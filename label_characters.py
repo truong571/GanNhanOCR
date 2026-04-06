@@ -1017,12 +1017,12 @@ def load_nom_font(font_path: str, size: int = 48):
 # ---------------------------------------------------------------------------
 
 def export_excel(dataset_path: str, output_path: str, prepared_dir: str):
-    """Xuất dataset ra file Excel với format trực quan.
+    """Xuất dataset ra file Excel đồng bộ với labels.csv.
 
-    Sheet 1: "Dataset" - Toàn bộ nhãn, mỗi hàng = 1 ký tự
-      - Màu: xanh lá (high), trắng (medium), vàng (low), đỏ (gap)
-    Sheet 2: "Thống kê theo trang" - Tổng hợp mỗi trang
-    Sheet 3: "Thống kê tổng" - Summary toàn bộ
+    Sheet 1: "Dataset" - Chỉ matched entries (giống labels.csv)
+      - Cột: image, nom_char, label, reading, confidence, bbox, page, source
+      - Màu theo confidence: xanh lá (high), trắng (medium), vàng (low)
+    Sheet 2: "Thống kê" - Summary + thống kê theo trang
     """
     try:
         import xlsxwriter
@@ -1033,6 +1033,8 @@ def export_excel(dataset_path: str, output_path: str, prepared_dir: str):
     with open(dataset_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
+    # dataset.json đã là format chuẩn — dùng trực tiếp
+    source_name = Path(prepared_dir).name
     wb = xlsxwriter.Workbook(output_path)
 
     # --- Formats ---
@@ -1040,165 +1042,123 @@ def export_excel(dataset_path: str, output_path: str, prepared_dir: str):
         "bold": True, "bg_color": "#4472C4", "font_color": "white",
         "border": 1, "text_wrap": True, "valign": "vcenter",
     })
-    high_fmt = wb.add_format({"bg_color": "#C6EFCE", "border": 1})   # xanh lá nhạt
-    med_fmt = wb.add_format({"border": 1})                            # trắng
-    low_fmt = wb.add_format({"bg_color": "#FFEB9C", "border": 1})    # vàng nhạt
-    gap_fmt = wb.add_format({"bg_color": "#FFC7CE", "border": 1})    # đỏ nhạt
-    nom_fmt = wb.add_format({"border": 1, "font_size": 16, "align": "center"})
+    high_fmt = wb.add_format({"bg_color": "#C6EFCE", "border": 1})
+    med_fmt = wb.add_format({"border": 1})
+    low_fmt = wb.add_format({"bg_color": "#FFEB9C", "border": 1})
     nom_high = wb.add_format({"bg_color": "#C6EFCE", "border": 1, "font_size": 16, "align": "center"})
     nom_med = wb.add_format({"border": 1, "font_size": 16, "align": "center"})
     nom_low = wb.add_format({"bg_color": "#FFEB9C", "border": 1, "font_size": 16, "align": "center"})
-    nom_gap = wb.add_format({"bg_color": "#FFC7CE", "border": 1, "font_size": 16, "align": "center"})
     center_fmt = wb.add_format({"border": 1, "align": "center"})
-    wrap_fmt = wb.add_format({"border": 1, "text_wrap": True})
 
     # ============================================
-    # Sheet 1: Dataset
+    # Sheet 1: Dataset (đồng bộ labels.csv)
     # ============================================
     ws = wb.add_worksheet("Dataset")
-    headers = [
-        "Trang", "Cột", "Vị trí", "Âm QN", "Chữ Nôm", "Unicode",
-        "Candidates", "Confidence", "Validation", "OCR",
-        "Crop file", "Typed Nom file",
-    ]
+    headers = ["image", "nom_char", "label", "reading", "confidence", "bbox", "page", "source"]
     for c, h in enumerate(headers):
         ws.write(0, c, h, header_fmt)
 
-    ws.set_column(0, 0, 8)    # Trang
-    ws.set_column(1, 1, 6)    # Cột
-    ws.set_column(2, 2, 7)    # Vị trí
-    ws.set_column(3, 3, 12)   # Âm QN
-    ws.set_column(4, 4, 10)   # Chữ Nôm
-    ws.set_column(5, 5, 12)   # Unicode
-    ws.set_column(6, 6, 30)   # Candidates
-    ws.set_column(7, 7, 12)   # Confidence
-    ws.set_column(8, 8, 14)   # Validation
-    ws.set_column(9, 9, 8)    # OCR
-    ws.set_column(10, 10, 35) # Crop file
-    ws.set_column(11, 11, 25) # Typed nom
+    ws.set_column(0, 0, 45)   # image
+    ws.set_column(1, 1, 10)   # nom_char
+    ws.set_column(2, 2, 12)   # label (unicode)
+    ws.set_column(3, 3, 12)   # reading (QN)
+    ws.set_column(4, 4, 12)   # confidence
+    ws.set_column(5, 5, 22)   # bbox
+    ws.set_column(6, 6, 8)    # page
+    ws.set_column(7, 7, 20)   # source
 
     row = 1
     for entry in data:
-        conf = entry.get("confidence", "gap")
-        fmt_map = {"high": high_fmt, "medium": med_fmt, "low": low_fmt, "gap": gap_fmt}
-        nom_fmt_map = {"high": nom_high, "medium": nom_med, "low": nom_low, "gap": nom_gap}
+        conf = entry.get("confidence", "medium")
+        fmt_map = {"high": high_fmt, "medium": med_fmt, "low": low_fmt}
+        nom_map = {"high": nom_high, "medium": nom_med, "low": nom_low}
         fmt = fmt_map.get(conf, med_fmt)
-        nfmt = nom_fmt_map.get(conf, nom_med)
+        nfmt = nom_map.get(conf, nom_med)
 
-        ws.write(row, 0, entry.get("page", ""), center_fmt)
-        ws.write(row, 1, entry.get("column", ""), center_fmt)
-        ws.write(row, 2, entry.get("position", entry.get("char_idx", "")), center_fmt)
-        ws.write(row, 3, entry.get("quoc_ngu", ""), fmt)
-        ws.write(row, 4, entry.get("nom_char", "") or "", nfmt)
-        ws.write(row, 5, entry.get("nom_unicode", "") or "", center_fmt)
-        candidates = entry.get("nom_candidates", [])
-        ws.write(row, 6, " ".join(candidates[:8]), wrap_fmt)
-        ws.write(row, 7, conf, fmt)
-        ws.write(row, 8, entry.get("validation", ""), fmt)
-        ocr_val = ""
-        if entry.get("ocr_source"):
-            ocr_val = "✓"
-        elif entry.get("ocr_char"):
-            ocr_val = entry["ocr_char"]
-        ws.write(row, 9, ocr_val, nfmt)
-        ws.write(row, 10, entry.get("crop_file", "") or "", fmt)
-        ws.write(row, 11, entry.get("typed_nom_file", "") or "", fmt)
+        ws.write(row, 0, entry.get("image", ""), fmt)
+        ws.write(row, 1, entry.get("nom_char", ""), nfmt)
+        ws.write(row, 2, entry.get("label", ""), center_fmt)
+        ws.write(row, 3, entry.get("reading", ""), fmt)
+        ws.write(row, 4, conf, fmt)
+        ws.write(row, 5, entry.get("bbox", ""), center_fmt)
+        ws.write(row, 6, entry.get("page", ""), center_fmt)
+        ws.write(row, 7, entry.get("source", source_name), fmt)
         row += 1
 
     ws.autofilter(0, 0, row - 1, len(headers) - 1)
     ws.freeze_panes(1, 0)
 
     # ============================================
-    # Sheet 2: Thống kê theo trang
+    # Sheet 2: Thống kê
     # ============================================
-    ws2 = wb.add_worksheet("Theo trang")
-    page_headers = ["Trang", "Matched", "High", "Medium", "Low", "Gaps", "Match Rate"]
-    for c, h in enumerate(page_headers):
-        ws2.write(0, c, h, header_fmt)
-
-    # Group by page
-    from collections import defaultdict
-    page_stats = defaultdict(lambda: {"matched": 0, "high": 0, "medium": 0, "low": 0, "gaps": 0})
-    for entry in data:
-        p = entry.get("page", 0)
-        t = entry.get("type", "")
-        conf = entry.get("confidence", "")
-        if t == "match":
-            page_stats[p]["matched"] += 1
-            if conf in ("high", "medium", "low"):
-                page_stats[p][conf] += 1
-        else:
-            page_stats[p]["gaps"] += 1
-
-    prow = 1
-    for page in sorted(page_stats):
-        s = page_stats[page]
-        total = s["matched"] + s["gaps"]
-        rate = s["matched"] / total if total > 0 else 0
-        ws2.write(prow, 0, page, center_fmt)
-        ws2.write(prow, 1, s["matched"], center_fmt)
-        ws2.write(prow, 2, s["high"], center_fmt)
-        ws2.write(prow, 3, s["medium"], center_fmt)
-        ws2.write(prow, 4, s["low"], center_fmt)
-        ws2.write(prow, 5, s["gaps"], center_fmt)
-        ws2.write(prow, 6, f"{rate:.1%}", center_fmt)
-        prow += 1
-
-    for c in range(len(page_headers)):
-        ws2.set_column(c, c, 12)
-
-    # ============================================
-    # Sheet 3: Tổng kết
-    # ============================================
-    ws3 = wb.add_worksheet("Tổng kết")
+    ws2 = wb.add_worksheet("Thống kê")
     title_fmt = wb.add_format({"bold": True, "font_size": 14})
     label_fmt = wb.add_format({"bold": True, "border": 1, "bg_color": "#D9E2F3"})
     val_fmt = wb.add_format({"border": 1, "align": "center", "font_size": 12})
     pct_fmt = wb.add_format({"border": 1, "align": "center", "font_size": 12, "num_format": "0.0%"})
 
-    ws3.set_column(0, 0, 25)
-    ws3.set_column(1, 1, 15)
+    ws2.set_column(0, 0, 25)
+    ws2.set_column(1, 6, 12)
 
-    ws3.write(0, 0, "Tổng kết gán nhãn", title_fmt)
-    ws3.write(1, 0, f"Nguồn: {Path(prepared_dir).name}", wb.add_format({"italic": True}))
+    # --- Tổng kết ---
+    ws2.write(0, 0, "Tổng kết gán nhãn", title_fmt)
+    ws2.write(1, 0, f"Nguồn: {source_name}", wb.add_format({"italic": True}))
 
-    total_match = sum(1 for d in data if d["type"] == "match")
-    total_gap = sum(1 for d in data if d["type"] != "match")
+    total_all = len(data)
     total_high = sum(1 for d in data if d.get("confidence") == "high")
     total_med = sum(1 for d in data if d.get("confidence") == "medium")
     total_low = sum(1 for d in data if d.get("confidence") == "low")
-    unique_nom = len(set(d.get("nom_char", "") for d in data if d.get("nom_char")))
+    unique_nom = len(set(d.get("nom_char", "") for d in data))
     unique_pages = len(set(d.get("page") for d in data))
 
     stats_data = [
-        ("Tổng entries", len(data)),
+        ("Tổng entries", total_all),
         ("Tổng trang", unique_pages),
-        ("Matched (có nhãn)", total_match),
         ("High confidence", total_high),
         ("Medium confidence", total_med),
         ("Low confidence", total_low),
-        ("Gaps (thừa/thiếu)", total_gap),
         ("Unicode Nôm unique", unique_nom),
     ]
     for i, (label, val) in enumerate(stats_data):
-        ws3.write(3 + i, 0, label, label_fmt)
-        ws3.write(3 + i, 1, val, val_fmt)
+        ws2.write(3 + i, 0, label, label_fmt)
+        ws2.write(3 + i, 1, val, val_fmt)
 
-    r = 3 + len(stats_data) + 1
-    ws3.write(r, 0, "Match rate", label_fmt)
-    ws3.write(r, 1, total_match / len(data) if data else 0, pct_fmt)
+    # --- Thống kê theo trang ---
+    r = 3 + len(stats_data) + 2
+    ws2.write(r, 0, "Thống kê theo trang", title_fmt)
+    r += 1
+    page_headers = ["Trang", "Total", "High", "Medium", "Low"]
+    for c, h in enumerate(page_headers):
+        ws2.write(r, c, h, header_fmt)
 
-    # Chú thích màu
-    r += 2
-    ws3.write(r, 0, "Chú thích màu:", title_fmt)
-    ws3.write(r + 1, 0, "High (1 candidate)", high_fmt)
-    ws3.write(r + 1, 1, "Chỉ có 1 ký tự Nôm ứng viên → gán chắc chắn")
-    ws3.write(r + 2, 0, "Medium (nhiều candidates)", med_fmt)
-    ws3.write(r + 2, 1, "Nhiều ứng viên → xếp hạng bằng visual + frequency")
-    ws3.write(r + 3, 0, "Low (không tìm thấy)", low_fmt)
-    ws3.write(r + 3, 1, "Âm QN không có trong từ điển")
-    ws3.write(r + 4, 0, "Gap (thừa/thiếu)", gap_fmt)
-    ws3.write(r + 4, 1, "Levenshtein insertion/deletion")
+    from collections import defaultdict
+    page_stats = defaultdict(lambda: {"total": 0, "high": 0, "medium": 0, "low": 0})
+    for entry in data:
+        p = entry.get("page", 0)
+        conf = entry.get("confidence", "")
+        page_stats[p]["total"] += 1
+        if conf in ("high", "medium", "low"):
+            page_stats[p][conf] += 1
+
+    r += 1
+    for page in sorted(page_stats):
+        s = page_stats[page]
+        ws2.write(r, 0, page, center_fmt)
+        ws2.write(r, 1, s["total"], center_fmt)
+        ws2.write(r, 2, s["high"], center_fmt)
+        ws2.write(r, 3, s["medium"], center_fmt)
+        ws2.write(r, 4, s["low"], center_fmt)
+        r += 1
+
+    # --- Chú thích ---
+    r += 1
+    ws2.write(r, 0, "Chú thích màu:", title_fmt)
+    ws2.write(r + 1, 0, "High", high_fmt)
+    ws2.write(r + 1, 1, "1 ứng viên hoặc OCR/Consistency xác nhận")
+    ws2.write(r + 2, 0, "Medium", med_fmt)
+    ws2.write(r + 2, 1, "Nhiều ứng viên, xếp hạng bằng visual + frequency")
+    ws2.write(r + 3, 0, "Low", low_fmt)
+    ws2.write(r + 3, 1, "Âm QN không có trong từ điển")
 
     wb.close()
     print(f"  Excel: {output_path}")
@@ -1666,12 +1626,29 @@ def process_prepared_dir(
                 print(f"  Consistency upgraded: {consist_upgraded}")
         print(f"  Output              : {output_dir}/")
 
-    # --- Save dataset.json ---
+    # --- Build dataset chuẩn (đồng bộ JSON, CSV, Excel) ---
+    dataset_rows = []
+    for lab in all_labels:
+        if lab.get("type") != "match" or not lab.get("nom_char"):
+            continue
+        bbox = lab.get("bbox", [])
+        dataset_rows.append({
+            "image": lab.get("crop_cleaned_file") or lab.get("crop_file", ""),
+            "nom_char": lab.get("nom_char", ""),
+            "label": lab.get("nom_unicode", ""),
+            "reading": lab.get("quoc_ngu", ""),
+            "confidence": lab.get("confidence", ""),
+            "bbox": ",".join(str(v) for v in bbox) if bbox else "",
+            "page": lab.get("page", ""),
+            "source": prepared_dir.name,
+        })
+
+    # Save dataset.json
     dataset_path = output_dir / "dataset.json"
     with open(dataset_path, "w", encoding="utf-8") as f:
-        json.dump(all_labels, f, ensure_ascii=False, indent=1)
+        json.dump(dataset_rows, f, ensure_ascii=False, indent=1)
     if verbose:
-        print(f"\n  Dataset: {dataset_path} ({len(all_labels)} entries)")
+        print(f"\n  Dataset: {dataset_path} ({len(dataset_rows)} entries)")
 
     # --- Save summary.json ---
     unique_nom = set(
@@ -1688,7 +1665,7 @@ def process_prepared_dir(
             "low": total_l,
         },
         "unique_nom_chars": len(unique_nom),
-        "total_labels": len(all_labels),
+        "total_labels": len(dataset_rows),
         "ocr_upgraded": sum(1 for lab in all_labels if lab.get("ocr_source")),
         "consistency_upgraded": sum(1 for lab in all_labels if lab.get("consistency_source")),
     }
@@ -1696,34 +1673,19 @@ def process_prepared_dir(
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
 
-    # --- Export labels.csv (dataset chuẩn nghiên cứu) ---
+    # --- Export labels.csv ---
     labels_csv_path = output_dir / "labels.csv"
     with open(labels_csv_path, "w", encoding="utf-8-sig", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "image", "nom_char", "label", "reading",
-            "confidence", "bbox", "page", "source",
-        ])
-        for lab in all_labels:
-            if lab["type"] != "match" or not lab.get("nom_char"):
-                continue
-            bbox_str = ",".join(str(v) for v in lab["bbox"]) if lab.get("bbox") else ""
+        writer.writerow(["image", "nom_char", "label", "reading",
+                         "confidence", "bbox", "page", "source"])
+        for row in dataset_rows:
             writer.writerow([
-                lab.get("crop_cleaned_file") or lab.get("crop_file", ""),
-                lab.get("nom_char", ""),
-                lab.get("nom_unicode", ""),
-                lab.get("quoc_ngu", ""),
-                lab.get("confidence", ""),
-                bbox_str,
-                lab.get("page", ""),
-                prepared_dir.name,
+                row["image"], row["nom_char"], row["label"], row["reading"],
+                row["confidence"], row["bbox"], row["page"], row["source"],
             ])
     if verbose:
-        matched_with_nom = sum(
-            1 for lab in all_labels
-            if lab["type"] == "match" and lab.get("nom_char")
-        )
-        print(f"  Labels CSV: {labels_csv_path} ({matched_with_nom} rows)")
+        print(f"  Labels CSV: {labels_csv_path} ({len(dataset_rows)} rows)")
 
     # --- Export Excel ---
     if excel:

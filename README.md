@@ -258,10 +258,14 @@ data/prepared/CacThanhTruyen4/labeled/
 - Chi phí xoá ký tự dựa trên kích thước ảnh (ảnh nhỏ → chi phí thấp → ưu tiên xoá nhiễu)
 - Kết quả: mỗi ký tự được gán 1 âm đọc QN hoặc đánh dấu `[GAP]`
 
-**Bước 5 — Tra từ điển + Gán Unicode:**
+**Bước 5 — Tra từ điển + Gán Unicode (có xếp hạng ứng viên):**
 - Từ điển chính: `QuocNgu_SinoNom_Merged.csv` (104,164 cặp QN→Nôm, 7,521 từ QN)
-- Nếu 1 âm QN có nhiều ứng viên Nôm → gán tất cả, đánh dấu `medium`
-- Nếu có OCR (`--ocr`): gọi API tools.clc.hcmus.edu.vn, so khớp bbox overlap (x-center cho cột, y-center cho ký tự), ưu tiên kết quả OCR khi khớp → nâng lên `high`
+- Nếu 1 âm QN có 1 ứng viên → gán luôn (`high`)
+- Nếu nhiều ứng viên → **xếp hạng bằng combined score** rồi chọn tốt nhất (`medium`):
+  - **Visual similarity (60%)**: so ảnh crop viết tay vs ảnh render font (IoU + projection profile correlation)
+  - **Corpus frequency (40%)**: đếm tần suất ký tự xuất hiện trong corpus transcription
+  - Cải thiện accuracy +15.3% so với lấy mặc định ứng viên đầu tiên (20.9% → 36.2%)
+- Nếu có OCR (`--ocr`): gọi API tools.clc.hcmus.edu.vn, so khớp bbox overlap, ưu tiên kết quả OCR → nâng lên `high`
 
 **Bước 5.5 — Render ảnh đánh máy:**
 - Render chữ Nôm Unicode bằng font NomNaTong-Regular.ttf

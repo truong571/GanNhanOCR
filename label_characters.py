@@ -156,6 +156,251 @@ def is_compatible(nom_char: str, qn_word: str, trans_dict: dict,
 
 
 # ---------------------------------------------------------------------------
+# Corpus Frequency & Visual Ranking (cải tiến chọn ứng viên)
+# ---------------------------------------------------------------------------
+
+def build_corpus_frequency(prepared_dir: Path, trans_dict: dict) -> dict:
+    """Đếm tần suất mỗi ký tự Nôm xuất hiện trong corpus transcription.
+
+    Với mỗi âm QN trong transcription, nếu từ điển chỉ có 1 candidate
+    thì ký tự đó chắc chắn đúng → tăng count. Nếu nhiều candidates thì
+    chia đều count cho tất cả (fractional counting).
+
+    Returns: {nom_char: float_count}
+    """
+    freq = {}
+    trans_dir = prepared_dir / "transcriptions"
+    if not trans_dir.exists():
+        return freq
+
+    for txt_file in sorted(trans_dir.glob("*.txt")):
+        with open(txt_file, "r", encoding="utf-8") as f:
+            text = f.read()
+        for word in text.lower().split():
+            word = re.sub(r'["""\'()[\]{}«»,.:;!?]', '', word).strip()
+            if not word:
+                continue
+            candidates = trans_dict.get(word, [])
+            if len(candidates) == 1:
+                freq[candidates[0]] = freq.get(candidates[0], 0) + 1.0
+            elif len(candidates) > 1:
+                share = 1.0 / len(candidates)
+                for c in candidates:
+                    freq[c] = freq.get(c, 0) + share
+
+    return freq
+
+
+def _load_pygame_font(ttf_path: str, size: int = 64):
+    """Load font bằng pygame.freetype (chất lượng tốt hơn PIL)."""
+    try:
+        import pygame
+        import pygame.freetype
+        if not pygame.get_init():
+            os.environ["SDL_VIDEODRIVER"] = "dummy"
+            pygame.init()
+        return pygame.freetype.Font(ttf_path, size=size)
+    except Exception:
+        return None
+
+
+_pygame_font = None
+_pygame_font_path = None
+
+
+def _render_candidate(char: str, font_or_path, size: int = 64) -> np.ndarray | None:
+    """Render 1 ký tự Nôm thành ảnh nhị phân.
+
+    Ưu tiên dùng pygame.freetype (từ FontDiffusion/ttf2im) cho chất lượng
+    render tốt hơn: alpha channel, aspect-ratio preserving, centering.
+    Fallback sang PIL nếu pygame không khả dụng.
+    """
+    global _pygame_font, _pygame_font_path
+
+    # --- Thử pygame.freetype (chất lượng cao) ---
+    font_path = None
+    if isinstance(font_or_path, str):
+        font_path = font_or_path
+    elif hasattr(font_or_path, 'path'):
+        font_path = font_or_path.path
+
+    if font_path:
+        if _pygame_font_path != font_path:
+            _pygame_font = _load_pygame_font(font_path, size=size)
+            _pygame_font_path = font_path
+
+        if _pygame_font is not None:
+            try:
+                import pygame
+                surface, _ = _pygame_font.render(char)
+                imo = pygame.surfarray.pixels_alpha(surface).transpose(1, 0)
+                imo = 255 - np.array(imo)  # Invert: nét đen trên nền trắng
+
+                bg = np.full((size, size), 255, dtype=np.uint8)
+                h, w = imo.shape[:2]
+                if h <= 0 or w <= 0:
+                    return None
+                # Aspect-ratio preserving resize
+                if h > size:
+                    w = round(w * size / h)
+                    h = size
+                    imo = cv2.resize(imo, (w, h))
+                if w > size:
+                    h = round(h * size / w)
+                    w = size
+                    imo = cv2.resize(imo, (w, h))
+                # Center
+                x = round((size - w) / 2)
+                y = round((size - h) / 2)
+                bg[y:h + y, x:x + w] = imo
+                _, binarized = cv2.threshold(bg, 128, 255, cv2.THRESH_BINARY)
+                return binarized
+            except Exception:
+                pass
+
+    # --- Fallback: PIL ---
+    from PIL import Image, ImageDraw
+    img = Image.new("L", (size, size), 255)
+    draw = ImageDraw.Draw(img)
+    try:
+        bbox = draw.textbbox((0, 0), char, font=font_or_path)
+    except Exception:
+        return None
+    w = bbox[2] - bbox[0]
+    h = bbox[3] - bbox[1]
+    if w <= 0 or h <= 0:
+        return None
+    x = (size - w) // 2 - bbox[0]
+    y = (size - h) // 2 - bbox[1]
+    draw.text((x, y), char, fill=0, font=font_or_path)
+    arr = np.array(img)
+    _, binarized = cv2.threshold(arr, 128, 255, cv2.THRESH_BINARY)
+    return binarized
+
+
+_render_cache: dict[str, np.ndarray | None] = {}
+
+
+def _get_rendered(char: str, font, size: int = 64) -> np.ndarray | None:
+    """Render với cache."""
+    if char not in _render_cache:
+        _render_cache[char] = _render_candidate(char, font, size)
+    return _render_cache[char]
+
+
+def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
+    """Tính độ tương đồng hình dạng giữa ảnh crop và ảnh render.
+
+    Kết hợp 2 metric:
+      1. IoU trên nét đen (pixel overlap) — so khớp vị trí nét
+      2. Stroke density correlation — phân bố nét theo hàng/cột
+
+    Returns: float 0.0 → 1.0 (1.0 = giống nhất)
+    """
+    if crop_img is None or rendered is None:
+        return 0.0
+
+    size = rendered.shape[0]
+    crop_resized = cv2.resize(crop_img, (size, size))
+
+    # Binarize crop
+    _, crop_bin = cv2.threshold(crop_resized, 128, 255, cv2.THRESH_BINARY)
+
+    crop_fg = (crop_bin == 0).astype(np.uint8)
+    rend_fg = (rendered == 0).astype(np.uint8)
+
+    # 1. IoU (pixel overlap)
+    intersection = np.sum(crop_fg & rend_fg)
+    union = np.sum(crop_fg | rend_fg)
+    iou = float(intersection) / float(union) if union > 0 else 0.0
+
+    # 2. Stroke density correlation (projection profile)
+    proj_score = 0.0
+    try:
+        h_crop = crop_fg.sum(axis=1).astype(float)
+        h_rend = rend_fg.sum(axis=1).astype(float)
+        v_crop = crop_fg.sum(axis=0).astype(float)
+        v_rend = rend_fg.sum(axis=0).astype(float)
+
+        def _ncc(a, b):
+            a, b = a - a.mean(), b - b.mean()
+            na, nb = np.linalg.norm(a), np.linalg.norm(b)
+            if na < 1e-8 or nb < 1e-8:
+                return 0.0
+            return float(np.dot(a, b) / (na * nb))
+
+        h_corr = max(0, _ncc(h_crop, h_rend))
+        v_corr = max(0, _ncc(v_crop, v_rend))
+        proj_score = (h_corr + v_corr) / 2.0
+    except Exception:
+        pass
+
+    # Combined: IoU 50% + Projection 50%
+    return 0.5 * iou + 0.5 * proj_score
+
+
+def rank_candidates(
+    candidates: list[str],
+    syllable: str,
+    crop_path: str | None,
+    font_path: str | None,
+    corpus_freq: dict,
+    visual_weight: float = 0.6,
+    freq_weight: float = 0.4,
+) -> list[tuple[str, float]]:
+    """Xếp hạng ứng viên bằng combined score: visual similarity + corpus frequency.
+
+    Args:
+        candidates: danh sách ký tự Nôm ứng viên
+        syllable: âm QN (dùng cho logging)
+        crop_path: đường dẫn ảnh crop cleaned (hoặc raw)
+        font_path: đường dẫn font TTF (dùng pygame.freetype render)
+        corpus_freq: {nom_char: count} từ build_corpus_frequency
+        visual_weight: trọng số visual (0-1)
+        freq_weight: trọng số frequency (0-1)
+
+    Returns: [(char, score)] sorted by score descending
+    """
+    if not candidates:
+        return []
+
+    # --- Frequency score ---
+    max_freq = max((corpus_freq.get(c, 0) for c in candidates), default=1)
+    if max_freq == 0:
+        max_freq = 1
+
+    # --- Visual score ---
+    crop_img = None
+    if crop_path and font_path:
+        if os.path.exists(crop_path):
+            crop_img = cv2.imread(crop_path, cv2.IMREAD_GRAYSCALE)
+
+    scored = []
+    for char in candidates:
+        # Frequency: normalize 0-1
+        f_score = corpus_freq.get(char, 0) / max_freq
+
+        # Visual: so sánh crop vs rendered (dùng pygame.freetype)
+        v_score = 0.0
+        if crop_img is not None and font_path:
+            rendered = _get_rendered(char, font_path, size=64)
+            if rendered is not None:
+                v_score = visual_similarity(crop_img, rendered)
+
+        # Combined score
+        if crop_img is not None and font_path:
+            total = visual_weight * v_score + freq_weight * f_score
+        else:
+            total = f_score
+
+        scored.append((char, total))
+
+    # Sort descending
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return scored
+
+
+# ---------------------------------------------------------------------------
 # OCR API Integration (tools.clc.hcmus.edu.vn)
 # ---------------------------------------------------------------------------
 
@@ -582,19 +827,25 @@ def levenshtein_align(chars: list[dict], syllables: list[str],
 # Gán Unicode Nôm (Bước 5)
 # ---------------------------------------------------------------------------
 
-def assign_unicode(aligned: list[dict], trans_dict: dict,
-                   similar_dict: dict | None = None) -> list[dict]:
+def assign_unicode(
+    aligned: list[dict],
+    trans_dict: dict,
+    similar_dict: dict | None = None,
+    corpus_freq: dict | None = None,
+    font_path: str | None = None,
+    crops_base: Path | None = None,
+) -> list[dict]:
     """Gán Unicode Nôm cho mỗi cặp (char, syllable) đã aligned.
 
     Chiến lược:
       1. Tra từ điển QN → danh sách Unicode candidates
       2. Nếu 1 candidate → gán luôn (confidence = "high")
-      3. Nếu nhiều candidates → gán candidate đầu (confidence = "medium")
+      3. Nếu nhiều candidates → xếp hạng bằng visual + frequency, chọn tốt nhất
       4. Nếu không tìm thấy trong từ điển → confidence = "low"
       5. Gap (insertion/deletion) → confidence = "gap"
 
     Returns: updated aligned list với thêm fields:
-      nom_char, nom_candidates, confidence
+      nom_char, nom_candidates, confidence, ranking_score
     """
     for pair in aligned:
         syl = pair.get("syllable")
@@ -606,10 +857,9 @@ def assign_unicode(aligned: list[dict], trans_dict: dict,
             continue
 
         if pair["type"] == "insertion":
-            # Có âm QN nhưng không có ký tự tương ứng
             candidates = trans_dict.get(syl.lower(), []) if syl else []
             pair["nom_char"] = candidates[0] if len(candidates) == 1 else None
-            pair["nom_candidates"] = candidates[:10]  # giới hạn 10
+            pair["nom_candidates"] = candidates[:10]
             pair["confidence"] = "gap"
             continue
 
@@ -627,12 +877,39 @@ def assign_unicode(aligned: list[dict], trans_dict: dict,
             pair["nom_candidates"] = candidates
             pair["confidence"] = "high"
         elif len(candidates) > 1:
-            # Gán candidate đầu tiên (phổ biến nhất trong từ điển)
-            pair["nom_char"] = candidates[0]
-            pair["nom_candidates"] = candidates[:10]
+            # --- CẢI TIẾN: xếp hạng ứng viên ---
+            crop_path = None
+            if crops_base and pair.get("char"):
+                crop_file = pair["char"].get("crop_file", "")
+                if crop_file:
+                    # Ưu tiên ảnh cleaned
+                    cleaned = crop_file.replace("crops/", "crops_cleaned/")
+                    p = crops_base / cleaned
+                    if p.exists():
+                        crop_path = str(p)
+                    else:
+                        p = crops_base / crop_file
+                        if p.exists():
+                            crop_path = str(p)
+
+            ranked = rank_candidates(
+                candidates[:10],
+                syl,
+                crop_path,
+                font_path,
+                corpus_freq or {},
+            )
+
+            if ranked:
+                pair["nom_char"] = ranked[0][0]
+                pair["nom_candidates"] = [r[0] for r in ranked]
+                pair["ranking_score"] = round(ranked[0][1], 3)
+            else:
+                pair["nom_char"] = candidates[0]
+                pair["nom_candidates"] = candidates[:10]
+
             pair["confidence"] = "medium"
         else:
-            # Không tìm thấy trong từ điển
             pair["nom_char"] = None
             pair["nom_candidates"] = []
             pair["confidence"] = "low"
@@ -917,7 +1194,7 @@ def export_excel(dataset_path: str, output_path: str, prepared_dir: str):
     ws3.write(r + 1, 0, "High (1 candidate)", high_fmt)
     ws3.write(r + 1, 1, "Chỉ có 1 ký tự Nôm ứng viên → gán chắc chắn")
     ws3.write(r + 2, 0, "Medium (nhiều candidates)", med_fmt)
-    ws3.write(r + 2, 1, "Nhiều ứng viên → gán ứng viên đầu tiên")
+    ws3.write(r + 2, 1, "Nhiều ứng viên → xếp hạng bằng visual + frequency")
     ws3.write(r + 3, 0, "Low (không tìm thấy)", low_fmt)
     ws3.write(r + 3, 1, "Âm QN không có trong từ điển")
     ws3.write(r + 4, 0, "Gap (thừa/thiếu)", gap_fmt)
@@ -1008,6 +1285,8 @@ def process_page(
     review: bool = False,
     use_ocr: bool = False,
     verbose: bool = True,
+    corpus_freq: dict | None = None,
+    font_path: str | None = None,
 ) -> dict | None:
     """Xử lý gán nhãn cho 1 trang."""
     book_page = page_info["book_page"]
@@ -1070,8 +1349,14 @@ def process_page(
         # Bước 4: Levenshtein alignment
         aligned = levenshtein_align(chars, syllables)
 
-        # Bước 5: Gán Unicode
-        aligned = assign_unicode(aligned, trans_dict, similar_dict)
+        # Bước 5: Gán Unicode (với ranking visual + frequency)
+        crops_base = prepared_dir / "detected"
+        aligned = assign_unicode(
+            aligned, trans_dict, similar_dict,
+            corpus_freq=corpus_freq,
+            font_path=font_path,
+            crops_base=crops_base,
+        )
 
         # Validate bằng từ điển
         validate_alignment(aligned, trans_dict, similar_dict)
@@ -1127,6 +1412,7 @@ def process_page(
                 "typed_nom_file": pair.get("typed_nom_file"),
                 "ocr_source": pair.get("ocr_source", False),
                 "ocr_char": pair.get("ocr_char"),
+                "ranking_score": pair.get("ranking_score"),
             }
 
             if char_info:
@@ -1254,6 +1540,11 @@ def process_prepared_dir(
     else:
         print(f"[WARN] Không có font Nôm, bỏ qua render ảnh đánh máy")
 
+    # --- Build corpus frequency ---
+    print("Building corpus frequency...")
+    corpus_freq = build_corpus_frequency(prepared_dir, trans_dict)
+    print(f"  → {len(corpus_freq)} ký tự Nôm có tần suất từ transcription")
+
     # --- Output directory ---
     output_dir = prepared_dir / "labeled"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -1286,6 +1577,7 @@ def process_prepared_dir(
             page_info, prepared_dir, trans_dict, similar_dict,
             nom_font, output_dir, typed_nom_dir,
             review=review, use_ocr=use_ocr, verbose=verbose,
+            corpus_freq=corpus_freq, font_path=font_path,
         )
 
         if result is None:

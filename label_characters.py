@@ -45,7 +45,6 @@ import json
 import os
 import re
 import sys
-import time
 from pathlib import Path
 
 import cv2
@@ -235,11 +234,11 @@ def _ocr_recognize(file_name: str) -> list[dict] | None:
     return None
 
 
-def _ocr_boxes_to_columns(boxes: list[dict]) -> list[list[str]]:
-    """Chuyển OCR boxes thành list of columns, mỗi column = list ký tự Unicode.
+def _ocr_boxes_to_columns(boxes: list[dict]) -> list[list[dict]]:
+    """Chuyển OCR boxes thành list of columns, mỗi column = list of {char, y_center}.
 
     Sắp xếp: cột phải → trái, trong cột trên → dưới.
-    Mỗi box transcription có thể chứa nhiều ký tự → tách thành từng ký tự.
+    Mỗi box chứa nhiều ký tự → chia đều bbox theo chiều dọc để ước lượng y.
     """
     if not boxes:
         return []
@@ -253,31 +252,44 @@ def _ocr_boxes_to_columns(boxes: list[dict]) -> list[list[str]]:
             cols.append([box])
             continue
         last_box = cols[-1][-1]
-        # Cùng cột nếu x gần nhau
         if abs(last_box["points"][0][0] - box["points"][0][0]) < 15:
             cols[-1].append(box)
         else:
             cols.append([box])
 
-    # Sắp xếp trong mỗi cột theo y tăng dần (trên → dưới)
+    # Sắp xếp trong mỗi cột theo y, tách ký tự với toạ độ ước lượng
     result = []
     for col in cols:
         col_sorted = sorted(col, key=lambda b: b["points"][0][1])
-        chars = []
+        chars_with_pos = []
         for box in col_sorted:
             text = box.get("transcription", "").strip()
-            # Mỗi box có thể chứa chuỗi nhiều ký tự → tách từng ký tự
-            for ch in text:
-                if ch.strip():
-                    chars.append(ch)
-        result.append(chars)
+            valid_chars = [ch for ch in text if ch.strip()]
+            n = len(valid_chars)
+            if n == 0:
+                continue
+            # Ước lượng y cho mỗi ký tự: chia đều box theo chiều dọc
+            y_top = box["points"][0][1]
+            y_bot = box["points"][2][1]
+            x_left = box["points"][0][0]
+            x_right = box["points"][1][0]
+            char_h = (y_bot - y_top) / n
+            for idx, ch in enumerate(valid_chars):
+                cy = y_top + char_h * (idx + 0.5)
+                chars_with_pos.append({
+                    "char": ch,
+                    "y_center": cy,
+                    "bbox": [x_left, int(y_top + char_h * idx),
+                             x_right, int(y_top + char_h * (idx + 1))],
+                })
+        result.append(chars_with_pos)
 
     return result
 
 
 def ocr_page(image_path: str, cache_path: str | None = None,
-             verbose: bool = False) -> list[list[str]] | None:
-    """OCR toàn bộ 1 trang ảnh, trả về columns of Unicode chars.
+             verbose: bool = False) -> list[list[dict]] | None:
+    """OCR toàn bộ 1 trang ảnh, trả về columns of char dicts.
 
     Args:
         image_path: path tới ảnh trang (pages/page_XXXX.png)
@@ -285,7 +297,7 @@ def ocr_page(image_path: str, cache_path: str | None = None,
         verbose: in trạng thái
 
     Returns:
-        list of columns, mỗi column = list of Unicode chars
+        list of columns, mỗi column = list of {char, y_center, bbox}
         None nếu OCR thất bại
     """
     # Đọc cache nếu có
@@ -318,12 +330,17 @@ def ocr_page(image_path: str, cache_path: str | None = None,
         total_chars = sum(len(c) for c in columns)
         print(f"    [OCR] Got {len(columns)} columns, {total_chars} chars")
 
-    # Lưu cache
+    # Lưu cache (bao gồm raw boxes để không cần gọi API lại)
     if cache_path:
         cache_file = Path(cache_path)
         cache_file.parent.mkdir(parents=True, exist_ok=True)
+        # Hash ảnh để detect thay đổi
+        import hashlib
+        with open(image_path, "rb") as fh:
+            img_hash = hashlib.md5(fh.read()).hexdigest()
         cache_data = {
             "image": image_path,
+            "image_hash": img_hash,
             "columns": columns,
             "boxes_raw": boxes,
         }
@@ -333,72 +350,92 @@ def ocr_page(image_path: str, cache_path: str | None = None,
     return columns
 
 
-def find_best_ocr_column(
-    ocr_columns: list[list[str]],
-    n_chars: int,
+def _find_best_ocr_column(
+    ocr_columns: list[list[dict]],
+    det_chars: list[dict],
     used_indices: set[int],
 ) -> int | None:
-    """Tìm cột OCR phù hợp nhất dựa trên số ký tự gần nhất.
+    """Tìm cột OCR phù hợp nhất dựa trên bbox x-overlap với detected chars.
 
-    Bỏ qua cột đã dùng và cột quá ngắn (nhiễu).
+    So sánh x trung tâm cột OCR vs x trung tâm detected chars.
     """
+    if not det_chars:
+        return None
+
+    # X trung tâm của detected column
+    det_x = sum((c["bbox"][0] + c["bbox"][2]) / 2 for c in det_chars) / len(det_chars)
+
     best_idx = None
-    best_diff = float("inf")
+    best_dist = float("inf")
     for i, col in enumerate(ocr_columns):
         if i in used_indices:
             continue
-        if len(col) < 3:  # bỏ cột nhiễu (< 3 ký tự)
+        if len(col) < 3:
             continue
-        diff = abs(len(col) - n_chars)
-        if diff < best_diff:
-            best_diff = diff
+        # X trung tâm cột OCR
+        ocr_x = sum((c["bbox"][0] + c["bbox"][2]) / 2 for c in col) / len(col)
+        dist = abs(ocr_x - det_x)
+        if dist < best_dist:
+            best_dist = dist
             best_idx = i
+
+    # Chỉ match nếu khoảng cách x hợp lý (< 100px)
+    if best_dist > 100:
+        return None
     return best_idx
 
 
-def match_ocr_with_candidates(
-    ocr_chars: list[str],
+def _match_ocr_bbox(
+    ocr_col: list[dict],
     aligned: list[dict],
     trans_dict: dict,
 ) -> int:
-    """So khớp ký tự OCR với aligned pairs trong 1 cột.
+    """So khớp ký tự OCR với aligned pairs bằng bbox y-overlap.
 
-    Với mỗi matched pair có confidence "medium":
-      - Nếu OCR char nằm trong nom_candidates → gán OCR char, upgrade sang "high"
+    Với mỗi detected char (matched pair), tìm ký tự OCR có y_center
+    gần nhất, nếu OCR char nằm trong candidates → upgrade sang "high".
 
-    Args:
-        ocr_chars: list Unicode chars từ OCR cho cột này
-        aligned: list aligned pairs cho cột này
-        trans_dict: từ điển QN→Nôm
-
-    Returns:
-        số lượng upgraded từ medium → high
+    Returns: số lượng upgraded
     """
     upgraded = 0
+    matched_pairs = [p for p in aligned if p["type"] == "match" and p.get("char")]
 
-    # Chỉ lấy các matched pairs (bỏ qua gap)
-    matched_pairs = [p for p in aligned if p["type"] == "match"]
+    for pair in matched_pairs:
+        char_info = pair["char"]
+        det_y1 = char_info["bbox"][1]
+        det_y2 = char_info["bbox"][3]
+        det_cy = (det_y1 + det_y2) / 2
 
-    # So khớp theo vị trí (positional matching)
-    for i, pair in enumerate(matched_pairs):
-        if i >= len(ocr_chars):
-            break
+        # Tìm OCR char có y_center gần nhất
+        best_ocr = None
+        best_dist = float("inf")
+        for oc in ocr_col:
+            dist = abs(oc["y_center"] - det_cy)
+            if dist < best_dist:
+                best_dist = dist
+                best_ocr = oc
 
-        ocr_char = ocr_chars[i]
+        if best_ocr is None:
+            continue
+
+        # Kiểm tra overlap: khoảng cách y_center < chiều cao ký tự
+        det_h = det_y2 - det_y1
+        if best_dist > max(det_h, 50):
+            continue
+
+        ocr_char = best_ocr["char"]
         candidates = pair.get("nom_candidates", [])
         conf = pair.get("confidence", "")
 
         if conf == "medium" and candidates:
             if ocr_char in candidates:
-                pair["nom_unicode"] = ocr_char
+                pair["nom_char"] = ocr_char
                 pair["confidence"] = "high"
                 pair["ocr_source"] = True
                 upgraded += 1
             else:
-                # OCR char không nằm trong candidates nhưng vẫn ghi nhận
                 pair["ocr_char"] = ocr_char
         elif conf == "low" and ocr_char:
-            # Không có trong từ điển nhưng OCR nhận ra → ghi nhận
             pair["ocr_char"] = ocr_char
 
     return upgraded
@@ -410,7 +447,6 @@ def match_ocr_with_candidates(
 
 def normalize_syllables(syllables: list[str]) -> list[str]:
     """Chuẩn hoá danh sách âm tiết: xoá ký tự dính, tách tên riêng."""
-    import re
     result = []
     for syl in syllables:
         # Xoá dấu ngoặc, quote dính vào âm tiết
@@ -558,13 +594,13 @@ def assign_unicode(aligned: list[dict], trans_dict: dict,
       5. Gap (insertion/deletion) → confidence = "gap"
 
     Returns: updated aligned list với thêm fields:
-      nom_unicode, nom_candidates, confidence
+      nom_char, nom_candidates, confidence
     """
     for pair in aligned:
         syl = pair.get("syllable")
 
         if pair["type"] == "deletion":
-            pair["nom_unicode"] = None
+            pair["nom_char"] = None
             pair["nom_candidates"] = []
             pair["confidence"] = "gap"
             continue
@@ -572,14 +608,14 @@ def assign_unicode(aligned: list[dict], trans_dict: dict,
         if pair["type"] == "insertion":
             # Có âm QN nhưng không có ký tự tương ứng
             candidates = trans_dict.get(syl.lower(), []) if syl else []
-            pair["nom_unicode"] = candidates[0] if len(candidates) == 1 else None
+            pair["nom_char"] = candidates[0] if len(candidates) == 1 else None
             pair["nom_candidates"] = candidates[:10]  # giới hạn 10
             pair["confidence"] = "gap"
             continue
 
         # type == "match"
         if not syl:
-            pair["nom_unicode"] = None
+            pair["nom_char"] = None
             pair["nom_candidates"] = []
             pair["confidence"] = "gap"
             continue
@@ -587,17 +623,17 @@ def assign_unicode(aligned: list[dict], trans_dict: dict,
         candidates = trans_dict.get(syl.lower(), [])
 
         if len(candidates) == 1:
-            pair["nom_unicode"] = candidates[0]
+            pair["nom_char"] = candidates[0]
             pair["nom_candidates"] = candidates
             pair["confidence"] = "high"
         elif len(candidates) > 1:
             # Gán candidate đầu tiên (phổ biến nhất trong từ điển)
-            pair["nom_unicode"] = candidates[0]
+            pair["nom_char"] = candidates[0]
             pair["nom_candidates"] = candidates[:10]
             pair["confidence"] = "medium"
         else:
             # Không tìm thấy trong từ điển
-            pair["nom_unicode"] = None
+            pair["nom_char"] = None
             pair["nom_candidates"] = []
             pair["confidence"] = "low"
 
@@ -612,7 +648,7 @@ def validate_alignment(aligned: list[dict], trans_dict: dict,
                        similar_dict: dict | None = None) -> dict:
     """Validate alignment bằng Levenshtein lượt 2 (dùng từ điển).
 
-    Kiểm tra mỗi cặp (nom_unicode, syllable) có compatible không.
+    Kiểm tra mỗi cặp (nom_char, syllable) có compatible không.
 
     Returns: dict thống kê validation
     """
@@ -627,7 +663,7 @@ def validate_alignment(aligned: list[dict], trans_dict: dict,
             continue
 
         total += 1
-        nom = pair.get("nom_unicode")
+        nom = pair.get("nom_char")
         syl = pair.get("syllable", "")
 
         if not nom:
@@ -925,7 +961,7 @@ def save_review_image(aligned_page: list[dict], output_path: str,
 
         char_info = pair["char"]
         conf = pair.get("confidence", "")
-        nom = pair.get("nom_unicode", "")
+        nom = pair.get("nom_char", "")
         syl = pair.get("syllable", "")
 
         # Ảnh viết tay (crop cleaned hoặc gốc)
@@ -1040,29 +1076,28 @@ def process_page(
         # Validate bằng từ điển
         validate_alignment(aligned, trans_dict, similar_dict)
 
-        # Bước 5b: So khớp với OCR API (nếu có)
+        # Bước 5b: So khớp với OCR API bằng bbox overlap (nếu có)
         if ocr_columns:
-            n_matched = sum(1 for p in aligned if p["type"] == "match")
-            ocr_col_idx = find_best_ocr_column(
-                ocr_columns, n_matched, ocr_used_indices,
+            ocr_col_idx = _find_best_ocr_column(
+                ocr_columns, chars, ocr_used_indices,
             )
             if ocr_col_idx is not None:
                 ocr_used_indices.add(ocr_col_idx)
-                ocr_chars = ocr_columns[ocr_col_idx]
-                n_upgraded = match_ocr_with_candidates(
-                    ocr_chars, aligned, trans_dict,
+                ocr_col = ocr_columns[ocr_col_idx]
+                n_upgraded = _match_ocr_bbox(
+                    ocr_col, aligned, trans_dict,
                 )
                 if verbose and n_upgraded > 0:
                     print(
                         f"    Cột {col_num}: OCR upgraded {n_upgraded} "
                         f"medium→high (ocr_col={ocr_col_idx+1}, "
-                        f"{len(ocr_chars)} chars)"
+                        f"{len(ocr_col)} chars)"
                     )
 
         # Bước 5.5: Render ảnh Nôm đánh máy
         if nom_font and typed_nom_dir:
             for pair in aligned:
-                nom = pair.get("nom_unicode")
+                nom = pair.get("nom_char")
                 if nom:
                     typed_path = typed_nom_dir / f"{ord(nom):06X}.png"
                     if not typed_path.exists():
@@ -1078,7 +1113,7 @@ def process_page(
         # Gom kết quả
         for pair in aligned:
             char_info = pair.get("char")
-            nom_char = pair.get("nom_unicode")
+            nom_char = pair.get("nom_char")
             label = {
                 "page": book_page,
                 "column": col_num,
@@ -1376,7 +1411,7 @@ Ví dụ:
     parser.add_argument("--excel", action="store_true",
                         help="Xuất file Excel với kết quả có màu")
     parser.add_argument("--ocr", action="store_true",
-                        help="Dùng API OCR kimhannom để cải thiện độ chính xác Unicode")
+                        help="Dùng API OCR (tools.clc.hcmus.edu.vn) để cải thiện độ chính xác Unicode")
 
     args = parser.parse_args()
 

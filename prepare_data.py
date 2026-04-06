@@ -113,8 +113,22 @@ def ocr_text_page(page: fitz.Page, dpi: int = 300, lang: str = "vie") -> str:
     img_bytes = pix.tobytes("png")
     img = Image.open(io.BytesIO(img_bytes))
 
-    # Chạy Tesseract
-    text = pytesseract.image_to_string(img, lang=lang, config="--psm 6")
+    # Tiền xử lý: chuyển grayscale + tăng contrast cho OCR tốt hơn
+    img_gray = img.convert("L")
+    # Adaptive threshold đơn giản: tăng contrast
+    import numpy as np
+    arr = np.array(img_gray)
+    # CLAHE-like: normalize contrast
+    p2, p98 = np.percentile(arr, (2, 98))
+    if p98 > p2:
+        arr = np.clip((arr - p2) / (p98 - p2) * 255, 0, 255).astype(np.uint8)
+    img_enhanced = Image.fromarray(arr)
+
+    # Chạy Tesseract với config tối ưu cho text dạng numbered list
+    text = pytesseract.image_to_string(
+        img_enhanced, lang=lang,
+        config="--psm 6 --oem 3",
+    )
     return text
 
 

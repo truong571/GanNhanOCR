@@ -1,0 +1,15 @@
+{
+  "source": "data/prepared/CacThanhTruyen2/detected/crops",
+  "output": "data/prepared/CacThanhTruyen2/detected/crops_cleaned",
+  "settings": {
+    "method": "sauvola",
+    "size": 64,
+    "padding": 5,
+    "denoise": 3,
+    "min_stroke": 2
+  },
+  "total_pages": 5,
+  "total_chars": 866,
+  "success": 866,
+  "failed": 0
+}

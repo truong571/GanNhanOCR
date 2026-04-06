@@ -266,13 +266,19 @@ data/prepared/CacThanhTruyen4/labeled/
   - **Corpus frequency (40%)**: đếm tần suất ký tự xuất hiện trong corpus transcription
   - Cải thiện accuracy +15.3% so với lấy mặc định ứng viên đầu tiên (20.9% → 36.2%)
 - Nếu có OCR (`--ocr`): gọi API tools.clc.hcmus.edu.vn, so khớp bbox overlap, ưu tiên kết quả OCR → nâng lên `high`
+- Font render bằng **pygame.freetype** (từ FontDiffusion) cho chất lượng cao hơn PIL
 
 **Bước 5.5 — Render ảnh đánh máy:**
 - Render chữ Nôm Unicode bằng font NomNaTong-Regular.ttf
 - Dùng cho visual review (so sánh viết tay vs đánh máy)
 
-**Bước 6 — Xuất dataset:**
-- `dataset.json`: đầy đủ tất cả trường (nom_char, nom_unicode, reading, confidence, bbox, candidates, ...)
+**Bước 7 — Self-Consistency (khi dùng `--ocr`):**
+- Sau khi xử lý tất cả trang, thu thập các cặp (QN → Nôm) đã được OCR xác nhận
+- Nếu cùng từ QN được OCR xác nhận ≥2 lần cho cùng ký tự Nôm → dùng ký tự đó cho tất cả medium còn lại
+- Hiệu quả: High tăng từ 14.7% → **64.8%** (+41,757 ký tự trên toàn bộ 6 bộ sách)
+
+**Bước 8 — Xuất dataset:**
+- `dataset.json`: đầy đủ tất cả trường (nom_char, nom_unicode, reading, confidence, ranking_score, bbox, candidates, ...)
 - `labels.csv`: format chuẩn nghiên cứu — `image, nom_char, label, reading, confidence, bbox, page, source`
 - Excel (tuỳ chọn): có màu theo confidence (xanh=high, vàng=medium, đỏ=low)
 
@@ -282,8 +288,8 @@ data/prepared/CacThanhTruyen4/labeled/
 
 | Mức | Ý nghĩa | Điều kiện |
 |-----|---------|-----------|
-| `high` | Tin cậy cao | Chỉ 1 ứng viên từ điển, hoặc OCR xác nhận |
-| `medium` | Cần review | Nhiều ứng viên từ điển, chưa phân biệt được |
+| `high` | Tin cậy cao | Chỉ 1 ứng viên, hoặc OCR xác nhận, hoặc Self-Consistency |
+| `medium` | Cần review | Nhiều ứng viên, chưa được OCR/Consistency xác nhận |
 | `low` | Không tìm thấy | Từ QN không có trong từ điển |
 | `gap` | Insertion/Deletion | Ký tự thừa hoặc thiếu từ alignment |
 
@@ -324,16 +330,30 @@ python label_characters.py data/prepared/SachThanhTruyen4 --ocr --review --excel
 
 ## Kết quả đạt được
 
-Trên 2 bộ dữ liệu đã chạy đầy đủ pipeline:
+Trên toàn bộ 6 bộ dữ liệu (với `--ocr`):
 
-| Bộ dữ liệu | Trang | Ký tự | High | Medium | Low | Gap |
-|-------------|-------|-------|------|--------|-----|-----|
-| CacThanhTruyen4 | 4 | ~750 | ~36% | ~62% | ~1% | ~2% |
-| SachThanhTruyen4 | 145 | ~83,000 | ~36% | ~55% | ~0.2% | ~9% |
+| Bộ dữ liệu | Trang | Detected | Matched | High | Medium | Low | Gap |
+|-------------|-------|----------|---------|------|--------|-----|-----|
+| CacThanhTruyen2 | 5 | 866 | 864 | 38.9% | 61.0% | 0.1% | 10.3% |
+| CacThanhTruyen4 | 4 | 756 | 753 | 49.1% | 50.2% | 0.7% | 2.0% |
+| CacThanhTruyen11 | 4 | 767 | 767 | 49.2% | 50.8% | 0.0% | 0.5% |
+| SachThanhTruyen2 | 160 | 28,454 | 27,973 | 64.6% | 34.0% | 1.3% | 4.6% |
+| SachThanhTruyen4 | 145 | 27,441 | 26,471 | 67.5% | 31.7% | 0.8% | 8.6% |
+| SachThanhTruyen11 | 143 | 27,160 | 26,646 | 63.9% | 35.3% | 0.8% | 6.4% |
+| **TỔNG** | **461** | **85,444** | **83,474** | **64.8%** | **34.3%** | **0.9%** | **6.5%** |
+
+**Chuỗi cải tiến:**
+
+| Giai đoạn | High confidence |
+|-----------|-----------------|
+| Ban đầu (lấy dict[0]) | ~0% |
+| + Ranking (visual 60% + frequency 40%) | ~0% (thay đổi ứng viên, không đổi confidence) |
+| + OCR API bbox matching | 14.7% (+12,289 ký tự) |
+| + **Self-Consistency** | **64.8%** (+41,757 ký tự) |
 
 **Lưu ý:**
-- Tỷ lệ `medium` cao do nhiều chữ Nôm có cùng âm đọc QN (tính đa âm của Hán Nôm)
-- `high` tăng khi dùng `--ocr` (OCR xác nhận giúp phân biệt giữa các ứng viên)
+- **Self-Consistency** là cải tiến lớn nhất: dùng kết quả OCR đã xác nhận để nâng medium→high cho cùng từ QN
+- SachThanhTruyen hưởng lợi nhiều nhất (140-160 trang → nhiều lần lặp lại cùng từ)
 - `gap` ở SachThanhTruyen cao hơn do Tesseract OCR text QN kém chính xác hơn text layer có sẵn
 
 ---

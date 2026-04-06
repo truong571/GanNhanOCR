@@ -1587,6 +1587,53 @@ def process_prepared_dir(
         for k in total_stats:
             total_stats[k] += result["stats"].get(k, 0)
 
+    # --- Bước 7: Self-Consistency (dùng OCR-confirmed để nâng medium) ---
+    if use_ocr:
+        # Xây bảng tần suất từ high-confidence (OCR-confirmed)
+        confirmed_freq: dict[str, dict[str, int]] = {}
+        for lab in all_labels:
+            if lab.get("ocr_source") and lab.get("quoc_ngu") and lab.get("nom_char"):
+                qn = lab["quoc_ngu"].lower()
+                char = lab["nom_char"]
+                confirmed_freq.setdefault(qn, {})
+                confirmed_freq[qn][char] = confirmed_freq[qn].get(char, 0) + 1
+
+        # Nâng cấp medium → high nếu cùng từ QN đã được OCR xác nhận
+        consistency_upgraded = 0
+        for lab in all_labels:
+            if lab.get("confidence") != "medium":
+                continue
+            qn = (lab.get("quoc_ngu") or "").lower()
+            if qn not in confirmed_freq:
+                continue
+            candidates = lab.get("nom_candidates", [])
+            if not candidates:
+                continue
+
+            # Tìm ký tự được OCR xác nhận nhiều nhất cho từ QN này
+            freq = confirmed_freq[qn]
+            best_char = max(freq, key=freq.get)
+            best_count = freq[best_char]
+
+            # Chỉ nâng cấp nếu: (1) ký tự nằm trong candidates, (2) xuất hiện ≥2 lần
+            if best_char in candidates and best_count >= 2:
+                lab["nom_char"] = best_char
+                lab["nom_unicode"] = f"U+{ord(best_char):04X}"
+                lab["confidence"] = "high"
+                lab["consistency_source"] = True
+                # Reorder candidates
+                new_cands = [best_char] + [c for c in candidates if c != best_char]
+                lab["nom_candidates"] = new_cands
+                consistency_upgraded += 1
+
+        if verbose and consistency_upgraded > 0:
+            print(f"\n  Self-Consistency: {consistency_upgraded} medium→high "
+                  f"(từ {len(confirmed_freq)} từ QN đã OCR xác nhận)")
+
+        # Cập nhật lại stats
+        total_stats["high"] = sum(1 for lab in all_labels if lab["type"] == "match" and lab.get("confidence") == "high")
+        total_stats["medium"] = sum(1 for lab in all_labels if lab["type"] == "match" and lab.get("confidence") == "medium")
+
     # --- Summary ---
     total_m = total_stats["matched"]
     total_h = total_stats["high"]
@@ -1613,7 +1660,10 @@ def process_prepared_dir(
         print(f"  Unicode Nôm unique  : {len(unique_nom)}")
         if use_ocr:
             ocr_upgraded = sum(1 for lab in all_labels if lab.get("ocr_source"))
+            consist_upgraded = sum(1 for lab in all_labels if lab.get("consistency_source"))
             print(f"  OCR upgraded        : {ocr_upgraded}")
+            if consist_upgraded:
+                print(f"  Consistency upgraded: {consist_upgraded}")
         print(f"  Output              : {output_dir}/")
 
     # --- Save dataset.json ---
@@ -1640,6 +1690,7 @@ def process_prepared_dir(
         "unique_nom_chars": len(unique_nom),
         "total_labels": len(all_labels),
         "ocr_upgraded": sum(1 for lab in all_labels if lab.get("ocr_source")),
+        "consistency_upgraded": sum(1 for lab in all_labels if lab.get("consistency_source")),
     }
     summary_path = output_dir / "summary.json"
     with open(summary_path, "w", encoding="utf-8") as f:

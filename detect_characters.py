@@ -288,66 +288,39 @@ def _auto_detect_n_columns(binary: np.ndarray, text_box: tuple[int, int, int, in
 # Character segmentation
 # ---------------------------------------------------------------------------
 
-def detect_chars_in_column(
-    binary: np.ndarray,
+def _extract_raw_blobs(
+    col_binary: np.ndarray,
     col_bbox: tuple[int, int, int, int],
-    min_char_height: int = 15,
-    expected_char_height: float | None = None,
-    expected_count: int | None = None,
+    expected_char_height: float,
+    min_char_height: int,
+    density_threshold_scale: float = 0.01,
 ) -> list[tuple[int, int, int, int]]:
-    """Phát hiện ký tự trong 1 cột.
+    """Trích xuất raw blobs từ horizontal projection (absolute threshold).
 
-    Chiến lược kết hợp:
-    1. Horizontal projection để tìm character blobs
-    2. Dùng expected_count (từ transcription) để tune split/merge
-
-    Returns:
-        List[(x1, y1, x2, y2)] cho mỗi ký tự, thứ tự trên→dưới
+    Tách riêng để có thể gọi lại với tham số khác (multi-pass).
     """
     x1, y1, x2, y2 = col_bbox
-    col_binary = binary[y1:y2, x1:x2]
     col_h, col_w = col_binary.shape
-
-    if col_w == 0 or col_h == 0:
-        return []
-
-    # Tính expected char height từ expected_count nếu có
-    if expected_count and expected_count > 0:
-        expected_char_height = col_h / expected_count
-
-    if expected_char_height is None:
-        expected_char_height = col_h / 20  # Fallback
 
     # Horizontal projection
     h_proj = col_binary.sum(axis=1).astype(float)
 
     # Smooth: nối nét gần nhau trong cùng 1 ký tự
-    # Kernel ~ 10% chiều cao ký tự
     smooth_k = max(3, int(expected_char_height * 0.1))
     h_smooth = np.convolve(h_proj, np.ones(smooth_k) / smooth_k, mode="same")
 
-    # Threshold rất thấp: bất kỳ dòng nào có ink đều "not gap"
-    threshold = max(col_w * 0.01, 0.5)
+    threshold = max(col_w * density_threshold_scale, 0.5)
     is_gap = h_smooth < threshold
 
-    # Dilate gaps: mở rộng gap nhẹ để tách ký tự dính nhau
-    # Nhưng chỉ tại vị trí density thấp
     min_gap = max(2, int(expected_char_height * 0.03))
-    # Erode is_gap to remove tiny gaps (noise)
     gap_kernel = np.ones(min_gap)
     is_gap_clean = np.convolve(is_gap.astype(float), gap_kernel / min_gap, mode="same") > 0.8
 
-    # Find connected regions
     transitions = np.diff(is_gap_clean.astype(int))
     char_starts = np.where(transitions == -1)[0]
     char_ends = np.where(transitions == 1)[0]
 
     if len(char_starts) == 0 and len(char_ends) == 0:
-        # Toàn bộ cột là 1 blob → chia đều
-        if expected_count and expected_count > 0:
-            step = col_h / expected_count
-            return [(x1, int(y1 + i * step), x2, int(y1 + (i + 1) * step))
-                    for i in range(expected_count)]
         return []
 
     if len(char_starts) == 0:
@@ -367,35 +340,286 @@ def detect_chars_in_column(
         if ch >= min_char_height:
             raw_chars.append((x1, int(char_starts[i] + y1), x2, int(char_ends[i] + y1)))
 
+    return raw_chars
+
+
+def _strip_column_borders(col_binary: np.ndarray) -> np.ndarray:
+    """Xóa vùng border lines bên trái/phải cột.
+
+    Sách Hán Nôm có đường kẻ dọc ngăn cách các cột. Đường kẻ tạo ink giả
+    suốt chiều dài cột → horizontal projection không tìm được gap.
+
+    Phương pháp: dùng vertical projection để tìm vùng có ink liên tục
+    (> 50% chiều cao) ở 2 bên mép → mask = 0.
+    """
+    h, w = col_binary.shape
+    if h == 0 or w == 0:
+        return col_binary
+
+    v_proj = col_binary.sum(axis=0).astype(float)
+    # Ngưỡng: cột pixel nào có ink > 40% chiều cao → có thể là border line
+    line_threshold = h * 0.40
+
+    cleaned = col_binary.copy()
+
+    # Scan từ trái vào: xóa đến khi hết border
+    left_trim = 0
+    for x in range(min(w // 4, 40)):
+        if v_proj[x] > line_threshold:
+            left_trim = x + 4  # Thêm 4px buffer
+    if left_trim > 0:
+        cleaned[:, :left_trim] = 0
+
+    # Scan từ phải vào
+    right_trim = w
+    for x in range(w - 1, max(w - w // 4, w - 40), -1):
+        if v_proj[x] > line_threshold:
+            right_trim = x - 4
+    if right_trim < w:
+        cleaned[:, right_trim:] = 0
+
+    return cleaned
+
+
+def _trim_to_ink_extent(
+    col_binary: np.ndarray, expected_char_height: float
+) -> tuple[int, int]:
+    """Tìm vùng chứa chữ thật trong cột (bỏ vùng trống trên/dưới).
+
+    Nhiều cột có chiều cao = full page nhưng chữ chỉ chiếm phần trên.
+    Nếu dùng full height, expected_char_height bị sai → chia sai.
+
+    Returns:
+        (top_offset, bottom_offset) relative to column top
+    """
+    h_proj = col_binary.sum(axis=1).astype(float)
+    col_w = col_binary.shape[1]
+
+    # Smooth mạnh hơn (1 expected char height) để phân biệt
+    # vùng có chữ (density cao) và vùng trống (density thấp)
+    smooth_k = max(5, int(expected_char_height * 0.5)) | 1
+    h_smooth = np.convolve(h_proj, np.ones(smooth_k) / smooth_k, mode="same")
+
+    if h_smooth.max() == 0:
+        return 0, col_binary.shape[0]
+
+    # Ngưỡng: 10% của density trung bình vùng có ink
+    mean_ink = np.mean(h_smooth[h_smooth > 0])
+    ink_threshold = mean_ink * 0.10
+
+    ink_rows = np.where(h_smooth > ink_threshold)[0]
+    if len(ink_rows) == 0:
+        return 0, col_binary.shape[0]
+
+    top = max(0, int(ink_rows[0]) - 5)
+    bottom = min(col_binary.shape[0], int(ink_rows[-1]) + 5)
+
+    return top, bottom
+
+
+def _segment_by_valleys(
+    col_binary: np.ndarray,
+    col_bbox: tuple[int, int, int, int],
+    expected_count: int,
+    expected_char_height: float,
+) -> list[tuple[int, int, int, int]]:
+    """Tách ký tự bằng valley detection (local minima) trong horizontal projection.
+
+    Dùng khi threshold approach thất bại (chữ viết dày, không có gap rõ ràng).
+
+    Pipeline:
+    1. Xóa border lines (đường kẻ dọc) → loại ink giả
+    2. Trim vùng trống → chỉ giữ vùng có chữ
+    3. Tính expected_char_height chính xác từ vùng có chữ thật
+    4. find_peaks tìm N-1 valleys sâu nhất
+    """
+    x1, y1, x2, y2 = col_bbox
+    col_h, col_w = col_binary.shape
+
+    if col_h == 0 or col_w == 0 or expected_count < 2:
+        return []
+
+    # 1. Xóa border lines
+    cleaned = _strip_column_borders(col_binary)
+
+    # 2. Trim vùng trống trên/dưới
+    ink_top, ink_bottom = _trim_to_ink_extent(cleaned, expected_char_height)
+    ink_region = cleaned[ink_top:ink_bottom, :]
+    ink_h = ink_bottom - ink_top
+
+    if ink_h < expected_char_height:
+        return []
+
+    # 3. Tính lại expected char height từ vùng ink thật
+    real_char_h = ink_h / expected_count
+
+    # 4. Horizontal projection trên vùng đã clean
+    h_proj = ink_region.sum(axis=1).astype(float)
+
+    # Smooth: ~10% expected height
+    smooth_k = max(3, int(real_char_h * 0.10)) | 1
+    h_smooth = np.convolve(h_proj, np.ones(smooth_k) / smooth_k, mode="same")
+
+    # Tìm valleys
+    min_dist = max(5, int(real_char_h * 0.5))
+    valleys, _ = find_peaks(-h_smooth, distance=min_dist)
+
+    if len(valleys) < expected_count - 1:
+        # Thử min_dist nhỏ hơn
+        min_dist2 = max(5, int(real_char_h * 0.35))
+        valleys, _ = find_peaks(-h_smooth, distance=min_dist2)
+
+    if len(valleys) < expected_count - 1:
+        return []
+
+    # Chọn N-1 valleys sâu nhất
+    depths = h_smooth[valleys]
+    n_needed = expected_count - 1
+    best_idx = np.argsort(depths)[:n_needed]
+    split_points = sorted(valleys[best_idx])
+
+    # Post-process: merge các phần quá nhỏ ở biên vào phần kế cận
+    all_points = [0] + list(split_points) + [ink_h]
+    min_part = real_char_h * 0.3
+
+    # Merge phần đầu nếu quá nhỏ
+    while len(all_points) > 2 and (all_points[1] - all_points[0]) < min_part:
+        all_points.pop(1)
+
+    # Merge phần cuối nếu quá nhỏ
+    while len(all_points) > 2 and (all_points[-1] - all_points[-2]) < min_part:
+        all_points.pop(-2)
+
+    # Validate: kiểm tra không có phần nào quá lớn (> 3x expected)
+    valid = True
+    for j in range(len(all_points) - 1):
+        part_h = all_points[j + 1] - all_points[j]
+        if part_h > real_char_h * 3.0:
+            valid = False
+            break
+
+    if not valid:
+        return []
+
+    # Tạo bboxes (chuyển offset về tọa độ gốc)
+    chars = []
+    for j in range(len(all_points) - 1):
+        cy1 = y1 + ink_top + all_points[j]
+        cy2 = y1 + ink_top + all_points[j + 1]
+        if cy2 - cy1 >= 8:
+            chars.append((x1, int(cy1), x2, int(cy2)))
+
+    return chars
+
+
+def detect_chars_in_column(
+    binary: np.ndarray,
+    col_bbox: tuple[int, int, int, int],
+    min_char_height: int = 15,
+    expected_char_height: float | None = None,
+    expected_count: int | None = None,
+) -> list[tuple[int, int, int, int]]:
+    """Phát hiện ký tự trong 1 cột.
+
+    Chiến lược 3 bước:
+    1. Threshold approach: tìm gap tuyệt đối trong horizontal projection
+    2. Valley approach: nếu threshold thất bại, tìm local minima (chữ dày đặc)
+    3. Multi-pass retry với nhiều mức threshold
+
+    Returns:
+        List[(x1, y1, x2, y2)] cho mỗi ký tự, thứ tự trên→dưới
+    """
+    x1, y1, x2, y2 = col_bbox
+    col_binary = binary[y1:y2, x1:x2]
+    col_h, col_w = col_binary.shape
+
+    if col_w == 0 or col_h == 0:
+        return []
+
+    # Tính expected char height từ expected_count nếu có
+    if expected_count and expected_count > 0:
+        expected_char_height = col_h / expected_count
+
+    if expected_char_height is None:
+        expected_char_height = col_h / 20  # Fallback
+
+    # --- Pass 1: Standard density threshold ---
+    raw_chars = _extract_raw_blobs(
+        col_binary, col_bbox, expected_char_height, min_char_height, 0.01
+    )
+
     if not raw_chars:
-        return raw_chars
+        # Không tìm được gap nào → thử valley-based segmentation
+        if expected_count and expected_count > 1:
+            valley_chars = _segment_by_valleys(
+                col_binary, col_bbox, expected_count, col_h / expected_count
+            )
+            if valley_chars and abs(len(valley_chars) - expected_count) <= max(1, expected_count // 5):
+                return valley_chars
+            # Fallback: chia đều trên vùng có chữ (trim border + trống)
+            cleaned = _strip_column_borders(col_binary)
+            ink_top, ink_bottom = _trim_to_ink_extent(cleaned, col_h / expected_count)
+            ink_h = ink_bottom - ink_top
+            if ink_h > col_h * 0.3:  # Trimmed phải > 30% column
+                step = ink_h / expected_count
+                return [(x1, int(y1 + ink_top + i * step), x2, int(y1 + ink_top + (i + 1) * step))
+                        for i in range(expected_count)]
+            # Chia đều full column nếu trim không hợp lý
+            step = col_h / expected_count
+            return [(x1, int(y1 + i * step), x2, int(y1 + (i + 1) * step))
+                    for i in range(expected_count)]
+        return []
 
     # Post-processing: merge small, then split large
     chars = _merge_small_boxes(raw_chars, expected_char_height)
     chars = _split_large_boxes(chars, expected_char_height, binary)
 
-    # Final adjustment: if we still have too few chars and know expected count,
-    # force-split the largest remaining blobs
+    # Final adjustment: force-split largest blobs nếu vẫn thiếu
     if expected_count and len(chars) < expected_count:
         chars = _force_split_to_count(chars, expected_count, expected_char_height, binary)
 
-    # Adaptive retry: nếu kết quả lệch quá nhiều so với expected,
-    # thử lại với ngưỡng khác
-    if expected_count and expected_count > 0:
+    # --- Pass 2: Nếu kết quả vẫn lệch quá nhiều, thử valley approach ---
+    if expected_count and expected_count > 1:
         diff = abs(len(chars) - expected_count)
-        tolerance = max(2, int(expected_count * 0.15))  # Cho phép lệch 15%
+        tolerance = max(2, int(expected_count * 0.15))
+
         if diff > tolerance:
-            # Retry với expected_char_height chính xác hơn
-            retry_h = col_h / expected_count
-            retry_chars = _merge_small_boxes(raw_chars, retry_h)
-            retry_chars = _split_large_boxes(retry_chars, retry_h, binary)
-            if len(retry_chars) < expected_count:
-                retry_chars = _force_split_to_count(
-                    retry_chars, expected_count, retry_h, binary)
-            # Chọn kết quả gần expected_count hơn
-            retry_diff = abs(len(retry_chars) - expected_count)
-            if retry_diff < diff:
-                chars = retry_chars
+            best_chars = chars
+            best_diff = diff
+
+            # Thử valley-based segmentation (hiệu quả với chữ dày đặc)
+            valley_chars = _segment_by_valleys(
+                col_binary, col_bbox, expected_count, col_h / expected_count
+            )
+            if valley_chars:
+                valley_diff = abs(len(valley_chars) - expected_count)
+                if valley_diff < best_diff:
+                    best_diff = valley_diff
+                    best_chars = valley_chars
+
+            # Thử nhiều density thresholds
+            if best_diff > tolerance:
+                for density_scale in [0.02, 0.05, 0.005]:
+                    retry_raw = _extract_raw_blobs(
+                        col_binary, col_bbox, col_h / expected_count,
+                        min_char_height, density_scale
+                    )
+                    if not retry_raw:
+                        continue
+                    retry_h = col_h / expected_count
+                    retry_chars = _merge_small_boxes(retry_raw, retry_h)
+                    retry_chars = _split_large_boxes(retry_chars, retry_h, binary)
+                    if len(retry_chars) < expected_count:
+                        retry_chars = _force_split_to_count(
+                            retry_chars, expected_count, retry_h, binary)
+                    retry_diff = abs(len(retry_chars) - expected_count)
+                    if retry_diff < best_diff:
+                        best_diff = retry_diff
+                        best_chars = retry_chars
+                    if best_diff <= 1:
+                        break
+
+            chars = best_chars
 
     return chars
 
@@ -439,10 +663,11 @@ def _force_split_to_count(
 ) -> list[tuple[int, int, int, int]]:
     """Khi vẫn thiếu ký tự, force-split các blob lớn nhất cho đến khi đạt target.
 
-    Chỉ split blob có height > 1.3x expected_h.
+    Chỉ split blob có height > 1.2x expected_h.
+    Sử dụng projection valleys ưu tiên, fallback connected components, rồi chia đều.
     """
     result = list(chars)
-    max_iterations = target_count  # Safety limit
+    max_iterations = target_count * 2  # Safety limit
 
     while len(result) < target_count and max_iterations > 0:
         max_iterations -= 1
@@ -453,7 +678,7 @@ def _force_split_to_count(
 
         split_done = False
         for h_val, idx in heights:
-            if h_val < expected_h * 1.3:
+            if h_val < expected_h * 1.2:
                 break  # Không có blob đủ lớn để split
 
             bbox = result[idx]
@@ -461,39 +686,62 @@ def _force_split_to_count(
             n_parts = min(round(h_val / expected_h), target_count - len(result) + 1)
             n_parts = max(2, n_parts)
 
-            # Tìm split point bằng projection valley
             col_binary = binary[y1:y2, x1:x2]
             h_proj = col_binary.sum(axis=1).astype(float)
-            h_smooth = np.convolve(h_proj, np.ones(3) / 3, mode="same")
 
-            min_dist = int(expected_h * 0.4)
+            # Smooth nhẹ hơn để phát hiện valley mịn
+            smooth_k = max(3, int(expected_h * 0.05))
+            h_smooth = np.convolve(h_proj, np.ones(smooth_k) / smooth_k, mode="same")
+
+            min_dist = int(expected_h * 0.35)
             valleys, _ = find_peaks(-h_smooth, distance=min_dist)
+
+            split_points = None
 
             if len(valleys) >= n_parts - 1:
                 depths = h_smooth[valleys]
                 best_idx = np.argsort(depths)[: n_parts - 1]
                 split_points = sorted(valleys[best_idx])
             else:
-                # Chia đều
+                # Thử connected components
+                num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
+                    col_binary, connectivity=8
+                )
+                if num_labels > 2:
+                    centers = []
+                    for lbl in range(1, num_labels):
+                        area = stats[lbl, cv2.CC_STAT_AREA]
+                        if area > col_binary.size * 0.003:
+                            cy = stats[lbl, cv2.CC_STAT_TOP] + stats[lbl, cv2.CC_STAT_HEIGHT] // 2
+                            centers.append(cy)
+                    if len(centers) >= n_parts:
+                        centers.sort()
+                        gaps = [(centers[i + 1] - centers[i], i) for i in range(len(centers) - 1)]
+                        gaps.sort(reverse=True)
+                        split_points = sorted(
+                            [(centers[i] + centers[i + 1]) // 2
+                             for _, i in gaps[: n_parts - 1]]
+                        )
+
+            if split_points is None:
                 box_h = y2 - y1
                 split_points = [int(box_h * i / n_parts) for i in range(1, n_parts)]
 
-            # Replace blob with sub-blobs
             sub_boxes = []
             all_points = [0] + list(split_points) + [y2 - y1]
             for j in range(len(all_points) - 1):
                 sy1 = y1 + all_points[j]
                 sy2 = y1 + all_points[j + 1]
-                if sy2 - sy1 >= 10:
+                if sy2 - sy1 >= 8:
                     sub_boxes.append((x1, sy1, x2, sy2))
 
             if len(sub_boxes) > 1:
-                result = result[:idx] + sub_boxes + result[idx + 1 :]
+                result = result[:idx] + sub_boxes + result[idx + 1:]
                 split_done = True
                 break
 
         if not split_done:
-            break  # Không thể split thêm
+            break
 
     return result
 
@@ -501,8 +749,13 @@ def _force_split_to_count(
 def _split_large_boxes(
     chars: list[tuple[int, int, int, int]], expected_h: float, binary: np.ndarray
 ) -> list[tuple[int, int, int, int]]:
-    """Split box quá lớn (> 1.6x expected height) thành 2+ ký tự."""
-    split_threshold = expected_h * 1.6
+    """Split box quá lớn (> 1.5x expected height) thành 2+ ký tự.
+
+    Sử dụng 2 chiến lược:
+      1. Horizontal projection valleys (tìm khoảng trống ngang)
+      2. Connected component separation (nếu projection không đủ valleys)
+    """
+    split_threshold = expected_h * 1.5
 
     result = []
     for bbox in chars:
@@ -511,16 +764,19 @@ def _split_large_boxes(
 
         if box_h > split_threshold:
             n_parts = round(box_h / expected_h)
-            n_parts = max(2, min(n_parts, 4))  # 2-4 phần
+            n_parts = max(2, min(n_parts, 5))
 
-            # Tìm split point tốt nhất (gap nhỏ nhất trong box)
             col_binary = binary[y1:y2, x1:x2]
             h_proj = col_binary.sum(axis=1).astype(float)
-            h_smooth = np.convolve(h_proj, np.ones(3) / 3, mode="same")
 
-            # Tìm n_parts-1 valleys trong box
-            min_dist = int(expected_h * 0.4)
+            # Smooth nhẹ hơn để giữ chi tiết valley
+            smooth_k = max(3, int(expected_h * 0.05))
+            h_smooth = np.convolve(h_proj, np.ones(smooth_k) / smooth_k, mode="same")
+
+            min_dist = int(expected_h * 0.35)
             valleys, _ = find_peaks(-h_smooth, distance=min_dist)
+
+            split_points = None
 
             if len(valleys) >= n_parts - 1:
                 # Chọn valleys sâu nhất
@@ -528,7 +784,39 @@ def _split_large_boxes(
                 best_idx = np.argsort(depths)[: n_parts - 1]
                 split_points = sorted(valleys[best_idx])
             else:
-                # Chia đều
+                # Thử connected components: tìm bounding boxes dọc của từng component
+                num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
+                    col_binary, connectivity=8
+                )
+                if num_labels > 2:  # > 1 component (+ background)
+                    # Gom components theo vị trí dọc trung tâm
+                    centers = []
+                    for lbl in range(1, num_labels):
+                        cy = stats[lbl, cv2.CC_STAT_TOP] + stats[lbl, cv2.CC_STAT_HEIGHT] // 2
+                        area = stats[lbl, cv2.CC_STAT_AREA]
+                        if area > col_binary.size * 0.005:  # Bỏ nhiễu nhỏ
+                            centers.append(cy)
+
+                    if len(centers) >= n_parts:
+                        # Cluster centers thành n_parts nhóm bằng khoảng cách
+                        centers.sort()
+                        # Tìm n_parts-1 gaps lớn nhất giữa các centers
+                        gaps = [(centers[i + 1] - centers[i], i) for i in range(len(centers) - 1)]
+                        gaps.sort(reverse=True)
+                        cc_splits = sorted(
+                            [(centers[i] + centers[i + 1]) // 2
+                             for _, i in gaps[: n_parts - 1]]
+                        )
+                        # Kiểm tra split points có hợp lý không
+                        valid = all(
+                            expected_h * 0.3 <= cc_splits[j] - (cc_splits[j - 1] if j > 0 else 0)
+                            for j in range(len(cc_splits))
+                        )
+                        if valid:
+                            split_points = cc_splits
+
+            if split_points is None:
+                # Fallback: chia đều
                 split_points = [int(box_h * i / n_parts) for i in range(1, n_parts)]
 
             # Tạo sub-boxes
@@ -536,7 +824,7 @@ def _split_large_boxes(
             for j in range(len(all_points) - 1):
                 sub_y1 = y1 + all_points[j]
                 sub_y2 = y1 + all_points[j + 1]
-                if sub_y2 - sub_y1 >= 10:  # Min size
+                if sub_y2 - sub_y1 >= 10:
                     result.append((x1, sub_y1, x2, sub_y2))
         else:
             result.append(bbox)

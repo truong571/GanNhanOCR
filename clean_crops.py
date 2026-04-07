@@ -79,9 +79,65 @@ class CharacterCleaner:
         self.denoise_strength = denoise_strength | 1  # Đảm bảo số lẻ
         self.min_stroke = min_stroke
 
+    # ----- Background Normalization -----
+
+    def _normalize_background(self, gray: np.ndarray) -> np.ndarray:
+        """Chuẩn hóa nền trước khi binarize.
+
+        Dùng Morphological Closing (kernel lớn) để ước lượng background,
+        rồi chia pixel/background × 255 để loại bỏ uneven illumination.
+        Giống pipeline detect_characters nhưng kernel nhỏ hơn (phù hợp crop).
+
+        Args:
+            gray: Ảnh grayscale (uint8)
+
+        Returns:
+            Ảnh đã chuẩn hóa nền (uint8)
+        """
+        h, w = gray.shape
+        # Kernel tỉ lệ với kích thước ảnh, tối thiểu 15, tối đa 51
+        k_size = max(15, min(51, max(h, w) // 3)) | 1  # Đảm bảo số lẻ
+        bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (k_size, k_size))
+        background = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, bg_kernel)
+
+        # Chia để loại bỏ uneven illumination
+        normalized = cv2.divide(gray, background, scale=255)
+
+        # Contrast stretching
+        p_low, p_high = np.percentile(normalized, (2, 98))
+        if p_high > p_low:
+            normalized = np.clip(
+                (normalized.astype(np.float32) - p_low) * 255 / (p_high - p_low),
+                0, 255
+            ).astype(np.uint8)
+
+        return normalized
+
+    # ----- Adaptive Sauvola Window -----
+
+    def _compute_adaptive_window(self, gray: np.ndarray) -> int:
+        """Tính Sauvola window tự động dựa trên kích thước ảnh.
+
+        Crop lớn cần window lớn hơn để Sauvola hoạt động đúng.
+        Crop nhỏ dùng window nhỏ để không bị over-smooth.
+
+        Returns:
+            Window size (số lẻ)
+        """
+        h, w = gray.shape
+        min_dim = min(h, w)
+
+        # Window ≈ 1/3 cạnh nhỏ nhất, clamp trong [15, 51]
+        adaptive_w = max(15, min(51, min_dim // 3))
+        # Đảm bảo số lẻ
+        adaptive_w = adaptive_w | 1
+
+        # Không nhỏ hơn window người dùng chỉ định
+        return max(adaptive_w, self.sauvola_window)
+
     # ----- Sauvola Binarization -----
 
-    def _sauvola_binarize(self, gray: np.ndarray) -> np.ndarray:
+    def _sauvola_binarize(self, gray: np.ndarray, window: int | None = None) -> np.ndarray:
         """Sauvola binarization — ngưỡng CỤC BỘ cho từng vùng nhỏ.
 
         Công thức: T(x,y) = mean(x,y) × [1 + k × (std(x,y)/R - 1)]
@@ -92,11 +148,12 @@ class CharacterCleaner:
 
         Args:
             gray: Ảnh grayscale (uint8)
+            window: Override window size (nếu None → dùng self.sauvola_window)
 
         Returns:
             Binary image (uint8): 255=ink (foreground), 0=background
         """
-        w = self.sauvola_window
+        w = window if window is not None else self.sauvola_window
         k = self.sauvola_k
         R = self.sauvola_R
 
@@ -269,8 +326,10 @@ class CharacterCleaner:
     def clean(self, image_path_or_array) -> tuple:
         """Pipeline làm sạch đầy đủ.
 
-        Ảnh crop thô → Sauvola → Morphological → Noise removal
-        → Stroke normalization → Center + Resize → nét đen trên nền trắng
+        Ảnh crop thô → Background normalization → Adaptive Sauvola
+        → Fallback Otsu (nếu Sauvola mất quá nhiều nét)
+        → Morphological → Noise removal → Stroke normalization
+        → Center + Resize → nét đen trên nền trắng
 
         Args:
             image_path_or_array: Path ảnh hoặc numpy array (grayscale)
@@ -298,22 +357,38 @@ class CharacterCleaner:
         else:
             denoised = gray
 
-        # 3. Sauvola binarization — ngưỡng cục bộ
-        binary = self._sauvola_binarize(denoised)
-        debug_info["fg_ratio_after_sauvola"] = round(
-            np.sum(binary > 0) / binary.size, 4
-        )
+        # 3. Background normalization — loại bỏ uneven illumination
+        normalized = self._normalize_background(denoised)
 
-        # 4. Morphological cleanup — Close(2×2) → Open(3×3)
+        # 4. Adaptive Sauvola binarization — window tự động theo kích thước crop
+        adaptive_w = self._compute_adaptive_window(normalized)
+        binary = self._sauvola_binarize(normalized, window=adaptive_w)
+        fg_ratio = np.sum(binary > 0) / binary.size
+        debug_info["fg_ratio_after_sauvola"] = round(fg_ratio, 4)
+        debug_info["sauvola_window_used"] = adaptive_w
+
+        # 5. Fallback Otsu — nếu Sauvola xóa quá nhiều (fg < 1%) hoặc giữ quá nhiều (> 60%)
+        if fg_ratio < 0.01 or fg_ratio > 0.60:
+            _, otsu_binary = cv2.threshold(
+                normalized, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
+            )
+            otsu_fg = np.sum(otsu_binary > 0) / otsu_binary.size
+            # Chọn kết quả hợp lý hơn (fg_ratio gần 5-40% là bình thường cho chữ)
+            if 0.01 <= otsu_fg <= 0.60:
+                binary = otsu_binary
+                debug_info["fallback"] = "otsu"
+                debug_info["fg_ratio_after_otsu"] = round(otsu_fg, 4)
+
+        # 6. Morphological cleanup — Close(2×2) → Open(3×3)
         binary = self._morphological_cleanup(binary)
 
-        # 5. Connected component noise removal
+        # 7. Connected component noise removal
         binary = self._remove_noise_components(binary)
 
-        # 6. Stroke normalization
+        # 8. Stroke normalization
         binary = self._normalize_stroke(binary)
 
-        # 7. Center + resize → target_size × target_size
+        # 9. Center + resize → target_size × target_size
         output = self._center_and_resize(binary)
 
         if output is None:

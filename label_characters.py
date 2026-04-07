@@ -1195,60 +1195,95 @@ def export_excel(dataset_path: str, output_path: str, prepared_dir: str):
 
 def save_review_image(aligned_page: list[dict], output_path: str,
                       crops_dir: str, typed_dir: str | None,
-                      max_chars: int = 50):
-    """Tạo ảnh review: [viết tay | đánh máy | nhãn] cho mỗi ký tự.
+                      max_chars: int = 80):
+    """Tạo ảnh review RGB: [viết tay | đánh máy | nhãn] cho mỗi ký tự.
 
     Mỗi ô gồm 3 phần xếp dọc:
-      1. Ảnh viết tay (crop) — 64×64
-      2. Ảnh đánh máy (typed_nom) — 64×64
-      3. Nhãn text: confidence + QN reading — 28px
+      1. Ảnh viết tay (crop) — 80×80
+      2. Ảnh đánh máy (typed_nom) — 80×80
+      3. Nhãn text 3 dòng: chữ Nôm, QN reading, Unicode — 44px
 
     Viền màu theo confidence:
-      Đen = high, Xám = medium, Nhạt = low
+      Xanh lá = high, Cam = medium, Đỏ = low/gap
     """
     from PIL import Image, ImageDraw, ImageFont
 
-    cell_size = 64
+    cell_size = 80  # Lớn hơn 64 → dễ nhìn
     pairs = [p for p in aligned_page if p["type"] == "match" and p.get("char")]
     pairs = pairs[:max_chars]
 
     if not pairs:
         return
 
-    cols = min(10, len(pairs))
+    cols = min(12, len(pairs))
     rows = (len(pairs) + cols - 1) // cols
 
-    # Mỗi ô: 2 ảnh + 28px text label
-    text_h = 28
-    cell_h = cell_size * 2 + text_h
-    cell_w = cell_size + 4
+    text_h = 44  # 3 dòng text
+    gap = 3  # Khoảng cách giữa các ô
+    cell_h = cell_size * 2 + text_h + gap
+    cell_w = cell_size + gap
 
-    canvas_h = rows * cell_h + 4
-    canvas_w = cols * cell_w + 4
+    canvas_h = rows * cell_h + gap * 2
+    canvas_w = cols * cell_w + gap * 2
 
-    # Dùng PIL để vẽ (hỗ trợ Unicode text cho QN reading)
-    pil_img = Image.new("L", (canvas_w, canvas_h), 240)
+    # Dùng RGB cho viền màu
+    pil_img = Image.new("RGB", (canvas_w, canvas_h), (245, 245, 245))
     draw = ImageDraw.Draw(pil_img)
 
-    # Font nhỏ cho text label
+    # Font cho text label
+    label_font = None
+    nom_font = None
+    # Font cho chữ Nôm (cần hỗ trợ CJK)
+    cjk_font_paths = [
+        "/System/Library/Fonts/PingFang.ttc",
+        "/System/Library/Fonts/STHeiti Light.ttc",
+        "/System/Library/Fonts/Hiragino Sans GB.ttc",
+        "/usr/share/fonts/truetype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    ]
+    for fp in cjk_font_paths:
+        try:
+            nom_font = ImageFont.truetype(fp, 16)
+            break
+        except Exception:
+            continue
+
     try:
-        label_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 11)
+        label_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 12)
     except Exception:
         try:
-            label_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 11)
+            label_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 12)
         except Exception:
             label_font = ImageFont.load_default()
+
+    if nom_font is None:
+        nom_font = label_font
+
+    # Màu viền theo confidence
+    border_colors = {
+        "high": (34, 139, 34),     # Xanh lá đậm
+        "medium": (230, 140, 0),   # Cam
+        "low": (200, 50, 50),      # Đỏ
+        "gap": (180, 180, 180),    # Xám
+    }
 
     for idx, pair in enumerate(pairs):
         r = idx // cols
         c = idx % cols
-        x0 = c * cell_w + 2
-        y0 = r * cell_h + 2
+        x0 = c * cell_w + gap
+        y0 = r * cell_h + gap
 
         char_info = pair["char"]
         conf = pair.get("confidence", "")
         nom = pair.get("nom_char", "")
         syl = pair.get("syllable", "")
+
+        # Viền màu nền theo confidence
+        border_color = border_colors.get(conf, (180, 180, 180))
+        draw.rectangle(
+            [x0 - 2, y0 - 2, x0 + cell_size + 1, y0 + 2 * cell_size + text_h],
+            outline=border_color, width=2,
+        )
 
         # 1. Ảnh viết tay (crop cleaned hoặc gốc)
         crop_file = char_info.get("crop_file", "")
@@ -1259,8 +1294,12 @@ def save_review_image(aligned_page: list[dict], output_path: str,
             hw_img = cv2.imread(str(crop_path), cv2.IMREAD_GRAYSCALE)
             if hw_img is not None:
                 hw_img = cv2.resize(hw_img, (cell_size, cell_size))
-                hw_pil = Image.fromarray(hw_img)
+                hw_pil = Image.fromarray(hw_img).convert("RGB")
                 pil_img.paste(hw_pil, (x0, y0))
+
+        # Đường kẻ ngăn cách giữa viết tay và đánh máy
+        draw.line([(x0, y0 + cell_size), (x0 + cell_size - 1, y0 + cell_size)],
+                  fill=(200, 200, 200), width=1)
 
         # 2. Ảnh đánh máy (nếu có)
         if typed_dir and nom:
@@ -1269,30 +1308,30 @@ def save_review_image(aligned_page: list[dict], output_path: str,
                 tp_img = cv2.imread(str(typed_path), cv2.IMREAD_GRAYSCALE)
                 if tp_img is not None:
                     tp_img = cv2.resize(tp_img, (cell_size, cell_size))
-                    tp_pil = Image.fromarray(tp_img)
+                    tp_pil = Image.fromarray(tp_img).convert("RGB")
                     pil_img.paste(tp_pil, (x0, y0 + cell_size))
 
-        # 3. Nhãn text: confidence tag + QN reading
+        # 3. Nhãn text 3 dòng
         text_y = y0 + 2 * cell_size + 2
+
+        # Dòng 1: Chữ Nôm + confidence tag (màu)
         conf_tag = {"high": "H", "medium": "M", "low": "L"}.get(conf, "?")
-        label_text = f"{conf_tag}:{syl}" if syl else conf_tag
-        # Cắt ngắn nếu quá dài
-        if len(label_text) > 8:
-            label_text = label_text[:7] + "…"
-        draw.text((x0 + 2, text_y), label_text, fill=0, font=label_font)
-
-        # Dòng 2: Unicode codepoint (nhỏ hơn)
+        conf_text_color = border_colors.get(conf, (100, 100, 100))
+        line1 = f"{conf_tag} "
+        draw.text((x0 + 2, text_y), line1, fill=conf_text_color, font=label_font)
+        # Chữ Nôm Unicode bên cạnh tag
         if nom:
-            code_text = f"{ord(nom):04X}"
-            draw.text((x0 + 2, text_y + 13), code_text, fill=100, font=label_font)
+            draw.text((x0 + 18, text_y - 1), nom, fill=(0, 0, 0), font=nom_font)
 
-        # Viền màu theo confidence
-        color_map = {"high": 0, "medium": 160, "low": 200, "gap": 220}
-        border_val = color_map.get(conf, 200)
-        draw.rectangle(
-            [x0 - 1, y0 - 1, x0 + cell_size, y0 + 2 * cell_size + text_h - 2],
-            outline=border_val, width=1,
-        )
+        # Dòng 2: Quốc ngữ reading
+        if syl:
+            qn_text = syl if len(syl) <= 10 else syl[:9] + "…"
+            draw.text((x0 + 2, text_y + 15), qn_text, fill=(0, 0, 100), font=label_font)
+
+        # Dòng 3: Unicode codepoint
+        if nom:
+            code_text = f"U+{ord(nom):04X}"
+            draw.text((x0 + 2, text_y + 29), code_text, fill=(120, 120, 120), font=label_font)
 
     pil_img.save(output_path)
 

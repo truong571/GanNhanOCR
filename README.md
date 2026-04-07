@@ -2,285 +2,409 @@
 
 **Gán nhãn tự động cho kho ngữ liệu Hán Nôm viết tay từ bản dịch Quốc ngữ**
 
-Hệ thống xử lý sách Hán Nôm viết tay (dạng PDF) kết hợp với bản dịch Quốc ngữ, tự động gán nhãn từng ký tự Nôm: crop ảnh viết tay, chữ Nôm, mã Unicode, âm đọc Quốc ngữ, và độ tin cậy.
+Hệ thống xử lý sách Hán Nôm viết tay (PDF) kết hợp bản dịch Quốc ngữ, tự động gán nhãn Unicode cho từng ký tự Nôm với độ tin cậy phân tầng (high/medium/low).
 
 ---
 
-## Tổng quan quy trình
+## Tổng quan pipeline
 
 ```
-PDF sách Hán Nôm ──► Bước 1: prepare_data.py
-                         │  Trích xuất ảnh trang Nôm + OCR text Quốc ngữ
-                         ▼
-                     Bước 2: detect_characters.py
-                         │  Phát hiện cột + cắt từng ký tự Nôm
-                         ▼
-                     Bước 3: clean_crops.py
-                         │  Khử nhiễu ảnh ký tự (Sauvola binarization)
-                         ▼
-                     Bước 4-6: label_characters.py
-                         │  Alignment + Tra từ điển + Gán nhãn + Xuất dataset
-                         ▼
-                     Dataset (JSON + CSV + Excel + ảnh crop)
+PDF sách Hán Nôm
+│
+├─ Giai đoạn 1: prepare_data.py ─── Tách PDF + OCR text QN + Khử nhiễu ảnh
+│     PyMuPDF · Tesseract OCR · Background Normalization
+│
+├─ Giai đoạn 2: detect_characters.py ─── Phát hiện cột + Cắt ký tự
+│     Otsu · Morphological Line Detection · Vertical/Horizontal Projection
+│
+├─ Giai đoạn 3: clean_crops.py ─── Làm sạch ảnh ký tự
+│     Sauvola Binarization · Connected Component · Stroke Normalization
+│
+├─ Giai đoạn 4: label_characters.py ─── Gán nhãn tự động
+│     Levenshtein DP · Dictionary Lookup · OCR API · Self-Consistency
+│
+├─ Giai đoạn 5: (tích hợp trong label_characters.py) ─── Xuất dataset
+│     JSON · CSV · XlsxWriter · Review Images
+│
+└─ Nâng cao (embedding/) ─── Deep Metric Learning
+      ResNet50 + SupConLoss · ViT + ConMIM · FAISS · Iterative Refinement
 ```
 
 ---
 
 ## Cài đặt
 
-### Yêu cầu hệ thống
+### Yêu cầu
 
 - Python 3.10+
-- Tesseract OCR (cài sẵn, dùng cho bước OCR text Quốc ngữ)
+- Tesseract OCR (`brew install tesseract` hoặc `apt install tesseract-ocr`)
 
-### Cài đặt thư viện
+### Thư viện Python
 
 ```bash
-pip install PyMuPDF opencv-python numpy scipy requests urllib3 pytesseract Pillow xlsxwriter
+# Core pipeline
+pip install PyMuPDF opencv-python numpy scipy pytesseract Pillow requests
+
+# Xuất Excel (tuỳ chọn)
+pip install xlsxwriter
+
+# Deep embedding (tuỳ chọn)
+pip install torch torchvision faiss-cpu
 ```
 
-### Cấu trúc thư mục
+---
+
+## Cấu trúc dự án
 
 ```
 GanNhanOCR/
-├── prepare_data.py          # Bước 1: Trích xuất PDF
-├── detect_characters.py     # Bước 2: Phát hiện ký tự
-├── clean_crops.py           # Bước 3: Khử nhiễu ảnh
-├── label_characters.py      # Bước 4-6: Gán nhãn + xuất dataset
-├── data/                    # Dữ liệu PDF đầu vào
-│   ├── CacThanhTruyen4.pdf
-│   └── SachThanhTruyen4.pdf
-├── Alignment/Code/dict/     # Từ điển
-│   ├── QuocNgu_SinoNom_Merged.csv      # Từ điển QN→Nôm chính (104,164 cặp)
-│   ├── QuocNgu_SinoNom_TongHop3.csv    # Từ điển gốc (99,859 cặp)
-│   ├── SinoNom_Similar_Dic_v2.csv      # Từ điển ký tự tương tự
-│   └── QuocNgu_SinoNom_Dic.xlsx        # Dic bổ sung (4,345 cặp mới)
+├── prepare_data.py            # GĐ1: Tách PDF → ảnh Nôm + text QN
+├── detect_characters.py       # GĐ2: Detect cột + cắt ký tự
+├── clean_crops.py             # GĐ3: Làm sạch ảnh (Sauvola)
+├── label_characters.py        # GĐ4-5: Gán nhãn + xuất dataset
+├── export_dataset.py          # Tổng hợp nhiều bộ sách → dataset chuẩn
+│
+├── embedding/                 # Deep Metric Learning (nâng cao)
+│   ├── prepare_data.py        #   Chuẩn bị dữ liệu training
+│   ├── train_embedding.py     #   ResNet50 + SupConLoss
+│   ├── train_conmim.py        #   ViT + ConMIM pre-training
+│   ├── embed_ranker.py        #   FAISS ranking interface
+│   └── iterative_refine.py    #   Vòng lặp label → train → re-label
+│
+├── Alignment/Code/dict/       # Từ điển QN → Nôm
+│   ├── QuocNgu_SinoNom_Merged.csv   # 104,164 cặp (chính)
+│   └── SinoNom_Similar_Dic_v2.csv   # Ký tự tương tự
+│
 ├── FontDiffusion/
-│   ├── fonts/NomNaTong-Regular.ttf     # Font Nôm để render ảnh đánh máy
-│   └── scripts/clean_image_enhance.py  # CharacterImageCleaner
-└── OCR/                     # Tham khảo code OCR API
+│   └── fonts/NomNaTong-Regular.ttf   # Font render ảnh đánh máy
+│
+└── data/                      # PDF đầu vào
+    ├── CacThanhTruyen4.pdf
+    └── SachThanhTruyen4.pdf
 ```
+
+---
+
+## Công nghệ theo giai đoạn
+
+| Giai đoạn | Công nghệ | Lĩnh vực |
+|-----------|-----------|----------|
+| Tách PDF | PyMuPDF + Tesseract OCR | Document Processing |
+| Khử nhiễu ảnh | Background Normalization (Morph. Closing 51×51) | Image Processing |
+| Binarize ảnh | Otsu thresholding + Close/Open | Image Processing |
+| Detect vùng text | Morphological line detection | Classical CV |
+| Detect cột | Vertical Projection + find_peaks | Classical CV |
+| Detect ký tự | Horizontal Projection + merge/split | Classical CV |
+| Làm sạch crop | Sauvola binarization (R=128) + morphology | Image Processing |
+| Alignment | Levenshtein DP (variable deletion cost) | Sequence Alignment |
+| Tra từ điển | Dictionary lookup + heuristic ranking | NLP / Lexicography |
+| OCR bổ trợ | REST API (HCMUS server) | Cloud OCR |
+| Self-Consistency | Statistical label propagation | Semi-supervised Learning |
+| Deep ranking | ResNet50/ViT + SupConLoss + FAISS | Deep Metric Learning |
 
 ---
 
 ## Hướng dẫn chạy
 
-### Bước 1: Trích xuất dữ liệu từ PDF (`prepare_data.py`)
-
-Tách trang ảnh Nôm (trang lẻ) và text Quốc ngữ (trang chẵn) từ PDF.
+### Giai đoạn 1: Tách dữ liệu từ PDF
 
 ```bash
-# Cơ bản
+# CacThanhTruyen (text nhúng sẵn trong PDF)
 python prepare_data.py data/CacThanhTruyen4.pdf
 
-# Tuỳ chỉnh thư mục output và DPI
-python prepare_data.py data/SachThanhTruyen4.pdf --output-dir data/prepared/STT4 --dpi 400
+# SachThanhTruyen (cần re-OCR bằng Tesseract)
+python prepare_data.py data/SachThanhTruyen4.pdf --reocr
 
-# Re-OCR bằng Tesseract (cần cho SachThanhTruyen - text không có sẵn trong PDF)
-python prepare_data.py data/SachThanhTruyen4.pdf --reocr --ocr-lang vie
+# Với khử nhiễu ảnh Nôm (lưu song song bản denoised)
+python prepare_data.py data/SachThanhTruyen4.pdf --reocr --denoise
 
-# Xử lý nhiều file cùng lúc
-python prepare_data.py data/CacThanhTruyen4.pdf data/SachThanhTruyen4.pdf
+# Nhiều file + tuỳ chỉnh DPI
+python prepare_data.py data/*.pdf --dpi 400
 ```
-
-**Tham số:**
 
 | Tham số | Mặc định | Mô tả |
 |---------|----------|-------|
-| `pdf_files` | (bắt buộc) | Đường dẫn file PDF |
+| `pdf_files` | (bắt buộc) | File PDF đầu vào |
 | `--output-dir` | `data/prepared/<tên_pdf>/` | Thư mục output |
-| `--dpi` | `300` | Độ phân giải ảnh trích xuất |
+| `--dpi` | `300` | Độ phân giải ảnh |
 | `--reocr` | `False` | Re-OCR trang text bằng Tesseract |
+| `--denoise` | `False` | Lưu ảnh Nôm đã khử nhiễu vào `pages_denoised/` |
 | `--ocr-lang` | `vie` | Ngôn ngữ Tesseract |
-| `--quiet` | `False` | Không hiển thị chi tiết |
+
+**Pipeline khử nhiễu (khi `--reocr` hoặc `--denoise`):**
+```
+Ảnh gốc → GaussianBlur(3,3) → Background Estimation (Morph. Closing 51×51)
+→ Background Removal (pixel ÷ background × 255) → Contrast Stretching
+→ (OCR: + Otsu → Close 2×2 → Open 3×3)
+```
 
 **Output:**
-
 ```
 data/prepared/CacThanhTruyen4/
-├── images/page_0001.png, page_0002.png, ...      # Ảnh trang Nôm
-├── transcriptions/page_0001.txt, ...              # Text QN tương ứng
-├── text_pages/page_0001.png, ...                  # Ảnh trang QN gốc
-└── manifest.json                                  # Metadata (số trang, DPI, ...)
+├── pages/page_0012.png              # Ảnh trang Nôm (gốc)
+├── pages_denoised/page_0012.png     # (--denoise) Ảnh đã khử nhiễu
+├── transcriptions/page_0012.txt     # Text QN (1 dòng = 1 cột)
+├── transcriptions/page_0012.json    # Chi tiết âm tiết
+└── manifest.json                    # Metadata
 ```
 
 ---
 
-### Bước 2: Phát hiện và cắt ký tự (`detect_characters.py`)
-
-Phát hiện cột (vertical projection + find_peaks) và cắt từng ký tự Nôm (horizontal projection).
+### Giai đoạn 2: Phát hiện và cắt ký tự
 
 ```bash
-# Cơ bản
 python detect_characters.py data/prepared/CacThanhTruyen4
-
-# Lưu ảnh debug với bounding box
-python detect_characters.py data/prepared/CacThanhTruyen4 --debug
-
-# Chỉ xử lý 1 trang
-python detect_characters.py data/prepared/CacThanhTruyen4 --page 2
+python detect_characters.py data/prepared/CacThanhTruyen4 --debug    # Ảnh debug
+python detect_characters.py data/prepared/CacThanhTruyen4 --page 12  # 1 trang
 ```
-
-**Tham số:**
 
 | Tham số | Mặc định | Mô tả |
 |---------|----------|-------|
-| `prepared_dir` | (bắt buộc) | Thư mục từ bước 1 |
-| `--output-dir` | `<prepared_dir>/detected/` | Thư mục output |
-| `--debug` | `False` | Lưu ảnh debug với bbox |
+| `prepared_dir` | (bắt buộc) | Thư mục từ GĐ1 |
+| `--debug` | `False` | Lưu ảnh debug với bounding box |
 | `--page` | Tất cả | Chỉ xử lý 1 trang |
-| `--quiet` | `False` | Không hiển thị chi tiết |
+
+**Pipeline (Bước 2.1 → 2.4):**
+```
+Ảnh gốc (hoặc denoised nếu có)
+│
+├─ 2.1 Binarization:
+│   GaussianBlur(3,3) → Morph. Closing(51×51) → Divide → Otsu
+│   → Close(2×2) → Open(3×3) → ảnh nhị phân (1=mực, 0=nền)
+│
+├─ 2.2 Text Box Detection:
+│   Morph. Open (w/3×1) → đường ngang
+│   Morph. Open (1×h/3) → đường dọc
+│   → 4 đường → hình chữ nhật vùng text
+│
+├─ 2.3 Column Detection:
+│   Vertical Projection → Smoothing → find_peaks
+│   → N cột (auto-detect từ transcription hoặc projection)
+│   Thứ tự: phải → trái (cột 1 ở bên phải)
+│
+└─ 2.4 Character Segmentation:
+    Horizontal Projection → find_peaks → ranh giới ký tự
+    Merge: box < 40% expected height → gộp với box liền kề
+    Split: box > 160% expected height → chia bằng projection valley
+    Adaptive retry: nếu lệch > 15% expected count → thử lại
+```
 
 **Output:**
-
 ```
 data/prepared/CacThanhTruyen4/detected/
-├── crops/page_0001/char_0001.png, ...             # Ảnh crop từng ký tự
-├── page_0001_detection.json                       # Bbox + metadata
-├── debug/page_0001_debug.png                      # (--debug) Ảnh với bbox
-└── detection_summary.json                         # Thống kê
+├── crops/page_0012/col01_char000.png    # Ảnh crop từng ký tự
+├── page_0012_detection.json             # Bbox + metadata
+├── debug/page_0012_debug.png            # (--debug) Ảnh với bbox
+└── summary.json                         # Thống kê
 ```
-
-**Thuật toán phát hiện:**
-1. Adaptive thresholding → ảnh nhị phân
-2. Vertical projection profile → tìm ranh giới cột (find_peaks với constraint 9 cột)
-3. Horizontal projection trong từng cột → tìm ranh giới ký tự
-4. Merge box nhỏ (nét bút bị tách) + Split box lớn (2 ký tự dính)
 
 ---
 
-### Bước 3: Khử nhiễu ảnh ký tự (`clean_crops.py`)
-
-Áp dụng Sauvola binarization — phương pháp tối ưu cho tài liệu lịch sử viết tay có nền không đều.
+### Giai đoạn 3: Làm sạch ảnh ký tự
 
 ```bash
-# Cơ bản (Sauvola, 64x64)
 python clean_crops.py data/prepared/CacThanhTruyen4/detected
-
-# Tuỳ chỉnh kích thước và phương pháp
-python clean_crops.py data/prepared/CacThanhTruyen4/detected --size 128 --method adaptive
-
-# Xem ảnh so sánh before/after
-python clean_crops.py data/prepared/CacThanhTruyen4/detected --verify --verify-samples 20
-
-# Chỉ 1 trang
-python clean_crops.py data/prepared/CacThanhTruyen4/detected --page 5
+python clean_crops.py data/prepared/CacThanhTruyen4/detected --verify   # So sánh before/after
+python clean_crops.py data/prepared/CacThanhTruyen4/detected --page 12
 ```
-
-**Tham số:**
 
 | Tham số | Mặc định | Mô tả |
 |---------|----------|-------|
-| `detected_dir` | (bắt buộc) | Thư mục detected/ từ bước 2 |
-| `--output-name` | `crops_cleaned` | Tên thư mục output |
-| `--size` | `64` | Kích thước output vuông (pixel) |
-| `--method` | `sauvola` | Phương pháp binarization: `auto`, `otsu`, `adaptive`, `sauvola` |
-| `--denoise` | `3` | Strength khử nhiễu |
+| `detected_dir` | (bắt buộc) | Thư mục detected/ từ GĐ2 |
+| `--size` | `64` | Kích thước output vuông |
+| `--sauvola-k` | `0.2` | Sauvola sensitivity |
+| `--sauvola-window` | `25` | Sauvola window size |
+| `--denoise` | `3` | Median blur kernel size |
 | `--min-stroke` | `2` | Độ dày nét tối thiểu |
-| `--padding` | `5` | Padding quanh ký tự |
-| `--page` | Tất cả | Chỉ xử lý 1 trang |
 | `--verify` | `False` | Tạo ảnh so sánh before/after |
-| `--verify-samples` | `10` | Số trang tạo ảnh verify |
+
+**Pipeline (self-contained, không phụ thuộc FontDiffusion):**
+```
+Ảnh crop thô
+│
+├─ Median Blur: khử nhiễu muối tiêu
+│
+├─ Sauvola Binarization:
+│   T(x,y) = mean(x,y) × [1 + k × (std(x,y)/R - 1)]
+│   k=0.2, R=128 (cố định theo paper gốc)
+│   → Ngưỡng cục bộ, xử lý tốt nền sáng tối không đều
+│
+├─ Morphological Close(2×2) → Open(3×3)
+│   Close: nối nét bị đứt  ·  Open: xóa chấm nhiễu
+│
+├─ Connected Component: xóa vùng < 0.5% diện tích
+│
+├─ Stroke Normalization: distance transform → dilate/erode
+│
+└─ Center + Resize → 64×64 (nét đen, nền trắng)
+```
 
 **Output:**
-
 ```
 data/prepared/CacThanhTruyen4/detected/
-├── crops_cleaned/page_0001/char_0001.png, ...     # Ảnh cleaned 64x64
-├── verify/page_0001_verify.png                    # (--verify) So sánh before/after
-└── crops_cleaned/clean_summary.json               # Thống kê
+├── crops_cleaned/page_0012/col01_char000.png   # Ảnh cleaned 64×64
+├── crops_cleaned/clean_summary.json            # Thống kê
+└── verify/page_0012_verify.png                 # (--verify) Before/after
 ```
-
-**Pipeline khử nhiễu:**
-1. Đọc ảnh crop grayscale
-2. Sauvola binarization (xử lý uneven illumination)
-3. Morphological cleanup
-4. Connected component noise removal
-5. Stroke thickness normalization
-6. Center + resize về kích thước chuẩn
-7. Output: nét đen trên nền trắng
 
 ---
 
-### Bước 4-6: Gán nhãn + Xuất dataset (`label_characters.py`)
-
-Gán nhãn tự động bằng Levenshtein alignment + tra từ điển + OCR API (tuỳ chọn).
+### Giai đoạn 4-5: Gán nhãn + Xuất dataset
 
 ```bash
-# Cơ bản
+# Cơ bản (Self-Consistency luôn chạy)
 python label_characters.py data/prepared/CacThanhTruyen4
 
-# Với OCR API để cải thiện accuracy (cần kết nối mạng)
+# Với OCR API (cần mạng)
 python label_characters.py data/prepared/CacThanhTruyen4 --ocr
 
-# Tạo ảnh review (so sánh viết tay | đánh máy)
-python label_characters.py data/prepared/CacThanhTruyen4 --review
+# Với deep embedding ranking
+python label_characters.py data/prepared/CacThanhTruyen4 \
+    --embedding embedding/checkpoints/best.pt \
+    --gallery embedding/data/gallery
 
-# Xuất file Excel
-python label_characters.py data/prepared/CacThanhTruyen4 --excel
-
-# Đầy đủ tất cả tuỳ chọn
-python label_characters.py data/prepared/CacThanhTruyen4 --ocr --review --excel
-
-# Chỉ 1 trang
-python label_characters.py data/prepared/CacThanhTruyen4 --page 2 --review
+# Đầy đủ
+python label_characters.py data/prepared/CacThanhTruyen4 \
+    --ocr --review --excel
 ```
-
-**Tham số:**
 
 | Tham số | Mặc định | Mô tả |
 |---------|----------|-------|
 | `prepared_dir` | (bắt buộc) | Thư mục prepared data |
 | `--font` | `FontDiffusion/fonts/NomNaTong-Regular.ttf` | Font Nôm TTF |
+| `--ocr` | `False` | Dùng API OCR HCMUS |
+| `--embedding` | `None` | Checkpoint deep embedding |
+| `--gallery` | `None` | Gallery directory |
+| `--review` | `False` | Tạo ảnh review [viết tay \| đánh máy \| nhãn] |
+| `--excel` | `False` | Xuất file Excel có màu |
 | `--page` | Tất cả | Chỉ xử lý 1 trang |
-| `--review` | `False` | Tạo ảnh review (viết tay \| đánh máy) |
-| `--excel` | `False` | Xuất file Excel với kết quả có màu |
-| `--ocr` | `False` | Dùng API OCR tools.clc.hcmus.edu.vn |
 
-**Output:**
+**Bước 4.1 — Chuẩn hóa text QN:**
+```
+"1. trời đất sinh ra Đo-minh-gô1 ..."
+  → Tách tên riêng: "Dominhgô" → "do minh cô" (bảng SAINT_NAMES)
+  → Xóa chú thích, dấu câu, artifact
+  → Tách âm tiết: ["trời", "đất", "sinh", "ra", "do", "minh", "cô"]
+```
 
+**Bước 4.2 — Levenshtein Alignment (DP):**
+```
+N ảnh ký tự ↔ M âm tiết QN (N có thể ≠ M)
+Chi phí deletion theo kích thước:
+  < 30% median height → cost 0.3 (nhiễu)
+  < 50% median height → cost 0.6 (nhỏ)
+  ≥ 50% median height → cost 1.2 (ký tự thật)
+Insertion cost = 1.0
+```
+
+**Bước 4.3 — Tra từ điển + Xếp hạng:**
+```
+"trời" → tra từ điển (104,164 cặp) → [𡗶, 𠅜, 天, ...]
+
+1 ứng viên  → gán luôn                → confidence = "high"
+N ứng viên  → xếp hạng → chọn top-1  → confidence = "medium"
+0 ứng viên  → không gán               → confidence = "low"
+
+Xếp hạng 3 cấp (tùy tài nguyên có sẵn):
+  Deep embedding:  0.5 × embed_sim + 0.3 × specificity + 0.2 × cjk_block
+  Classical visual: 0.4 × IoU/proj   + 0.3 × specificity + 0.3 × cjk_block
+  Fallback:                            0.6 × specificity + 0.4 × cjk_block
+```
+
+**Bước 4.4 — OCR API (tuỳ chọn, `--ocr`):**
+```
+Ảnh trang Nôm → Upload HCMUS → OCR → boxes → columns
+So khớp bbox y-overlap: nếu OCR char ∈ candidates → nâng lên "high"
+Cache: labeled/ocr_cache/ (tránh gọi lại API)
+```
+
+**Bước 4.5 — Self-Consistency (LUÔN chạy):**
+```
+Thu thập TẤT CẢ cặp (QN, Nôm) có confidence = "high"
+  (bao gồm: 1-candidate dict lookup + OCR-confirmed)
+Đếm: "trời" → {𡗶: 8 lần}
+Nếu 1 ký tự xuất hiện ≥2 lần → propagate cho tất cả medium cùng từ
+→ medium → high
+```
+
+**Output (Giai đoạn 5):**
 ```
 data/prepared/CacThanhTruyen4/labeled/
-├── dataset.json             # Toàn bộ nhãn
-├── labels.csv               # Dataset chuẩn nghiên cứu
-├── summary.json             # Thống kê accuracy
-├── typed_nom/               # Ảnh Nôm đánh máy render từ font
-│   └── page_0001/char_0001.png, ...
-├── review/                  # (--review) Ảnh debug
-│   └── page_0001_review.png
-└── labels_CacThanhTruyen4.xlsx  # (--excel) File Excel
+├── dataset.json              # Đầy đủ metadata
+├── labels.csv                # Format chuẩn nghiên cứu (UTF-8 BOM)
+├── summary.json              # Thống kê confidence
+├── typed_nom/000000.png      # Ảnh Nôm render từ font (pygame/PIL)
+├── review/page_0012.png      # (--review) [viết tay | đánh máy | nhãn]
+├── ocr_cache/                # (--ocr) Cache kết quả OCR
+└── *.xlsx                    # (--excel) Excel có màu
 ```
 
-**Chi tiết từng bước con:**
+---
 
-**Bước 4 — Levenshtein Alignment:**
-- Đối sánh N ký tự detected ↔ M âm tiết Quốc ngữ
-- Chi phí xoá ký tự dựa trên kích thước ảnh (ảnh nhỏ → chi phí thấp → ưu tiên xoá nhiễu)
-- Kết quả: mỗi ký tự được gán 1 âm đọc QN hoặc đánh dấu `[GAP]`
+### Tổng hợp nhiều bộ sách (`export_dataset.py`)
 
-**Bước 5 — Tra từ điển + Gán Unicode (có xếp hạng ứng viên):**
-- Từ điển chính: `QuocNgu_SinoNom_Merged.csv` (104,164 cặp QN→Nôm, 7,521 từ QN)
-- Nếu 1 âm QN có 1 ứng viên → gán luôn (`high`)
-- Nếu nhiều ứng viên → **xếp hạng bằng combined score** rồi chọn tốt nhất (`medium`):
-  - **Visual similarity (60%)**: so ảnh crop viết tay vs ảnh render font (IoU + projection profile correlation)
-  - **Corpus frequency (40%)**: đếm tần suất ký tự xuất hiện trong corpus transcription
-  - Cải thiện accuracy +15.3% so với lấy mặc định ứng viên đầu tiên (20.9% → 36.2%)
-- Nếu có OCR (`--ocr`): gọi API tools.clc.hcmus.edu.vn, so khớp bbox overlap, ưu tiên kết quả OCR → nâng lên `high`
-- Font render bằng **pygame.freetype** (từ FontDiffusion) cho chất lượng cao hơn PIL
+```bash
+python export_dataset.py data/prepared/*/labeled \
+    --output dataset/ --split 0.8 0.1 0.1
 
-**Bước 5.5 — Render ảnh đánh máy:**
-- Render chữ Nôm Unicode bằng font NomNaTong-Regular.ttf
-- Dùng cho visual review (so sánh viết tay vs đánh máy)
+# Chỉ high confidence
+python export_dataset.py data/prepared/*/labeled \
+    --output dataset/ --min-confidence high
+```
 
-**Bước 7 — Self-Consistency (khi dùng `--ocr`):**
-- Sau khi xử lý tất cả trang, thu thập các cặp (QN → Nôm) đã được OCR xác nhận
-- Nếu cùng từ QN được OCR xác nhận ≥2 lần cho cùng ký tự Nôm → dùng ký tự đó cho tất cả medium còn lại
-- Hiệu quả: High tăng từ 14.7% → **64.8%** (+41,757 ký tự trên toàn bộ 6 bộ sách)
+**Output:**
+```
+dataset/
+├── labels.csv       # Tổng hợp tất cả
+├── train.csv        # 80% (stratified by source)
+├── val.csv          # 10%
+├── test.csv         # 10%
+├── class_map.json   # class_id → (char, unicode)
+└── metadata.json    # Thống kê
+```
 
-**Bước 8 — Xuất dataset:**
-- `dataset.json`: đầy đủ tất cả trường (nom_char, nom_unicode, reading, confidence, ranking_score, bbox, candidates, ...)
-- `labels.csv`: format chuẩn nghiên cứu — `image, nom_char, label, reading, confidence, bbox, page, source`
-- Excel (tuỳ chọn): có màu theo confidence (xanh=high, vàng=medium, đỏ=low)
+---
+
+## Deep Embedding (nâng cao)
+
+### Chuẩn bị dữ liệu
+
+```bash
+python embedding/prepare_data.py \
+    --kaggle-dataset path/to/New-SinoNom_Dataset \
+    --font FontDiffusion/fonts/NomNaTong-Regular.ttf \
+    --output embedding/data
+```
+
+### Training ResNet50 + SupConLoss
+
+```bash
+python embedding/train_embedding.py \
+    --manifest embedding/data/manifest.csv \
+    --output-dir embedding/checkpoints \
+    --epochs 50 --device cuda
+```
+
+### ConMIM Pre-training (ViT-Small)
+
+```bash
+# Phase 1: Self-supervised pre-training
+python embedding/train_conmim.py \
+    --manifest embedding/data/manifest.csv \
+    --output-dir embedding/checkpoints/conmim \
+    --pretrain-epochs 100 --finetune-epochs 50
+```
+
+### Iterative Refinement
+
+```bash
+python embedding/iterative_refine.py \
+    --prepared-dir data/prepared/SachThanhTruyen4 \
+    --manifest embedding/data/manifest.csv \
+    --checkpoint embedding/checkpoints/best.pt \
+    --gallery embedding/data/gallery \
+    --max-rounds 3
+```
 
 ---
 
@@ -288,125 +412,60 @@ data/prepared/CacThanhTruyen4/labeled/
 
 | Mức | Ý nghĩa | Điều kiện |
 |-----|---------|-----------|
-| `high` | Tin cậy cao | Chỉ 1 ứng viên, hoặc OCR xác nhận, hoặc Self-Consistency |
-| `medium` | Cần review | Nhiều ứng viên, chưa được OCR/Consistency xác nhận |
+| `high` | Tin cậy cao | 1 ứng viên duy nhất / OCR xác nhận / Self-Consistency (≥2 lần) |
+| `medium` | Cần review | Nhiều ứng viên, chọn bằng ranking |
 | `low` | Không tìm thấy | Từ QN không có trong từ điển |
-| `gap` | Insertion/Deletion | Ký tự thừa hoặc thiếu từ alignment |
-
----
-
-## OCR API (tuỳ chọn)
-
-Khi dùng flag `--ocr`, hệ thống gọi API nhận dạng chữ Nôm tại `tools.clc.hcmus.edu.vn`:
-
-1. Upload ảnh trang Nôm → nhận bounding boxes + ký tự nhận dạng
-2. Tổ chức kết quả theo cột (sắp xếp x phải→trái)
-3. So khớp bbox overlap với ký tự detected:
-   - **Cột**: tìm cột OCR có x-center gần nhất (threshold 100px)
-   - **Ký tự**: trong cột, tìm box OCR có y-center gần nhất (threshold max(det_h, 50)px)
-4. Nếu khớp → dùng ký tự OCR, confidence = `high`
-
-**Cache**: Kết quả OCR được cache theo hash ảnh tại `<detected_dir>/ocr_cache/`, tránh gọi lại API cho ảnh đã xử lý.
+| `gap` | Thừa/thiếu | Insertion hoặc Deletion từ alignment |
 
 ---
 
 ## Chạy toàn bộ pipeline
 
 ```bash
-# === CacThanhTruyen4 ===
-python prepare_data.py data/CacThanhTruyen4.pdf
+# === CacThanhTruyen4 (text nhúng PDF) ===
+python prepare_data.py data/CacThanhTruyen4.pdf --denoise
 python detect_characters.py data/prepared/CacThanhTruyen4
 python clean_crops.py data/prepared/CacThanhTruyen4/detected
 python label_characters.py data/prepared/CacThanhTruyen4 --ocr --review --excel
 
-# === SachThanhTruyen4 (cần --reocr vì PDF không có text layer) ===
-python prepare_data.py data/SachThanhTruyen4.pdf --reocr
+# === SachThanhTruyen4 (cần Tesseract re-OCR) ===
+python prepare_data.py data/SachThanhTruyen4.pdf --reocr --denoise
 python detect_characters.py data/prepared/SachThanhTruyen4
 python clean_crops.py data/prepared/SachThanhTruyen4/detected
 python label_characters.py data/prepared/SachThanhTruyen4 --ocr --review --excel
+
+# === Tổng hợp dataset ===
+python export_dataset.py data/prepared/*/labeled --output dataset/
 ```
 
 ---
 
-## Kết quả đạt được
+## Format dataset
 
-Trên toàn bộ 6 bộ dữ liệu (với `--ocr`):
-
-| Bộ dữ liệu | Trang | Detected | Matched | High | Medium | Low | Gap |
-|-------------|-------|----------|---------|------|--------|-----|-----|
-| CacThanhTruyen2 | 5 | 866 | 864 | 38.9% | 61.0% | 0.1% | 10.3% |
-| CacThanhTruyen4 | 4 | 756 | 753 | 49.1% | 50.2% | 0.7% | 2.0% |
-| CacThanhTruyen11 | 4 | 767 | 767 | 49.2% | 50.8% | 0.0% | 0.5% |
-| SachThanhTruyen2 | 160 | 28,454 | 27,973 | 64.6% | 34.0% | 1.3% | 4.6% |
-| SachThanhTruyen4 | 145 | 27,441 | 26,471 | 67.5% | 31.7% | 0.8% | 8.6% |
-| SachThanhTruyen11 | 143 | 27,160 | 26,646 | 63.9% | 35.3% | 0.8% | 6.4% |
-| **TỔNG** | **461** | **85,444** | **83,474** | **64.8%** | **34.3%** | **0.9%** | **6.5%** |
-
-**Chuỗi cải tiến:**
-
-| Giai đoạn | High confidence |
-|-----------|-----------------|
-| Ban đầu (lấy dict[0]) | ~0% |
-| + Ranking (visual 60% + frequency 40%) | ~0% (thay đổi ứng viên, không đổi confidence) |
-| + OCR API bbox matching | 14.7% (+12,289 ký tự) |
-| + **Self-Consistency** | **64.8%** (+41,757 ký tự) |
-
-**Lưu ý:**
-- **Self-Consistency** là cải tiến lớn nhất: dùng kết quả OCR đã xác nhận để nâng medium→high cho cùng từ QN
-- SachThanhTruyen hưởng lợi nhiều nhất (140-160 trang → nhiều lần lặp lại cùng từ)
-- `gap` ở SachThanhTruyen cao hơn do Tesseract OCR text QN kém chính xác hơn text layer có sẵn
-
----
-
-## Từ điển
-
-### QuocNgu_SinoNom_Merged.csv
-- **104,164 cặp** (QN → Nôm)
-- **7,521 từ QN** khác nhau, **41,501 ký tự Nôm** khác nhau
-- Được merge từ TongHop3.csv (99,859 cặp) + Dic.xlsx (4,345 cặp mới)
-- Format: `quoc_ngu,sino_nom` (UTF-8, không header)
-
-### SinoNom_Similar_Dic_v2.csv
-- Từ điển ký tự Nôm tương tự (dùng cho so sánh hình dạng)
-
----
-
-## Format dataset đầu ra
-
-### labels.csv (format chuẩn nghiên cứu)
+### labels.csv
 
 ```csv
 image,nom_char,label,reading,confidence,bbox,page,source
-crops_cleaned/page_0001/char_0001.png,經,U+7D93,kinh,high,"[x1,y1,x2,y2]",1,CacThanhTruyen4
+crops_cleaned/page_0012/col01_char000.png,經,U+7D93,kinh,high,"100,200,150,260",12,CacThanhTruyen4
 ```
 
 | Trường | Mô tả |
 |--------|-------|
-| `image` | Đường dẫn ảnh crop (tương đối từ thư mục labeled/) |
-| `nom_char` | Chữ Nôm (ký tự Unicode gốc) |
-| `label` | Mã Unicode dạng `U+XXXX` |
+| `image` | Đường dẫn ảnh crop (tương đối) |
+| `nom_char` | Ký tự Nôm (Unicode gốc) |
+| `label` | Mã Unicode `U+XXXX` |
 | `reading` | Âm đọc Quốc ngữ |
-| `confidence` | Mức độ tin cậy: `high`, `medium`, `low`, `gap` |
-| `bbox` | Bounding box `[x1, y1, x2, y2]` |
-| `page` | Số trang |
+| `confidence` | `high` / `medium` / `low` |
+| `bbox` | Bounding box `x1,y1,x2,y2` |
+| `page` | Số trang sách |
 | `source` | Tên bộ sách |
 
-### dataset.json
+---
 
-Chứa đầy đủ thông tin hơn labels.csv, bao gồm: danh sách tất cả ứng viên (`candidates`), thông tin alignment, OCR result, v.v.
+## Tài liệu tham khảo
 
-https://huggingface.co/dzungpham/font-architect
-
-https://huggingface.co/datasets/dzungpham/FontTransfer
-
-https://kaggle.com/datasets/969f19f11b9520b762792eb5be002ab15583e83c98986c47fe0ea21f36e044b1
-
-https://kaggle.com/datasets/5c09041f61f1bd528a0281281a55ed4ddb6b4aa1c83bdb0c0e21a1553339ad32
-
-https://www.kaggle.com/code/hongduyhng/sinonom-img-to-img-algo-2
-
-https://www.kaggle.com/code/hongduyhng/sinonom-img-to-img-similarity-retrieval
-
-https://github.com/TencentARC/ConMIM?tab=readme-ov-file
-
-https://www.kaggle.com/code/hongduyhng/sinonom-img-to-img-version-3
+- [New-SinoNom Dataset (Kaggle)](https://www.kaggle.com/datasets/5c09041f61f1bd528a0281281a55ed4ddb6b4aa1c83bdb0c0e21a1553339ad32)
+- [SinoNom Similarity Retrieval (Kaggle)](https://www.kaggle.com/code/hongduyhng/sinonom-img-to-img-similarity-retrieval)
+- [ConMIM - Masked Image Modeling (GitHub)](https://github.com/TencentARC/ConMIM)
+- [FontDiffuser / Font Architect (HuggingFace)](https://huggingface.co/dzungpham/font-architect)
+- [FontTransfer Dataset (HuggingFace)](https://huggingface.co/datasets/dzungpham/FontTransfer)

@@ -1,0 +1,6 @@
+#!/bin/bash
+
+python3 inference.py --model resnet34 --output_embeddings archived/cached/embeddings_resnet34_256_parts_2.pt --output_similarity archived/cached/cosine_similarity_resnet34_256_parts_2.pt --output_xlsx archived/results/SinoNom_similar_Dic_ver2_resnet34_256_parts_2.xlsx --device cuda:1
+python3 inference.py --model resnet50 --output_embeddings archived/cached/embeddings_resnet50_256_parts_2.pt --output_similarity archived/cached/cosine_similarity_resnet50_256_parts_2.pt --output_xlsx archived/results/SinoNom_similar_Dic_ver2_resnet50_256_parts_2.xlsx --device cuda:1
+python3 inference.py --model resnet101 --output_embeddings archived/cached/embeddings_resnet101_256_parts_2.pt --output_similarity archived/cached/cosine_similarity_resnet101_256_parts_2.pt --output_xlsx archived/results/SinoNom_similar_Dic_ver2_resnet101_256_parts_2.xlsx --device cuda:1
+python3 inference.py --model resnet152 --output_embeddings archived/cached/embeddings_resnet152_256_parts_2.pt --output_similarity archived/cached/cosine_similarity_resnet152_256_parts_2.pt --output_xlsx archived/results/SinoNom_similar_Dic_ver2_resnet152_256_parts_2.xlsx --device cuda:1

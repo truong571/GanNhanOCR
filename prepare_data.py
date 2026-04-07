@@ -3,8 +3,8 @@
 prepare_data.py - Trích xuất và tổ chức dữ liệu Hán Nôm từ PDF
 
 Xử lý PDF sách Nôm có cấu trúc xen kẽ:
-  - Trang chẵn (PDF): Ảnh chữ Nôm viết tay (9 cột dọc)
-  - Trang lẻ (PDF): Bản dịch Quốc ngữ (9 dòng đánh số)
+  - Trang chẵn (PDF): Ảnh chữ Nôm viết tay (N cột dọc, auto-detect)
+  - Trang lẻ (PDF): Bản dịch Quốc ngữ (N dòng đánh số, tương ứng N cột)
 
 Output:
   output_dir/
@@ -113,16 +113,12 @@ def ocr_text_page(page: fitz.Page, dpi: int = 300, lang: str = "vie") -> str:
     img_bytes = pix.tobytes("png")
     img = Image.open(io.BytesIO(img_bytes))
 
-    # Tiền xử lý: chuyển grayscale + tăng contrast cho OCR tốt hơn
-    img_gray = img.convert("L")
-    # Adaptive threshold đơn giản: tăng contrast
+    # Tiền xử lý nâng cao: background removal + binarization
     import numpy as np
-    arr = np.array(img_gray)
-    # CLAHE-like: normalize contrast
-    p2, p98 = np.percentile(arr, (2, 98))
-    if p98 > p2:
-        arr = np.clip((arr - p2) / (p98 - p2) * 255, 0, 255).astype(np.uint8)
-    img_enhanced = Image.fromarray(arr)
+    arr = np.array(img.convert("L"))
+    # Pipeline: denoise → Otsu → morphological cleanup
+    processed = preprocess_for_ocr(arr)
+    img_enhanced = Image.fromarray(processed)
 
     # Chạy Tesseract với config tối ưu cho text dạng numbered list
     text = pytesseract.image_to_string(
@@ -144,6 +140,93 @@ def has_vietnamese_diacritics(text: str) -> bool:
     if total_alpha == 0:
         return False
     return (count / total_alpha) > 0.05
+
+
+# ---------------------------------------------------------------------------
+# Image denoising
+# ---------------------------------------------------------------------------
+
+def denoise_image(gray):
+    """Khử nhiễu nâng cao cho ảnh sách cổ viết tay.
+
+    Pipeline:
+      Ảnh gốc (giấy cũ, ố vàng, mực loang)
+      │
+      ├─ GaussianBlur(3,3): Khử nhiễu nhẹ
+      │
+      ├─ Background estimation:
+      │   Morphological Closing (kernel 51×51)
+      │   → Ước lượng nền giấy (bỏ qua nét chữ)
+      │
+      ├─ Background removal:
+      │   pixel_mới = pixel_gốc ÷ background × 255
+      │   → Nền trắng đều, chữ đen rõ
+      │
+      └─ Contrast stretching (percentile 2–98)
+
+    Args:
+        gray: Ảnh grayscale (numpy uint8)
+
+    Returns:
+        Ảnh grayscale đã khử nhiễu, nền trắng đều (uint8)
+    """
+    import cv2
+    import numpy as np
+
+    # 1. Gaussian blur — khử nhiễu nhẹ
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+
+    # 2. Background estimation — morphological closing (kernel lớn)
+    #    Kết quả = ảnh chỉ có nền, không có nét chữ
+    bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
+    background = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, bg_kernel)
+
+    # 3. Background removal — chia pixel cho background
+    #    → Nền trắng đều bất kể giấy ố vàng hay sáng tối khác nhau
+    normalized = cv2.divide(blurred, background, scale=255)
+
+    # 4. Contrast stretching — tăng độ tương phản
+    p2, p98 = np.percentile(normalized, (2, 98))
+    if p98 > p2:
+        normalized = np.clip(
+            (normalized.astype(float) - p2) / (p98 - p2) * 255, 0, 255
+        ).astype(np.uint8)
+
+    return normalized
+
+
+def preprocess_for_ocr(gray):
+    """Tiền xử lý nâng cao cho Tesseract OCR.
+
+    Pipeline:
+      1. denoise_image(): xóa nền ố, chuẩn hóa illumination
+      2. Otsu thresholding: tạo ảnh nhị phân rõ ràng
+      3. Morphological close (2×2): nối nét bị đứt nhỏ
+      4. Morphological open (3×3): xóa chấm nhiễu nhỏ
+
+    Args:
+        gray: Ảnh grayscale (numpy uint8)
+
+    Returns:
+        Ảnh binary tối ưu cho OCR (uint8, 0=chữ đen, 255=nền trắng)
+    """
+    import cv2
+
+    # 1. Khử nhiễu nền
+    denoised = denoise_image(gray)
+
+    # 2. Otsu — tự động tìm ngưỡng chia đen/trắng
+    _, binary = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+
+    # 3. Morphological close — nối nét bị đứt
+    close_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
+    binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, close_kernel)
+
+    # 4. Morphological open — xóa chấm nhiễu nhỏ
+    open_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+    binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, open_kernel)
+
+    return binary
 
 
 # ---------------------------------------------------------------------------
@@ -183,18 +266,24 @@ def extract_book_page_number(page: fitz.Page) -> int | None:
     if not lines:
         return None
 
+    # Số trang sách thường > 9 (trang 10+), phân biệt với số thứ tự cột (1-9)
+    # Lưu ý: threshold này dùng cho text nhúng trong PDF của trang ẢNH Nôm,
+    # trong đó các số nhỏ (1-9) là số cột, số lớn (10+) là số trang sách.
+    # Khác với parse_numbered_lines (xử lý trang TEXT QN, cho phép đến 50 dòng).
+    page_num_threshold = 9
+
     # Dòng đầu là số trang (CacThanhTruyen)
     match = re.match(r"^(\d+)$", lines[0])
     if match:
         num = int(match.group(1))
-        if num > 9:  # Bỏ qua số cột (1-9)
+        if num > page_num_threshold:
             return num
 
     # Dòng cuối là số trang (SachThanhTruyen image page + Tesseract text page)
     match = re.match(r"^(\d+)$", lines[-1])
     if match:
         num = int(match.group(1))
-        if num > 9:
+        if num > page_num_threshold:
             return num
 
     # Tìm trong vài dòng cuối (có thể có noise sau số trang)
@@ -202,7 +291,7 @@ def extract_book_page_number(page: fitz.Page) -> int | None:
         match = re.match(r"^(\d+)$", line)
         if match:
             num = int(match.group(1))
-            if num > 9:
+            if num > page_num_threshold:
                 return num
 
     return None
@@ -261,8 +350,8 @@ def parse_numbered_lines(text: str) -> dict[int, str]:
     current_num = None
     current_content = []
 
-    # Pattern: (noise tùy chọn) + số 1-9 + dấu chấm/phẩy + space + nội dung
-    line_start_pattern = re.compile(r"^[^a-zA-ZÀ-ỹ]*?(\d)[.,]\s+(.*)")
+    # Pattern: (noise tùy chọn) + số + dấu chấm/phẩy + space + nội dung
+    line_start_pattern = re.compile(r"^[^a-zA-ZÀ-ỹ]*?(\d+)[.,]\s+(.*)")
 
     for raw_line in text.split("\n"):
         stripped = raw_line.strip()
@@ -272,7 +361,7 @@ def parse_numbered_lines(text: str) -> dict[int, str]:
         match = line_start_pattern.match(stripped)
         if match:
             num = int(match.group(1))
-            if 1 <= num <= 9:
+            if 1 <= num <= 50:  # Cho phép tối đa 50 cột (auto-detect)
                 # Lưu dòng trước
                 if current_num is not None:
                     lines[current_num] = " ".join(current_content)
@@ -320,6 +409,7 @@ def process_pdf(
     dpi: int = 300,
     reocr: bool = False,
     ocr_lang: str = "vie",
+    denoise: bool = False,
     verbose: bool = True,
 ) -> list[dict]:
     """Xử lý 1 file PDF, trích xuất cặp (ảnh Nôm, text QN).
@@ -329,6 +419,8 @@ def process_pdf(
                False để dùng text nhúng trong PDF (cho CacThanhTruyen).
                "auto" sẽ tự phát hiện khi text kém.
         ocr_lang: Ngôn ngữ Tesseract (mặc định: "vie")
+        denoise: True để lưu ảnh Nôm đã khử nhiễu song song với ảnh gốc
+                 (vào pages_denoised/, dùng cho detect_characters.py sau này)
 
     Returns:
         List[dict] - thông tin từng trang đã xử lý
@@ -341,6 +433,11 @@ def process_pdf(
     pages_dir.mkdir(parents=True, exist_ok=True)
     trans_dir.mkdir(parents=True, exist_ok=True)
 
+    denoised_dir = None
+    if denoise:
+        denoised_dir = output_dir / "pages_denoised"
+        denoised_dir.mkdir(parents=True, exist_ok=True)
+
     results = []
     page_idx = 0
     total_pages = doc.page_count
@@ -348,9 +445,10 @@ def process_pdf(
 
     if verbose:
         mode = "re-OCR (Tesseract)" if reocr else "text nhúng PDF"
+        denoise_tag = " + denoise" if denoise else ""
         print(f"\nXử lý: {pdf_path.name} ({total_pages} trang PDF)")
         print(f"Output: {output_dir}/")
-        print(f"Chế độ text: {mode}")
+        print(f"Chế độ text: {mode}{denoise_tag}")
         print("-" * 60)
 
     while page_idx < total_pages:
@@ -437,6 +535,16 @@ def process_pdf(
         image_path = pages_dir / image_filename
         image_info = extract_nom_image(image_page, image_path, dpi)
 
+        # Lưu ảnh Nôm đã khử nhiễu (nếu bật --denoise)
+        if denoise and denoised_dir is not None:
+            import cv2
+            denoised_path = denoised_dir / image_filename
+            gray = cv2.imread(str(image_path), cv2.IMREAD_GRAYSCALE)
+            if gray is not None:
+                denoised = denoise_image(gray)
+                cv2.imwrite(str(denoised_path), denoised)
+                image_info["denoised_file"] = f"pages_denoised/{image_filename}"
+
         # Làm sạch text và tách âm tiết
         columns = []
         for line_num in sorted(raw_lines.keys()):
@@ -508,19 +616,28 @@ def process_pdf(
 
 def validate_results(results: list[dict], verbose: bool = True) -> dict:
     """Kiểm tra tính nhất quán của kết quả."""
+    # Xác định số cột phổ biến nhất (mode) thay vì hardcode 9
+    col_counts = [r["num_columns"] for r in results]
+    if col_counts:
+        from collections import Counter
+        mode_n_cols = Counter(col_counts).most_common(1)[0][0]
+    else:
+        mode_n_cols = 0
+
     stats = {
         "total_pages": len(results),
         "total_columns": sum(r["num_columns"] for r in results),
         "total_syllables": sum(r["total_syllables"] for r in results),
-        "pages_with_9_columns": sum(1 for r in results if r["num_columns"] == 9),
-        "pages_not_9_columns": [],
+        "expected_columns_per_page": mode_n_cols,
+        "pages_with_expected_columns": sum(1 for r in results if r["num_columns"] == mode_n_cols),
+        "pages_unexpected_columns": [],
         "min_syllables_per_column": float("inf"),
         "max_syllables_per_column": 0,
     }
 
     for r in results:
-        if r["num_columns"] != 9:
-            stats["pages_not_9_columns"].append(
+        if r["num_columns"] != mode_n_cols:
+            stats["pages_unexpected_columns"].append(
                 {"page": r["book_page"], "columns": r["num_columns"]}
             )
         for count in r["syllable_counts"]:
@@ -537,10 +654,11 @@ def validate_results(results: list[dict], verbose: bool = True) -> dict:
         print(f"  Tổng số trang Nôm  : {stats['total_pages']}")
         print(f"  Tổng số cột        : {stats['total_columns']}")
         print(f"  Tổng số âm tiết    : {stats['total_syllables']}")
-        print(f"  Trang có đủ 9 cột  : {stats['pages_with_9_columns']}")
-        if stats["pages_not_9_columns"]:
-            print(f"  [WARN] Trang không đủ 9 cột:")
-            for p in stats["pages_not_9_columns"]:
+        print(f"  Số cột/trang (phổ biến): {mode_n_cols}")
+        print(f"  Trang đúng {mode_n_cols} cột   : {stats['pages_with_expected_columns']}")
+        if stats["pages_unexpected_columns"]:
+            print(f"  [WARN] Trang có số cột khác {mode_n_cols}:")
+            for p in stats["pages_unexpected_columns"]:
                 print(f"    - Trang {p['page']}: {p['columns']} cột")
         if stats["total_pages"] > 0:
             print(f"  Âm tiết/cột (min)  : {stats['min_syllables_per_column']}")
@@ -581,6 +699,11 @@ Ví dụ:
         default="vie",
         help="Ngôn ngữ Tesseract (mặc định: vie)",
     )
+    parser.add_argument(
+        "--denoise",
+        action="store_true",
+        help="Lưu ảnh Nôm đã khử nhiễu (pages_denoised/) song song ảnh gốc",
+    )
     parser.add_argument("--quiet", action="store_true", help="Không hiển thị chi tiết")
 
     args = parser.parse_args()
@@ -605,6 +728,7 @@ Ví dụ:
             dpi=args.dpi,
             reocr=args.reocr,
             ocr_lang=args.ocr_lang,
+            denoise=args.denoise,
             verbose=not args.quiet,
         )
         all_results.extend(results)
@@ -618,6 +742,7 @@ Ví dụ:
             "dpi": args.dpi,
             "reocr": args.reocr,
             "ocr_lang": args.ocr_lang if args.reocr else None,
+            "denoise": args.denoise,
             "stats": stats,
             "pages": results,
         }

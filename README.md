@@ -394,3 +394,19 @@ crops_cleaned/page_0001/char_0001.png,經,U+7D93,kinh,high,"[x1,y1,x2,y2]",1,Cac
 ### dataset.json
 
 Chứa đầy đủ thông tin hơn labels.csv, bao gồm: danh sách tất cả ứng viên (`candidates`), thông tin alignment, OCR result, v.v.
+
+https://huggingface.co/dzungpham/font-architect
+
+https://huggingface.co/datasets/dzungpham/FontTransfer
+
+https://kaggle.com/datasets/969f19f11b9520b762792eb5be002ab15583e83c98986c47fe0ea21f36e044b1
+
+https://kaggle.com/datasets/5c09041f61f1bd528a0281281a55ed4ddb6b4aa1c83bdb0c0e21a1553339ad32
+
+https://www.kaggle.com/code/hongduyhng/sinonom-img-to-img-algo-2
+
+https://www.kaggle.com/code/hongduyhng/sinonom-img-to-img-similarity-retrieval
+
+https://github.com/TencentARC/ConMIM?tab=readme-ov-file
+
+https://www.kaggle.com/code/hongduyhng/sinonom-img-to-img-version-3

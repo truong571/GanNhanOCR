@@ -4,7 +4,7 @@ detect_characters.py - Phát hiện và cắt từng ký tự Nôm từ ảnh tr
 
 Phương pháp: Classical CV cải tiến (B+)
 - Adaptive thresholding + border removal
-- Column detection bằng vertical projection + constraint 9 cột
+- Column detection bằng vertical projection + auto-detect số cột từ transcription
 - Character segmentation bằng horizontal projection + merge/split
 - Cross-check với transcription để validate
 
@@ -46,10 +46,15 @@ class NumpyEncoder(json.JSONEncoder):
 # ---------------------------------------------------------------------------
 
 def load_and_binarize(image_path: str) -> tuple[np.ndarray, np.ndarray]:
-    """Load ảnh và tạo binary mask.
+    """Load ảnh và tạo binary mask (Bước 2.1 — Binarization).
 
-    Sử dụng Sauvola-like local thresholding để xử lý tốt cả
-    ảnh sạch (SachThanhTruyen) và ảnh có background noise (CacThanhTruyen).
+    Pipeline:
+      Ảnh gốc → GaussianBlur(3,3)
+      → Background estimation: Morphological Closing (51×51)
+      → Background removal: pixel ÷ background × 255
+      → Otsu thresholding → ảnh nhị phân (1=mực, 0=nền)
+      → Close (2×2): nối nét bị đứt nhỏ
+      → Open (3×3): xóa chấm nhiễu nhỏ
 
     Returns:
         (gray_image, binary_mask) - binary_mask: 1=ink, 0=background
@@ -231,6 +236,54 @@ def detect_columns(
     return columns
 
 
+def _auto_detect_n_columns(binary: np.ndarray, text_box: tuple[int, int, int, int]) -> int:
+    """Tự động phát hiện số cột khi không có transcription.
+
+    Dùng vertical projection + find_peaks để đếm số vùng có mực (peaks),
+    không ràng buộc số cột cố định.
+
+    Returns:
+        Số cột phát hiện được (tối thiểu 1)
+    """
+    left, top, right, bottom = text_box
+    text_region = binary[top:bottom, left:right]
+    region_w = right - left
+
+    if region_w == 0:
+        return 1
+
+    # Vertical projection
+    v_proj = text_region.sum(axis=0).astype(float)
+
+    # Smooth rộng hơn để tìm cột lớn (không phải nét nhỏ)
+    kernel = max(5, region_w // 50)
+    v_smooth = np.convolve(v_proj, np.ones(kernel) / kernel, mode="same")
+
+    if v_smooth.max() == 0:
+        return 1
+
+    # Tìm valleys (khoảng trống giữa cột)
+    # min_distance: cột tối thiểu rộng 3% ảnh
+    min_dist = max(10, int(region_w * 0.03))
+    # Ngưỡng valley: dưới 20% max density
+    threshold = v_smooth.max() * 0.15
+
+    valleys, _ = find_peaks(-v_smooth, distance=min_dist, height=-threshold)
+
+    # Số cột = số valley + 1, nhưng lọc valley quá nông
+    significant_valleys = []
+    for v in valleys:
+        if v_smooth[v] < v_smooth.max() * 0.2:
+            significant_valleys.append(v)
+
+    n_cols = len(significant_valleys) + 1
+
+    # Sanity check: tối thiểu 1, tối đa 50
+    n_cols = max(1, min(n_cols, 50))
+
+    return n_cols
+
+
 # ---------------------------------------------------------------------------
 # Character segmentation
 # ---------------------------------------------------------------------------
@@ -325,6 +378,24 @@ def detect_chars_in_column(
     # force-split the largest remaining blobs
     if expected_count and len(chars) < expected_count:
         chars = _force_split_to_count(chars, expected_count, expected_char_height, binary)
+
+    # Adaptive retry: nếu kết quả lệch quá nhiều so với expected,
+    # thử lại với ngưỡng khác
+    if expected_count and expected_count > 0:
+        diff = abs(len(chars) - expected_count)
+        tolerance = max(2, int(expected_count * 0.15))  # Cho phép lệch 15%
+        if diff > tolerance:
+            # Retry với expected_char_height chính xác hơn
+            retry_h = col_h / expected_count
+            retry_chars = _merge_small_boxes(raw_chars, retry_h)
+            retry_chars = _split_large_boxes(retry_chars, retry_h, binary)
+            if len(retry_chars) < expected_count:
+                retry_chars = _force_split_to_count(
+                    retry_chars, expected_count, retry_h, binary)
+            # Chọn kết quả gần expected_count hơn
+            retry_diff = abs(len(retry_chars) - expected_count)
+            if retry_diff < diff:
+                chars = retry_chars
 
     return chars
 
@@ -479,14 +550,16 @@ def _split_large_boxes(
 
 def detect_page(
     image_path: str,
-    n_columns: int = 9,
+    n_columns: int | None = None,
     expected_counts: list[int] | None = None,
 ) -> dict:
     """Pipeline đầy đủ: load ảnh → detect columns → detect chars.
 
     Args:
+        n_columns: Số cột kỳ vọng. Nếu None → suy ra từ expected_counts
+                   hoặc auto-detect bằng vertical projection.
         expected_counts: Số ký tự kỳ vọng mỗi cột (từ transcription).
-                         Dùng để cải thiện split/merge.
+                         Dùng để cải thiện split/merge VÀ suy ra số cột.
 
     Returns:
         dict với columns, chars, metadata
@@ -496,6 +569,12 @@ def detect_page(
 
     # Detect text box
     text_box = detect_text_box(binary)
+
+    # Xác định số cột: ưu tiên n_columns > len(expected_counts) > auto-detect
+    if n_columns is None and expected_counts is not None:
+        n_columns = len(expected_counts)
+    if n_columns is None:
+        n_columns = _auto_detect_n_columns(binary, text_box)
 
     # Detect columns
     columns = detect_columns(binary, text_box, n_expected=n_columns)
@@ -704,23 +783,39 @@ def process_prepared_dir(
         if page_filter is not None and book_page != page_filter:
             continue
 
-        image_path = str(prepared_dir / page_info["image_file"])
+        original_image_path = str(prepared_dir / page_info["image_file"])
         trans_path = str(prepared_dir / page_info["transcription_file"])
 
-        if not Path(image_path).exists():
+        if not Path(original_image_path).exists():
             if verbose:
                 print(f"  [SKIP] Trang {book_page}: ảnh không tồn tại")
             continue
 
+        # Ưu tiên ảnh đã khử nhiễu cho detection (từ prepare_data.py --denoise)
+        # Crop ký tự vẫn dùng ảnh gốc (giữ texture tự nhiên cho embedding)
+        detect_image_path = original_image_path
+        denoised_path = str(
+            prepared_dir / "pages_denoised" / Path(page_info["image_file"]).name
+        )
+        if Path(denoised_path).exists():
+            detect_image_path = denoised_path
+
         # Load expected counts from transcription (for better split/merge)
+        # Số dòng trong transcription = số cột trong ảnh (auto-detect)
         expected_counts = None
+        n_columns = None
         if Path(trans_path).exists():
             with open(trans_path, "r", encoding="utf-8") as f:
                 lines = f.read().strip().split("\n")
             expected_counts = [len(line.split()) for line in lines]
+            n_columns = len(lines)  # Số cột = số dòng text QN
 
-        # Detect
-        detection = detect_page(image_path, expected_counts=expected_counts)
+        # Fallback: đọc num_columns từ manifest nếu transcription không có
+        if n_columns is None:
+            n_columns = page_info.get("num_columns")
+
+        # Detect (dùng ảnh denoised nếu có → binarize tốt hơn)
+        detection = detect_page(detect_image_path, n_columns=n_columns, expected_counts=expected_counts)
 
         # Validate
         validation = {}
@@ -731,13 +826,13 @@ def process_prepared_dir(
             if validation["accuracy"] >= 0.9:
                 pages_matched += 1
 
-        # Save char crops
-        save_char_crops(image_path, detection, output_dir, book_page)
+        # Save char crops (dùng ảnh GỐC — giữ texture tự nhiên cho embedding)
+        save_char_crops(original_image_path, detection, output_dir, book_page)
 
-        # Save debug image
+        # Save debug image (dùng ảnh gốc để thấy bbox trên ảnh thực)
         if debug:
             debug_path = str(debug_dir / f"page_{book_page:04d}_debug.png")
-            save_debug_image(image_path, detection, debug_path)
+            save_debug_image(original_image_path, detection, debug_path)
 
         # Save detection JSON
         det_json_path = output_dir / f"page_{book_page:04d}_detection.json"
@@ -753,16 +848,26 @@ def process_prepared_dir(
 
         if verbose:
             acc_str = ""
+            warn_str = ""
             if validation:
                 acc = validation["accuracy"]
                 col_match = sum(1 for c in validation["column_comparison"] if c["match"])
+                n_cols = detection['num_columns']
                 acc_str = (
                     f"  det={validation['total_detected']:>3} "
                     f"exp={validation['total_expected']:>3} "
                     f"acc={acc:.0%} "
-                    f"col_match={col_match}/9"
+                    f"col_match={col_match}/{n_cols}"
                 )
-            print(f"  Trang {book_page:4d}: {detection['total_chars']:>3} chars{acc_str}")
+                # Cảnh báo khi N detected ≠ M expected
+                diff = abs(validation['total_detected'] - validation['total_expected'])
+                if diff > max(3, int(validation['total_expected'] * 0.1)):
+                    warn_str = f" ⚠ lệch {diff} ký tự"
+                # Cảnh báo từng cột lệch nhiều
+                for cc in validation["column_comparison"]:
+                    if abs(cc["diff"]) > max(2, int(cc["expected"] * 0.2)):
+                        warn_str += f" [cột {cc['column']}: {cc['detected']}≠{cc['expected']}]"
+            print(f"  Trang {book_page:4d}: {detection['total_chars']:>3} chars{acc_str}{warn_str}")
 
     # Summary
     if verbose and results:

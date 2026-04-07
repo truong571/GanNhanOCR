@@ -159,36 +159,18 @@ def is_compatible(nom_char: str, qn_word: str, trans_dict: dict,
 # Corpus Frequency & Visual Ranking (cải tiến chọn ứng viên)
 # ---------------------------------------------------------------------------
 
-def build_corpus_frequency(prepared_dir: Path, trans_dict: dict) -> dict:
-    """Đếm tần suất mỗi ký tự Nôm xuất hiện trong corpus transcription.
+def build_char_specificity(trans_dict: dict) -> dict[str, int]:
+    """Tính độ cụ thể của mỗi ký tự Nôm: bao nhiêu âm QN map đến nó.
 
-    Với mỗi âm QN trong transcription, nếu từ điển chỉ có 1 candidate
-    thì ký tự đó chắc chắn đúng → tăng count. Nếu nhiều candidates thì
-    chia đều count cho tất cả (fractional counting).
+    Ký tự map ít QN words → cụ thể hơn → ưu tiên hơn khi xếp hạng.
 
-    Returns: {nom_char: float_count}
+    Returns: {nom_char: number_of_qn_words_it_maps_to}
     """
-    freq = {}
-    trans_dir = prepared_dir / "transcriptions"
-    if not trans_dir.exists():
-        return freq
-
-    for txt_file in sorted(trans_dir.glob("*.txt")):
-        with open(txt_file, "r", encoding="utf-8") as f:
-            text = f.read()
-        for word in text.lower().split():
-            word = re.sub(r'["""\'()[\]{}«»,.:;!?]', '', word).strip()
-            if not word:
-                continue
-            candidates = trans_dict.get(word, [])
-            if len(candidates) == 1:
-                freq[candidates[0]] = freq.get(candidates[0], 0) + 1.0
-            elif len(candidates) > 1:
-                share = 1.0 / len(candidates)
-                for c in candidates:
-                    freq[c] = freq.get(c, 0) + share
-
-    return freq
+    char_word_count: dict[str, int] = {}
+    for word, chars in trans_dict.items():
+        for c in chars:
+            char_word_count[c] = char_word_count.get(c, 0) + 1
+    return char_word_count
 
 
 def _load_pygame_font(ttf_path: str, size: int = 64):
@@ -339,63 +321,104 @@ def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
     return 0.5 * iou + 0.5 * proj_score
 
 
+def _cjk_block_score(char: str) -> float:
+    """Điểm ưu tiên theo Unicode block. CJK cơ bản > Extension > PUA."""
+    cp = ord(char)
+    if 0x4E00 <= cp <= 0x9FFF:    # CJK Unified (phổ biến nhất)
+        return 1.0
+    if 0xF900 <= cp <= 0xFAFF:    # CJK Compatibility
+        return 0.8
+    if 0x3400 <= cp <= 0x4DBF:    # CJK Extension A
+        return 0.5
+    if 0x20000 <= cp <= 0x2A6DF:  # CJK Extension B
+        return 0.3
+    if 0xE000 <= cp <= 0xF8FF:    # Private Use Area → tránh
+        return 0.05
+    return 0.2
+
+
 def rank_candidates(
     candidates: list[str],
     syllable: str,
     crop_path: str | None,
     font_path: str | None,
     corpus_freq: dict,
-    visual_weight: float = 0.6,
-    freq_weight: float = 0.4,
+    embed_ranker=None,
 ) -> list[tuple[str, float]]:
-    """Xếp hạng ứng viên bằng combined score: visual similarity + corpus frequency.
+    """Xếp hạng ứng viên bằng visual similarity + specificity + CJK block.
+
+    Scoring (khi có ảnh crop + font):
+      1. Visual similarity (40%): so hình dạng crop viết tay vs render font
+      2. Specificity (30%): ký tự map ít QN words → cụ thể hơn → điểm cao
+      3. CJK block (30%): ưu tiên CJK cơ bản, tránh PUA/Extension
+
+    Fallback (không có ảnh crop hoặc font):
+      1. Specificity (60%) + CJK block (40%)
 
     Args:
         candidates: danh sách ký tự Nôm ứng viên
-        syllable: âm QN (dùng cho logging)
-        crop_path: đường dẫn ảnh crop cleaned (hoặc raw)
-        font_path: đường dẫn font TTF (dùng pygame.freetype render)
-        corpus_freq: {nom_char: count} từ build_corpus_frequency
-        visual_weight: trọng số visual (0-1)
-        freq_weight: trọng số frequency (0-1)
+        syllable: âm QN
+        crop_path: đường dẫn ảnh crop viết tay (hoặc None)
+        font_path: đường dẫn font Nôm (hoặc None)
+        corpus_freq: {nom_char: word_count} từ build_char_specificity
 
     Returns: [(char, score)] sorted by score descending
     """
     if not candidates:
         return []
 
-    # --- Frequency score ---
-    max_freq = max((corpus_freq.get(c, 0) for c in candidates), default=1)
-    if max_freq == 0:
-        max_freq = 1
+    # Lọc bỏ PUA characters
+    filtered = [c for c in candidates if _cjk_block_score(c) > 0.1]
+    if not filtered:
+        filtered = candidates
 
-    # --- Visual score ---
+    # Specificity: ký tự map ít words hơn → cụ thể hơn → điểm cao
+    max_words = max((corpus_freq.get(c, 1) for c in filtered), default=1)
+    if max_words == 0:
+        max_words = 1
+
+    # --- Deep embedding ranking (ưu tiên nếu có) ---
+    embed_scores = {}
+    use_embedding = False
+    if embed_ranker is not None and crop_path:
+        try:
+            embed_results = embed_ranker.rank_candidates(crop_path, filtered)
+            embed_scores = {char: score for char, score in embed_results}
+            use_embedding = True
+        except Exception:
+            pass
+
+    # --- Fallback: visual similarity bằng IoU/projection ---
     crop_img = None
-    if crop_path and font_path:
-        if os.path.exists(crop_path):
-            crop_img = cv2.imread(crop_path, cv2.IMREAD_GRAYSCALE)
+    use_visual = False
+    if not use_embedding and crop_path and font_path:
+        crop_img = cv2.imread(crop_path, cv2.IMREAD_GRAYSCALE)
+        if crop_img is not None:
+            use_visual = True
 
     scored = []
-    for char in candidates:
-        # Frequency: normalize 0-1
-        f_score = corpus_freq.get(char, 0) / max_freq
+    for char in filtered:
+        n_words = corpus_freq.get(char, max_words)  # Unknown = treat as ambiguous
+        specificity = 1.0 - (n_words - 1) / max_words  # 1 word = 1.0, many words = low
+        specificity = max(0.0, specificity)
 
-        # Visual: so sánh crop vs rendered (dùng pygame.freetype)
-        v_score = 0.0
-        if crop_img is not None and font_path:
-            rendered = _get_rendered(char, font_path, size=64)
-            if rendered is not None:
-                v_score = visual_similarity(crop_img, rendered)
+        block_score = _cjk_block_score(char)
 
-        # Combined score
-        if crop_img is not None and font_path:
-            total = visual_weight * v_score + freq_weight * f_score
+        if use_embedding:
+            # Deep embedding: 0.5 visual + 0.3 specificity + 0.2 CJK block
+            vis_score = embed_scores.get(char, 0.0)
+            total = 0.5 * vis_score + 0.3 * specificity + 0.2 * block_score
+        elif use_visual:
+            # Classical visual: 0.4 IoU/proj + 0.3 specificity + 0.3 CJK block
+            rendered = _render_candidate(char, font_path)
+            vis_score = visual_similarity(crop_img, rendered) if rendered is not None else 0.0
+            total = 0.4 * vis_score + 0.3 * specificity + 0.3 * block_score
         else:
-            total = f_score
+            # Không có ảnh: 0.6 specificity + 0.4 CJK block
+            total = 0.6 * specificity + 0.4 * block_score
 
         scored.append((char, total))
 
-    # Sort descending
     scored.sort(key=lambda x: x[1], reverse=True)
     return scored
 
@@ -834,6 +857,7 @@ def assign_unicode(
     corpus_freq: dict | None = None,
     font_path: str | None = None,
     crops_base: Path | None = None,
+    embed_ranker=None,
 ) -> list[dict]:
     """Gán Unicode Nôm cho mỗi cặp (char, syllable) đã aligned.
 
@@ -898,6 +922,7 @@ def assign_unicode(
                 crop_path,
                 font_path,
                 corpus_freq or {},
+                embed_ranker=embed_ranker,
             )
 
             if ranked:
@@ -1171,7 +1196,18 @@ def export_excel(dataset_path: str, output_path: str, prepared_dir: str):
 def save_review_image(aligned_page: list[dict], output_path: str,
                       crops_dir: str, typed_dir: str | None,
                       max_chars: int = 50):
-    """Tạo ảnh review: viết tay | đánh máy | nhãn QN cho mỗi ký tự."""
+    """Tạo ảnh review: [viết tay | đánh máy | nhãn] cho mỗi ký tự.
+
+    Mỗi ô gồm 3 phần xếp dọc:
+      1. Ảnh viết tay (crop) — 64×64
+      2. Ảnh đánh máy (typed_nom) — 64×64
+      3. Nhãn text: confidence + QN reading — 28px
+
+    Viền màu theo confidence:
+      Đen = high, Xám = medium, Nhạt = low
+    """
+    from PIL import Image, ImageDraw, ImageFont
+
     cell_size = 64
     pairs = [p for p in aligned_page if p["type"] == "match" and p.get("char")]
     pairs = pairs[:max_chars]
@@ -1182,13 +1218,26 @@ def save_review_image(aligned_page: list[dict], output_path: str,
     cols = min(10, len(pairs))
     rows = (len(pairs) + cols - 1) // cols
 
-    # Mỗi ô: 2 ảnh (viết tay + đánh máy) + text label
-    cell_h = cell_size * 2 + 24  # 2 ảnh + 24px text
+    # Mỗi ô: 2 ảnh + 28px text label
+    text_h = 28
+    cell_h = cell_size * 2 + text_h
     cell_w = cell_size + 4
 
     canvas_h = rows * cell_h + 4
     canvas_w = cols * cell_w + 4
-    canvas = np.full((canvas_h, canvas_w), 240, dtype=np.uint8)
+
+    # Dùng PIL để vẽ (hỗ trợ Unicode text cho QN reading)
+    pil_img = Image.new("L", (canvas_w, canvas_h), 240)
+    draw = ImageDraw.Draw(pil_img)
+
+    # Font nhỏ cho text label
+    try:
+        label_font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 11)
+    except Exception:
+        try:
+            label_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 11)
+        except Exception:
+            label_font = ImageFont.load_default()
 
     for idx, pair in enumerate(pairs):
         r = idx // cols
@@ -1201,7 +1250,7 @@ def save_review_image(aligned_page: list[dict], output_path: str,
         nom = pair.get("nom_char", "")
         syl = pair.get("syllable", "")
 
-        # Ảnh viết tay (crop cleaned hoặc gốc)
+        # 1. Ảnh viết tay (crop cleaned hoặc gốc)
         crop_file = char_info.get("crop_file", "")
         crop_path = Path(crops_dir).parent / crop_file.replace("crops/", "crops_cleaned/")
         if not crop_path.exists():
@@ -1210,24 +1259,42 @@ def save_review_image(aligned_page: list[dict], output_path: str,
             hw_img = cv2.imread(str(crop_path), cv2.IMREAD_GRAYSCALE)
             if hw_img is not None:
                 hw_img = cv2.resize(hw_img, (cell_size, cell_size))
-                canvas[y0:y0 + cell_size, x0:x0 + cell_size] = hw_img
+                hw_pil = Image.fromarray(hw_img)
+                pil_img.paste(hw_pil, (x0, y0))
 
-        # Ảnh đánh máy (nếu có)
+        # 2. Ảnh đánh máy (nếu có)
         if typed_dir and nom:
             typed_path = Path(typed_dir) / f"{ord(nom):06X}.png"
             if typed_path.exists():
                 tp_img = cv2.imread(str(typed_path), cv2.IMREAD_GRAYSCALE)
                 if tp_img is not None:
                     tp_img = cv2.resize(tp_img, (cell_size, cell_size))
-                    canvas[y0 + cell_size:y0 + 2 * cell_size, x0:x0 + cell_size] = tp_img
+                    tp_pil = Image.fromarray(tp_img)
+                    pil_img.paste(tp_pil, (x0, y0 + cell_size))
+
+        # 3. Nhãn text: confidence tag + QN reading
+        text_y = y0 + 2 * cell_size + 2
+        conf_tag = {"high": "H", "medium": "M", "low": "L"}.get(conf, "?")
+        label_text = f"{conf_tag}:{syl}" if syl else conf_tag
+        # Cắt ngắn nếu quá dài
+        if len(label_text) > 8:
+            label_text = label_text[:7] + "…"
+        draw.text((x0 + 2, text_y), label_text, fill=0, font=label_font)
+
+        # Dòng 2: Unicode codepoint (nhỏ hơn)
+        if nom:
+            code_text = f"{ord(nom):04X}"
+            draw.text((x0 + 2, text_y + 13), code_text, fill=100, font=label_font)
 
         # Viền màu theo confidence
         color_map = {"high": 0, "medium": 160, "low": 200, "gap": 220}
         border_val = color_map.get(conf, 200)
-        cv2.rectangle(canvas, (x0 - 1, y0 - 1),
-                      (x0 + cell_size, y0 + 2 * cell_size + 22), border_val, 1)
+        draw.rectangle(
+            [x0 - 1, y0 - 1, x0 + cell_size, y0 + 2 * cell_size + text_h - 2],
+            outline=border_val, width=1,
+        )
 
-    cv2.imwrite(output_path, canvas)
+    pil_img.save(output_path)
 
 
 # ---------------------------------------------------------------------------
@@ -1247,6 +1314,7 @@ def process_page(
     verbose: bool = True,
     corpus_freq: dict | None = None,
     font_path: str | None = None,
+    embed_ranker=None,
 ) -> dict | None:
     """Xử lý gán nhãn cho 1 trang."""
     book_page = page_info["book_page"]
@@ -1286,6 +1354,7 @@ def process_page(
 
     # Align từng cột
     page_labels = []
+    all_aligned_page = []  # Tích luỹ aligned pairs cho review image
     page_stats = {
         "total_chars": 0, "matched": 0, "gaps": 0,
         "high": 0, "medium": 0, "low": 0,
@@ -1309,13 +1378,14 @@ def process_page(
         # Bước 4: Levenshtein alignment
         aligned = levenshtein_align(chars, syllables)
 
-        # Bước 5: Gán Unicode (với ranking visual + frequency)
+        # Bước 5: Gán Unicode (với ranking visual/embedding + frequency)
         crops_base = prepared_dir / "detected"
         aligned = assign_unicode(
             aligned, trans_dict, similar_dict,
             corpus_freq=corpus_freq,
             font_path=font_path,
             crops_base=crops_base,
+            embed_ranker=embed_ranker,
         )
 
         # Validate bằng từ điển
@@ -1338,6 +1408,9 @@ def process_page(
                         f"medium→high (ocr_col={ocr_col_idx+1}, "
                         f"{len(ocr_col)} chars)"
                     )
+
+        # Tích luỹ aligned pairs (dùng cho review image)
+        all_aligned_page.extend(aligned)
 
         # Bước 5.5: Render ảnh Nôm đánh máy
         if nom_font and typed_nom_dir:
@@ -1397,27 +1470,13 @@ def process_page(
 
         page_stats["total_chars"] += len(chars)
 
-    # Review image
+    # Review image (dùng aligned pairs đã tính — bao gồm ranking + OCR)
     if review:
         review_dir = output_dir / "review"
         review_dir.mkdir(parents=True, exist_ok=True)
-        # Lấy tất cả aligned pairs cho trang này
-        all_aligned = []
-        for col_data in detection["columns"]:
-            col_num = col_data["column"]
-            line_idx = col_num - 1
-            if line_idx < len(trans_lines):
-                raw_syllables = trans_lines[line_idx].split()
-            else:
-                raw_syllables = []
-            syllables = normalize_syllables(raw_syllables)
-            a = levenshtein_align(col_data["chars"], syllables)
-            a = assign_unicode(a, trans_dict, similar_dict)
-            all_aligned.extend(a)
-
         crops_dir = str(prepared_dir / "detected" / "crops")
         save_review_image(
-            all_aligned,
+            all_aligned_page,
             str(review_dir / f"page_{book_page:04d}_review.png"),
             crops_dir,
             str(typed_nom_dir) if typed_nom_dir else None,
@@ -1453,9 +1512,32 @@ def process_prepared_dir(
     review: bool = False,
     excel: bool = False,
     use_ocr: bool = False,
+    embedding_checkpoint: str | None = None,
+    embedding_gallery: str | None = None,
     verbose: bool = True,
 ):
     """Xử lý gán nhãn cho toàn bộ thư mục prepared."""
+
+    # --- Load embedding ranker (nếu có) ---
+    embed_ranker = None
+    if embedding_checkpoint:
+        try:
+            from embedding.embed_ranker import get_ranker
+            base_dir_embed = Path(__file__).parent
+            gallery = embedding_gallery or str(base_dir_embed / "embedding" / "data" / "gallery")
+            embed_ranker = get_ranker(
+                checkpoint_path=embedding_checkpoint,
+                gallery_dir=gallery,
+                device="cpu",
+            )
+            if embed_ranker and embed_ranker.is_ready:
+                print(f"Embedding ranker: ON ({len(embed_ranker.gallery_codes)} ký tự)")
+            else:
+                print("[WARN] Embedding ranker không sẵn sàng, dùng ranking cơ bản")
+                embed_ranker = None
+        except Exception as e:
+            print(f"[WARN] Không load được embedding ranker: {e}")
+            embed_ranker = None
 
     # --- Load manifest ---
     manifest_path = prepared_dir / "manifest.json"
@@ -1500,10 +1582,10 @@ def process_prepared_dir(
     else:
         print(f"[WARN] Không có font Nôm, bỏ qua render ảnh đánh máy")
 
-    # --- Build corpus frequency ---
-    print("Building corpus frequency...")
-    corpus_freq = build_corpus_frequency(prepared_dir, trans_dict)
-    print(f"  → {len(corpus_freq)} ký tự Nôm có tần suất từ transcription")
+    # --- Build character specificity ---
+    print("Building character specificity...")
+    corpus_freq = build_char_specificity(trans_dict)
+    print(f"  → {len(corpus_freq)} ký tự Nôm với specificity score")
 
     # --- Output directory ---
     output_dir = prepared_dir / "labeled"
@@ -1538,6 +1620,7 @@ def process_prepared_dir(
             nom_font, output_dir, typed_nom_dir,
             review=review, use_ocr=use_ocr, verbose=verbose,
             corpus_freq=corpus_freq, font_path=font_path,
+            embed_ranker=embed_ranker,
         )
 
         if result is None:
@@ -1547,52 +1630,66 @@ def process_prepared_dir(
         for k in total_stats:
             total_stats[k] += result["stats"].get(k, 0)
 
-    # --- Bước 7: Self-Consistency (dùng OCR-confirmed để nâng medium) ---
-    if use_ocr:
-        # Xây bảng tần suất từ high-confidence (OCR-confirmed)
-        confirmed_freq: dict[str, dict[str, int]] = {}
-        for lab in all_labels:
-            if lab.get("ocr_source") and lab.get("quoc_ngu") and lab.get("nom_char"):
-                qn = lab["quoc_ngu"].lower()
-                char = lab["nom_char"]
-                confirmed_freq.setdefault(qn, {})
-                confirmed_freq[qn][char] = confirmed_freq[qn].get(char, 0) + 1
+    # --- Bước 4.5: Self-Consistency (lan truyền nhãn thống kê) ---
+    # Quan sát: cùng 1 từ QN xuất hiện nhiều lần trong sách.
+    # Nếu "trời" = 𡗶 đã được xác nhận ≥2 lần (qua OCR hoặc 1-candidate dict)
+    # → tất cả "trời" medium đều nâng lên high.
+    #
+    # LUÔN chạy (không phụ thuộc --ocr) vì:
+    # - 1-candidate dictionary lookup đã cho confidence="high"
+    # - Những high pairs này đủ để lan truyền sang medium
 
-        # Nâng cấp medium → high nếu cùng từ QN đã được OCR xác nhận
-        consistency_upgraded = 0
-        for lab in all_labels:
-            if lab.get("confidence") != "medium":
-                continue
-            qn = (lab.get("quoc_ngu") or "").lower()
-            if qn not in confirmed_freq:
-                continue
-            candidates = lab.get("nom_candidates", [])
-            if not candidates:
-                continue
+    # Thu thập TẤT CẢ cặp (qn, nom_char) có confidence = "high"
+    confirmed_freq: dict[str, dict[str, int]] = {}
+    for lab in all_labels:
+        if (lab.get("confidence") == "high"
+                and lab.get("quoc_ngu") and lab.get("nom_char")):
+            qn = lab["quoc_ngu"].lower()
+            char = lab["nom_char"]
+            confirmed_freq.setdefault(qn, {})
+            confirmed_freq[qn][char] = confirmed_freq[qn].get(char, 0) + 1
 
-            # Tìm ký tự được OCR xác nhận nhiều nhất cho từ QN này
-            freq = confirmed_freq[qn]
-            best_char = max(freq, key=freq.get)
-            best_count = freq[best_char]
+    # Nâng cấp medium → high nếu cùng từ QN đã được xác nhận ≥2 lần
+    consistency_upgraded = 0
+    for lab in all_labels:
+        if lab.get("confidence") != "medium":
+            continue
+        qn = (lab.get("quoc_ngu") or "").lower()
+        if qn not in confirmed_freq:
+            continue
+        candidates = lab.get("nom_candidates", [])
+        if not candidates:
+            continue
 
-            # Chỉ nâng cấp nếu: (1) ký tự nằm trong candidates, (2) xuất hiện ≥2 lần
-            if best_char in candidates and best_count >= 2:
-                lab["nom_char"] = best_char
-                lab["nom_unicode"] = f"U+{ord(best_char):04X}"
-                lab["confidence"] = "high"
-                lab["consistency_source"] = True
-                # Reorder candidates
-                new_cands = [best_char] + [c for c in candidates if c != best_char]
-                lab["nom_candidates"] = new_cands
-                consistency_upgraded += 1
+        # Tìm ký tự được xác nhận nhiều nhất cho từ QN này
+        freq = confirmed_freq[qn]
+        best_char = max(freq, key=freq.get)
+        best_count = freq[best_char]
 
-        if verbose and consistency_upgraded > 0:
-            print(f"\n  Self-Consistency: {consistency_upgraded} medium→high "
-                  f"(từ {len(confirmed_freq)} từ QN đã OCR xác nhận)")
+        # Chỉ nâng cấp nếu: (1) ký tự nằm trong candidates, (2) xuất hiện ≥2 lần
+        if best_char in candidates and best_count >= 2:
+            lab["nom_char"] = best_char
+            lab["nom_unicode"] = f"U+{ord(best_char):04X}"
+            lab["confidence"] = "high"
+            lab["consistency_source"] = True
+            # Reorder candidates
+            new_cands = [best_char] + [c for c in candidates if c != best_char]
+            lab["nom_candidates"] = new_cands
+            consistency_upgraded += 1
 
-        # Cập nhật lại stats
-        total_stats["high"] = sum(1 for lab in all_labels if lab["type"] == "match" and lab.get("confidence") == "high")
-        total_stats["medium"] = sum(1 for lab in all_labels if lab["type"] == "match" and lab.get("confidence") == "medium")
+    if verbose and consistency_upgraded > 0:
+        print(f"\n  Self-Consistency: {consistency_upgraded} medium→high "
+              f"(từ {len(confirmed_freq)} từ QN đã xác nhận ≥2 lần)")
+
+    # Cập nhật lại stats sau self-consistency
+    total_stats["high"] = sum(
+        1 for lab in all_labels
+        if lab["type"] == "match" and lab.get("confidence") == "high"
+    )
+    total_stats["medium"] = sum(
+        1 for lab in all_labels
+        if lab["type"] == "match" and lab.get("confidence") == "medium"
+    )
 
     # --- Summary ---
     total_m = total_stats["matched"]
@@ -1618,12 +1715,12 @@ def process_prepared_dir(
             if lab.get("nom_char")
         )
         print(f"  Unicode Nôm unique  : {len(unique_nom)}")
-        if use_ocr:
-            ocr_upgraded = sum(1 for lab in all_labels if lab.get("ocr_source"))
-            consist_upgraded = sum(1 for lab in all_labels if lab.get("consistency_source"))
+        ocr_upgraded = sum(1 for lab in all_labels if lab.get("ocr_source"))
+        consist_upgraded = sum(1 for lab in all_labels if lab.get("consistency_source"))
+        if ocr_upgraded:
             print(f"  OCR upgraded        : {ocr_upgraded}")
-            if consist_upgraded:
-                print(f"  Consistency upgraded: {consist_upgraded}")
+        if consist_upgraded:
+            print(f"  Consistency upgraded: {consist_upgraded}")
         print(f"  Output              : {output_dir}/")
 
     # --- Build dataset chuẩn (đồng bộ JSON, CSV, Excel) ---
@@ -1717,6 +1814,10 @@ Ví dụ:
                         help="Xuất file Excel với kết quả có màu")
     parser.add_argument("--ocr", action="store_true",
                         help="Dùng API OCR (tools.clc.hcmus.edu.vn) để cải thiện độ chính xác Unicode")
+    parser.add_argument("--embedding", type=str, default=None,
+                        help="Path tới embedding checkpoint (best.pt) để dùng deep ranking")
+    parser.add_argument("--gallery", type=str, default=None,
+                        help="Path tới gallery directory (embedding/data/gallery)")
 
     args = parser.parse_args()
 
@@ -1732,6 +1833,8 @@ Ví dụ:
         review=args.review,
         excel=args.excel,
         use_ocr=args.ocr,
+        embedding_checkpoint=args.embedding,
+        embedding_gallery=args.gallery,
     )
 
 

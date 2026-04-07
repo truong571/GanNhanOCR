@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Training Watch</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .summary {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 1.2em;
+            color: #4CAF50;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            box-shadow: 0 2px 3px rgba(0,0,0,0.1);
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+            cursor: pointer;
+        }
+        th {
+            background-color: #4CAF50;
+            color: white;
+            position: relative;
+            text-align: center; /* Center align the headers */
+        }
+        th.sorted-asc::after {
+            content: " ▲";
+            position: absolute;
+            right: 10px;
+        }
+        th.sorted-desc::after {
+            content: " ▼";
+            position: absolute;
+            right: 10px;
+        }
+        tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        tr:hover {
+            background-color: #ddd;
+        }
+        td.center-align {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Training Watch</h1>
+    <div class="summary">
+        <b>Greatest True Rep.: {{ max_true_rep }}</b>
+    </div>
+    <table id="trainTable">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0, true)">#</th>
+                <th onclick="sortTable(1, false)">Method</th>
+                <th onclick="sortTable(2, true)">Epoch</th>
+                <th onclick="sortTable(3, true)">Generation</th>
+                <th onclick="sortTable(4, true)">True Rep.</th>
+                <th onclick="sortTable(5, true)">False Rep.</th>
+                <th onclick="sortTable(6, true)">Insert</th>
+                <th onclick="sortTable(7, true)">Delete</th>
+                <th onclick="sortTable(8, false)">Best Model</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for info in train_infos %}
+            <tr>
+                <td class="center-align">{{ loop.index }}</td>
+                <td>{{ info[0] }}</td>
+                <td class="center-align">{{ info[1] }}</td>
+                <td class="center-align">{{ info[2] }}</td>
+                <td class="center-align">{{ info[3] }}</td>
+                <td class="center-align">{{ info[4] }}</td>
+                <td class="center-align">{{ info[5] }}</td>
+                <td class="center-align">{{ info[6] }}</td>
+                <td>{{ info[7] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <script>
+        function sortTable(n, isNumeric) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.getElementById("trainTable");
+            switching = true;
+            dir = "asc"; 
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    if (dir == "asc") {
+                        if (isNumeric) {
+                            if (parseFloat(x.innerHTML) > parseFloat(y.innerHTML)) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        } else {
+                            if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                    } else if (dir == "desc") {
+                        if (isNumeric) {
+                            if (parseFloat(x.innerHTML) < parseFloat(y.innerHTML)) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        } else {
+                            if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+                                shouldSwitch = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount ++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+            updateHeaders(n, dir);
+        }
+
+        function updateHeaders(columnIndex, direction) {
+            var headers = document.querySelectorAll("th");
+            headers.forEach(function(header, index) {
+                header.classList.remove("sorted-asc", "sorted-desc");
+                if (index === columnIndex) {
+                    header.classList.add(direction === "asc" ? "sorted-asc" : "sorted-desc");
+                }
+            });
+        }
+    </script>
+</body>
+</html>

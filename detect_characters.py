@@ -478,27 +478,12 @@ def _segment_by_valleys(
     best_idx = np.argsort(depths)[:n_needed]
     split_points = sorted(valleys[best_idx])
 
-    # Post-process: merge các phần quá nhỏ ở biên vào phần kế cận
+    # Giữ nguyên split points, chỉ đảm bảo start=0 và end=ink_h
     all_points = [0] + list(split_points) + [ink_h]
-    min_part = real_char_h * 0.3
 
-    # Merge phần đầu nếu quá nhỏ
-    while len(all_points) > 2 and (all_points[1] - all_points[0]) < min_part:
-        all_points.pop(1)
-
-    # Merge phần cuối nếu quá nhỏ
-    while len(all_points) > 2 and (all_points[-1] - all_points[-2]) < min_part:
-        all_points.pop(-2)
-
-    # Validate: kiểm tra không có phần nào quá lớn (> 3x expected)
-    valid = True
-    for j in range(len(all_points) - 1):
-        part_h = all_points[j + 1] - all_points[j]
-        if part_h > real_char_h * 3.0:
-            valid = False
-            break
-
-    if not valid:
+    # Validate: không có phần nào > 3x expected → reject nếu quá tệ
+    max_part = max(all_points[j + 1] - all_points[j] for j in range(len(all_points) - 1))
+    if max_part > real_char_h * 3.0:
         return []
 
     # Tạo bboxes (chuyển offset về tọa độ gốc)

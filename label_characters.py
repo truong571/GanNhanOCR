@@ -286,26 +286,67 @@ def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
     size = rendered.shape[0]
     crop_resized = cv2.resize(crop_img, (size, size))
 
-    # Binarize crop with Otsu (adaptive, better than fixed threshold)
+    # Binarize crop with Otsu
     _, crop_bin = cv2.threshold(crop_resized, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     crop_fg = (crop_bin == 0).astype(np.uint8)
     rend_fg = (rendered == 0).astype(np.uint8)
 
-    # 0. Template matching (normalized cross-correlation)
-    tm_score = 0.0
+    # --- 1. Hu Moments / matchShapes (scale/position invariant) ---
+    shape_score = 0.0
     try:
-        res = cv2.matchTemplate(crop_resized, rendered, cv2.TM_CCOEFF_NORMED)
-        tm_score = max(0.0, float(res[0][0]))
+        # Find contours for both
+        crop_contours, _ = cv2.findContours(
+            crop_fg * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        rend_contours, _ = cv2.findContours(
+            rend_fg * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        if crop_contours and rend_contours:
+            # Use the largest contour from each
+            crop_cnt = max(crop_contours, key=cv2.contourArea)
+            rend_cnt = max(rend_contours, key=cv2.contourArea)
+
+            # matchShapes returns dissimilarity (lower = more similar)
+            dissim = cv2.matchShapes(crop_cnt, rend_cnt, cv2.CONTOURS_MATCH_I2, 0)
+            # Convert to similarity score [0, 1]
+            shape_score = max(0.0, 1.0 - min(dissim, 3.0) / 3.0)
     except Exception:
         pass
 
-    # 1. IoU (pixel overlap)
-    intersection = np.sum(crop_fg & rend_fg)
-    union = np.sum(crop_fg | rend_fg)
-    iou = float(intersection) / float(union) if union > 0 else 0.0
+    # --- 2. Structural features comparison ---
+    struct_score = 0.0
+    try:
+        # Ink density
+        crop_density = crop_fg.sum() / max(1, crop_fg.size)
+        rend_density = rend_fg.sum() / max(1, rend_fg.size)
+        density_sim = 1.0 - min(abs(crop_density - rend_density) / max(0.01, max(crop_density, rend_density)), 1.0)
 
-    # 2. Stroke density correlation (projection profile)
+        # Center of mass
+        crop_moments = cv2.moments(crop_fg)
+        rend_moments = cv2.moments(rend_fg)
+        sz = crop_fg.shape[0]  # Both are same size
+
+        if crop_moments["m00"] > 0 and rend_moments["m00"] > 0:
+            crop_cx = crop_moments["m10"] / crop_moments["m00"] / sz
+            crop_cy = crop_moments["m01"] / crop_moments["m00"] / sz
+            rend_cx = rend_moments["m10"] / rend_moments["m00"] / sz
+            rend_cy = rend_moments["m01"] / rend_moments["m00"] / sz
+
+            com_dist = ((crop_cx - rend_cx)**2 + (crop_cy - rend_cy)**2) ** 0.5
+            com_sim = max(0.0, 1.0 - com_dist * 3.0)  # Normalize: 0.33 distance → 0
+        else:
+            com_sim = 0.0
+
+        # Number of connected components
+        n_crop_cc = len(crop_contours) if crop_contours else 0
+        n_rend_cc = len(rend_contours) if rend_contours else 0
+        cc_sim = 1.0 - min(abs(n_crop_cc - n_rend_cc), 5) / 5.0
+
+        struct_score = 0.4 * density_sim + 0.3 * com_sim + 0.3 * cc_sim
+    except Exception:
+        pass
+
+    # --- 3. Projection profile correlation ---
     proj_score = 0.0
     try:
         h_crop = crop_fg.sum(axis=1).astype(float)
@@ -326,8 +367,8 @@ def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
     except Exception:
         pass
 
-    # Combined: Template 35% + IoU 30% + Projection 35%
-    return 0.35 * tm_score + 0.30 * iou + 0.35 * proj_score
+    # Combined: Shape 35% + Structural 30% + Projection 35%
+    return 0.35 * shape_score + 0.30 * struct_score + 0.35 * proj_score
 
 
 def _cjk_block_score(char: str) -> float:
@@ -418,11 +459,10 @@ def rank_candidates(
             vis_score = embed_scores.get(char, 0.0)
             total = 0.5 * vis_score + 0.3 * specificity + 0.2 * block_score
         elif use_visual:
-            # Classical visual (cải tiến): 0.50 visual + 0.25 specificity + 0.25 CJK
-            # Tăng trọng số visual vì template matching mới chính xác hơn
+            # Structural visual matching: 0.55 visual + 0.25 specificity + 0.20 CJK
             rendered = _render_candidate(char, font_path)
             vis_score = visual_similarity(crop_img, rendered) if rendered is not None else 0.0
-            total = 0.50 * vis_score + 0.25 * specificity + 0.25 * block_score
+            total = 0.55 * vis_score + 0.25 * specificity + 0.20 * block_score
         else:
             # Không có ảnh: 0.6 specificity + 0.4 CJK block
             total = 0.6 * specificity + 0.4 * block_score

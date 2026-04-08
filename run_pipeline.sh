@@ -11,6 +11,7 @@ set -euo pipefail
 BOOKS=("CacThanhTruyen2" "CacThanhTruyen4" "CacThanhTruyen11")
 PYTHON="${PYTHON:-python3}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+USE_PADDLE="${USE_PADDLE:-0}"  # Set USE_PADDLE=1 to use PaddleOCR hybrid detection
 
 # ---------------------------------------------------------------------------
 # Màu terminal
@@ -75,9 +76,15 @@ echo -e "${GREEN}[OK]${NC} Giai đoạn 1 hoàn tất ($(elapsed_time $t))"
 log_stage 2 "PHÁT HIỆN VÀ CẮT KÝ TỰ"
 t=$(date +%s)
 
+PADDLE_FLAG=""
+if [[ "$USE_PADDLE" == "1" ]]; then
+    PADDLE_FLAG="--paddle"
+    echo -e "  ${CYAN}Mode: PaddleOCR Hybrid${NC}"
+fi
+
 for BOOK in "${BOOKS[@]}"; do
     log_book "$BOOK"
-    "$PYTHON" "$SCRIPT_DIR/detect_characters.py" "data/prepared/${BOOK}"
+    "$PYTHON" "$SCRIPT_DIR/detect_characters.py" "data/prepared/${BOOK}" $PADDLE_FLAG
 done
 
 echo -e "${GREEN}[OK]${NC} Giai đoạn 2 hoàn tất ($(elapsed_time $t))"

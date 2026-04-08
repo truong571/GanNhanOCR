@@ -273,10 +273,12 @@ def _get_rendered(char: str, font, size: int = 64) -> np.ndarray | None:
 def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
     """Tính độ tương đồng hình dạng giữa ảnh crop và ảnh render.
 
-    Kết hợp 3 metric:
-      1. Template matching (TM_CCOEFF_NORMED) — robust hơn IoU
-      2. IoU trên nét đen (pixel overlap) — so khớp vị trí nét
-      3. Stroke density correlation — phân bố nét theo hàng/cột
+    Cải tiến (Issue #3):
+      1. Multi-contour matching: so sánh TẤT CẢ contours chính (top-3 by area),
+         không chỉ contour lớn nhất → capture bộ thủ phức tạp
+      2. Pixel IoU trực tiếp trên ảnh binary → robust hơn contour-based
+      3. Projection profile correlation
+      4. Structural features (density, CoM, #components)
 
     Returns: float 0.0 → 1.0 (1.0 = giống nhất)
     """
@@ -292,24 +294,42 @@ def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
     crop_fg = (crop_bin == 0).astype(np.uint8)
     rend_fg = (rendered == 0).astype(np.uint8)
 
-    # --- 1. Hu Moments / matchShapes (scale/position invariant) ---
+    # --- 1. Multi-contour shape matching (Issue #3 cải tiến) ---
     shape_score = 0.0
+    crop_contours = []
+    rend_contours = []
     try:
-        # Find contours for both
         crop_contours, _ = cv2.findContours(
             crop_fg * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
         rend_contours, _ = cv2.findContours(
             rend_fg * 255, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         if crop_contours and rend_contours:
-            # Use the largest contour from each
-            crop_cnt = max(crop_contours, key=cv2.contourArea)
-            rend_cnt = max(rend_contours, key=cv2.contourArea)
+            # So sánh top-3 contours (by area) thay vì chỉ largest
+            crop_sorted = sorted(crop_contours, key=cv2.contourArea, reverse=True)[:3]
+            rend_sorted = sorted(rend_contours, key=cv2.contourArea, reverse=True)[:3]
 
-            # matchShapes returns dissimilarity (lower = more similar)
-            dissim = cv2.matchShapes(crop_cnt, rend_cnt, cv2.CONTOURS_MATCH_I2, 0)
-            # Convert to similarity score [0, 1]
-            shape_score = max(0.0, 1.0 - min(dissim, 3.0) / 3.0)
+            # Tạo combined mask từ top contours để so sánh tổng thể
+            crop_mask = np.zeros_like(crop_fg)
+            rend_mask = np.zeros_like(rend_fg)
+            cv2.drawContours(crop_mask, crop_sorted, -1, 1, thickness=cv2.FILLED)
+            cv2.drawContours(rend_mask, rend_sorted, -1, 1, thickness=cv2.FILLED)
+
+            # matchShapes trên combined contour masks (Hu moments)
+            crop_hu = cv2.HuMoments(cv2.moments(crop_mask)).flatten()
+            rend_hu = cv2.HuMoments(cv2.moments(rend_mask)).flatten()
+            # Log-transform Hu moments cho so sánh tốt hơn
+            eps = 1e-10
+            crop_hu_log = -np.sign(crop_hu) * np.log10(np.abs(crop_hu) + eps)
+            rend_hu_log = -np.sign(rend_hu) * np.log10(np.abs(rend_hu) + eps)
+            hu_dist = np.linalg.norm(crop_hu_log - rend_hu_log)
+            shape_score = max(0.0, 1.0 - min(hu_dist, 10.0) / 10.0)
+
+            # Bonus: Pixel IoU trực tiếp (robust hơn contour matching)
+            intersection = (crop_fg & rend_fg).sum()
+            union = (crop_fg | rend_fg).sum()
+            iou = intersection / max(union, 1)
+            shape_score = 0.5 * shape_score + 0.5 * iou
     except Exception:
         pass
 
@@ -324,7 +344,7 @@ def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
         # Center of mass
         crop_moments = cv2.moments(crop_fg)
         rend_moments = cv2.moments(rend_fg)
-        sz = crop_fg.shape[0]  # Both are same size
+        sz = crop_fg.shape[0]
 
         if crop_moments["m00"] > 0 and rend_moments["m00"] > 0:
             crop_cx = crop_moments["m10"] / crop_moments["m00"] / sz
@@ -333,13 +353,14 @@ def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
             rend_cy = rend_moments["m01"] / rend_moments["m00"] / sz
 
             com_dist = ((crop_cx - rend_cx)**2 + (crop_cy - rend_cy)**2) ** 0.5
-            com_sim = max(0.0, 1.0 - com_dist * 3.0)  # Normalize: 0.33 distance → 0
+            com_sim = max(0.0, 1.0 - com_dist * 3.0)
         else:
             com_sim = 0.0
 
-        # Number of connected components
-        n_crop_cc = len(crop_contours) if crop_contours else 0
-        n_rend_cc = len(rend_contours) if rend_contours else 0
+        # Number of connected components (significant ones only)
+        min_area = max(1, crop_fg.size * 0.005)  # Ignore tiny noise
+        n_crop_cc = sum(1 for c in crop_contours if cv2.contourArea(c) > min_area)
+        n_rend_cc = sum(1 for c in rend_contours if cv2.contourArea(c) > min_area)
         cc_sim = 1.0 - min(abs(n_crop_cc - n_rend_cc), 5) / 5.0
 
         struct_score = 0.4 * density_sim + 0.3 * com_sim + 0.3 * cc_sim
@@ -367,8 +388,10 @@ def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
     except Exception:
         pass
 
-    # Combined: Shape 35% + Structural 30% + Projection 35%
-    return 0.35 * shape_score + 0.30 * struct_score + 0.35 * proj_score
+    # Combined: Shape 30% + Structural 30% + Projection 40%
+    # (Issue #3: giảm weight shape vì handwriting ≠ font,
+    #  tăng projection vì phân bố nét ổn định hơn giữa handwriting/font)
+    return 0.30 * shape_score + 0.30 * struct_score + 0.40 * proj_score
 
 
 def _cjk_block_score(char: str) -> float:
@@ -455,14 +478,16 @@ def rank_candidates(
         block_score = _cjk_block_score(char)
 
         if use_embedding:
-            # Deep embedding: 0.5 visual + 0.3 specificity + 0.2 CJK block
+            # Deep embedding: visual chiếm ưu thế (0.65) vì embedding đáng tin hơn
             vis_score = embed_scores.get(char, 0.0)
-            total = 0.5 * vis_score + 0.3 * specificity + 0.2 * block_score
+            total = 0.65 * vis_score + 0.20 * specificity + 0.15 * block_score
         elif use_visual:
-            # Structural visual matching: 0.55 visual + 0.25 specificity + 0.20 CJK
-            rendered = _render_candidate(char, font_path)
+            # Issue #3: Giảm visual weight (0.65→0.45) vì handwriting ≠ font render.
+            # Tăng specificity (0.20→0.35) vì dictionary specificity đáng tin hơn
+            # visual matching giữa chữ viết tay và font.
+            rendered = _get_rendered(char, font_path)
             vis_score = visual_similarity(crop_img, rendered) if rendered is not None else 0.0
-            total = 0.55 * vis_score + 0.25 * specificity + 0.20 * block_score
+            total = 0.45 * vis_score + 0.35 * specificity + 0.20 * block_score
         else:
             # Không có ảnh: 0.6 specificity + 0.4 CJK block
             total = 0.6 * specificity + 0.4 * block_score
@@ -479,8 +504,10 @@ def rank_candidates(
 
 _SN_DOMAIN = os.environ.get("SN_DOMAIN", "tools.clc.hcmus.edu.vn")
 
-# Token lấy từ OCR/nom_ocr/ocr_client.py (Firebase JWT cho detai@gmail.com)
-_OCR_TOKEN = (
+# Issue #10: Token từ environment variable thay vì hardcode.
+# Đặt: export SN_OCR_TOKEN="eyJhbGci..." trước khi chạy.
+# Nếu không có env var → fallback sang token cũ (có thể hết hạn).
+_OCR_TOKEN_FALLBACK = (
     "eyJhbGciOiJSUzI1NiIsImtpZCI6IjQ3YWU0OWM0YzlkM2ViODVhNTI1NDA3MmMz"
     "MGQyZThlNzY2MWVmZTEiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3NlY3"
     "VyZXRva2VuLmdvb2dsZS5jb20vY2xjLWhhbS1ub24iLCJhdWQiOiJjbGMtaGFtLW5v"
@@ -498,12 +525,43 @@ _OCR_TOKEN = (
 )
 
 
+def _get_ocr_token() -> str:
+    """Lấy OCR token từ env var hoặc fallback. Kiểm tra expiry."""
+    token = os.environ.get("SN_OCR_TOKEN", _OCR_TOKEN_FALLBACK)
+
+    # Kiểm tra JWT expiry (decode payload không cần verify signature)
+    try:
+        import base64
+        parts = token.split(".")
+        if len(parts) >= 2:
+            # Decode payload (phần 2, base64url)
+            payload_b64 = parts[1] + "=" * (4 - len(parts[1]) % 4)
+            payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+            exp = payload.get("exp", 0)
+            import time
+            now = time.time()
+            if exp > 0 and now > exp:
+                remaining = now - exp
+                print(f"[OCR WARNING] Token đã hết hạn {remaining/3600:.0f} giờ trước!",
+                      file=sys.stderr)
+                print(f"[OCR WARNING] Đặt SN_OCR_TOKEN env var với token mới:",
+                      file=sys.stderr)
+                print(f"  export SN_OCR_TOKEN=\"<new_token>\"", file=sys.stderr)
+            elif exp > 0 and (exp - now) < 300:
+                print(f"[OCR WARNING] Token sắp hết hạn trong {(exp-now)/60:.0f} phút!",
+                      file=sys.stderr)
+    except Exception:
+        pass  # Không block pipeline nếu decode thất bại
+
+    return token
+
+
 def _ocr_upload_image(image_path: str) -> str | None:
     """Upload ảnh lên server OCR, trả về file_name trên server."""
     url = f"https://{_SN_DOMAIN}/api/web/clc-sinonom/image-upload"
     headers = {
         "User-Agent": "Mozilla/5.0",
-        "Authorization": f"Bearer {_OCR_TOKEN}",
+        "Authorization": f"Bearer {_get_ocr_token()}",
     }
 
     try:
@@ -527,7 +585,7 @@ def _ocr_recognize(file_name: str) -> list[dict] | None:
     url = f"https://{_SN_DOMAIN}/api/web/clc-sinonom/image-ocr"
     headers = {
         "User-Agent": "Mozilla/5.0",
-        "Authorization": f"Bearer {_OCR_TOKEN}",
+        "Authorization": f"Bearer {_get_ocr_token()}",
         "Content-Type": "application/json; charset=utf-8",
     }
     body = {
@@ -790,8 +848,8 @@ def normalize_syllables(syllables: list[str]) -> list[str]:
     """Chuẩn hoá danh sách âm tiết: xoá ký tự dính, tách tên riêng."""
     result = []
     for syl in syllables:
-        # Xoá dấu ngoặc, quote dính vào âm tiết
-        cleaned = re.sub(r'["""\'()[\]{}«»]', '', syl).strip()
+        # Xoá dấu ngoặc, quote, dấu câu dính vào âm tiết
+        cleaned = re.sub(r'["""\'()[\]{}«»,.;:!?…–—\-]', '', syl).strip()
         if not cleaned:
             continue
 
@@ -810,8 +868,14 @@ def normalize_syllables(syllables: list[str]) -> list[str]:
 # ---------------------------------------------------------------------------
 
 def levenshtein_align(chars: list[dict], syllables: list[str],
-                      deletion_cost_fn=None) -> list[dict]:
+                      deletion_cost_fn=None,
+                      trans_dict: dict | None = None) -> list[dict]:
     """Căn chỉnh Levenshtein giữa ký tự detected và âm tiết QN.
+
+    Cải tiến: Dùng dictionary-based substitution cost thay vì cost=0.
+    Nếu âm tiết QN có candidates trong từ điển → cost thấp (có thể match).
+    Nếu không có candidates → cost cao (mismatch, DP sẽ ưu tiên skip).
+    Điều này giúp DP tự sửa khi detection bị lệch 1 ký tự.
 
     Args:
         chars: list of char dicts từ detection.json
@@ -819,6 +883,8 @@ def levenshtein_align(chars: list[dict], syllables: list[str],
         syllables: list of QN syllables ["quốc", "âm", ...]
         deletion_cost_fn: hàm tính chi phí xoá (nhận char dict, trả về float)
                           mặc định: ký tự nhỏ → chi phí thấp (dễ xoá)
+        trans_dict: từ điển QN→Nôm để tính substitution cost.
+                    Nếu None → fallback cost=0 (hành vi cũ).
 
     Returns:
         list of aligned pairs:
@@ -838,17 +904,27 @@ def levenshtein_align(chars: list[dict], syllables: list[str],
     # Tính chi phí xoá cho từng ký tự dựa trên kích thước
     if deletion_cost_fn is None:
         # Tính median height để phân biệt ký tự thật vs nhiễu
-        heights = [c["height"] for c in chars]
+        heights = [c.get("height", 50) for c in chars]
         median_h = sorted(heights)[len(heights) // 2] if heights else 50
 
         def deletion_cost_fn(c):
-            ratio = c["height"] / median_h if median_h > 0 else 1
+            ratio = c.get("height", 50) / median_h if median_h > 0 else 1
             if ratio < 0.3:
                 return 0.3    # Ký tự rất nhỏ → rẻ để xoá (nhiễu)
             elif ratio < 0.5:
                 return 0.6    # Ký tự nhỏ
             else:
                 return 1.2    # Ký tự bình thường → đắt để xoá
+
+    # Pre-compute substitution costs cho mỗi âm tiết dựa trên từ điển.
+    # Âm tiết có trong từ điển → cost thấp (nhiều khả năng match).
+    # Âm tiết không có → cost cao (mismatch, DP ưu tiên deletion/insertion).
+    MATCH_COST = 0.0         # Âm tiết có candidate → likely match
+    MISMATCH_COST = 0.8      # Âm tiết không có candidate → likely mismatch
+    syl_has_candidates = [False] * n
+    if trans_dict:
+        for j_idx, syl in enumerate(syllables):
+            syl_has_candidates[j_idx] = bool(trans_dict.get(syl.lower(), []))
 
     # DP matrix
     INF = float("inf")
@@ -866,9 +942,16 @@ def levenshtein_align(chars: list[dict], syllables: list[str],
     # Fill DP
     for i in range(1, m + 1):
         for j in range(1, n + 1):
-            # Match/mismatch (diagonal)
-            # Cost = 0 cho match (vì chưa biết Unicode, mọi cặp đều có thể match)
-            diag_cost = dp[i - 1][j - 1] + 0
+            # Match/mismatch (diagonal) — dictionary-aware cost:
+            # - Âm tiết có candidate trong từ điển → cost thấp (likely valid match)
+            # - Âm tiết không có candidate → cost cao (likely mismatch,
+            #   DP sẽ ưu tiên skip char hoặc skip syllable thay vì match sai)
+            if trans_dict:
+                subst_cost = MATCH_COST if syl_has_candidates[j - 1] else MISMATCH_COST
+            else:
+                subst_cost = 0  # Fallback: hành vi cũ khi không có từ điển
+
+            diag_cost = dp[i - 1][j - 1] + subst_cost
 
             # Deletion (skip char)
             del_cost = dp[i - 1][j] + deletion_cost_fn(chars[i - 1])
@@ -944,6 +1027,7 @@ def assign_unicode(
     Returns: updated aligned list với thêm fields:
       nom_char, nom_candidates, confidence, ranking_score
     """
+    missing_crops = 0
     for pair in aligned:
         syl = pair.get("syllable")
 
@@ -976,6 +1060,7 @@ def assign_unicode(
         elif len(candidates) > 1:
             # --- CẢI TIẾN: xếp hạng ứng viên ---
             crop_path = None
+            crop_file = ""
             if crops_base and pair.get("char"):
                 crop_file = pair["char"].get("crop_file", "")
                 if crop_file:
@@ -988,6 +1073,9 @@ def assign_unicode(
                         p = crops_base / crop_file
                         if p.exists():
                             crop_path = str(p)
+
+            if crop_path is None and crop_file:
+                missing_crops += 1
 
             ranked = rank_candidates(
                 candidates[:10],
@@ -1002,17 +1090,97 @@ def assign_unicode(
                 pair["nom_char"] = ranked[0][0]
                 pair["nom_candidates"] = [r[0] for r in ranked]
                 pair["ranking_score"] = round(ranked[0][1], 3)
+                # Ghi score gap giữa top-1 và top-2 (dùng cho post-processing)
+                if len(ranked) >= 2:
+                    pair["ranking_gap"] = round(ranked[0][1] - ranked[1][1], 3)
+                else:
+                    pair["ranking_gap"] = 1.0
             else:
                 pair["nom_char"] = candidates[0]
                 pair["nom_candidates"] = candidates[:10]
 
             pair["confidence"] = "medium"
         else:
-            pair["nom_char"] = None
-            pair["nom_candidates"] = []
-            pair["confidence"] = "low"
+            # --- Issue #5: Fuzzy matching khi exact match thất bại ---
+            # Thử Levenshtein distance ≤1 trên QN word (cover lỗi OCR/typo)
+            fuzzy_candidates = _fuzzy_dict_lookup(syl.lower(), trans_dict)
+            if fuzzy_candidates:
+                pair["nom_candidates"] = fuzzy_candidates[:10]
+                if len(fuzzy_candidates) == 1:
+                    pair["nom_char"] = fuzzy_candidates[0]
+                    pair["confidence"] = "medium"
+                    pair["fuzzy_match"] = True
+                else:
+                    # Rank fuzzy candidates
+                    crop_path_f = None
+                    if crops_base and pair.get("char"):
+                        crop_file_f = pair["char"].get("crop_file", "")
+                        if crop_file_f:
+                            cleaned_f = crop_file_f.replace("crops/", "crops_cleaned/")
+                            p_f = crops_base / cleaned_f
+                            if p_f.exists():
+                                crop_path_f = str(p_f)
+                            elif (crops_base / crop_file_f).exists():
+                                crop_path_f = str(crops_base / crop_file_f)
+                    ranked_f = rank_candidates(
+                        fuzzy_candidates[:10], syl, crop_path_f, font_path,
+                        corpus_freq or {}, embed_ranker=embed_ranker,
+                    )
+                    if ranked_f:
+                        pair["nom_char"] = ranked_f[0][0]
+                        pair["nom_candidates"] = [r[0] for r in ranked_f]
+                        pair["ranking_score"] = round(ranked_f[0][1], 3)
+                    else:
+                        pair["nom_char"] = fuzzy_candidates[0]
+                    pair["confidence"] = "medium"
+                    pair["fuzzy_match"] = True
+            else:
+                pair["nom_char"] = None
+                pair["nom_candidates"] = []
+                pair["confidence"] = "low"
+
+    if missing_crops > 0:
+        print(f"    [WARNING] {missing_crops} chars missing crop files → ranking without visual similarity")
 
     return aligned
+
+
+def _fuzzy_dict_lookup(qn_word: str, trans_dict: dict,
+                       max_dist: int = 1) -> list[str]:
+    """Tìm candidates bằng fuzzy matching khi exact lookup thất bại.
+
+    Tìm tất cả key trong trans_dict có Levenshtein distance ≤ max_dist
+    với qn_word. Trả về union của candidates từ tất cả matched keys.
+    Chỉ fuzzy match trên folded text (bỏ dấu) để tránh false positive
+    do khác dấu thanh.
+    """
+    import unicodedata
+
+    def _fold(text):
+        text = unicodedata.normalize("NFC", text.lower())
+        text = text.replace("đ", "d").replace("Đ", "d")
+        nfd = unicodedata.normalize("NFD", text)
+        return "".join(c for c in nfd if unicodedata.category(c) != "Mn")
+
+    target_folded = _fold(qn_word)
+    if len(target_folded) <= 1:
+        return []  # Quá ngắn → fuzzy match không đáng tin
+
+    candidates = []
+    seen = set()
+    for key in trans_dict:
+        key_folded = _fold(key)
+        # Quick length filter: Levenshtein distance ≥ |len diff|
+        if abs(len(key_folded) - len(target_folded)) > max_dist:
+            continue
+        dist = _simple_levenshtein(target_folded, key_folded)
+        if dist <= max_dist and dist > 0:  # dist=0 would be exact match
+            for c in trans_dict[key]:
+                if c not in seen:
+                    seen.add(c)
+                    candidates.append(c)
+
+    return candidates
 
 
 # ---------------------------------------------------------------------------
@@ -1112,15 +1280,25 @@ def anchor_refine_alignment(
             )
 
             if ranked and len(ranked) >= 2:
-                # Nếu top candidate score vượt trội (>0.15 gap) → nâng lên high
+                # CẢI TIẾN: tăng gap threshold 0.15 → 0.20
+                # VÀ require top_score tuyệt đối > 0.35 (tránh upgrade khi
+                # cả 2 candidates đều có score thấp)
                 top_score = ranked[0][1]
                 second_score = ranked[1][1]
-                if top_score - second_score > 0.15:
+                gap = top_score - second_score
+                if gap > 0.20 and top_score > 0.35:
                     pair["nom_char"] = ranked[0][0]
                     pair["nom_candidates"] = [r[0] for r in ranked]
                     pair["ranking_score"] = round(top_score, 3)
+                    pair["ranking_gap"] = round(gap, 3)
                     pair["confidence"] = "high"
                     pair["anchor_refined"] = True
+                elif ranked[0][0] != pair.get("nom_char"):
+                    # Update candidate nhưng giữ medium nếu gap chưa đủ lớn
+                    pair["nom_char"] = ranked[0][0]
+                    pair["nom_candidates"] = [r[0] for r in ranked]
+                    pair["ranking_score"] = round(top_score, 3)
+                    pair["ranking_gap"] = round(gap, 3)
 
     return aligned
 
@@ -1194,7 +1372,7 @@ def multi_tier_postprocess(
         if not qn or not nom_char:
             continue
 
-        # ── Tier 1: Dictionary Intersection ──
+        # ── Tier 1: Dictionary Intersection (với strong signal) ──
         # S1 = set of QN readings cho nom_char hiện tại
         s1 = set(reading_map.get(nom_char, []))
         # S2 = set of nom chars cho QN word
@@ -1202,24 +1380,49 @@ def multi_tier_postprocess(
 
         if nom_char in s2 and qn in s1:
             # nom_char vừa là candidate cho qn, VÀ qn là reading của nom_char
-            # → Double confirmation → HIGH
-            lab["confidence"] = "high"
-            lab["postprocess_tier"] = 1
-            tier1_upgraded += 1
-            continue
+            # CẢI TIẾN: chỉ upgrade HIGH nếu có thêm strong signal:
+            #   (a) Ít candidates (≤3) → ít ambiguity, HOẶC
+            #   (b) ranking_gap lớn (>0.10) → visual rõ ràng, HOẶC
+            #   (c) Đã được OCR confirm
+            n_cands = len(s2)
+            ranking_gap = lab.get("ranking_gap", 0)
+            has_ocr = lab.get("ocr_source", False)
+            if n_cands <= 3 or ranking_gap > 0.10 or has_ocr:
+                lab["confidence"] = "high"
+                lab["postprocess_tier"] = 1
+                tier1_upgraded += 1
+                continue
+            # Dict confirm nhưng nhiều candidate + visual không rõ → giữ medium
+            # (tránh upgrade sai khi dict quá rộng)
 
         # Tìm trong candidates: char nào vừa có reading = qn
         intersection_chars = [c for c in candidates if c in s2 and qn in set(reading_map.get(c, []))]
         if intersection_chars:
+            # CẢI TIẾN: chỉ thay candidate nếu có strong signal
+            # Ưu tiên char có ít readings nhất (cụ thể nhất)
+            intersection_chars.sort(key=lambda c: len(reading_map.get(c, [])))
             best = intersection_chars[0]
-            lab["nom_char"] = best
-            lab["nom_unicode"] = f"U+{ord(best):04X}"
-            lab["confidence"] = "high"
-            lab["postprocess_tier"] = 1
-            new_cands = [best] + [c for c in candidates if c != best]
-            lab["nom_candidates"] = new_cands
-            tier1_upgraded += 1
-            continue
+            best_readings = len(reading_map.get(best, []))
+            ranking_gap = lab.get("ranking_gap", 0)
+            has_ocr = lab.get("ocr_source", False)
+
+            if best_readings <= 3 or ranking_gap > 0.10 or has_ocr:
+                lab["nom_char"] = best
+                lab["nom_unicode"] = f"U+{ord(best):04X}"
+                lab["confidence"] = "high"
+                lab["postprocess_tier"] = 1
+                new_cands = [best] + [c for c in candidates if c != best]
+                lab["nom_candidates"] = new_cands
+                tier1_upgraded += 1
+                continue
+            elif best != nom_char:
+                # Thay candidate cụ thể hơn nhưng giữ medium
+                lab["nom_char"] = best
+                lab["nom_unicode"] = f"U+{ord(best):04X}"
+                lab["postprocess_tier"] = 1
+                new_cands = [best] + [c for c in candidates if c != best]
+                lab["nom_candidates"] = new_cands
+                continue
 
         # ── Tier 2: Reverse Lookup with Levenshtein ──
         qn_folded = _fold_text(qn)
@@ -1239,10 +1442,14 @@ def multi_tier_postprocess(
         if best_match and best_edit <= 1:
             lab["nom_char"] = best_match
             lab["nom_unicode"] = f"U+{ord(best_match):04X}"
-            lab["confidence"] = "high"
             lab["postprocess_tier"] = 2
             new_cands = [best_match] + [c for c in candidates if c != best_match]
             lab["nom_candidates"] = new_cands
+            # edit_dist=0 → exact match → high; edit_dist=1 → fuzzy → medium
+            if best_edit == 0:
+                lab["confidence"] = "high"
+            else:
+                lab["confidence"] = "medium"
             tier2_upgraded += 1
             continue
 
@@ -1725,6 +1932,44 @@ def process_page(
     with open(trans_path, "r", encoding="utf-8") as f:
         trans_lines = f.read().strip().split("\n")
 
+    # --- Issue #9: Column order verification ---
+    # Kiểm tra thứ tự cột (R→L) bằng cách so sánh dict match rate
+    # giữa column_order hiện tại vs reversed order.
+    # Nếu reversed có match rate cao hơn đáng kể → cảnh báo.
+    if len(detection["columns"]) >= 3 and len(trans_lines) >= 3 and trans_dict:
+        def _quick_match_rate(columns_data, lines, td):
+            """Tính nhanh % cặp (char_count, syllable_count) khớp."""
+            hits = 0
+            total = 0
+            for i, col in enumerate(columns_data):
+                if i >= len(lines):
+                    break
+                syls = normalize_syllables(lines[i].split())
+                n_chars = len(col["chars"])
+                n_syls = len(syls)
+                total += 1
+                # "Khớp" nếu chênh lệch ≤ 15%
+                if n_syls > 0 and n_chars > 0:
+                    ratio = abs(n_chars - n_syls) / max(n_chars, n_syls)
+                    if ratio <= 0.15:
+                        hits += 1
+            return hits / total if total > 0 else 0
+
+        cols_data = detection["columns"]
+        normal_rate = _quick_match_rate(cols_data, trans_lines, trans_dict)
+        reversed_lines = list(reversed(trans_lines))
+        reverse_rate = _quick_match_rate(cols_data, reversed_lines, trans_dict)
+
+        if reverse_rate > normal_rate + 0.2 and reverse_rate > 0.5:
+            if verbose:
+                print(f"  [COLUMN_ORDER] Trang {book_page}: "
+                      f"reversed order match rate ({reverse_rate:.0%}) >> "
+                      f"normal order ({normal_rate:.0%}) → REVERSING lines")
+            trans_lines = reversed_lines
+        elif normal_rate < 0.3 and verbose:
+            print(f"  [COLUMN_ORDER] Trang {book_page}: "
+                  f"low match rate ({normal_rate:.0%}) — column/text alignment may be wrong")
+
     # --- OCR API (nếu bật) ---
     ocr_columns = None
     if use_ocr:
@@ -1742,6 +1987,7 @@ def process_page(
     page_stats = {
         "total_chars": 0, "matched": 0, "gaps": 0,
         "high": 0, "medium": 0, "low": 0,
+        "flagged_columns": [],  # Cột có mismatch lớn (Issue #2)
     }
     ocr_used_indices = set()  # track cột OCR đã dùng
 
@@ -1759,8 +2005,26 @@ def process_page(
         # Chuẩn hoá tên riêng
         syllables = normalize_syllables(raw_syllables)
 
-        # Bước 4: Levenshtein alignment
-        aligned = levenshtein_align(chars, syllables)
+        # --- Issue #2: Detection validation ---
+        # Flag cột có chênh lệch >30% giữa detected chars và syllables
+        n_chars = len(chars)
+        n_syls = len(syllables)
+        if n_syls > 0 and n_chars > 0:
+            mismatch_ratio = abs(n_chars - n_syls) / max(n_chars, n_syls)
+            if mismatch_ratio > 0.30:
+                page_stats["flagged_columns"].append({
+                    "column": col_num,
+                    "detected_chars": n_chars,
+                    "syllables": n_syls,
+                    "mismatch_ratio": round(mismatch_ratio, 2),
+                })
+                if verbose:
+                    print(f"    [FLAG] Cột {col_num}: {n_chars} chars vs "
+                          f"{n_syls} syllables (mismatch {mismatch_ratio:.0%}) "
+                          f"— alignment may be unreliable")
+
+        # Bước 4: Levenshtein alignment (dictionary-aware cost)
+        aligned = levenshtein_align(chars, syllables, trans_dict=trans_dict)
 
         # Bước 5: Gán Unicode (với ranking visual/embedding + frequency)
         crops_base = prepared_dir / "detected"
@@ -2012,6 +2276,7 @@ def process_prepared_dir(
         print("-" * 70)
 
     all_labels = []
+    _all_flagged_columns = []  # Issue #2: track all flagged columns
     total_stats = {
         "total_chars": 0, "matched": 0, "gaps": 0,
         "high": 0, "medium": 0, "low": 0,
@@ -2033,8 +2298,12 @@ def process_prepared_dir(
             continue
 
         all_labels.extend(result["labels"])
-        for k in total_stats:
+        for k in ("total_chars", "matched", "gaps", "high", "medium", "low"):
             total_stats[k] += result["stats"].get(k, 0)
+        # Collect flagged columns (Issue #2)
+        for fc in result["stats"].get("flagged_columns", []):
+            fc["page"] = result["book_page"]
+            _all_flagged_columns.append(fc)
 
     # --- Bước 4.5: Self-Consistency (lan truyền nhãn thống kê) ---
     # Quan sát: cùng 1 từ QN xuất hiện nhiều lần trong sách.
@@ -2045,17 +2314,31 @@ def process_prepared_dir(
     #   Lượt 1: Dùng high confidence (dict 1-candidate + OCR confirmed)
     #   Lượt 2: Dùng OCR cross-validation (ocr_char khớp với top candidate)
 
-    # --- Lượt 1: Thu thập TẤT CẢ cặp (qn, nom_char) có confidence = "high" ---
+    # --- Lượt 1: Thu thập cặp (qn, nom_char) truly unambiguous ---
+    # Issue #4: CHỈ dùng labels mà:
+    #   (a) confidence="high" VÀ chỉ có 1 candidate trong từ điển (truly unambiguous)
+    #   (b) HOẶC đã được OCR API xác nhận (ocr_source=True)
+    # KHÔNG dùng labels high từ anchor_refined/consistency_source vì có thể sai
     confirmed_freq: dict[str, dict[str, int]] = {}
     for lab in all_labels:
-        if (lab.get("confidence") == "high"
-                and lab.get("quoc_ngu") and lab.get("nom_char")):
-            qn = lab["quoc_ngu"].lower()
+        if lab.get("confidence") != "high":
+            continue
+        if not (lab.get("quoc_ngu") and lab.get("nom_char")):
+            continue
+        # Chỉ lấy truly unambiguous sources
+        qn = lab["quoc_ngu"].lower()
+        candidates = trans_dict.get(qn, [])
+        is_unambiguous = len(candidates) == 1
+        is_ocr_confirmed = lab.get("ocr_source", False)
+        if is_unambiguous or is_ocr_confirmed:
             char = lab["nom_char"]
             confirmed_freq.setdefault(qn, {})
             confirmed_freq[qn][char] = confirmed_freq[qn].get(char, 0) + 1
 
-    # Nâng cấp medium → high nếu cùng từ QN đã được xác nhận ≥2 lần
+    # Nâng cấp medium → high nếu cùng từ QN đã được xác nhận đủ nhiều lần
+    # CẢI TIẾN: tăng threshold ≥2 → ≥4 để tránh lan truyền lỗi
+    # (1 lỗi ranking ban đầu nếu xuất hiện 2 lần sẽ không đủ để lan truyền)
+    CONSISTENCY_MIN_COUNT = 4
     consistency_upgraded = 0
     for lab in all_labels:
         if lab.get("confidence") != "medium":
@@ -2072,8 +2355,12 @@ def process_prepared_dir(
         best_char = max(freq, key=freq.get)
         best_count = freq[best_char]
 
-        # Chỉ nâng cấp nếu: (1) ký tự nằm trong candidates, (2) xuất hiện ≥2 lần
-        if best_char in candidates and best_count >= 2:
+        # CẢI TIẾN: chỉ nâng cấp nếu xuất hiện ≥4 lần (thay vì ≥2)
+        # VÀ phải chiếm >60% tổng xuất hiện (tránh trường hợp split vote)
+        total_for_qn = sum(freq.values())
+        dominant = best_count / total_for_qn if total_for_qn > 0 else 0
+
+        if best_char in candidates and best_count >= CONSISTENCY_MIN_COUNT and dominant > 0.6:
             lab["nom_char"] = best_char
             lab["nom_unicode"] = f"U+{ord(best_char):04X}"
             lab["confidence"] = "high"
@@ -2095,17 +2382,25 @@ def process_prepared_dir(
             lab["ocr_crossval"] = True
             ocr_crossval_upgraded += 1
 
-    # --- Lượt 3: Lan truyền từ lượt 1+2 cho medium còn lại (với threshold thấp hơn) ---
-    # Sau lượt 1+2, có thêm nhiều high → lan truyền tiếp
+    # --- Lượt 3: Lan truyền từ lượt 1+2 cho medium còn lại ---
+    # Issue #4: Lượt 3 cũng chỉ dùng truly unambiguous + OCR confirmed
     confirmed_freq2: dict[str, dict[str, int]] = {}
     for lab in all_labels:
-        if (lab.get("confidence") == "high"
-                and lab.get("quoc_ngu") and lab.get("nom_char")):
-            qn = lab["quoc_ngu"].lower()
+        if lab.get("confidence") != "high":
+            continue
+        if not (lab.get("quoc_ngu") and lab.get("nom_char")):
+            continue
+        qn = lab["quoc_ngu"].lower()
+        candidates_3 = trans_dict.get(qn, [])
+        is_unambiguous_3 = len(candidates_3) == 1
+        is_ocr_3 = lab.get("ocr_source", False) or lab.get("ocr_crossval", False)
+        if is_unambiguous_3 or is_ocr_3:
             char = lab["nom_char"]
             confirmed_freq2.setdefault(qn, {})
             confirmed_freq2[qn][char] = confirmed_freq2[qn].get(char, 0) + 1
 
+    # CẢI TIẾN: lượt 3 cũng cần threshold cao hơn (≥3 thay vì ≥1)
+    CONSISTENCY_MIN_COUNT_2 = 3
     consistency_upgraded_2 = 0
     for lab in all_labels:
         if lab.get("confidence") != "medium":
@@ -2119,8 +2414,10 @@ def process_prepared_dir(
         freq = confirmed_freq2[qn]
         best_char = max(freq, key=freq.get)
         best_count = freq[best_char]
-        # Lượt 2: chỉ cần ≥1 lần confirmed (vì đã qua lượt 1 lọc rồi)
-        if best_char in candidates and best_count >= 1:
+        total_for_qn = sum(freq.values())
+        dominant = best_count / total_for_qn if total_for_qn > 0 else 0
+
+        if best_char in candidates and best_count >= CONSISTENCY_MIN_COUNT_2 and dominant > 0.6:
             lab["nom_char"] = best_char
             lab["nom_unicode"] = f"U+{ord(best_char):04X}"
             lab["confidence"] = "high"
@@ -2180,6 +2477,15 @@ def process_prepared_dir(
             print(f"  OCR upgraded        : {ocr_upgraded}")
         if consist_upgraded:
             print(f"  Consistency upgraded: {consist_upgraded}")
+        if _all_flagged_columns:
+            print(f"\n  [WARNING] {len(_all_flagged_columns)} cột có chênh lệch "
+                  f"detection/transcription >30%:")
+            for fc in _all_flagged_columns[:10]:
+                print(f"    Trang {fc['page']} cột {fc['column']}: "
+                      f"{fc['detected_chars']} chars vs {fc['syllables']} syls "
+                      f"(mismatch {fc['mismatch_ratio']:.0%})")
+            if len(_all_flagged_columns) > 10:
+                print(f"    ... và {len(_all_flagged_columns) - 10} cột khác")
         print(f"  Output              : {output_dir}/")
 
     # --- Build dataset chuẩn (đồng bộ JSON, CSV, Excel) ---
@@ -2224,6 +2530,7 @@ def process_prepared_dir(
         "total_labels": len(dataset_rows),
         "ocr_upgraded": sum(1 for lab in all_labels if lab.get("ocr_source")),
         "consistency_upgraded": sum(1 for lab in all_labels if lab.get("consistency_source")),
+        "flagged_columns": _all_flagged_columns,
     }
     summary_path = output_dir / "summary.json"
     with open(summary_path, "w", encoding="utf-8") as f:

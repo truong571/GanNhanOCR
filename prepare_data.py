@@ -561,6 +561,46 @@ def process_pdf(
                 }
             )
 
+        # --- Issue #8: Transcription validation ---
+        # Kiểm tra chất lượng text sau OCR/extract
+        trans_warnings = []
+        total_syls = sum(len(c["syllables"]) for c in columns)
+        if total_syls == 0:
+            trans_warnings.append("EMPTY: Không có âm tiết nào")
+        elif total_syls < 10 and len(columns) > 3:
+            trans_warnings.append(f"SPARSE: Chỉ {total_syls} âm tiết cho {len(columns)} cột")
+
+        # Kiểm tra tỷ lệ từ quá ngắn (1 ký tự) → có thể OCR lỗi
+        all_syls = [s for c in columns for s in c["syllables"]]
+        if all_syls:
+            single_char_ratio = sum(1 for s in all_syls if len(s) <= 1) / len(all_syls)
+            if single_char_ratio > 0.4:
+                trans_warnings.append(
+                    f"NOISE: {single_char_ratio:.0%} âm tiết chỉ có 1 ký tự "
+                    f"(có thể OCR bị phân mảnh)")
+
+        # Kiểm tra dấu tiếng Việt (nếu re-OCR)
+        if used_reocr:
+            combined_text = " ".join(c.get("cleaned_text", "") for c in columns)
+            if combined_text and not has_vietnamese_diacritics(combined_text):
+                trans_warnings.append("NO_DIACRITICS: Text OCR thiếu dấu tiếng Việt")
+
+        # Kiểm tra cột có số âm tiết bất thường (quá ít hoặc quá nhiều)
+        syl_counts = [len(c["syllables"]) for c in columns]
+        if len(syl_counts) >= 3:
+            median_count = sorted(syl_counts)[len(syl_counts) // 2]
+            if median_count > 0:
+                for c in columns:
+                    col_count = len(c["syllables"])
+                    if col_count > 0 and abs(col_count - median_count) / median_count > 0.5:
+                        trans_warnings.append(
+                            f"COL_OUTLIER: Cột {c['column']} có {col_count} âm tiết "
+                            f"(median={median_count})")
+
+        if trans_warnings and verbose:
+            for w in trans_warnings:
+                print(f"    [TRANS_WARN] Trang {book_page}: {w}")
+
         # Lưu transcription (1 dòng = 1 cột, âm tiết cách space)
         trans_filename = f"page_{book_page:04d}.txt"
         trans_path = trans_dir / trans_filename
@@ -593,6 +633,7 @@ def process_pdf(
             "syllable_counts": [c["num_syllables"] for c in columns],
             "image_info": image_info,
             "text_source": text_source,
+            "transcription_warnings": trans_warnings,
         }
         results.append(page_result)
 

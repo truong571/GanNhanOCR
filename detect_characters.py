@@ -1216,27 +1216,152 @@ def validate_with_transcription(
     return validation
 
 
+def _tighten_char_bbox(
+    binary: np.ndarray,
+    bbox: tuple[int, int, int, int],
+    col_center_x: float,
+    padding: int = 5,
+) -> tuple[int, int, int, int]:
+    """Tighten bbox quanh ink thực tế của ký tự, loại bỏ chữ cột bên cạnh.
+
+    Vấn đề gốc: char bbox kế thừa toàn bộ chiều rộng cột,
+    nên crop chứa cả đường kẻ cột + nét chữ cột liền kề.
+
+    Giải pháp:
+    1. Binarize vùng bbox
+    2. Loại bỏ ruling lines (các đường thẳng đứng mỏng ở biên)
+    3. Tìm connected components, chỉ giữ CCs gần tâm cột
+    4. Tighten bbox quanh ink còn lại
+
+    Args:
+        binary: Binary image toàn trang (INV: ink=255, bg=0)
+        bbox: (x1, y1, x2, y2) full-column-width bbox
+        col_center_x: Tâm x của cột (dùng để phân biệt ink thuộc cột này vs cột bên)
+        padding: Pixels padding sau khi tighten
+
+    Returns:
+        (x1, y1, x2, y2) tight-fit bbox
+    """
+    x1, y1, x2, y2 = bbox
+    img_h, img_w = binary.shape
+    col_w = x2 - x1
+    char_h = y2 - y1
+
+    if col_w <= 0 or char_h <= 0:
+        return bbox
+
+    # Crop region
+    region = binary[y1:y2, x1:x2].copy()
+    rh, rw = region.shape
+    if rh == 0 or rw == 0:
+        return bbox
+
+    # --- Bước 1: Loại bỏ ruling lines (đường kẻ dọc mỏng ở biên cột) ---
+    # Ruling lines thường là đường thẳng đứng rất mỏng (1-4px) ở biên trái/phải
+    edge_margin = max(6, int(rw * 0.08))  # 8% chiều rộng cột
+
+    # Xoá ink ở biên trái
+    left_strip = region[:, :edge_margin]
+    v_proj_left = left_strip.sum(axis=0)
+    for cx in range(edge_margin):
+        # Nếu cột pixel này có ink liên tục > 60% chiều cao → ruling line
+        col_ink = np.count_nonzero(left_strip[:, cx])
+        if col_ink > rh * 0.5:
+            region[:, cx] = 0
+
+    # Xoá ink ở biên phải
+    right_strip = region[:, -edge_margin:]
+    for cx in range(edge_margin):
+        col_ink = np.count_nonzero(right_strip[:, cx])
+        if col_ink > rh * 0.5:
+            region[:, rw - edge_margin + cx] = 0
+
+    # --- Bước 2: Connected Components → chỉ giữ ink gần tâm cột ---
+    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
+        region, connectivity=8
+    )
+
+    if num_labels <= 1:
+        return bbox  # Không có ink
+
+    # Tâm cột relative to region
+    col_cx_rel = col_center_x - x1
+
+    # Giữ CCs có centroid x nằm trong vùng trung tâm (35%-65% chiều rộng)
+    # hoặc CCs có diện tích lớn gần tâm
+    keep_mask = np.zeros_like(region)
+    center_margin = rw * 0.30  # 30% biên mỗi bên
+
+    for lbl in range(1, num_labels):
+        cx = centroids[lbl][0]  # x centroid of this CC
+        area = stats[lbl, cv2.CC_STAT_AREA]
+
+        # CC ở vùng trung tâm → giữ
+        if center_margin <= cx <= rw - center_margin:
+            keep_mask[labels == lbl] = 255
+        # CC lớn (> 3% region area) và không quá xa tâm → giữ
+        elif area > region.size * 0.02 and center_margin * 0.5 <= cx <= rw - center_margin * 0.5:
+            keep_mask[labels == lbl] = 255
+        # CC chạm cả vùng trung tâm → giữ (chữ rộng)
+        else:
+            cc_x1 = stats[lbl, cv2.CC_STAT_LEFT]
+            cc_x2 = cc_x1 + stats[lbl, cv2.CC_STAT_WIDTH]
+            if cc_x1 < rw - center_margin and cc_x2 > center_margin:
+                keep_mask[labels == lbl] = 255
+
+    # --- Bước 3: Tighten bbox quanh ink còn lại ---
+    coords = cv2.findNonZero(keep_mask)
+    if coords is None:
+        # Fallback: dùng all ink (trước khi filter CC)
+        coords = cv2.findNonZero(region)
+        if coords is None:
+            return bbox
+
+    rx, ry, rw_tight, rh_tight = cv2.boundingRect(coords)
+
+    # Áp dụng padding
+    new_x1 = max(0, x1 + rx - padding)
+    new_x2 = min(img_w, x1 + rx + rw_tight + padding)
+    new_y1 = max(0, y1 + ry - padding)
+    new_y2 = min(img_h, y1 + ry + rh_tight + padding)
+
+    # Safety: bbox mới không nhỏ hơn 25% diện tích bbox cũ
+    orig_area = col_w * char_h
+    new_area = (new_x2 - new_x1) * (new_y2 - new_y1)
+    if new_area < orig_area * 0.15:
+        return bbox
+
+    return (int(new_x1), int(new_y1), int(new_x2), int(new_y2))
+
+
 def save_char_crops(
     image_path: str, detection: dict, output_dir: Path, page_num: int
 ) -> list[str]:
-    """Cắt và lưu ảnh từng ký tự."""
+    """Cắt và lưu ảnh từng ký tự với tight-fit bbox."""
     gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    # Binary cho tightening (INV: ink=white)
+    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+
     crops_dir = output_dir / "crops" / f"page_{page_num:04d}"
     crops_dir.mkdir(parents=True, exist_ok=True)
 
     crop_paths = []
     for col in detection["columns"]:
+        # Tâm x của cột
+        col_bbox = col["bbox"]
+        col_center_x = (col_bbox[0] + col_bbox[2]) / 2.0
+
         for char_info in col["chars"]:
             x1, y1, x2, y2 = char_info["bbox"]
 
-            # Thêm padding nhỏ
-            pad = 3
-            y1p = max(0, y1 - pad)
-            y2p = min(gray.shape[0], y2 + pad)
-            x1p = max(0, x1 - pad)
-            x2p = min(gray.shape[1], x2 + pad)
+            # Tighten bbox: loại bỏ ruling lines + chữ cột bên cạnh
+            tx1, ty1, tx2, ty2 = _tighten_char_bbox(
+                binary, (x1, y1, x2, y2), col_center_x
+            )
+            char_info["bbox_tight"] = [int(tx1), int(ty1), int(tx2), int(ty2)]
 
-            crop = gray[y1p:y2p, x1p:x2p]
+            # Crop từ tight bbox
+            crop = gray[ty1:ty2, tx1:tx2]
 
             filename = f"col{col['column']:02d}_char{char_info['char_idx']:03d}.png"
             crop_path = crops_dir / filename

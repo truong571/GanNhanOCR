@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Label Verification Report</title>
+<style>
+body { font-family: 'Segoe UI', sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+h1 { color: #333; }
+.summary { background: #f5f5f5; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+table { border-collapse: collapse; width: 100%; }
+th { background: #4a90d9; color: white; padding: 10px; text-align: left; }
+td { padding: 8px; border-bottom: 1px solid #ddd; }
+tr:hover { background: #f0f0f0; }
+.ok { color: #2ecc71; font-weight: bold; }
+.warn { color: #f39c12; font-weight: bold; }
+.bad { color: #e74c3c; font-weight: bold; }
+.nom { font-size: 24px; }
+.crop-img { max-height: 50px; }
+.rank-bad { background: #ffeaea; }
+</style>
+</head>
+<body>
+<h1>Label Verification Report (DINOv2)</h1>
+
+<div class="summary">
+<strong>Total:</strong> 20 |
+<strong class="ok">Rank #1 (likely correct):</strong> 2 |
+<strong class="bad">Rank > 1 (likely WRONG):</strong> 18 |
+<strong class="warn">Low similarity (< 0.45):</strong> 0
+</div>
+
+<table>
+<tr>
+<th>#</th><th>Crop</th><th>Assigned</th><th>Reading</th>
+<th>DINOv2 Sim</th><th>Rank</th><th>Best Match</th><th>Top Candidates</th>
+</tr>
+
+<tr class="rank-bad">
+<td>1</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char000.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char000.png"><br><small>col01_char000.png</small></td>
+<td><span class="nom">二</span></td>
+<td>Nhị</td>
+<td class="bad">0.6998</td>
+<td class="bad">#22</td>
+<td><span class="nom">瀰</span> (0.7298)</td>
+<td><span class="nom">瀰</span>(0.730) <span class="nom">洱</span>(0.723) <span class="nom">蘂</span>(0.718) <span class="nom">蕊</span>(0.716) <span class="nom">堄</span>(0.714)</td>
+</tr>
+
+<tr class="">
+<td>2</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char001.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char001.png"><br><small>col01_char001.png</small></td>
+<td><span class="nom">月</span></td>
+<td>nguyệt</td>
+<td class="ok">0.7026</td>
+<td class="ok">#1</td>
+<td><span class="nom">月</span> (0.7026)</td>
+<td><span class="nom">月</span>(0.703) <span class="nom">刖</span>(0.689) <span class="nom">望</span>(0.687) <span class="nom">囝</span>(0.682) <span class="nom">跀</span>(0.681)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>3</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char002.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char002.png"><br><small>col01_char002.png</small></td>
+<td><span class="nom">二</span></td>
+<td>nhị</td>
+<td class="bad">0.7199</td>
+<td class="bad">#10</td>
+<td><span class="nom">瀰</span> (0.7514)</td>
+<td><span class="nom">瀰</span>(0.751) <span class="nom">蘂</span>(0.733) <span class="nom">洱</span>(0.730) <span class="nom">彌</span>(0.729) <span class="nom">餌</span>(0.728)</td>
+</tr>
+
+<tr class="">
+<td>4</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char003.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char003.png"><br><small>col01_char003.png</small></td>
+<td><span class="nom">十</span></td>
+<td>thập</td>
+<td class="ok">0.7065</td>
+<td class="ok">#1</td>
+<td><span class="nom">十</span> (0.7065)</td>
+<td><span class="nom">十</span>(0.707) <span class="nom">辻</span>(0.681) <span class="nom">㕸</span>(0.675) <span class="nom">葚</span>(0.673) <span class="nom">出</span>(0.666)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>5</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char004.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char004.png"><br><small>col01_char004.png</small></td>
+<td><span class="nom">八</span></td>
+<td>bát</td>
+<td class="bad">0.7692</td>
+<td class="bad">#3</td>
+<td><span class="nom">癶</span> (0.7861)</td>
+<td><span class="nom">癶</span>(0.786) <span class="nom">叭</span>(0.773) <span class="nom">八</span>(0.769) <span class="nom">扒</span>(0.766) <span class="nom">趴</span>(0.764)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>6</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char005.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col01_char005.png"><br><small>col01_char005.png</small></td>
+<td><span class="nom">日</span></td>
+<td>nhật</td>
+<td class="bad">0.6984</td>
+<td class="bad">#3</td>
+<td><span class="nom">白</span> (0.7209)</td>
+<td><span class="nom">白</span>(0.721) <span class="nom">月</span>(0.702) <span class="nom">日</span>(0.698) <span class="nom">馹</span>(0.683) <span class="nom">釰</span>(0.681)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>7</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char000.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char000.png"><br><small>col02_char000.png</small></td>
+<td><span class="nom">綀</span></td>
+<td>SƠ</td>
+<td class="bad">0.6811</td>
+<td class="bad">#14</td>
+<td><span class="nom">疏</span> (0.7271)</td>
+<td><span class="nom">疏</span>(0.727) <span class="nom">⼹</span>(0.717) <span class="nom">車</span>(0.713) <span class="nom">匹</span>(0.710) <span class="nom">䟽</span>(0.707)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>8</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char001.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char001.png"><br><small>col02_char001.png</small></td>
+<td><span class="nom">一</span></td>
+<td>NHẤT</td>
+<td class="bad">0.7060</td>
+<td class="bad">#3</td>
+<td><span class="nom">弌</span> (0.7260)</td>
+<td><span class="nom">弌</span>(0.726) <span class="nom">壹</span>(0.707) <span class="nom">一</span>(0.706) <span class="nom">壱</span>(0.637) <span class="nom">搋</span>(0.637)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>9</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char002.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char002.png"><br><small>col02_char002.png</small></td>
+<td><span class="nom">日</span></td>
+<td>NHẬT</td>
+<td class="bad">0.7246</td>
+<td class="bad">#5</td>
+<td><span class="nom">釰</span> (0.7796)</td>
+<td><span class="nom">釰</span>(0.780) <span class="nom">馹</span>(0.765) <span class="nom">月</span>(0.742) <span class="nom">白</span>(0.728) <span class="nom">日</span>(0.725)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>10</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char003.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char003.png"><br><small>col02_char003.png</small></td>
+<td><span class="nom">翁</span></td>
+<td>Ông</td>
+<td class="bad">0.8143</td>
+<td class="bad">#9</td>
+<td><span class="nom">䈵</span> (0.8300)</td>
+<td><span class="nom">䈵</span>(0.830) <span class="nom">𪪳</span>(0.829) <span class="nom">蓊</span>(0.828) <span class="nom">螉</span>(0.823) <span class="nom">鶲</span>(0.823)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>11</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char004.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char004.png"><br><small>col02_char004.png</small></td>
+<td><span class="nom">垩</span></td>
+<td>Thánh</td>
+<td class="bad">0.7392</td>
+<td class="bad">#7</td>
+<td><span class="nom">𡃑</span> (0.7648)</td>
+<td><span class="nom">𡃑</span>(0.765) <span class="nom">𬉊</span>(0.755) <span class="nom">堊</span>(0.754) <span class="nom">請</span>(0.744) <span class="nom">圣</span>(0.741)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>12</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char005.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char005.png"><br><small>col02_char005.png</small></td>
+<td><span class="nom">季</span></td>
+<td>I</td>
+<td class="bad">0.7732</td>
+<td class="bad">#2</td>
+<td><span class="nom">軌</span> (0.7863)</td>
+<td><span class="nom">軌</span>(0.786) <span class="nom">季</span>(0.773) <span class="nom">䠏</span>(0.771) <span class="nom">匱</span>(0.763) <span class="nom">揆</span>(0.762)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>13</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char006.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char006.png"><br><small>col02_char006.png</small></td>
+<td><span class="nom">那</span></td>
+<td>na</td>
+<td class="bad">0.7260</td>
+<td class="bad">#12</td>
+<td><span class="nom">娜</span> (0.7542)</td>
+<td><span class="nom">娜</span>(0.754) <span class="nom">挼</span>(0.753) <span class="nom">南</span>(0.751) <span class="nom">難</span>(0.745) <span class="nom">儺</span>(0.741)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>14</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char007.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char007.png"><br><small>col02_char007.png</small></td>
+<td><span class="nom">樞</span></td>
+<td>xu</td>
+<td class="bad">0.7648</td>
+<td class="bad">#13</td>
+<td><span class="nom">跢</span> (0.8045)</td>
+<td><span class="nom">跢</span>(0.804) <span class="nom">趍</span>(0.800) <span class="nom">趨</span>(0.798) <span class="nom">趋</span>(0.796) <span class="nom">搊</span>(0.794)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>15</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char008.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char008.png"><br><small>col02_char008.png</small></td>
+<td><span class="nom">曰</span></td>
+<td>viết</td>
+<td class="bad">0.6549</td>
+<td class="bad">#2</td>
+<td><span class="nom">別</span> (0.6867)</td>
+<td><span class="nom">別</span>(0.687) <span class="nom">曰</span>(0.655)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>16</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char009.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char009.png"><br><small>col02_char009.png</small></td>
+<td><span class="nom">釪</span></td>
+<td>vồ</td>
+<td class="bad">0.7494</td>
+<td class="bad">#5</td>
+<td><span class="nom">摹</span> (0.7564)</td>
+<td><span class="nom">摹</span>(0.756) <span class="nom">撫</span>(0.754) <span class="nom">橅</span>(0.752) <span class="nom">拊</span>(0.750) <span class="nom">釪</span>(0.749)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>17</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char010.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char010.png"><br><small>col02_char010.png</small></td>
+<td><span class="nom">子</span></td>
+<td>tử</td>
+<td class="bad">0.7448</td>
+<td class="bad">#22</td>
+<td><span class="nom">紫</span> (0.8294)</td>
+<td><span class="nom">紫</span>(0.829) <span class="nom">榟</span>(0.826) <span class="nom">崽</span>(0.817) <span class="nom">滓</span>(0.816) <span class="nom">籽</span>(0.816)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>18</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char011.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char011.png"><br><small>col02_char011.png</small></td>
+<td><span class="nom">爲</span></td>
+<td>vì</td>
+<td class="bad">0.7621</td>
+<td class="bad">#3</td>
+<td><span class="nom">󰩄</span> (0.7822)</td>
+<td><span class="nom">󰩄</span>(0.782) <span class="nom">為</span>(0.769) <span class="nom">爲</span>(0.762) <span class="nom">位</span>(0.733) <span class="nom">𡸏</span>(0.729)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>19</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char012.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char012.png"><br><small>col02_char012.png</small></td>
+<td><span class="nom">盗</span></td>
+<td>đạo</td>
+<td class="bad">0.7106</td>
+<td class="bad">#6</td>
+<td><span class="nom">導</span> (0.7365)</td>
+<td><span class="nom">導</span>(0.737) <span class="nom">道</span>(0.730) <span class="nom">导</span>(0.727) <span class="nom">盜</span>(0.717) <span class="nom">燾</span>(0.714)</td>
+</tr>
+
+<tr class="rank-bad">
+<td>20</td>
+<td><img src="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char013.png" class="crop-img" alt="Data/prepared/CacThanhTruyen2/detected/crops/page_0012/col02_char013.png"><br><small>col02_char013.png</small></td>
+<td><span class="nom">傳</span></td>
+<td>truyện</td>
+<td class="bad">0.7081</td>
+<td class="bad">#3</td>
+<td><span class="nom">传</span> (0.7292)</td>
+<td><span class="nom">传</span>(0.729) <span class="nom">縳</span>(0.729) <span class="nom">傳</span>(0.708) <span class="nom">𡀯</span>(0.701) <span class="nom">伝</span>(0.635)</td>
+</tr>
+
+</table>
+</body></html>

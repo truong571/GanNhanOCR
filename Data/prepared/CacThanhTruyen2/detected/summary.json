@@ -1,23 +1,23 @@
 {
   "source_dir": "data/prepared/CacThanhTruyen2",
   "total_pages": 5,
-  "total_detected": 917,
+  "total_detected": 961,
   "total_expected": 961,
-  "pages_matched_90pct": 4,
+  "pages_matched_90pct": 5,
   "pages": [
     {
       "book_page": 12,
-      "total_chars": 162,
+      "total_chars": 169,
       "validation": {
-        "total_detected": 162,
+        "total_detected": 169,
         "total_expected": 169,
         "column_comparison": [
           {
             "column": 1,
-            "detected": 4,
+            "detected": 6,
             "expected": 6,
-            "diff": -2,
-            "match": false
+            "diff": 0,
+            "match": true
           },
           {
             "column": 2,
@@ -70,13 +70,13 @@
           },
           {
             "column": 9,
-            "detected": 18,
+            "detected": 23,
             "expected": 23,
-            "diff": -5,
-            "match": false
+            "diff": 0,
+            "match": true
           }
         ],
-        "accuracy": 0.9586
+        "accuracy": 1.0
       }
     },
     {
@@ -155,23 +155,23 @@
     },
     {
       "book_page": 16,
-      "total_chars": 186,
+      "total_chars": 200,
       "validation": {
-        "total_detected": 186,
+        "total_detected": 200,
         "total_expected": 200,
         "column_comparison": [
           {
             "column": 1,
-            "detected": 7,
+            "detected": 23,
             "expected": 23,
-            "diff": -16,
-            "match": false
+            "diff": 0,
+            "match": true
           },
           {
             "column": 2,
-            "detected": 23,
+            "detected": 21,
             "expected": 21,
-            "diff": 2,
+            "diff": 0,
             "match": true
           },
           {
@@ -224,28 +224,28 @@
             "match": true
           }
         ],
-        "accuracy": 0.93
+        "accuracy": 1.0
       }
     },
     {
       "book_page": 18,
-      "total_chars": 197,
+      "total_chars": 200,
       "validation": {
-        "total_detected": 197,
+        "total_detected": 200,
         "total_expected": 200,
         "column_comparison": [
           {
             "column": 1,
-            "detected": 18,
+            "detected": 22,
             "expected": 22,
-            "diff": -4,
-            "match": false
+            "diff": 0,
+            "match": true
           },
           {
             "column": 2,
-            "detected": 22,
+            "detected": 21,
             "expected": 21,
-            "diff": 1,
+            "diff": 0,
             "match": true
           },
           {
@@ -298,22 +298,22 @@
             "match": true
           }
         ],
-        "accuracy": 0.985
+        "accuracy": 1.0
       }
     },
     {
       "book_page": 20,
-      "total_chars": 167,
+      "total_chars": 187,
       "validation": {
-        "total_detected": 167,
+        "total_detected": 187,
         "total_expected": 187,
         "column_comparison": [
           {
             "column": 1,
-            "detected": 17,
+            "detected": 22,
             "expected": 22,
-            "diff": -5,
-            "match": false
+            "diff": 0,
+            "match": true
           },
           {
             "column": 2,
@@ -366,13 +366,13 @@
           },
           {
             "column": 9,
-            "detected": 6,
+            "detected": 21,
             "expected": 21,
-            "diff": -15,
-            "match": false
+            "diff": 0,
+            "match": true
           }
         ],
-        "accuracy": 0.893
+        "accuracy": 1.0
       }
     }
   ]

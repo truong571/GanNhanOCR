@@ -1,15 +1,15 @@
 {
   "source_dir": "data/prepared/CacThanhTruyen4",
   "total_pages": 4,
-  "total_detected": 763,
+  "total_detected": 765,
   "total_expected": 765,
   "pages_matched_90pct": 4,
   "pages": [
     {
       "book_page": 12,
-      "total_chars": 192,
+      "total_chars": 190,
       "validation": {
-        "total_detected": 192,
+        "total_detected": 190,
         "total_expected": 190,
         "column_comparison": [
           {
@@ -28,23 +28,23 @@
           },
           {
             "column": 3,
-            "detected": 22,
+            "detected": 21,
             "expected": 21,
-            "diff": 1,
+            "diff": 0,
             "match": true
           },
           {
             "column": 4,
-            "detected": 23,
+            "detected": 22,
             "expected": 22,
-            "diff": 1,
+            "diff": 0,
             "match": true
           },
           {
             "column": 5,
-            "detected": 24,
+            "detected": 25,
             "expected": 25,
-            "diff": -1,
+            "diff": 0,
             "match": true
           },
           {
@@ -70,13 +70,13 @@
           },
           {
             "column": 9,
-            "detected": 22,
+            "detected": 21,
             "expected": 21,
-            "diff": 1,
+            "diff": 0,
             "match": true
           }
         ],
-        "accuracy": 0.9895
+        "accuracy": 1.0
       }
     },
     {
@@ -229,24 +229,24 @@
     },
     {
       "book_page": 18,
-      "total_chars": 160,
+      "total_chars": 164,
       "validation": {
-        "total_detected": 160,
+        "total_detected": 164,
         "total_expected": 164,
         "column_comparison": [
           {
             "column": 1,
-            "detected": 25,
+            "detected": 23,
             "expected": 23,
-            "diff": 2,
+            "diff": 0,
             "match": true
           },
           {
             "column": 2,
-            "detected": 9,
+            "detected": 11,
             "expected": 11,
-            "diff": -2,
-            "match": false
+            "diff": 0,
+            "match": true
           },
           {
             "column": 3,
@@ -257,10 +257,10 @@
           },
           {
             "column": 4,
-            "detected": 5,
+            "detected": 9,
             "expected": 9,
-            "diff": -4,
-            "match": false
+            "diff": 0,
+            "match": true
           },
           {
             "column": 5,
@@ -298,7 +298,7 @@
             "match": true
           }
         ],
-        "accuracy": 0.9756
+        "accuracy": 1.0
       }
     }
   ]

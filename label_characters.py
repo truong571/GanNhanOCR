@@ -273,9 +273,10 @@ def _get_rendered(char: str, font, size: int = 64) -> np.ndarray | None:
 def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
     """Tính độ tương đồng hình dạng giữa ảnh crop và ảnh render.
 
-    Kết hợp 2 metric:
-      1. IoU trên nét đen (pixel overlap) — so khớp vị trí nét
-      2. Stroke density correlation — phân bố nét theo hàng/cột
+    Kết hợp 3 metric:
+      1. Template matching (TM_CCOEFF_NORMED) — robust hơn IoU
+      2. IoU trên nét đen (pixel overlap) — so khớp vị trí nét
+      3. Stroke density correlation — phân bố nét theo hàng/cột
 
     Returns: float 0.0 → 1.0 (1.0 = giống nhất)
     """
@@ -285,11 +286,19 @@ def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
     size = rendered.shape[0]
     crop_resized = cv2.resize(crop_img, (size, size))
 
-    # Binarize crop
-    _, crop_bin = cv2.threshold(crop_resized, 128, 255, cv2.THRESH_BINARY)
+    # Binarize crop with Otsu (adaptive, better than fixed threshold)
+    _, crop_bin = cv2.threshold(crop_resized, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
 
     crop_fg = (crop_bin == 0).astype(np.uint8)
     rend_fg = (rendered == 0).astype(np.uint8)
+
+    # 0. Template matching (normalized cross-correlation)
+    tm_score = 0.0
+    try:
+        res = cv2.matchTemplate(crop_resized, rendered, cv2.TM_CCOEFF_NORMED)
+        tm_score = max(0.0, float(res[0][0]))
+    except Exception:
+        pass
 
     # 1. IoU (pixel overlap)
     intersection = np.sum(crop_fg & rend_fg)
@@ -317,8 +326,8 @@ def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
     except Exception:
         pass
 
-    # Combined: IoU 50% + Projection 50%
-    return 0.5 * iou + 0.5 * proj_score
+    # Combined: Template 35% + IoU 30% + Projection 35%
+    return 0.35 * tm_score + 0.30 * iou + 0.35 * proj_score
 
 
 def _cjk_block_score(char: str) -> float:
@@ -409,10 +418,11 @@ def rank_candidates(
             vis_score = embed_scores.get(char, 0.0)
             total = 0.5 * vis_score + 0.3 * specificity + 0.2 * block_score
         elif use_visual:
-            # Classical visual: 0.4 IoU/proj + 0.3 specificity + 0.3 CJK block
+            # Classical visual (cải tiến): 0.50 visual + 0.25 specificity + 0.25 CJK
+            # Tăng trọng số visual vì template matching mới chính xác hơn
             rendered = _render_candidate(char, font_path)
             vis_score = visual_similarity(crop_img, rendered) if rendered is not None else 0.0
-            total = 0.4 * vis_score + 0.3 * specificity + 0.3 * block_score
+            total = 0.50 * vis_score + 0.25 * specificity + 0.25 * block_score
         else:
             # Không có ảnh: 0.6 specificity + 0.4 CJK block
             total = 0.6 * specificity + 0.4 * block_score
@@ -661,7 +671,10 @@ def _match_ocr_bbox(
     """So khớp ký tự OCR với aligned pairs bằng bbox y-overlap.
 
     Với mỗi detected char (matched pair), tìm ký tự OCR có y_center
-    gần nhất, nếu OCR char nằm trong candidates → upgrade sang "high".
+    gần nhất. Upgrade confidence dựa trên mức độ phù hợp:
+    - medium + OCR in candidates → "high" (xác nhận)
+    - medium + OCR not in candidates → ghi nhận ocr_char để tham khảo
+    - low + OCR char hợp lệ → upgrade "medium" (OCR cung cấp nhãn khi dict thiếu)
 
     Returns: số lượng upgraded
     """
@@ -692,6 +705,9 @@ def _match_ocr_bbox(
             continue
 
         ocr_char = best_ocr["char"]
+        if not ocr_char or not ocr_char.strip():
+            continue
+
         candidates = pair.get("nom_candidates", [])
         conf = pair.get("confidence", "")
 
@@ -702,8 +718,25 @@ def _match_ocr_bbox(
                 pair["ocr_source"] = True
                 upgraded += 1
             else:
+                # OCR không khớp candidates nhưng vẫn ghi nhận
                 pair["ocr_char"] = ocr_char
         elif conf == "low" and ocr_char:
+            # Dict không có candidates → dùng OCR char trực tiếp
+            # Kiểm tra OCR char có phải CJK hợp lệ không
+            cp = ord(ocr_char)
+            is_cjk = (0x4E00 <= cp <= 0x9FFF or 0x3400 <= cp <= 0x4DBF
+                       or 0x20000 <= cp <= 0x2A6DF or 0xF900 <= cp <= 0xFAFF)
+            if is_cjk:
+                pair["nom_char"] = ocr_char
+                pair["nom_unicode"] = f"U+{cp:04X}"
+                pair["nom_candidates"] = [ocr_char]
+                pair["confidence"] = "medium"
+                pair["ocr_source"] = True
+                upgraded += 1
+            else:
+                pair["ocr_char"] = ocr_char
+        elif conf == "high":
+            # Ghi nhận OCR char cho cross-validation (không thay đổi nhãn)
             pair["ocr_char"] = ocr_char
 
     return upgraded
@@ -1674,11 +1707,11 @@ def process_prepared_dir(
     # Nếu "trời" = 𡗶 đã được xác nhận ≥2 lần (qua OCR hoặc 1-candidate dict)
     # → tất cả "trời" medium đều nâng lên high.
     #
-    # LUÔN chạy (không phụ thuộc --ocr) vì:
-    # - 1-candidate dictionary lookup đã cho confidence="high"
-    # - Những high pairs này đủ để lan truyền sang medium
+    # Cải tiến: 2 lượt lan truyền
+    #   Lượt 1: Dùng high confidence (dict 1-candidate + OCR confirmed)
+    #   Lượt 2: Dùng OCR cross-validation (ocr_char khớp với top candidate)
 
-    # Thu thập TẤT CẢ cặp (qn, nom_char) có confidence = "high"
+    # --- Lượt 1: Thu thập TẤT CẢ cặp (qn, nom_char) có confidence = "high" ---
     confirmed_freq: dict[str, dict[str, int]] = {}
     for lab in all_labels:
         if (lab.get("confidence") == "high"
@@ -1711,14 +1744,62 @@ def process_prepared_dir(
             lab["nom_unicode"] = f"U+{ord(best_char):04X}"
             lab["confidence"] = "high"
             lab["consistency_source"] = True
-            # Reorder candidates
             new_cands = [best_char] + [c for c in candidates if c != best_char]
             lab["nom_candidates"] = new_cands
             consistency_upgraded += 1
 
-    if verbose and consistency_upgraded > 0:
-        print(f"\n  Self-Consistency: {consistency_upgraded} medium→high "
-              f"(từ {len(confirmed_freq)} từ QN đã xác nhận ≥2 lần)")
+    # --- Lượt 2: OCR cross-validation cho remaining medium ---
+    # Nếu ocr_char trùng với nom_char hiện tại (top candidate) → upgrade
+    ocr_crossval_upgraded = 0
+    for lab in all_labels:
+        if lab.get("confidence") != "medium":
+            continue
+        ocr_char = lab.get("ocr_char")
+        nom_char = lab.get("nom_char")
+        if ocr_char and nom_char and ocr_char == nom_char:
+            lab["confidence"] = "high"
+            lab["ocr_crossval"] = True
+            ocr_crossval_upgraded += 1
+
+    # --- Lượt 3: Lan truyền từ lượt 1+2 cho medium còn lại (với threshold thấp hơn) ---
+    # Sau lượt 1+2, có thêm nhiều high → lan truyền tiếp
+    confirmed_freq2: dict[str, dict[str, int]] = {}
+    for lab in all_labels:
+        if (lab.get("confidence") == "high"
+                and lab.get("quoc_ngu") and lab.get("nom_char")):
+            qn = lab["quoc_ngu"].lower()
+            char = lab["nom_char"]
+            confirmed_freq2.setdefault(qn, {})
+            confirmed_freq2[qn][char] = confirmed_freq2[qn].get(char, 0) + 1
+
+    consistency_upgraded_2 = 0
+    for lab in all_labels:
+        if lab.get("confidence") != "medium":
+            continue
+        qn = (lab.get("quoc_ngu") or "").lower()
+        if qn not in confirmed_freq2:
+            continue
+        candidates = lab.get("nom_candidates", [])
+        if not candidates:
+            continue
+        freq = confirmed_freq2[qn]
+        best_char = max(freq, key=freq.get)
+        best_count = freq[best_char]
+        # Lượt 2: chỉ cần ≥1 lần confirmed (vì đã qua lượt 1 lọc rồi)
+        if best_char in candidates and best_count >= 1:
+            lab["nom_char"] = best_char
+            lab["nom_unicode"] = f"U+{ord(best_char):04X}"
+            lab["confidence"] = "high"
+            lab["consistency_source"] = True
+            new_cands = [best_char] + [c for c in candidates if c != best_char]
+            lab["nom_candidates"] = new_cands
+            consistency_upgraded_2 += 1
+
+    total_consistency = consistency_upgraded + ocr_crossval_upgraded + consistency_upgraded_2
+    if verbose and total_consistency > 0:
+        print(f"\n  Self-Consistency: {total_consistency} upgraded "
+              f"(lượt1={consistency_upgraded}, ocr_crossval={ocr_crossval_upgraded}, "
+              f"lượt2={consistency_upgraded_2})")
 
     # Cập nhật lại stats sau self-consistency
     total_stats["high"] = sum(

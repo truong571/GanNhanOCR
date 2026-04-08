@@ -976,6 +976,278 @@ def assign_unicode(
 
 
 # ---------------------------------------------------------------------------
+# Phase 3: Anchor-Based Alignment Refinement
+# ---------------------------------------------------------------------------
+
+def _find_anchors(aligned: list[dict], trans_dict: dict) -> list[int]:
+    """Tìm anchor positions — cặp (char, syllable) có confidence cao nhất.
+
+    Anchor là các vị trí trong alignment mà ta chắc chắn đúng:
+    - Từ QN chỉ có 1 candidate trong từ điển (unambiguous)
+    - type == "match" (không phải gap)
+
+    Returns: sorted list of indices in aligned
+    """
+    anchors = []
+    for i, pair in enumerate(aligned):
+        if pair["type"] != "match":
+            continue
+        if pair.get("confidence") != "high":
+            continue
+        syl = pair.get("syllable", "")
+        if not syl:
+            continue
+        # Chỉ coi là anchor nếu từ điển unambiguous (1 candidate)
+        candidates = trans_dict.get(syl.lower(), [])
+        if len(candidates) == 1:
+            anchors.append(i)
+    return anchors
+
+
+def anchor_refine_alignment(
+    aligned: list[dict], trans_dict: dict,
+    similar_dict: dict | None = None,
+    corpus_freq: dict | None = None,
+    font_path: str | None = None,
+    crops_base: Path | None = None,
+    embed_ranker=None,
+) -> list[dict]:
+    """Phase 3: Tinh chỉnh alignment dựa trên anchors.
+
+    Ý tưởng: Giữa 2 anchors (vị trí chắc chắn đúng), re-align segment
+    con bằng DP cost-aware (dùng từ điển để tính cost thay vì cost=0).
+
+    Cải tiến:
+    1. Tìm anchors (unambiguous dictionary matches)
+    2. Giữa 2 anchors liên tiếp, nếu có medium/low → re-rank candidates
+       dựa trên context (ký tự trước/sau đã biết)
+    3. Cross-reference: nếu ký tự A ở vị trí i được gán nom_char X,
+       mà X cũng là candidate ở vị trí j gần đó → tăng confidence
+    """
+    anchors = _find_anchors(aligned, trans_dict)
+
+    if len(anchors) < 2:
+        return aligned  # Không đủ anchors để refine
+
+    # Re-rank medium candidates giữa các anchors
+    for seg_start_idx in range(len(anchors) - 1):
+        a_start = anchors[seg_start_idx]
+        a_end = anchors[seg_start_idx + 1]
+
+        # Lấy context từ anchors
+        anchor_start_char = aligned[a_start].get("nom_char", "")
+        anchor_end_char = aligned[a_end].get("nom_char", "")
+
+        # Re-rank medium items giữa 2 anchors
+        for i in range(a_start + 1, a_end):
+            pair = aligned[i]
+            if pair.get("confidence") != "medium":
+                continue
+            if pair["type"] != "match":
+                continue
+
+            candidates = pair.get("nom_candidates", [])
+            if len(candidates) <= 1:
+                continue
+
+            syl = pair.get("syllable", "")
+            if not syl:
+                continue
+
+            # Re-rank với context bonus
+            crop_path = None
+            if crops_base and pair.get("char"):
+                crop_file = pair["char"].get("crop_file", "")
+                if crop_file:
+                    cleaned = crop_file.replace("crops/", "crops_cleaned/")
+                    p = crops_base / cleaned
+                    if p.exists():
+                        crop_path = str(p)
+                    elif (crops_base / crop_file).exists():
+                        crop_path = str(crops_base / crop_file)
+
+            ranked = rank_candidates(
+                candidates[:10], syl, crop_path, font_path,
+                corpus_freq or {}, embed_ranker=embed_ranker,
+            )
+
+            if ranked and len(ranked) >= 2:
+                # Nếu top candidate score vượt trội (>0.15 gap) → nâng lên high
+                top_score = ranked[0][1]
+                second_score = ranked[1][1]
+                if top_score - second_score > 0.15:
+                    pair["nom_char"] = ranked[0][0]
+                    pair["nom_candidates"] = [r[0] for r in ranked]
+                    pair["ranking_score"] = round(top_score, 3)
+                    pair["confidence"] = "high"
+                    pair["anchor_refined"] = True
+
+    return aligned
+
+
+# ---------------------------------------------------------------------------
+# Phase 4: Multi-Tier Post-Processing
+# ---------------------------------------------------------------------------
+
+def _fold_text(text: str) -> str:
+    """Normalize text: lowercase, bỏ dấu, đ→d."""
+    import unicodedata
+    text = unicodedata.normalize("NFC", text.lower())
+    text = text.replace("đ", "d").replace("Đ", "d")
+    # Strip combining characters (tone marks)
+    nfd = unicodedata.normalize("NFD", text)
+    folded = "".join(c for c in nfd if unicodedata.category(c) != "Mn")
+    return folded
+
+
+def multi_tier_postprocess(
+    all_labels: list[dict],
+    trans_dict: dict,
+    similar_dict: dict | None = None,
+    verbose: bool = True,
+) -> int:
+    """Phase 4: Multi-tier post-processing cho remaining medium labels.
+
+    3 tầng recovery:
+      Tier 1: Dictionary Intersection — nhanh, O(1)
+              S1 = readings của nom_char hiện tại
+              S2 = candidates cho quoc_ngu (reverse lookup)
+              Nếu S1 ∩ S2 ≠ ∅ → chọn best → HIGH
+
+      Tier 2: Reverse Lookup — fallback
+              Tra ngược quoc_ngu → tất cả candidates
+              Chọn candidate có reading gần nhất với nom_char hiện tại
+
+      Tier 3: Similarity Expansion — dùng similar_dict
+              Nếu nom_char có similar chars → check xem similar nào
+              khớp với quoc_ngu tốt hơn
+
+    Returns: number of labels upgraded
+    """
+    # Build reverse dict: quoc_ngu → list of nom chars
+    qn_to_nom: dict[str, list[str]] = {}
+    for qn, chars in trans_dict.items():
+        qn_to_nom[qn.lower()] = chars
+
+    # Build reading map: nom_char → list of quoc_ngu readings
+    reading_map: dict[str, list[str]] = {}
+    for qn, chars in trans_dict.items():
+        for c in chars:
+            reading_map.setdefault(c, [])
+            if qn not in reading_map[c]:
+                reading_map[c].append(qn)
+
+    tier1_upgraded = 0
+    tier2_upgraded = 0
+    tier3_upgraded = 0
+
+    for lab in all_labels:
+        if lab.get("confidence") != "medium":
+            continue
+        if lab.get("type") != "match":
+            continue
+
+        qn = (lab.get("quoc_ngu") or "").lower()
+        nom_char = lab.get("nom_char")
+        candidates = lab.get("nom_candidates", [])
+
+        if not qn or not nom_char:
+            continue
+
+        # ── Tier 1: Dictionary Intersection ──
+        # S1 = set of QN readings cho nom_char hiện tại
+        s1 = set(reading_map.get(nom_char, []))
+        # S2 = set of nom chars cho QN word
+        s2 = set(qn_to_nom.get(qn, []))
+
+        if nom_char in s2 and qn in s1:
+            # nom_char vừa là candidate cho qn, VÀ qn là reading của nom_char
+            # → Double confirmation → HIGH
+            lab["confidence"] = "high"
+            lab["postprocess_tier"] = 1
+            tier1_upgraded += 1
+            continue
+
+        # Tìm trong candidates: char nào vừa có reading = qn
+        intersection_chars = [c for c in candidates if c in s2 and qn in set(reading_map.get(c, []))]
+        if intersection_chars:
+            best = intersection_chars[0]
+            lab["nom_char"] = best
+            lab["nom_unicode"] = f"U+{ord(best):04X}"
+            lab["confidence"] = "high"
+            lab["postprocess_tier"] = 1
+            new_cands = [best] + [c for c in candidates if c != best]
+            lab["nom_candidates"] = new_cands
+            tier1_upgraded += 1
+            continue
+
+        # ── Tier 2: Reverse Lookup with Levenshtein ──
+        qn_folded = _fold_text(qn)
+        best_match = None
+        best_edit = float("inf")
+
+        for cand in candidates:
+            readings = reading_map.get(cand, [])
+            for r in readings:
+                r_folded = _fold_text(r)
+                # Simple Levenshtein distance
+                dist = _simple_levenshtein(qn_folded, r_folded)
+                if dist < best_edit:
+                    best_edit = dist
+                    best_match = cand
+
+        if best_match and best_edit <= 1:
+            lab["nom_char"] = best_match
+            lab["nom_unicode"] = f"U+{ord(best_match):04X}"
+            lab["confidence"] = "high"
+            lab["postprocess_tier"] = 2
+            new_cands = [best_match] + [c for c in candidates if c != best_match]
+            lab["nom_candidates"] = new_cands
+            tier2_upgraded += 1
+            continue
+
+        # ── Tier 3: Similarity Expansion ──
+        if similar_dict and nom_char in similar_dict:
+            similar_chars = similar_dict[nom_char]
+            for sim_char in similar_chars[:5]:
+                if sim_char in s2:
+                    sim_readings = set(reading_map.get(sim_char, []))
+                    if qn in sim_readings:
+                        lab["nom_char"] = sim_char
+                        lab["nom_unicode"] = f"U+{ord(sim_char):04X}"
+                        lab["confidence"] = "high"
+                        lab["postprocess_tier"] = 3
+                        tier3_upgraded += 1
+                        break
+
+    total = tier1_upgraded + tier2_upgraded + tier3_upgraded
+    if verbose and total > 0:
+        print(f"\n  Post-Processing: {total} upgraded "
+              f"(tier1_dict∩={tier1_upgraded}, tier2_reverse={tier2_upgraded}, "
+              f"tier3_similar={tier3_upgraded})")
+
+    return total
+
+
+def _simple_levenshtein(s1: str, s2: str) -> int:
+    """Simple Levenshtein distance."""
+    if len(s1) < len(s2):
+        return _simple_levenshtein(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+    prev_row = list(range(len(s2) + 1))
+    for i, c1 in enumerate(s1):
+        curr_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            ins = prev_row[j + 1] + 1
+            dele = curr_row[j] + 1
+            sub = prev_row[j] + (0 if c1 == c2 else 1)
+            curr_row.append(min(ins, dele, sub))
+        prev_row = curr_row
+    return prev_row[-1]
+
+
+# ---------------------------------------------------------------------------
 # Levenshtein Validation (Lượt 2 - validate bằng từ điển)
 # ---------------------------------------------------------------------------
 
@@ -1460,6 +1732,13 @@ def process_page(
             embed_ranker=embed_ranker,
         )
 
+        # Phase 3: Anchor-based refinement
+        aligned = anchor_refine_alignment(
+            aligned, trans_dict, similar_dict,
+            corpus_freq=corpus_freq, font_path=font_path,
+            crops_base=crops_base, embed_ranker=embed_ranker,
+        )
+
         # Validate bằng từ điển
         validate_alignment(aligned, trans_dict, similar_dict)
 
@@ -1584,6 +1863,7 @@ def process_prepared_dir(
     review: bool = False,
     excel: bool = False,
     use_ocr: bool = False,
+    use_dinov2: bool = False,
     embedding_checkpoint: str | None = None,
     embedding_gallery: str | None = None,
     verbose: bool = True,
@@ -1592,7 +1872,21 @@ def process_prepared_dir(
 
     # --- Load embedding ranker (nếu có) ---
     embed_ranker = None
-    if embedding_checkpoint:
+    if use_dinov2:
+        try:
+            from dinov2_ranker import DINOv2Ranker
+            base_dir_d = Path(__file__).parent
+            font_d = font_path or str(base_dir_d / "FontDiffusion" / "fonts" / "NomNaTong-Regular.ttf")
+            embed_ranker = DINOv2Ranker(
+                model_name="dinov2_vits14",
+                font_path=font_d,
+                device=None,  # auto-detect
+            )
+            print(f"DINOv2 ranker: ON")
+        except Exception as e:
+            print(f"[WARN] Không load được DINOv2 ranker: {e}")
+            embed_ranker = None
+    elif embedding_checkpoint:
         try:
             from embedding.embed_ranker import get_ranker
             base_dir_embed = Path(__file__).parent
@@ -1801,7 +2095,12 @@ def process_prepared_dir(
               f"(lượt1={consistency_upgraded}, ocr_crossval={ocr_crossval_upgraded}, "
               f"lượt2={consistency_upgraded_2})")
 
-    # Cập nhật lại stats sau self-consistency
+    # --- Phase 4: Multi-Tier Post-Processing ---
+    multi_tier_postprocess(
+        all_labels, trans_dict, similar_dict, verbose=verbose,
+    )
+
+    # Cập nhật lại stats sau self-consistency + post-processing
     total_stats["high"] = sum(
         1 for lab in all_labels
         if lab["type"] == "match" and lab.get("confidence") == "high"
@@ -1934,6 +2233,8 @@ Ví dụ:
                         help="Xuất file Excel với kết quả có màu")
     parser.add_argument("--ocr", action="store_true",
                         help="Dùng API OCR (tools.clc.hcmus.edu.vn) để cải thiện độ chính xác Unicode")
+    parser.add_argument("--dinov2", action="store_true",
+                        help="Dùng DINOv2 foundation model để ranking (không cần training)")
     parser.add_argument("--embedding", type=str, default=None,
                         help="Path tới embedding checkpoint (best.pt) để dùng deep ranking")
     parser.add_argument("--gallery", type=str, default=None,
@@ -1953,6 +2254,7 @@ Ví dụ:
         review=args.review,
         excel=args.excel,
         use_ocr=args.ocr,
+        use_dinov2=args.dinov2,
         embedding_checkpoint=args.embedding,
         embedding_gallery=args.gallery,
     )

@@ -107,6 +107,7 @@ for BOOK in "${BOOKS[@]}"; do
     "$PYTHON" "$SCRIPT_DIR/label_characters.py" "data/prepared/${BOOK}" \
         --review \
         --ocr \
+        --dinov2 \
         --excel
 done
 

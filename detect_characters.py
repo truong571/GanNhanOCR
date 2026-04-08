@@ -1220,23 +1220,19 @@ def _tighten_char_bbox(
     binary: np.ndarray,
     bbox: tuple[int, int, int, int],
     col_center_x: float,
+    expected_h: float = 0,
     padding: int = 5,
 ) -> tuple[int, int, int, int]:
-    """Tighten bbox quanh ink thực tế của ký tự, loại bỏ chữ cột bên cạnh.
+    """Tighten bbox quanh ink thực tế của ký tự.
 
-    Vấn đề gốc: char bbox kế thừa toàn bộ chiều rộng cột,
-    nên crop chứa cả đường kẻ cột + nét chữ cột liền kề.
-
-    Giải pháp:
-    1. Binarize vùng bbox
-    2. Loại bỏ ruling lines (các đường thẳng đứng mỏng ở biên)
-    3. Tìm connected components, chỉ giữ CCs gần tâm cột
-    4. Tighten bbox quanh ink còn lại
+    Xử lý cả X-axis (loại bỏ chữ cột bên cạnh, ruling lines)
+    và Y-axis (loại bỏ phần chữ trên/dưới khi bbox quá cao).
 
     Args:
         binary: Binary image toàn trang (INV: ink=255, bg=0)
         bbox: (x1, y1, x2, y2) full-column-width bbox
-        col_center_x: Tâm x của cột (dùng để phân biệt ink thuộc cột này vs cột bên)
+        col_center_x: Tâm x của cột
+        expected_h: Chiều cao kỳ vọng 1 ký tự (từ detection JSON)
         padding: Pixels padding sau khi tighten
 
     Returns:
@@ -1257,75 +1253,134 @@ def _tighten_char_bbox(
         return bbox
 
     # --- Bước 1: Loại bỏ ruling lines (đường kẻ dọc mỏng ở biên cột) ---
-    # Ruling lines thường là đường thẳng đứng rất mỏng (1-4px) ở biên trái/phải
-    edge_margin = max(6, int(rw * 0.08))  # 8% chiều rộng cột
+    edge_margin = max(6, int(rw * 0.08))
 
-    # Xoá ink ở biên trái
-    left_strip = region[:, :edge_margin]
-    v_proj_left = left_strip.sum(axis=0)
     for cx in range(edge_margin):
-        # Nếu cột pixel này có ink liên tục > 60% chiều cao → ruling line
-        col_ink = np.count_nonzero(left_strip[:, cx])
+        col_ink = np.count_nonzero(region[:, cx])
         if col_ink > rh * 0.5:
             region[:, cx] = 0
 
-    # Xoá ink ở biên phải
-    right_strip = region[:, -edge_margin:]
     for cx in range(edge_margin):
-        col_ink = np.count_nonzero(right_strip[:, cx])
+        col_ink = np.count_nonzero(region[:, rw - 1 - cx])
         if col_ink > rh * 0.5:
-            region[:, rw - edge_margin + cx] = 0
+            region[:, rw - 1 - cx] = 0
 
-    # --- Bước 2: Connected Components → chỉ giữ ink gần tâm cột ---
+    # --- Bước 2: Connected Components → chỉ giữ ink gần tâm cột (X-axis) ---
     num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(
         region, connectivity=8
     )
 
     if num_labels <= 1:
-        return bbox  # Không có ink
+        return bbox
 
-    # Tâm cột relative to region
-    col_cx_rel = col_center_x - x1
-
-    # Giữ CCs có centroid x nằm trong vùng trung tâm (35%-65% chiều rộng)
-    # hoặc CCs có diện tích lớn gần tâm
     keep_mask = np.zeros_like(region)
-    center_margin = rw * 0.30  # 30% biên mỗi bên
+    center_margin = rw * 0.30
 
     for lbl in range(1, num_labels):
-        cx = centroids[lbl][0]  # x centroid of this CC
+        cx = centroids[lbl][0]
         area = stats[lbl, cv2.CC_STAT_AREA]
 
-        # CC ở vùng trung tâm → giữ
         if center_margin <= cx <= rw - center_margin:
             keep_mask[labels == lbl] = 255
-        # CC lớn (> 3% region area) và không quá xa tâm → giữ
         elif area > region.size * 0.02 and center_margin * 0.5 <= cx <= rw - center_margin * 0.5:
             keep_mask[labels == lbl] = 255
-        # CC chạm cả vùng trung tâm → giữ (chữ rộng)
         else:
             cc_x1 = stats[lbl, cv2.CC_STAT_LEFT]
             cc_x2 = cc_x1 + stats[lbl, cv2.CC_STAT_WIDTH]
             if cc_x1 < rw - center_margin and cc_x2 > center_margin:
                 keep_mask[labels == lbl] = 255
 
-    # --- Bước 3: Tighten bbox quanh ink còn lại ---
+    # --- Bước 3: Y-axis trim — loại bỏ ink của chữ trên/dưới ---
+    if expected_h > 0:
+        coords_check = cv2.findNonZero(keep_mask)
+        if coords_check is not None:
+            _, ry_c, _, rh_c = cv2.boundingRect(coords_check)
+            ink_h = rh_c
+
+            # Nếu ink cao > 1.4× expected → có thể chứa phần chữ trên/dưới
+            if ink_h > expected_h * 1.4:
+                # Horizontal projection (sum ink per row) trong keep_mask
+                h_proj = keep_mask.sum(axis=1).astype(float)
+
+                # Smooth projection
+                k = max(3, int(expected_h * 0.06)) | 1
+                h_smooth = np.convolve(h_proj, np.ones(k) / k, mode="same")
+
+                # Tìm vùng ink chính: vùng liên tục có projection > threshold
+                thresh = h_smooth.max() * 0.08
+                above = h_smooth > thresh
+
+                # Tìm tất cả các runs of True
+                runs = []
+                in_run = False
+                run_start = 0
+                for ry in range(len(above)):
+                    if above[ry] and not in_run:
+                        run_start = ry
+                        in_run = True
+                    elif not above[ry] and in_run:
+                        runs.append((run_start, ry))
+                        in_run = False
+                if in_run:
+                    runs.append((run_start, len(above)))
+
+                if len(runs) >= 2:
+                    # Nhiều runs → chọn run có tổng ink lớn nhất
+                    best_run = max(runs, key=lambda r: h_smooth[r[0]:r[1]].sum())
+                    trim_y1, trim_y2 = best_run
+
+                    # Mở rộng nhẹ để không cắt sát nét
+                    expand = max(3, int(expected_h * 0.05))
+                    trim_y1 = max(0, trim_y1 - expand)
+                    trim_y2 = min(rh, trim_y2 + expand)
+
+                    # Chỉ áp dụng nếu trim đáng kể (> 15% height)
+                    if (rh - (trim_y2 - trim_y1)) > rh * 0.12:
+                        # Xoá ink ngoài vùng chính
+                        keep_mask[:trim_y1, :] = 0
+                        keep_mask[trim_y2:, :] = 0
+
+                elif len(runs) == 1:
+                    # Một run nhưng vẫn quá cao → trim dựa trên tâm
+                    run_h = runs[0][1] - runs[0][0]
+                    if run_h > expected_h * 1.5:
+                        # Tìm valley sâu nhất gần tâm để split
+                        center_y = rh // 2
+                        search_start = max(0, int(center_y - expected_h * 0.7))
+                        search_end = min(rh, int(center_y + expected_h * 0.7))
+                        search_range = h_smooth[search_start:search_end]
+
+                        if len(search_range) > 10:
+                            valley_y = search_start + np.argmin(search_range)
+                            valley_depth = h_smooth[valley_y]
+
+                            # Chỉ split nếu valley đủ sâu (< 30% peak)
+                            if valley_depth < h_smooth.max() * 0.30:
+                                # Giữ phần có nhiều ink hơn
+                                upper_ink = h_smooth[:valley_y].sum()
+                                lower_ink = h_smooth[valley_y:].sum()
+
+                                expand = max(3, int(expected_h * 0.05))
+                                if upper_ink >= lower_ink:
+                                    keep_mask[valley_y + expand:, :] = 0
+                                else:
+                                    keep_mask[:max(0, valley_y - expand), :] = 0
+
+    # --- Bước 4: Final tighten bbox ---
     coords = cv2.findNonZero(keep_mask)
     if coords is None:
-        # Fallback: dùng all ink (trước khi filter CC)
         coords = cv2.findNonZero(region)
         if coords is None:
             return bbox
 
     rx, ry, rw_tight, rh_tight = cv2.boundingRect(coords)
 
-    # Áp dụng padding
     new_x1 = max(0, x1 + rx - padding)
     new_x2 = min(img_w, x1 + rx + rw_tight + padding)
     new_y1 = max(0, y1 + ry - padding)
     new_y2 = min(img_h, y1 + ry + rh_tight + padding)
 
-    # Safety: bbox mới không nhỏ hơn 25% diện tích bbox cũ
+    # Safety: bbox mới không nhỏ hơn 15% diện tích bbox cũ
     orig_area = col_w * char_h
     new_area = (new_x2 - new_x1) * (new_y2 - new_y1)
     if new_area < orig_area * 0.15:
@@ -1345,6 +1400,8 @@ def save_char_crops(
     crops_dir = output_dir / "crops" / f"page_{page_num:04d}"
     crops_dir.mkdir(parents=True, exist_ok=True)
 
+    expected_h = detection.get("expected_char_height", 0)
+
     crop_paths = []
     for col in detection["columns"]:
         # Tâm x của cột
@@ -1354,9 +1411,9 @@ def save_char_crops(
         for char_info in col["chars"]:
             x1, y1, x2, y2 = char_info["bbox"]
 
-            # Tighten bbox: loại bỏ ruling lines + chữ cột bên cạnh
+            # Tighten bbox: loại bỏ ruling lines + chữ cột bên cạnh + chữ trên/dưới
             tx1, ty1, tx2, ty2 = _tighten_char_bbox(
-                binary, (x1, y1, x2, y2), col_center_x
+                binary, (x1, y1, x2, y2), col_center_x, expected_h
             )
             char_info["bbox_tight"] = [int(tx1), int(ty1), int(tx2), int(ty2)]
 

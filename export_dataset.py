@@ -42,6 +42,9 @@ import shutil
 from collections import Counter
 from pathlib import Path
 
+import cv2
+import numpy as np
+
 
 def load_labels(labels_csv: Path, source_name: str) -> list[dict]:
     """Load labels.csv, thêm source_name."""
@@ -60,6 +63,80 @@ def filter_by_confidence(rows: list[dict], min_confidence: str) -> list[dict]:
     min_level = levels.get(min_confidence, 0)
 
     return [r for r in rows if levels.get(r.get("confidence", ""), 0) >= min_level]
+
+
+def filter_crop_quality(rows: list[dict], base_dirs: dict[str, Path],
+                        min_size: int = 10, max_size: int = 256,
+                        min_ink_ratio: float = 0.02,
+                        max_ink_ratio: float = 0.85) -> tuple[list[dict], dict]:
+    """Issue #6: Lọc crop quality — loại bỏ ảnh blank/noise/corrupt.
+
+    Kiểm tra:
+      1. File tồn tại và đọc được
+      2. Kích thước hợp lý (không quá nhỏ = noise, không quá lớn = 2 ký tự)
+      3. Tỷ lệ ink pixel hợp lý (không blank, không toàn đen)
+
+    Returns: (filtered_rows, quality_stats)
+    """
+    quality_stats = {
+        "total": len(rows),
+        "missing_file": 0,
+        "too_small": 0,
+        "too_large": 0,
+        "blank_image": 0,
+        "too_dark": 0,
+        "passed": 0,
+    }
+    filtered = []
+    for row in rows:
+        img_path_str = row.get("image", "")
+        if not img_path_str:
+            quality_stats["missing_file"] += 1
+            continue
+
+        # Resolve path relative to labeled dir
+        source = row.get("source", "")
+        base = base_dirs.get(source)
+        if base:
+            full_path = base / "detected" / img_path_str
+        else:
+            full_path = Path(img_path_str)
+
+        if not full_path.exists():
+            quality_stats["missing_file"] += 1
+            continue
+
+        # Read image
+        img = cv2.imread(str(full_path), cv2.IMREAD_GRAYSCALE)
+        if img is None:
+            quality_stats["missing_file"] += 1
+            continue
+
+        h, w = img.shape[:2]
+
+        # Size check
+        if h < min_size or w < min_size:
+            quality_stats["too_small"] += 1
+            continue
+        if h > max_size or w > max_size:
+            quality_stats["too_large"] += 1
+            continue
+
+        # Ink ratio check (Otsu threshold)
+        _, binary = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
+        ink_ratio = binary.sum() / 255 / (h * w)
+
+        if ink_ratio < min_ink_ratio:
+            quality_stats["blank_image"] += 1
+            continue
+        if ink_ratio > max_ink_ratio:
+            quality_stats["too_dark"] += 1
+            continue
+
+        quality_stats["passed"] += 1
+        filtered.append(row)
+
+    return filtered, quality_stats
 
 
 def build_class_map(rows: list[dict]) -> dict:
@@ -82,6 +159,19 @@ def build_class_map(rows: list[dict]) -> dict:
     return class_map
 
 
+def filter_rare_classes(rows: list[dict], min_samples: int = 3) -> tuple[list[dict], int]:
+    """Issue #7: Loại bỏ class có quá ít samples (không thể train/test).
+
+    Returns: (filtered_rows, num_removed_classes)
+    """
+    char_counts = Counter(r.get("nom_char", "") for r in rows if r.get("nom_char"))
+    rare_chars = {c for c, count in char_counts.items() if count < min_samples}
+    if not rare_chars:
+        return rows, 0
+    filtered = [r for r in rows if r.get("nom_char", "") not in rare_chars]
+    return filtered, len(rare_chars)
+
+
 def split_dataset(
     rows: list[dict],
     train_ratio: float = 0.8,
@@ -91,27 +181,40 @@ def split_dataset(
 ) -> tuple[list[dict], list[dict], list[dict]]:
     """Chia dataset thành train/val/test.
 
-    Chiến lược: stratified split theo source (mỗi bộ sách có đại diện trong cả 3 set).
+    Issue #7: Stratified split theo CHARACTER CLASS (nom_char) thay vì chỉ source.
+    Đảm bảo mỗi ký tự có đại diện trong cả train/val/test.
+    Ký tự có ≤2 samples → chỉ vào train (không đủ để split).
     """
     random.seed(seed)
 
-    # Nhóm theo source
-    by_source = {}
+    # Nhóm theo character class
+    by_char: dict[str, list[dict]] = {}
     for row in rows:
-        src = row.get("source", "unknown")
-        by_source.setdefault(src, []).append(row)
+        char = row.get("nom_char", "_unknown_")
+        by_char.setdefault(char, []).append(row)
 
     train, val, test = [], [], []
 
-    for src, src_rows in by_source.items():
-        random.shuffle(src_rows)
-        n = len(src_rows)
-        n_train = int(n * train_ratio)
-        n_val = int(n * val_ratio)
+    for char, char_rows in by_char.items():
+        random.shuffle(char_rows)
+        n = len(char_rows)
 
-        train.extend(src_rows[:n_train])
-        val.extend(src_rows[n_train:n_train + n_val])
-        test.extend(src_rows[n_train + n_val:])
+        if n <= 2:
+            # Quá ít → chỉ vào train
+            train.extend(char_rows)
+            continue
+
+        n_train = max(1, int(n * train_ratio))
+        n_val = max(1, int(n * val_ratio))
+        # Đảm bảo test có ít nhất 1 sample nếu đủ data
+        n_test = n - n_train - n_val
+        if n_test < 1 and n >= 3:
+            n_train -= 1
+            n_test = 1
+
+        train.extend(char_rows[:n_train])
+        val.extend(char_rows[n_train:n_train + n_val])
+        test.extend(char_rows[n_train + n_val:])
 
     random.shuffle(train)
     random.shuffle(val)
@@ -164,6 +267,10 @@ def main():
                         help="Confidence tối thiểu để đưa vào dataset")
     parser.add_argument("--copy-images", action="store_true",
                         help="Copy ảnh vào thư mục output (thay vì giữ path gốc)")
+    parser.add_argument("--no-quality-filter", action="store_true",
+                        help="Bỏ qua crop quality filter (mặc định: bật)")
+    parser.add_argument("--min-samples", type=int, default=3,
+                        help="Loại bỏ class có ít hơn N samples (mặc định: 3)")
 
     args = parser.parse_args()
     output_dir = Path(args.output)
@@ -171,6 +278,7 @@ def main():
 
     # --- Load tất cả labels ---
     all_rows = []
+    base_dirs = {}  # source_name → prepared_dir Path (for quality filter)
     for labeled_dir in args.labeled_dirs:
         labeled_path = Path(labeled_dir)
         labels_csv = labeled_path / "labels.csv"
@@ -182,6 +290,10 @@ def main():
             continue
 
         source_name = labeled_path.parent.name if labeled_path.name == "labeled" else labeled_path.name
+        # Resolve prepared dir (parent of labeled/)
+        prepared_dir = labeled_path.parent if labeled_path.name == "labeled" else labeled_path
+        base_dirs[source_name] = prepared_dir
+
         rows = load_labels(labels_csv, source_name)
         print(f"  {source_name}: {len(rows)} rows")
         all_rows.extend(rows)
@@ -196,13 +308,37 @@ def main():
     filtered = filter_by_confidence(all_rows, args.min_confidence)
     print(f"Sau lọc (>= {args.min_confidence}): {len(filtered)} rows")
 
+    # --- Issue #6: Crop quality filter ---
+    if not args.no_quality_filter:
+        print("\nKiểm tra chất lượng crop...")
+        filtered, qstats = filter_crop_quality(filtered, base_dirs)
+        print(f"  Tổng kiểm tra  : {qstats['total']}")
+        if qstats["missing_file"]:
+            print(f"  File thiếu/lỗi : {qstats['missing_file']}")
+        if qstats["too_small"]:
+            print(f"  Quá nhỏ (noise): {qstats['too_small']}")
+        if qstats["too_large"]:
+            print(f"  Quá lớn        : {qstats['too_large']}")
+        if qstats["blank_image"]:
+            print(f"  Blank/trắng    : {qstats['blank_image']}")
+        if qstats["too_dark"]:
+            print(f"  Quá đen        : {qstats['too_dark']}")
+        print(f"  Đạt chất lượng : {qstats['passed']}")
+
+    # --- Issue #7: Loại class hiếm ---
+    if args.min_samples > 1:
+        filtered, n_removed = filter_rare_classes(filtered, args.min_samples)
+        if n_removed > 0:
+            print(f"\nLoại {n_removed} class có <{args.min_samples} samples "
+                  f"→ còn {len(filtered)} rows")
+
     # --- Thống kê ---
     conf_counts = Counter(r.get("confidence", "") for r in filtered)
     char_counts = Counter(r.get("nom_char", "") for r in filtered if r.get("nom_char"))
 
     print(f"\nPhân bố confidence:")
     for conf, count in sorted(conf_counts.items()):
-        pct = count / len(filtered) * 100
+        pct = count / len(filtered) * 100 if filtered else 0
         print(f"  {conf}: {count} ({pct:.1f}%)")
 
     print(f"\nSố ký tự unique: {len(char_counts)}")

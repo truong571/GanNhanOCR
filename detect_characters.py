@@ -939,8 +939,9 @@ def _force_split_to_count(
 
             bbox = result[idx]
             x1, y1, x2, y2 = bbox
-            n_parts = min(round(h_val / expected_h), target_count - len(result) + 1)
-            n_parts = max(2, n_parts)
+            deficit = target_count - len(result)
+            n_parts = min(round(h_val / expected_h), deficit + 1)
+            n_parts = max(2, min(n_parts, deficit + 1))  # KHÔNG tạo quá deficit+1
 
             col_binary = binary[y1:y2, x1:x2]
             h_proj = col_binary.sum(axis=1).astype(float)
@@ -993,6 +994,9 @@ def _force_split_to_count(
 
             if len(sub_boxes) > 1:
                 result = result[:idx] + sub_boxes + result[idx + 1:]
+                # Guard: nếu vượt target → cắt bớt sub_boxes cuối
+                if len(result) > target_count:
+                    result = result[:target_count]
                 split_done = True
                 break
 
@@ -1369,9 +1373,26 @@ def _tighten_char_bbox(
     # --- Bước 4: Final tighten bbox ---
     coords = cv2.findNonZero(keep_mask)
     if coords is None:
-        coords = cv2.findNonZero(region)
+        # Tất cả components bị filter → fallback: giữ components gần tâm nhất
+        # thay vì dùng region gốc (sẽ undo toàn bộ tightening)
+        if num_labels > 1:
+            # Tìm component có centroid gần tâm cột nhất
+            center_x = rw / 2
+            best_lbl = None
+            best_dist = float("inf")
+            for lbl in range(1, num_labels):
+                cx = centroids[lbl][0]
+                dist = abs(cx - center_x)
+                if dist < best_dist:
+                    best_dist = dist
+                    best_lbl = lbl
+            if best_lbl is not None:
+                keep_mask[labels == best_lbl] = 255
+                coords = cv2.findNonZero(keep_mask)
         if coords is None:
-            return bbox
+            coords = cv2.findNonZero(region)
+            if coords is None:
+                return bbox
 
     rx, ry, rw_tight, rh_tight = cv2.boundingRect(coords)
 
@@ -1664,7 +1685,6 @@ def main():
         "--paddle", action="store_true",
         help="Dùng PaddleOCR hybrid detection (cần cài paddlepaddle + paddleocr)"
     )
-
     args = parser.parse_args()
 
     process_prepared_dir(

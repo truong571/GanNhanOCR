@@ -1475,6 +1475,7 @@ def process_prepared_dir(
     debug: bool = False,
     page_filter: int | None = None,
     verbose: bool = True,
+    use_paddle: bool = False,
 ):
     """Xử lý toàn bộ thư mục prepared data."""
     manifest_path = prepared_dir / "manifest.json"
@@ -1498,8 +1499,19 @@ def process_prepared_dir(
     total_expected = 0
     pages_matched = 0
 
+    # PaddleOCR hybrid detector
+    paddle_detector = None
+    if use_paddle:
+        from paddle_detector import PaddleHybridDetector
+        paddle_detector = PaddleHybridDetector()
+        if not paddle_detector.is_available():
+            print("[WARNING] PaddleOCR chưa cài đặt, fallback về classical CV")
+            print("  pip install paddlepaddle paddleocr")
+            paddle_detector = None
+
     if verbose:
-        print(f"\nChar Detection: {prepared_dir.name}")
+        method_name = "PaddleOCR Hybrid" if paddle_detector else "Classical CV"
+        print(f"\nChar Detection: {prepared_dir.name} [{method_name}]")
         print(f"Output: {output_dir}/")
         print("-" * 70)
 
@@ -1541,7 +1553,13 @@ def process_prepared_dir(
             n_columns = page_info.get("num_columns")
 
         # Detect (dùng ảnh denoised nếu có → binarize tốt hơn)
-        detection = detect_page(detect_image_path, n_columns=n_columns, expected_counts=expected_counts)
+        if paddle_detector:
+            detection = paddle_detector.detect_page(
+                detect_image_path, n_columns=n_columns,
+                expected_counts=expected_counts,
+            )
+        else:
+            detection = detect_page(detect_image_path, n_columns=n_columns, expected_counts=expected_counts)
 
         # Validate
         validation = {}
@@ -1642,6 +1660,10 @@ def main():
     parser.add_argument("--debug", action="store_true", help="Lưu ảnh debug với bbox")
     parser.add_argument("--page", type=int, default=None, help="Chỉ xử lý 1 trang")
     parser.add_argument("--quiet", action="store_true", help="Không hiển thị chi tiết")
+    parser.add_argument(
+        "--paddle", action="store_true",
+        help="Dùng PaddleOCR hybrid detection (cần cài paddlepaddle + paddleocr)"
+    )
 
     args = parser.parse_args()
 
@@ -1651,6 +1673,7 @@ def main():
         debug=args.debug,
         page_filter=args.page,
         verbose=not args.quiet,
+        use_paddle=args.paddle,
     )
 
 

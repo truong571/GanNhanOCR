@@ -1216,156 +1216,11 @@ def validate_with_transcription(
     return validation
 
 
-def _tighten_bbox(
-    binary: np.ndarray, bbox: tuple[int, int, int, int],
-    min_ink_ratio: float = 0.005, padding: int = 4,
-) -> tuple[int, int, int, int]:
-    """Tight-fit bbox quanh contour thật của ký tự.
-
-    Thay vì dùng grid-divide bbox (chứa nhiều padding trống), tìm vùng
-    ink thực tế bằng connected components rồi trim bbox.
-
-    Args:
-        binary: Binary image toàn trang
-        bbox: (x1, y1, x2, y2) grid-divide bbox
-        min_ink_ratio: Ngưỡng tối thiểu ink để giữ bbox gốc
-        padding: Pixels padding sau khi trim
-
-    Returns:
-        (x1, y1, x2, y2) tight-fit bbox
-    """
-    x1, y1, x2, y2 = bbox
-    img_h, img_w = binary.shape
-
-    # Crop vùng từ binary
-    region = binary[y1:y2, x1:x2]
-    rh, rw = region.shape
-    if rh == 0 or rw == 0:
-        return bbox
-
-    # Kiểm tra có ink không
-    ink_ratio = np.count_nonzero(region) / max(1, rh * rw)
-    if ink_ratio < min_ink_ratio:
-        return bbox
-
-    # Tìm bounding rect của tất cả ink pixels
-    coords = cv2.findNonZero(region)
-    if coords is None:
-        return bbox
-
-    rx, ry, rw_tight, rh_tight = cv2.boundingRect(coords)
-
-    # Chỉ tighten nếu trim > 10% mỗi chiều (tránh trim quá ít gây noise)
-    trim_x = rw - rw_tight
-    trim_y = rh - rh_tight
-    if trim_x < rw * 0.05 and trim_y < rh * 0.05:
-        return bbox  # Bbox đã khá tight, giữ nguyên
-
-    # Thêm padding để không cắt sát nét chữ
-    new_x1 = max(0, x1 + rx - padding)
-    new_y1 = max(0, y1 + ry - padding)
-    new_x2 = min(img_w, x1 + rx + rw_tight + padding)
-    new_y2 = min(img_h, y1 + ry + rh_tight + padding)
-
-    # Safety: bbox mới không được nhỏ hơn 50% bbox cũ (tránh trim quá mức)
-    orig_area = (x2 - x1) * (y2 - y1)
-    new_area = (new_x2 - new_x1) * (new_y2 - new_y1)
-    if new_area < orig_area * 0.3:
-        return bbox
-
-    return (int(new_x1), int(new_y1), int(new_x2), int(new_y2))
-
-
-def _cc_split_touching_chars(
-    binary: np.ndarray, bbox: tuple[int, int, int, int],
-    expected_h: float,
-) -> list[tuple[int, int, int, int]]:
-    """Tách ký tự chạm nhau bằng Connected Component analysis.
-
-    Khi 2+ ký tự chạm nhau trong 1 bbox (height > 1.5× expected),
-    projection valleys có thể fail. CC analysis tìm các component
-    riêng biệt và tách chúng.
-
-    Args:
-        binary: Binary image toàn trang
-        bbox: (x1, y1, x2, y2) bbox chứa nhiều ký tự
-        expected_h: Chiều cao kỳ vọng của 1 ký tự
-
-    Returns:
-        List các bbox đã tách, hoặc [bbox] nếu không cần tách
-    """
-    x1, y1, x2, y2 = bbox
-    box_h = y2 - y1
-
-    # Chỉ tách nếu bbox cao hơn 1.5× expected
-    if box_h <= expected_h * 1.5:
-        return [bbox]
-
-    region = binary[y1:y2, x1:x2]
-    rh, rw = region.shape
-    if rh == 0 or rw == 0:
-        return [bbox]
-
-    n_expected = max(2, round(box_h / expected_h))
-
-    # Strategy 1: Horizontal projection valleys
-    h_proj = region.sum(axis=1).astype(float)
-    smooth_k = max(3, int(expected_h * 0.08)) | 1
-    h_smooth = np.convolve(h_proj, np.ones(smooth_k) / smooth_k, mode="same")
-
-    min_dist = max(3, int(expected_h * 0.3))
-    valleys, _ = find_peaks(-h_smooth, distance=min_dist)
-
-    if len(valleys) >= n_expected - 1:
-        depths = h_smooth[valleys]
-        best_idx = np.argsort(depths)[:n_expected - 1]
-        split_points = sorted(valleys[best_idx])
-    else:
-        # Strategy 2: Connected components
-        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
-            region, connectivity=8
-        )
-        if num_labels <= 2:
-            return [bbox]
-
-        # Lọc components có diện tích đủ lớn
-        centers = []
-        for lbl in range(1, num_labels):
-            area = stats[lbl, cv2.CC_STAT_AREA]
-            if area > region.size * 0.003:
-                cy = stats[lbl, cv2.CC_STAT_TOP] + stats[lbl, cv2.CC_STAT_HEIGHT] // 2
-                centers.append(cy)
-
-        if len(centers) < n_expected:
-            return [bbox]
-
-        centers.sort()
-        gaps = [(centers[i + 1] - centers[i], i) for i in range(len(centers) - 1)]
-        gaps.sort(reverse=True)
-        split_points = sorted(
-            [(centers[i] + centers[i + 1]) // 2 for _, i in gaps[:n_expected - 1]]
-        )
-
-    # Tạo sub-boxes
-    all_points = [0] + list(split_points) + [box_h]
-    sub_boxes = []
-    for j in range(len(all_points) - 1):
-        sy1 = y1 + all_points[j]
-        sy2 = y1 + all_points[j + 1]
-        if sy2 - sy1 >= 8:
-            sub_boxes.append((x1, sy1, x2, sy2))
-
-    return sub_boxes if len(sub_boxes) > 1 else [bbox]
-
-
 def save_char_crops(
     image_path: str, detection: dict, output_dir: Path, page_num: int
 ) -> list[str]:
-    """Cắt và lưu ảnh từng ký tự với tight-fit bbox."""
+    """Cắt và lưu ảnh từng ký tự."""
     gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    # Cần binary cho bbox tightening
-    _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-
     crops_dir = output_dir / "crops" / f"page_{page_num:04d}"
     crops_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1374,16 +1229,12 @@ def save_char_crops(
         for char_info in col["chars"]:
             x1, y1, x2, y2 = char_info["bbox"]
 
-            # Phase 1: Tight-fit bbox theo contour thật
-            tx1, ty1, tx2, ty2 = _tighten_bbox(binary, (x1, y1, x2, y2))
-            char_info["bbox_tight"] = [int(tx1), int(ty1), int(tx2), int(ty2)]
-
-            # Crop từ tight bbox + padding nhỏ
-            pad = 2
-            y1p = max(0, ty1 - pad)
-            y2p = min(gray.shape[0], ty2 + pad)
-            x1p = max(0, tx1 - pad)
-            x2p = min(gray.shape[1], tx2 + pad)
+            # Thêm padding nhỏ
+            pad = 3
+            y1p = max(0, y1 - pad)
+            y2p = min(gray.shape[0], y2 + pad)
+            x1p = max(0, x1 - pad)
+            x2p = min(gray.shape[1], x2 + pad)
 
             crop = gray[y1p:y2p, x1p:x2p]
 

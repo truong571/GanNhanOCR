@@ -1,12 +1,22 @@
-"""Step 4: Merge labels from all books, filter, stratified split -> final dataset.
+"""Step 4: Export dataset — per-book + all-in-one.
 
-No confidence filtering. Labels are either matched (black) or unmatched (red).
+Output structure:
+  dataset/
+    CacThanhTruyen2/    <- per-book
+      labels.csv
+      class_map.json
+      metadata.json
+    CacThanhTruyen4/
+      ...
+    all/                <- merged from all books
+      labels.csv
+      class_map.json
+      metadata.json
 """
 
 import argparse
 import csv
 import json
-import random
 import sys
 from collections import Counter
 from pathlib import Path
@@ -96,66 +106,73 @@ def build_class_map(rows: list[dict]) -> dict:
     }
 
 
-def split_dataset(
-    rows: list[dict],
-    ratios: tuple[float, float, float] = (0.8, 0.1, 0.1),
-    seed: int = 42,
-) -> tuple[list[dict], list[dict], list[dict]]:
-    """Stratified split by character class."""
-    random.seed(seed)
-    train_r, val_r, _ = ratios
-
-    by_char: dict[str, list[dict]] = {}
-    for row in rows:
-        char = row.get("nom_char", "_unknown_")
-        by_char.setdefault(char, []).append(row)
-
-    train, val, test = [], [], []
-    for char, char_rows in by_char.items():
-        random.shuffle(char_rows)
-        n = len(char_rows)
-        if n <= 2:
-            train.extend(char_rows)
-            continue
-        n_train = max(1, int(n * train_r))
-        n_val = max(1, int(n * val_r))
-        n_test = n - n_train - n_val
-        if n_test < 1 and n >= 3:
-            n_train -= 1
-            n_test = 1
-        train.extend(char_rows[:n_train])
-        val.extend(char_rows[n_train:n_train + n_val])
-        test.extend(char_rows[n_train + n_val:])
-
-    random.shuffle(train)
-    random.shuffle(val)
-    random.shuffle(test)
-    return train, val, test
+FIELDNAMES = [
+    "crop_file", "nom_char", "unicode", "syllable", "matched",
+    "tier", "bbox", "page", "source",
+]
 
 
-def save_csv(rows: list[dict], path: Path, fieldnames: list[str]):
+def save_csv(rows: list[dict], path: Path):
     with open(path, "w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+        writer = csv.DictWriter(f, fieldnames=FIELDNAMES, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(rows)
 
 
+def save_subset(rows: list[dict], out_dir: Path, name: str, verbose: bool = True):
+    """Filter, build class_map, save one subset (per-book or all)."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # Add unicode field
+    for row in rows:
+        if "unicode" not in row and row.get("nom_char"):
+            row["unicode"] = f"U+{ord(row['nom_char']):04X}"
+
+    # Build class map
+    class_map = build_class_map(rows)
+    with open(out_dir / "class_map.json", "w", encoding="utf-8") as f:
+        json.dump(class_map, f, ensure_ascii=False, indent=2)
+
+    # Save labels
+    save_csv(rows, out_dir / "labels.csv")
+
+    # Metadata
+    matched_count = sum(1 for r in rows if r.get("matched") in (True, "True"))
+    unmatched_count = len(rows) - matched_count
+    metadata = {
+        "total_samples": len(rows),
+        "num_classes": len(class_map),
+        "matched": matched_count,
+        "unmatched": unmatched_count,
+        "sources": sorted(set(r.get("source", "") for r in rows)),
+    }
+    with open(out_dir / "metadata.json", "w", encoding="utf-8") as f:
+        json.dump(metadata, f, ensure_ascii=False, indent=2)
+
+    if verbose:
+        print(f"    {name}: {len(rows)} samples, "
+              f"{len(class_map)} classes, "
+              f"{matched_count} matched, {unmatched_count} unmatched")
+
+
 def export_dataset(config: dict, verbose: bool = True):
-    """Run Step 4: export final dataset."""
+    """Run Step 4: export per-book + all-in-one dataset."""
     paths = config["paths"]
     step4_cfg = config.get("step4", {})
     data_dir = Path(paths["data_dir"])
     output_dir = Path(paths["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
+    min_samples = step4_cfg.get("min_samples_per_class", 3)
 
     if verbose:
         print(f"\n{'='*60}")
         print("Step 4: Export Dataset")
         print(f"{'='*60}")
 
-    # Load all labels
-    all_rows = []
+    # Load and export per-book
+    all_filtered: list[dict] = []
     base_dirs: dict[str, Path] = {}
+
     for book in config["books"]:
         name = book["name"]
         labels_csv = data_dir / name / "labeled" / "labels.csv"
@@ -163,84 +180,42 @@ def export_dataset(config: dict, verbose: bool = True):
             if verbose:
                 print(f"  [SKIP] {name}: no labels.csv")
             continue
+
         rows = load_labels(labels_csv, name)
         base_dirs[name] = data_dir / name
-        if verbose:
-            print(f"  {name}: {len(rows)} rows")
-        all_rows.extend(rows)
 
-    if not all_rows:
+        # Filter: remove gaps
+        rows = [r for r in rows if r.get("nom_char")]
+
+        # Filter: crop quality
+        rows, _ = filter_crop_quality(rows, base_dirs)
+
+        # Filter: rare classes (per-book)
+        if min_samples > 1:
+            rows, _ = filter_rare_classes(rows, min_samples)
+
+        # Save per-book
+        book_dir = output_dir / name
+        save_subset(rows, book_dir, name, verbose=verbose)
+
+        all_filtered.extend(rows)
+
+    if not all_filtered:
         print("[ERROR] No data.", file=sys.stderr)
         return
 
-    # Only keep rows with nom_char (skip gaps)
-    filtered = [r for r in all_rows if r.get("nom_char")]
-    if verbose:
-        print(f"\n  After removing gaps: {len(filtered)}")
-
-    # Filter quality
-    filtered, qstats = filter_crop_quality(filtered, base_dirs)
-    if verbose:
-        print(f"  After quality filter: {qstats['passed']} passed, {qstats['filtered']} filtered")
-
-    # Filter rare classes
-    min_samples = step4_cfg.get("min_samples_per_class", 3)
+    # Filter rare classes again on merged set
     if min_samples > 1:
-        filtered, n_removed = filter_rare_classes(filtered, min_samples)
-        if verbose and n_removed:
-            print(f"  Removed {n_removed} classes with <{min_samples} samples")
+        all_filtered, _ = filter_rare_classes(all_filtered, min_samples)
 
-    # Add unicode field
-    for row in filtered:
-        if "unicode" not in row and row.get("nom_char"):
-            row["unicode"] = f"U+{ord(row['nom_char']):04X}"
-
-    # Build class map
-    class_map = build_class_map(filtered)
-    with open(output_dir / "class_map.json", "w", encoding="utf-8") as f:
-        json.dump(class_map, f, ensure_ascii=False, indent=2)
-
-    # Split
-    ratios = tuple(step4_cfg.get("split_ratios", [0.8, 0.1, 0.1]))
-    seed = step4_cfg.get("seed", 42)
-    train, val, test = split_dataset(filtered, ratios, seed)
-
-    # Save
-    fieldnames = [
-        "crop_file", "nom_char", "unicode", "syllable", "matched",
-        "tier", "bbox", "page", "source",
-    ]
-    save_csv(filtered, output_dir / "labels.csv", fieldnames)
-    save_csv(train, output_dir / "train.csv", fieldnames)
-    save_csv(val, output_dir / "val.csv", fieldnames)
-    save_csv(test, output_dir / "test.csv", fieldnames)
-
-    # Metadata
-    matched_count = sum(1 for r in filtered if r.get("matched") in (True, "True"))
-    unmatched_count = len(filtered) - matched_count
-    metadata = {
-        "total_samples": len(filtered),
-        "num_classes": len(class_map),
-        "splits": {"train": len(train), "val": len(val), "test": len(test)},
-        "matched": matched_count,
-        "unmatched": unmatched_count,
-        "sources": sorted(set(r.get("source", "") for r in filtered)),
-    }
-    with open(output_dir / "metadata.json", "w", encoding="utf-8") as f:
-        json.dump(metadata, f, ensure_ascii=False, indent=2)
+    # Save all-in-one
+    all_dir = output_dir / "all"
+    save_subset(all_filtered, all_dir, "all", verbose=verbose)
 
     if verbose:
         print(f"\n  {'='*50}")
-        print(f"  DATASET EXPORTED")
+        print(f"  DATASET EXPORTED -> {output_dir}/")
         print(f"  {'='*50}")
-        print(f"  Output:    {output_dir}/")
-        print(f"  Total:     {len(filtered)} samples")
-        print(f"  Classes:   {len(class_map)}")
-        print(f"  Matched:   {matched_count} (black)")
-        print(f"  Unmatched: {unmatched_count} (red)")
-        print(f"  Train:     {len(train)}")
-        print(f"  Val:       {len(val)}")
-        print(f"  Test:      {len(test)}")
 
 
 def main():

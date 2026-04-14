@@ -26,7 +26,7 @@ PDF sach co (Han Nom + Quoc Ngu)
 │     • Tang 2: Mo rong qua chu tuong tu
 │     • Tang 3: So khop anh (DINOv2 cosine similarity)
 │
-└── Buoc 4: Export ─── Gop sach → Loc chat luong → Stratified split → dataset
+└── Buoc 4: Export ─── Gop sach → Loc chat luong → dataset cuoi cung
 ```
 
 **Nguyen tac cot loi:** `processed_image` chi dung noi bo cho OCR. Moi anh luu ra dataset deu la crop tu `original_image`.
@@ -41,10 +41,18 @@ PDF sach co (Han Nom + Quoc Ngu)
 - Font NomNaTong (co san tai `FontDiffusion/fonts/NomNaTong-Regular.ttf`)
 - Token API Kimhannom (dat trong file `.env`)
 
-### Cai thu vien
+### Tao moi truong ao va cai thu vien
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
+```
+
+Lan sau mo lai project chi can kich hoat lai:
+
+```bash
+source .venv/bin/activate
 ```
 
 ### Cau hinh API
@@ -184,10 +192,14 @@ GanNhanOCR/
 │   ├── QuocNgu_SinoNom_TongHop3.csv
 │   └── SinoNom_Similar_Dic_v2.csv
 │
-├── Data/                           # PDF dau vao
-│   └── prepared/                   # Output cua pipeline
+├── Data/                           # PDF dau vao (chi chua file goc)
 │
-├── dataset/                        # Dataset cuoi cung (train/val/test)
+├── prepared/                       # Output trung gian cua pipeline (moi book 1 folder)
+│
+├── dataset/                        # Ket qua cuoi cung
+│   ├── CacThanhTruyen2/            #   tung book rieng
+│   ├── CacThanhTruyen4/
+│   └── all/                        #   gop tat ca book
 │
 ├── requirements.txt
 ├── run_pipeline.sh
@@ -207,7 +219,7 @@ books:
     reocr: false          # true neu can re-OCR trang QN bang PaddleOCR+VietOCR
 
 paths:
-  data_dir: Data/prepared
+  data_dir: prepared
   output_dir: dataset
   qn_to_nom_dict: Dict/QuocNgu_SinoNom_TongHop3.csv
   similar_dict: Dict/SinoNom_Similar_Dic_v2.csv
@@ -226,7 +238,6 @@ step3:
 
 step4:
   min_samples_per_class: 3
-  split_ratios: [0.8, 0.1, 0.1]
 ```
 
 ---
@@ -275,7 +286,7 @@ Can chinh N ky tu detected voi M am tiet QN bang Levenshtein DP:
 - Gop labels.csv tu tat ca sach
 - Loc crop loi (trang, qua den, kich thuoc bat thuong)
 - Loai class hiem (< 3 mau)
-- Stratified split: 80% train / 10% val / 10% test
+- Xuat rieng tung book + gop tat ca vao `all/`
 
 ---
 
@@ -315,12 +326,18 @@ crops/page_0012/col01_char000.png,經,U+7D93,kinh,True,1,"[100,200,150,260]",pag
 
 ```
 dataset/
-├── labels.csv        # Toan bo sau loc
-├── train.csv         # 80%
-├── val.csv           # 10%
-├── test.csv          # 10%
-├── class_map.json    # class_id → {char, unicode}
-└── metadata.json     # Thong ke
+├── CacThanhTruyen2/       # Du lieu rieng tung book
+│   ├── labels.csv
+│   ├── class_map.json
+│   └── metadata.json
+├── CacThanhTruyen4/
+│   ├── labels.csv
+│   ├── class_map.json
+│   └── metadata.json
+└── all/                   # Gop tat ca book
+    ├── labels.csv
+    ├── class_map.json
+    └── metadata.json
 ```
 
 ---
@@ -355,7 +372,7 @@ python tools/visualize_labels.py Data/prepared/CacThanhTruyen2 --pdf output.pdf
 | Tra tu dien | Song huong QN↔Nom + Fuzzy matching |
 | Chu tuong tu | SinoNom_Similar_Dic |
 | So khop anh | DINOv2 ViT-S/14 cosine similarity |
-| Xuat dataset | Stratified split theo character class |
+| Xuat dataset | Merge + Quality filter + Class map |
 
 ---
 

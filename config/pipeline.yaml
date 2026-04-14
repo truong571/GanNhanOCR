@@ -12,7 +12,7 @@ books:
     reocr: false
 
 paths:
-  data_dir: Data/prepared
+  data_dir: prepared
   output_dir: dataset
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom_TongHop3.csv
@@ -42,5 +42,3 @@ step3:
 
 step4:
   min_samples_per_class: 3
-  split_ratios: [0.8, 0.1, 0.1]
-  seed: 42

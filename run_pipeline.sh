@@ -1,149 +1,101 @@
 #!/usr/bin/env bash
-# =============================================================================
-# run_pipeline.sh - Chạy toàn bộ pipeline cho 3 bộ CacThanhTruyen (2, 4, 11)
-# =============================================================================
+# GanNhanOCR Pipeline — 5 steps (0-4)
+#
+# Usage:
+#   ./run_pipeline.sh                    # Run all steps for all books
+#   ./run_pipeline.sh --step 1           # Run only step 1
+#   ./run_pipeline.sh --book CacThanhTruyen2  # Run only one book
+#   ./run_pipeline.sh --config config/pipeline.yaml
 
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
-# Cấu hình
-# ---------------------------------------------------------------------------
-BOOKS=("CacThanhTruyen2" "CacThanhTruyen4" "CacThanhTruyen11")
-PYTHON="${PYTHON:-python3}"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-USE_PADDLE="${USE_PADDLE:-0}"  # Set USE_PADDLE=1 to use PaddleOCR hybrid detection
+CONFIG="${CONFIG:-config/pipeline.yaml}"
+STEP="${STEP:-all}"
+BOOK="${BOOK:-all}"
 
-# ---------------------------------------------------------------------------
-# Màu terminal
-# ---------------------------------------------------------------------------
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-CYAN='\033[0;36m'
-BOLD='\033[1m'
-NC='\033[0m'
-
-log_stage() {
-    echo ""
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${BOLD}${CYAN}  GIAI ĐOẠN $1: $2${NC}"
-    echo -e "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-}
-
-log_book() {
-    echo -e "${BOLD}  ▸ $1${NC}"
-}
-
-elapsed_time() {
-    local diff=$(( $(date +%s) - $1 ))
-    echo "$((diff / 60))m $((diff % 60))s"
-}
-
-# ---------------------------------------------------------------------------
-# Kiểm tra file PDF
-# ---------------------------------------------------------------------------
-for BOOK in "${BOOKS[@]}"; do
-    if [[ ! -f "data/${BOOK}.pdf" ]]; then
-        echo -e "${RED}[ERROR]${NC} Không tìm thấy: data/${BOOK}.pdf"
-        exit 1
-    fi
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --config) CONFIG="$2"; shift 2 ;;
+        --step)   STEP="$2"; shift 2 ;;
+        --book)   BOOK="$2"; shift 2 ;;
+        --help)
+            echo "Usage: $0 [--config PATH] [--step N] [--book NAME]"
+            echo ""
+            echo "Steps:"
+            echo "  0  Setup & validation"
+            echo "  1  Extract data from PDF"
+            echo "  2  Levenshtein alignment"
+            echo "  3  3-tier label assignment"
+            echo "  4  Export dataset"
+            echo "  all  Run all steps (default)"
+            exit 0 ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
 done
 
-echo ""
-echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BOLD}${CYAN}║     PIPELINE GÁN NHÃN: CacThanhTruyen (2, 4, 11)           ║${NC}"
-echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════════════════════════╝${NC}"
-
-PIPELINE_START=$(date +%s)
-
-# =====================================================================
-# GIAI ĐOẠN 1: TRÍCH XUẤT DỮ LIỆU TỪ PDF
-# =====================================================================
-log_stage 1 "TRÍCH XUẤT DỮ LIỆU TỪ PDF"
-t=$(date +%s)
-
-for BOOK in "${BOOKS[@]}"; do
-    log_book "$BOOK"
-    "$PYTHON" "$SCRIPT_DIR/prepare_data.py" "data/${BOOK}.pdf" \
-        --dpi 300 \
-        --denoise
-done
-
-echo -e "${GREEN}[OK]${NC} Giai đoạn 1 hoàn tất ($(elapsed_time $t))"
-
-# =====================================================================
-# GIAI ĐOẠN 2: PHÁT HIỆN VÀ CẮT KÝ TỰ
-# =====================================================================
-log_stage 2 "PHÁT HIỆN VÀ CẮT KÝ TỰ"
-t=$(date +%s)
-
-PADDLE_FLAG=""
-if [[ "$USE_PADDLE" == "1" ]]; then
-    PADDLE_FLAG="--paddle"
-    echo -e "  ${CYAN}Mode: PaddleOCR Hybrid${NC}"
+# Extract book names from config
+if [[ "$BOOK" == "all" ]]; then
+    BOOKS=$(python3 -c "
+import yaml
+with open('$CONFIG') as f:
+    cfg = yaml.safe_load(f)
+for b in cfg['books']:
+    print(b['name'])
+")
+else
+    BOOKS="$BOOK"
 fi
 
-for BOOK in "${BOOKS[@]}"; do
-    log_book "$BOOK"
-    "$PYTHON" "$SCRIPT_DIR/detect_characters.py" "data/prepared/${BOOK}" $PADDLE_FLAG
-done
+echo "================================================================"
+echo "  GanNhanOCR Pipeline"
+echo "  Config: $CONFIG"
+echo "  Steps:  $STEP"
+echo "  Books:  $(echo $BOOKS | tr '\n' ' ')"
+echo "================================================================"
 
-echo -e "${GREEN}[OK]${NC} Giai đoạn 2 hoàn tất ($(elapsed_time $t))"
+# Step 0: Setup
+if [[ "$STEP" == "all" || "$STEP" == "0" ]]; then
+    echo ""
+    echo ">>> Step 0: Setup & Validation"
+    python3 -m pipeline.step0_setup "$CONFIG"
+fi
 
-# =====================================================================
-# GIAI ĐOẠN 3: LÀM SẠCH ẢNH KÝ TỰ
-# =====================================================================
-log_stage 3 "LÀM SẠCH ẢNH KÝ TỰ"
-t=$(date +%s)
+# Step 1: Extract
+if [[ "$STEP" == "all" || "$STEP" == "1" ]]; then
+    for book in $BOOKS; do
+        echo ""
+        echo ">>> Step 1: Extract — $book"
+        python3 -m pipeline.step1_extract "$CONFIG" "$book"
+    done
+fi
 
-for BOOK in "${BOOKS[@]}"; do
-    log_book "$BOOK"
-    "$PYTHON" "$SCRIPT_DIR/clean_crops.py" "data/prepared/${BOOK}/detected" \
-        --size 64
-done
+# Step 2: Align
+if [[ "$STEP" == "all" || "$STEP" == "2" ]]; then
+    for book in $BOOKS; do
+        echo ""
+        echo ">>> Step 2: Align — $book"
+        python3 -m pipeline.step2_align "$CONFIG" "$book"
+    done
+fi
 
-echo -e "${GREEN}[OK]${NC} Giai đoạn 3 hoàn tất ($(elapsed_time $t))"
+# Step 3: Label
+if [[ "$STEP" == "all" || "$STEP" == "3" ]]; then
+    for book in $BOOKS; do
+        echo ""
+        echo ">>> Step 3: Label — $book"
+        python3 -m pipeline.step3_label "$CONFIG" "$book"
+    done
+fi
 
-# =====================================================================
-# GIAI ĐOẠN 4: GÁN NHÃN TỰ ĐỘNG
-# =====================================================================
-log_stage 4 "GÁN NHÃN TỰ ĐỘNG"
-t=$(date +%s)
+# Step 4: Export
+if [[ "$STEP" == "all" || "$STEP" == "4" ]]; then
+    echo ""
+    echo ">>> Step 4: Export Dataset"
+    python3 -m pipeline.step4_export "$CONFIG"
+fi
 
-for BOOK in "${BOOKS[@]}"; do
-    log_book "$BOOK"
-    "$PYTHON" "$SCRIPT_DIR/label_characters.py" "data/prepared/${BOOK}" \
-        --review \
-        --ocr \
-        --dinov2 \
-        --excel
-done
-
-echo -e "${GREEN}[OK]${NC} Giai đoạn 4 hoàn tất ($(elapsed_time $t))"
-
-# =====================================================================
-# GIAI ĐOẠN 5: XUẤT DATASET (gộp cả 3 bộ)
-# =====================================================================
-log_stage 5 "XUẤT DATASET (gộp 3 bộ)"
-t=$(date +%s)
-
-"$PYTHON" "$SCRIPT_DIR/export_dataset.py" \
-    data/prepared/CacThanhTruyen2/labeled \
-    data/prepared/CacThanhTruyen4/labeled \
-    data/prepared/CacThanhTruyen11/labeled \
-    --min-confidence low \
-    --split 0.8 0.1 0.1
-
-echo -e "${GREEN}[OK]${NC} Giai đoạn 5 hoàn tất ($(elapsed_time $t))"
-
-# ---------------------------------------------------------------------------
-# Tổng kết
-# ---------------------------------------------------------------------------
 echo ""
-echo -e "${GREEN}${BOLD}╔══════════════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}${BOLD}║              PIPELINE HOÀN TẤT!                             ║${NC}"
-echo -e "${GREEN}${BOLD}╚══════════════════════════════════════════════════════════════╝${NC}"
-echo -e "${CYAN}  Bộ sách:       CacThanhTruyen2, CacThanhTruyen4, CacThanhTruyen11${NC}"
-echo -e "${CYAN}  Tổng thời gian: $(elapsed_time $PIPELINE_START)${NC}"
-echo -e "${CYAN}  Output:        data/prepared/CacThanhTruyen*/${NC}"
-echo -e "${CYAN}  Dataset:       dataset/${NC}"
-echo ""
+echo "================================================================"
+echo "  Pipeline complete!"
+echo "================================================================"

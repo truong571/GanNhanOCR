@@ -342,12 +342,13 @@ def tier3_visual_comparison(
     font_path: str,
     dinov2_ranker=None,
     fontdiffusion_ckpt: str | None = None,
+    fd_cache: dict[str, str] | None = None,
     threshold: float = 0.75,
 ) -> tuple[str | None, bool, float]:
     """Tier 3: Visual comparison via FontDiffusion + DINOv2.
 
-    Compare crop image against rendered candidates using DINOv2 embeddings.
-    Union of S2 candidates + similar chars as comparison set.
+    Uses pre-generated FontDiffusion images from fd_cache (batch generated
+    in step3 before labeling). Falls back to font-rendered DINOv2 if no cache.
 
     Returns: (chosen_char, matched: bool, score)
       matched=True if score > threshold (visually confirmed)
@@ -361,7 +362,25 @@ def tier3_visual_comparison(
     if not filtered:
         filtered = all_candidates
 
-    # Try DINOv2 ranking
+    # Use pre-generated FontDiffusion images from cache
+    if fd_cache and dinov2_ranker is not None:
+        candidate_images = {}
+        for char in filtered[:20]:
+            if char in fd_cache:
+                candidate_images[char] = fd_cache[char]
+
+        if candidate_images:
+            try:
+                results = dinov2_ranker.rank_candidates_from_paths(
+                    crop_path, candidate_images,
+                )
+                if results:
+                    best_char, best_score = results[0]
+                    return best_char, best_score > threshold, best_score
+            except Exception:
+                pass
+
+    # Fallback: DINOv2 with font-rendered images (no FontDiffusion)
     if dinov2_ranker is not None:
         try:
             results = dinov2_ranker.rank_candidates(crop_path, filtered)
@@ -399,6 +418,8 @@ def assign_label(
     similar_dict: dict[str, list[str]],
     font_path: str | None = None,
     dinov2_ranker=None,
+    fontdiffusion_ckpt: str | None = None,
+    fd_cache: dict[str, str] | None = None,
 ) -> dict:
     """Full 3-tier label assignment for one character.
 
@@ -435,6 +456,8 @@ def assign_label(
         vis_char, vis_matched, vis_score = tier3_visual_comparison(
             crop_path, candidates, similar_chars, font_path,
             dinov2_ranker=dinov2_ranker,
+            fontdiffusion_ckpt=fontdiffusion_ckpt,
+            fd_cache=fd_cache,
         )
         if vis_char:
             return {

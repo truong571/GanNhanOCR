@@ -157,5 +157,34 @@ class DINOv2Ranker:
         results.sort(key=lambda x: x[1], reverse=True)
         return results
 
+    def rank_candidates_from_paths(
+        self, crop_path: str, candidate_images: dict[str, str],
+    ) -> list[tuple[str, float]]:
+        """Rank candidates using pre-generated images (e.g. FontDiffusion output).
+
+        Args:
+            crop_path: Path to the handwritten crop image.
+            candidate_images: {char: image_path} — generated handwritten-style images.
+
+        Returns: [(char, score)] sorted by score descending.
+        """
+        crop_emb = self._embed_crop(crop_path)
+        if crop_emb is None:
+            return [(c, 0.0) for c in candidate_images]
+
+        results = []
+        for char, img_path in candidate_images.items():
+            # Embed the FontDiffusion-generated image (not font-rendered)
+            fd_emb = self._embed_crop(img_path)
+            if fd_emb is None:
+                results.append((char, 0.0))
+                continue
+            sim = float(F.cosine_similarity(crop_emb.unsqueeze(0), fd_emb.unsqueeze(0)))
+            sim = max(0.0, (sim + 1.0) / 2.0)
+            results.append((char, sim))
+
+        results.sort(key=lambda x: x[1], reverse=True)
+        return results
+
     def clear_cache(self):
         self._crop_cache.clear()

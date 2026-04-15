@@ -18,7 +18,8 @@ paths:
   qn_to_nom_dict: Dict/QuocNgu_SinoNom_TongHop3.csv
   similar_dict: Dict/SinoNom_Similar_Dic_v2.csv
   font_path: FontDiffusion/fonts/NomNaTong-Regular.ttf
-  fontdiffusion_ckpt: FontDiffusion/ckpt
+  fontdiffusion_ckpt: FontDiffusion/ckpt/DRO-20260227-19P2/checkpoint_step_6000
+  fontdiffusion_phase1_ckpt: FontDiffusion/ckpt/FST/checkpoint_step_1500
 
 step1:
   dpi: 300
@@ -38,7 +39,7 @@ step2:
 step3:
   use_dinov2: true
   dinov2_threshold: 0.75
-  use_fontdiffusion: false
+  use_fontdiffusion: true
 
 step4:
-  min_samples_per_class: 3
+  min_samples_per_class: 1

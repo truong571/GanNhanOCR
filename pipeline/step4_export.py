@@ -120,6 +120,67 @@ def save_csv(rows: list[dict], path: Path):
         writer.writerows(rows)
 
 
+def save_excel(rows: list[dict], path: Path):
+    """Save labels as Excel with formatted columns."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Labels"
+
+    # Header
+    headers = FIELDNAMES
+    header_font = Font(bold=True)
+    header_fill = PatternFill(start_color="D9E1F2", end_color="D9E1F2", fill_type="solid")
+    for col, h in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=h)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center")
+
+    # Data
+    red_font = Font(color="FF0000")
+    green_font = Font(color="008000")
+    nom_font = Font(size=14)
+
+    for r_idx, row in enumerate(rows, 2):
+        for c_idx, key in enumerate(headers, 1):
+            val = row.get(key, "")
+            if key == "bbox" and val:
+                val = str(val)
+            cell = ws.cell(row=r_idx, column=c_idx, value=val)
+
+            # Color matched column
+            if key == "matched":
+                if val in (True, "True"):
+                    cell.font = green_font
+                    cell.value = "True"
+                else:
+                    cell.font = red_font
+                    cell.value = "False"
+
+            # Larger font for nom_char
+            if key == "nom_char" and val:
+                cell.font = Font(size=14)
+                cell.alignment = Alignment(horizontal="center")
+
+    # Auto-width
+    for col in ws.columns:
+        max_len = 0
+        col_letter = col[0].column_letter
+        for cell in col:
+            if cell.value:
+                max_len = max(max_len, len(str(cell.value)))
+        ws.column_dimensions[col_letter].width = min(max_len + 3, 40)
+
+    # Freeze header
+    ws.auto_filter.ref = ws.dimensions
+    ws.freeze_panes = "A2"
+
+    wb.save(str(path))
+
+
 def copy_crops(rows: list[dict], out_dir: Path, base_dirs: dict[str, Path]) -> int:
     """Copy crop images into dataset output folder."""
     copied = 0
@@ -160,8 +221,9 @@ def save_subset(
     with open(out_dir / "class_map.json", "w", encoding="utf-8") as f:
         json.dump(class_map, f, ensure_ascii=False, indent=2)
 
-    # Save labels
+    # Save labels (CSV + Excel)
     save_csv(rows, out_dir / "labels.csv")
+    save_excel(rows, out_dir / "labels.xlsx")
 
     # Copy crop images into dataset folder
     copied = copy_crops(rows, out_dir, base_dirs)

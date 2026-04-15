@@ -118,11 +118,10 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
         print(f"[ERROR] No aligned files in {aligned_dir}", file=sys.stderr)
         return
 
-    # ── FontDiffusion: batch pre-generate per page style ──
-    # fd_cache_per_page = {page_name: {char: image_path}}
-    fd_cache_per_page: dict[str, dict[str, str]] = {}
+    # ── FontDiffusion cache ──
+    # fd_cache = {char: generated_image_path}
+    fd_cache: dict[str, str] = {}
     fontdiffusion_ckpt = None
-    fd_generator = None
 
     if step3_cfg.get("use_fontdiffusion", False):
         ckpt = paths.get("fontdiffusion_ckpt")
@@ -131,56 +130,64 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
         if ckpt and Path(ckpt).exists():
             fontdiffusion_ckpt = ckpt
 
-            if verbose:
-                print(f"\n  Pass 1: Scanning tier 3 candidates...")
-
-            tier3_chars = _collect_tier3_candidates(
-                aligned_files, data_dir, qn_to_nom, nom_to_qn, similar_dict,
-            )
-
-            if verbose:
-                print(f"    Found {len(tier3_chars)} unique chars needing tier 3")
-
-            if tier3_chars:
-                # Collect 1 style image per page
-                page_styles: dict[str, str] = {}
-                for af in aligned_files:
-                    page_name = af.stem.replace("_aligned", "")
-                    with open(af) as f:
-                        alignment = json.load(f)
-                    for pair in alignment:
-                        if pair["type"] == "match" and pair.get("char"):
-                            cf = pair["char"].get("crop_file", "")
-                            if cf:
-                                p = data_dir / "detected" / cf
-                                if p.exists():
-                                    page_styles[page_name] = str(p)
-                                    break
-
-                if page_styles:
+            # Load pre-generated cache from disk (generated on Colab/Kaggle)
+            cache_base = data_dir / "fd_cache"
+            if cache_base.exists():
+                for png in cache_base.rglob("U+*.png"):
+                    # Parse char from filename: U+7D93.png -> 經
+                    hex_str = png.stem.replace("U+", "")
                     try:
-                        from lib.fontdiffusion_gen import FontDiffusionGenerator
-                        fd_generator = FontDiffusionGenerator(
-                            ckpt_dir=ckpt,
-                            phase1_ckpt_dir=phase1_ckpt,
-                            font_path=font_path or "FontDiffusion/fonts/NomNaTong-Regular.ttf",
-                            cache_dir=str(data_dir / "fd_cache"),
-                        )
-                        chars_list = list(tier3_chars)
-                        for page_name, style_path in page_styles.items():
-                            if verbose:
-                                print(f"\n    Generating for style: {page_name}")
-                            page_cache = fd_generator.generate(
-                                chars_list, style_path, style_name=page_name,
+                        char = chr(int(hex_str, 16))
+                        fd_cache[char] = str(png)
+                    except ValueError:
+                        pass
+
+            if verbose and fd_cache:
+                print(f"    FontDiffusion cache: {len(fd_cache)} images loaded from disk")
+
+            # If no cache, try generating locally
+            if not fd_cache:
+                if verbose:
+                    print(f"\n  Pass 1: Scanning tier 3 candidates...")
+
+                tier3_chars = _collect_tier3_candidates(
+                    aligned_files, data_dir, qn_to_nom, nom_to_qn, similar_dict,
+                )
+                if verbose:
+                    print(f"    Found {len(tier3_chars)} unique chars needing tier 3")
+
+                if tier3_chars:
+                    style_image = None
+                    for af in aligned_files:
+                        with open(af) as f:
+                            alignment = json.load(f)
+                        for pair in alignment:
+                            if pair["type"] == "match" and pair.get("char"):
+                                cf = pair["char"].get("crop_file", "")
+                                if cf:
+                                    p = data_dir / "detected" / cf
+                                    if p.exists():
+                                        style_image = str(p)
+                                        break
+                        if style_image:
+                            break
+
+                    if style_image:
+                        try:
+                            from lib.fontdiffusion_gen import FontDiffusionGenerator
+                            generator = FontDiffusionGenerator(
+                                ckpt_dir=ckpt,
+                                phase1_ckpt_dir=phase1_ckpt,
+                                font_path=font_path or "FontDiffusion/fonts/NomNaTong-Regular.ttf",
+                                cache_dir=str(cache_base),
                             )
-                            fd_cache_per_page[page_name] = page_cache
-                        if verbose:
-                            total_cached = sum(len(c) for c in fd_cache_per_page.values())
-                            print(f"\n    FontDiffusion: {total_cached} images "
-                                  f"across {len(page_styles)} styles")
-                    except Exception as e:
-                        print(f"    FontDiffusion error: {e}", file=sys.stderr)
-                        fd_cache_per_page = {}
+                            fd_cache = generator.generate(
+                                list(tier3_chars), style_image, style_name=book_name,
+                            )
+                            if verbose:
+                                print(f"    FontDiffusion: {len(fd_cache)} images generated")
+                        except Exception as e:
+                            print(f"    FontDiffusion error: {e}", file=sys.stderr)
         elif verbose:
             print(f"    FontDiffusion: checkpoint not found at {ckpt}")
 
@@ -234,8 +241,7 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                             if p.exists():
                                 ranking_crop_path = str(p)
 
-                # 3-tier assignment (use page-specific fd_cache if available)
-                page_fd_cache = fd_cache_per_page.get(page_name, {})
+                # 3-tier assignment
                 result = assign_label(
                     ocr_char=ocr_char,
                     qn_syllable=syllable,
@@ -246,7 +252,7 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                     font_path=font_path,
                     dinov2_ranker=dinov2,
                     fontdiffusion_ckpt=fontdiffusion_ckpt,
-                    fd_cache=page_fd_cache,
+                    fd_cache=fd_cache,
                 )
 
                 is_matched = bool(result["matched"])

@@ -1,5 +1,10 @@
 """Step 3: 3-tier label assignment — dictionary -> similar -> FontDiffusion+DINOv2.
 
+2-pass approach for FontDiffusion optimization:
+  Pass 1: Scan all pairs, run tier 1+2, collect tier 3 candidates
+  Pass 2: Batch-generate FontDiffusion images for all candidates at once
+  Pass 3: Label tier 3 using pre-generated images
+
 Labels are either:
   matched=True  -> correct (BLACK in visualization)
   matched=False -> incorrect/unconfirmed (RED in visualization)
@@ -14,9 +19,62 @@ from pathlib import Path
 from lib.dictionary import (
     load_qn_to_nom, build_nom_to_qn, load_similarity_dict,
 )
-from lib.ranker import assign_label, get_dinov2_ranker
+from lib.ranker import (
+    assign_label, get_dinov2_ranker,
+    tier1_dictionary_lookup, tier2_similar_expansion,
+    tier3_visual_comparison,
+)
+from lib.dictionary import cjk_block_score
 
 from pipeline.step0_setup import load_config
+
+
+def _collect_tier3_candidates(
+    aligned_files: list[Path],
+    data_dir: Path,
+    qn_to_nom: dict,
+    nom_to_qn: dict,
+    similar_dict: dict,
+) -> set[str]:
+    """Pass 1: Scan all pairs, run tier 1+2, collect unique chars needing tier 3."""
+    candidates = set()
+
+    for aligned_path in aligned_files:
+        with open(aligned_path, "r", encoding="utf-8") as f:
+            alignment = json.load(f)
+
+        for pair in alignment:
+            if pair["type"] != "match":
+                continue
+
+            char_info = pair.get("char", {})
+            syllable = pair.get("syllable", "")
+            ocr_char = char_info.get("ocr_char") if char_info else None
+
+            # Try tier 1
+            char, matched, s2 = tier1_dictionary_lookup(
+                ocr_char, syllable, qn_to_nom, nom_to_qn,
+            )
+            if matched and char:
+                continue
+
+            # Try tier 2
+            if ocr_char:
+                sim_char, sim_matched = tier2_similar_expansion(
+                    ocr_char, s2, similar_dict,
+                )
+                if sim_char:
+                    continue
+
+            # Needs tier 3 — collect all candidate chars
+            similar_chars = similar_dict.get(ocr_char, []) if ocr_char else []
+            all_cands = list(dict.fromkeys(s2 + similar_chars))
+            filtered = [c for c in all_cands if cjk_block_score(c) > 0.1]
+            if not filtered:
+                filtered = all_cands
+            candidates.update(filtered[:20])
+
+    return candidates
 
 
 def label_book(config: dict, book_name: str, verbose: bool = True):
@@ -60,6 +118,70 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
         print(f"[ERROR] No aligned files in {aligned_dir}", file=sys.stderr)
         return
 
+    # ── FontDiffusion: batch pre-generate ──
+    fd_cache: dict[str, str] = {}  # {char: generated_image_path}
+    fontdiffusion_ckpt = None
+
+    if step3_cfg.get("use_fontdiffusion", False):
+        ckpt = paths.get("fontdiffusion_ckpt")
+        phase1_ckpt = paths.get("fontdiffusion_phase1_ckpt")
+
+        if ckpt and Path(ckpt).exists():
+            fontdiffusion_ckpt = ckpt
+
+            if verbose:
+                print(f"\n  Pass 1: Scanning tier 3 candidates...")
+
+            tier3_chars = _collect_tier3_candidates(
+                aligned_files, data_dir, qn_to_nom, nom_to_qn, similar_dict,
+            )
+
+            if verbose:
+                print(f"    Found {len(tier3_chars)} unique chars needing tier 3")
+
+            if tier3_chars:
+                # Pick a representative style image from first page
+                style_image = None
+                for af in aligned_files:
+                    with open(af) as f:
+                        alignment = json.load(f)
+                    for pair in alignment:
+                        if pair["type"] == "match" and pair.get("char"):
+                            cf = pair["char"].get("crop_file", "")
+                            if cf:
+                                p = data_dir / "detected" / cf
+                                if p.exists():
+                                    style_image = str(p)
+                                    break
+                    if style_image:
+                        break
+
+                if style_image:
+                    try:
+                        from lib.fontdiffusion_gen import FontDiffusionGenerator
+                        generator = FontDiffusionGenerator(
+                            ckpt_dir=ckpt,
+                            phase1_ckpt_dir=phase1_ckpt,
+                            font_path=font_path or "FontDiffusion/fonts/NomNaTong-Regular.ttf",
+                            cache_dir=str(data_dir / "fd_cache"),
+                        )
+                        fd_cache = generator.generate(
+                            list(tier3_chars),
+                            style_image,
+                            style_name=book_name,
+                        )
+                        if verbose:
+                            print(f"    FontDiffusion: {len(fd_cache)} images cached")
+                    except Exception as e:
+                        print(f"    FontDiffusion error: {e}", file=sys.stderr)
+                        fd_cache = {}
+        elif verbose:
+            print(f"    FontDiffusion: checkpoint not found at {ckpt}")
+
+    # ── Pass 2: Label all pairs ──
+    if verbose:
+        print(f"\n  Labeling...")
+
     all_labels = []
     tier_counts = {1: 0, 2: 0, 3: 0, 0: 0}
     matched_count = 0
@@ -91,7 +213,7 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                 syllable = pair.get("syllable", "")
                 ocr_char = char_info.get("ocr_char") if char_info else None
 
-                # Resolve crop path for visual ranking (prefer cleaned for better comparison)
+                # Resolve crop path for visual ranking
                 ranking_crop_path = None
                 if char_info:
                     cleaned_file = char_info.get("cleaned_file", "")
@@ -116,9 +238,11 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                     similar_dict=similar_dict,
                     font_path=font_path,
                     dinov2_ranker=dinov2,
+                    fontdiffusion_ckpt=fontdiffusion_ckpt,
+                    fd_cache=fd_cache,
                 )
 
-                is_matched = bool(result["matched"])  # convert numpy bool_ to Python bool
+                is_matched = bool(result["matched"])
 
                 label = {
                     "page": page_name,
@@ -132,7 +256,6 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                     "nom_candidates": result.get("nom_candidates", []),
                     "ocr_char": ocr_char,
                     "bbox": char_info.get("bbox") if char_info else None,
-                    # Always save original crop path — processed images never go into dataset
                     "crop_file": char_info.get("crop_file") if char_info else None,
                 }
                 tier_counts[result["tier"]] += 1

@@ -17,6 +17,7 @@ Output structure:
 import argparse
 import csv
 import json
+import shutil
 import sys
 from collections import Counter
 from pathlib import Path
@@ -119,8 +120,34 @@ def save_csv(rows: list[dict], path: Path):
         writer.writerows(rows)
 
 
-def save_subset(rows: list[dict], out_dir: Path, name: str, verbose: bool = True):
-    """Filter, build class_map, save one subset (per-book or all)."""
+def copy_crops(rows: list[dict], out_dir: Path, base_dirs: dict[str, Path]) -> int:
+    """Copy crop images into dataset output folder."""
+    copied = 0
+    for row in rows:
+        crop_file = row.get("crop_file", "")
+        source = row.get("source", "")
+        if not crop_file or not source:
+            continue
+        base = base_dirs.get(source)
+        if not base:
+            continue
+        src = base / "detected" / crop_file
+        dst = out_dir / crop_file
+        if src.exists():
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(str(src), str(dst))
+            copied += 1
+    return copied
+
+
+def save_subset(
+    rows: list[dict],
+    out_dir: Path,
+    name: str,
+    base_dirs: dict[str, Path],
+    verbose: bool = True,
+):
+    """Filter, build class_map, copy crops, save one subset."""
     out_dir.mkdir(parents=True, exist_ok=True)
 
     # Add unicode field
@@ -135,6 +162,9 @@ def save_subset(rows: list[dict], out_dir: Path, name: str, verbose: bool = True
 
     # Save labels
     save_csv(rows, out_dir / "labels.csv")
+
+    # Copy crop images into dataset folder
+    copied = copy_crops(rows, out_dir, base_dirs)
 
     # Metadata
     matched_count = sum(1 for r in rows if r.get("matched") in (True, "True"))
@@ -152,7 +182,8 @@ def save_subset(rows: list[dict], out_dir: Path, name: str, verbose: bool = True
     if verbose:
         print(f"    {name}: {len(rows)} samples, "
               f"{len(class_map)} classes, "
-              f"{matched_count} matched, {unmatched_count} unmatched")
+              f"{matched_count} matched, {unmatched_count} unmatched, "
+              f"{copied} crops copied")
 
 
 def export_dataset(config: dict, verbose: bool = True):
@@ -196,7 +227,7 @@ def export_dataset(config: dict, verbose: bool = True):
 
         # Save per-book
         book_dir = output_dir / name
-        save_subset(rows, book_dir, name, verbose=verbose)
+        save_subset(rows, book_dir, name, base_dirs, verbose=verbose)
 
         all_filtered.extend(rows)
 
@@ -210,7 +241,7 @@ def export_dataset(config: dict, verbose: bool = True):
 
     # Save all-in-one
     all_dir = output_dir / "all"
-    save_subset(all_filtered, all_dir, "all", verbose=verbose)
+    save_subset(all_filtered, all_dir, "all", base_dirs, verbose=verbose)
 
     if verbose:
         print(f"\n  {'='*50}")

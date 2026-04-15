@@ -176,28 +176,33 @@ class FontDiffusionGenerator:
         if not content_tensors:
             return results
 
-        # Batch generate
-        content_batch = torch.stack(content_tensors)
-        style_batch = style_tensor[None, :].repeat(len(content_tensors), 1, 1, 1)
+        # Process in small batches: generate → save → free memory
+        cache_style_dir = self.cache_dir / style_name
+        cache_style_dir.mkdir(parents=True, exist_ok=True)
 
-        dtype = torch.float32
-        content_batch = content_batch.to(self.device, dtype=dtype)
-        style_batch = style_batch.to(self.device, dtype=dtype)
-
-        print(f"    FontDiffusion: generating {len(valid_chars)} images "
-              f"(batch_size={self.batch_size})...", flush=True)
+        total = len(valid_chars)
+        n_batches = (total + self.batch_size - 1) // self.batch_size
+        generated = 0
         start = time.time()
 
-        all_images = []
-        with torch.inference_mode():
-            for i in range(0, len(content_batch), self.batch_size):
-                bc = content_batch[i:i + self.batch_size]
-                bs = style_batch[i:i + self.batch_size]
+        print(f"    FontDiffusion: generating {total} images "
+              f"({n_batches} batches of {self.batch_size})...", flush=True)
 
+        dtype = torch.float32
+
+        for i in range(0, total, self.batch_size):
+            batch_chars = valid_chars[i:i + self.batch_size]
+            batch_content = torch.stack(content_tensors[i:i + self.batch_size])
+            batch_style = style_tensor[None, :].repeat(len(batch_chars), 1, 1, 1)
+
+            batch_content = batch_content.to(self.device, dtype=dtype)
+            batch_style = batch_style.to(self.device, dtype=dtype)
+
+            with torch.inference_mode():
                 images = self.pipe.generate(
-                    content_images=bc,
-                    style_images=bs,
-                    batch_size=len(bc),
+                    content_images=batch_content,
+                    style_images=batch_style,
+                    batch_size=len(batch_content),
                     order=self.args.order,
                     num_inference_step=self.args.num_inference_steps,
                     content_encoder_downsample_size=self.args.content_encoder_downsample_size,
@@ -209,20 +214,29 @@ class FontDiffusionGenerator:
                     method=self.args.method,
                     correcting_x0_fn=self.args.correcting_x0_fn,
                 )
-                all_images.extend(images)
+
+            # Save immediately and free memory
+            for char, img in zip(batch_chars, images):
+                cache_path = self._get_cache_path(char, style_name)
+                img.save(str(cache_path))
+                results[char] = str(cache_path)
+
+            generated += len(images)
+            batch_num = i // self.batch_size + 1
+            elapsed = time.time() - start
+            rate = elapsed / generated
+            remaining = rate * (total - generated)
+            print(f"      [{batch_num}/{n_batches}] {generated}/{total} done "
+                  f"({rate:.1f}s/img, ~{remaining/60:.0f}min left)", flush=True)
+
+            # Free GPU memory
+            del batch_content, batch_style, images
+            if self.device != "cpu":
+                torch.mps.empty_cache() if "mps" in self.device else torch.cuda.empty_cache()
 
         elapsed = time.time() - start
-        print(f"    FontDiffusion: {len(all_images)} images in {elapsed:.1f}s "
-              f"({elapsed/max(1,len(all_images)):.1f}s/img)")
-
-        # Save to cache
-        cache_style_dir = self.cache_dir / style_name
-        cache_style_dir.mkdir(parents=True, exist_ok=True)
-
-        for char, img in zip(valid_chars, all_images):
-            cache_path = self._get_cache_path(char, style_name)
-            img.save(str(cache_path))
-            results[char] = str(cache_path)
+        print(f"    FontDiffusion: {generated} images in {elapsed:.1f}s "
+              f"({elapsed/max(1,generated):.1f}s/img)")
 
         return results
 

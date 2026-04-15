@@ -66,7 +66,7 @@ def _collect_tier3_candidates(
                 if sim_char:
                     continue
 
-            # Needs tier 3 — collect all candidate chars
+            # Needs tier 3 — collect top 5 candidate chars only
             similar_chars = similar_dict.get(ocr_char, []) if ocr_char else []
             all_cands = list(dict.fromkeys(s2 + similar_chars))
             filtered = [c for c in all_cands if cjk_block_score(c) > 0.1]
@@ -118,9 +118,11 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
         print(f"[ERROR] No aligned files in {aligned_dir}", file=sys.stderr)
         return
 
-    # ── FontDiffusion: batch pre-generate ──
-    fd_cache: dict[str, str] = {}  # {char: generated_image_path}
+    # ── FontDiffusion: batch pre-generate per page style ──
+    # fd_cache_per_page = {page_name: {char: image_path}}
+    fd_cache_per_page: dict[str, dict[str, str]] = {}
     fontdiffusion_ckpt = None
+    fd_generator = None
 
     if step3_cfg.get("use_fontdiffusion", False):
         ckpt = paths.get("fontdiffusion_ckpt")
@@ -140,9 +142,10 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                 print(f"    Found {len(tier3_chars)} unique chars needing tier 3")
 
             if tier3_chars:
-                # Pick a representative style image from first page
-                style_image = None
+                # Collect 1 style image per page
+                page_styles: dict[str, str] = {}
                 for af in aligned_files:
+                    page_name = af.stem.replace("_aligned", "")
                     with open(af) as f:
                         alignment = json.load(f)
                     for pair in alignment:
@@ -151,30 +154,33 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                             if cf:
                                 p = data_dir / "detected" / cf
                                 if p.exists():
-                                    style_image = str(p)
+                                    page_styles[page_name] = str(p)
                                     break
-                    if style_image:
-                        break
 
-                if style_image:
+                if page_styles:
                     try:
                         from lib.fontdiffusion_gen import FontDiffusionGenerator
-                        generator = FontDiffusionGenerator(
+                        fd_generator = FontDiffusionGenerator(
                             ckpt_dir=ckpt,
                             phase1_ckpt_dir=phase1_ckpt,
                             font_path=font_path or "FontDiffusion/fonts/NomNaTong-Regular.ttf",
                             cache_dir=str(data_dir / "fd_cache"),
                         )
-                        fd_cache = generator.generate(
-                            list(tier3_chars),
-                            style_image,
-                            style_name=book_name,
-                        )
+                        chars_list = list(tier3_chars)
+                        for page_name, style_path in page_styles.items():
+                            if verbose:
+                                print(f"\n    Generating for style: {page_name}")
+                            page_cache = fd_generator.generate(
+                                chars_list, style_path, style_name=page_name,
+                            )
+                            fd_cache_per_page[page_name] = page_cache
                         if verbose:
-                            print(f"    FontDiffusion: {len(fd_cache)} images cached")
+                            total_cached = sum(len(c) for c in fd_cache_per_page.values())
+                            print(f"\n    FontDiffusion: {total_cached} images "
+                                  f"across {len(page_styles)} styles")
                     except Exception as e:
                         print(f"    FontDiffusion error: {e}", file=sys.stderr)
-                        fd_cache = {}
+                        fd_cache_per_page = {}
         elif verbose:
             print(f"    FontDiffusion: checkpoint not found at {ckpt}")
 
@@ -228,7 +234,8 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                             if p.exists():
                                 ranking_crop_path = str(p)
 
-                # 3-tier assignment
+                # 3-tier assignment (use page-specific fd_cache if available)
+                page_fd_cache = fd_cache_per_page.get(page_name, {})
                 result = assign_label(
                     ocr_char=ocr_char,
                     qn_syllable=syllable,
@@ -239,7 +246,7 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                     font_path=font_path,
                     dinov2_ranker=dinov2,
                     fontdiffusion_ckpt=fontdiffusion_ckpt,
-                    fd_cache=fd_cache,
+                    fd_cache=page_fd_cache,
                 )
 
                 is_matched = bool(result["matched"])

@@ -8,10 +8,10 @@ def denoise_image(gray: np.ndarray) -> np.ndarray:
     """Denoise old book page images.
 
     Pipeline:
-      GaussianBlur(3,3) -> Morph.Close(51x51) background estimate
+      bilateralFilter(d=9) -> Morph.Close(51x51) background estimate
       -> divide by background x255 -> contrast stretching (2%-98%)
     """
-    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    blurred = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
     bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
     background = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, bg_kernel)
     normalized = cv2.divide(blurred, background, scale=255)
@@ -38,14 +38,14 @@ def preprocess_for_ocr(gray: np.ndarray) -> np.ndarray:
 def load_and_binarize(image_path: str) -> tuple[np.ndarray, np.ndarray]:
     """Load image and create binary mask (ink=1, background=0).
 
-    Pipeline: GaussianBlur -> Morph.Close(51x51) -> divide -> Otsu
+    Pipeline: bilateralFilter(d=9) -> Morph.Close(51x51) -> divide -> Otsu
               -> Close(2x2) -> Open(3x3)
     """
     gray = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     if gray is None:
         raise FileNotFoundError(f"Cannot load image: {image_path}")
 
-    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    blurred = cv2.bilateralFilter(gray, d=9, sigmaColor=75, sigmaSpace=75)
     bg_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (51, 51))
     background = cv2.morphologyEx(blurred, cv2.MORPH_CLOSE, bg_kernel)
     normalized = cv2.divide(blurred, background, scale=255)

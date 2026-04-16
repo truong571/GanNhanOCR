@@ -9,7 +9,8 @@ import numpy as np
 class CharacterCleaner:
     """Clean handwritten Nom character crops from old books.
 
-    Pipeline: Denoise -> Background norm -> Sauvola binarize -> Morph cleanup
+    Pipeline: MedianBlur denoise -> Background norm -> Sauvola binarize
+              -> Border line removal (strict) -> Morph cleanup
               -> CC noise removal -> Stroke normalization -> Center+Resize 64x64
     """
 
@@ -67,6 +68,56 @@ class CharacterCleaner:
         binary[gray_f < threshold] = 255
         return binary
 
+    def _remove_border_lines(self, binary: np.ndarray) -> np.ndarray:
+        """Remove vertical/horizontal ruling lines at character crop edges.
+
+        Only activates when a strong, continuous line is detected near the
+        border (>40% of the edge length filled). This avoids damaging
+        character strokes that merely touch the image border.
+        """
+        h, w = binary.shape
+        if h < 20 or w < 20:
+            return binary
+
+        # Use long kernels — only detect continuous ruling lines
+        v_len = max(h // 2, 15)
+        v_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, v_len))
+        v_lines = cv2.morphologyEx(binary, cv2.MORPH_OPEN, v_kernel)
+
+        h_len = max(w // 2, 15)
+        h_kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (h_len, 1))
+        h_lines = cv2.morphologyEx(binary, cv2.MORPH_OPEN, h_kernel)
+
+        # Only check narrow edge strips (10% each side)
+        margin_x = max(4, w // 10)
+        margin_y = max(4, h // 10)
+        mask = np.zeros_like(binary)
+
+        # Vertical lines at left/right — require >40% fill in the strip
+        left_v = v_lines[:, :margin_x]
+        if np.sum(left_v > 0) > h * margin_x * 0.4:
+            mask[:, :margin_x] = left_v
+
+        right_v = v_lines[:, w - margin_x:]
+        if np.sum(right_v > 0) > h * margin_x * 0.4:
+            mask[:, w - margin_x:] = right_v
+
+        # Horizontal lines at top/bottom — require >40% fill
+        top_h = h_lines[:margin_y, :]
+        if np.sum(top_h > 0) > w * margin_y * 0.4:
+            mask[:margin_y, :] = top_h
+
+        bot_h = h_lines[h - margin_y:, :]
+        if np.sum(bot_h > 0) > w * margin_y * 0.4:
+            mask[h - margin_y:, :] = bot_h
+
+        if np.sum(mask) == 0:
+            return binary
+
+        # Thin dilation (2x2) — minimal collateral damage
+        mask = cv2.dilate(mask, np.ones((2, 2), np.uint8), iterations=1)
+        return cv2.subtract(binary, mask)
+
     def _morphological_cleanup(self, binary: np.ndarray) -> np.ndarray:
         close_k = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
         result = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, close_k)
@@ -77,7 +128,9 @@ class CharacterCleaner:
     def _remove_noise_components(self, binary: np.ndarray) -> np.ndarray:
         h, w = binary.shape
         min_area = max(10, int(h * w * 0.005))
-        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(binary, connectivity=8)
+        num_labels, labels, stats, _ = cv2.connectedComponentsWithStats(
+            binary, connectivity=8
+        )
         cleaned = np.zeros_like(binary)
         for i in range(1, num_labels):
             if stats[i, cv2.CC_STAT_AREA] >= min_area:
@@ -157,6 +210,7 @@ class CharacterCleaner:
                 binary = otsu_binary
                 debug_info["fallback"] = "otsu"
 
+        binary = self._remove_border_lines(binary)
         binary = self._morphological_cleanup(binary)
         binary = self._remove_noise_components(binary)
         binary = self._normalize_stroke(binary)

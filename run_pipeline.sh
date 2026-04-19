@@ -23,12 +23,13 @@ while [[ $# -gt 0 ]]; do
             echo "Usage: $0 [--config PATH] [--step N] [--book NAME]"
             echo ""
             echo "Steps:"
-            echo "  0  Setup & validation"
-            echo "  1  Extract data from PDF"
-            echo "  2  Levenshtein alignment"
-            echo "  3  3-tier label assignment"
-            echo "  4  Export dataset"
-            echo "  all  Run all steps (default)"
+            echo "  0     Setup & validation"
+            echo "  1     Extract data from PDF"
+            echo "  2     Levenshtein alignment"
+            echo "  2.5   Multi-engine OCR + consensus voting"
+            echo "  3     3-tier label assignment"
+            echo "  4     Export dataset"
+            echo "  all   Run all steps (default)"
             exit 0 ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
@@ -76,6 +77,15 @@ if [[ "$STEP" == "all" || "$STEP" == "2" ]]; then
         echo ""
         echo ">>> Step 2: Align — $book"
         python3 -m pipeline.step2_align "$CONFIG" "$book"
+    done
+fi
+
+# Step 2.5: Multi-engine OCR + consensus
+if [[ "$STEP" == "all" || "$STEP" == "2.5" ]]; then
+    for book in $BOOKS; do
+        echo ""
+        echo ">>> Step 2.5: Multi-engine OCR + consensus — $book"
+        python3 -m pipeline.step2_5_recognize "$CONFIG" "$book"
     done
 fi
 

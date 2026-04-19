@@ -14,7 +14,7 @@ Config (pipeline.yaml -> step2_5):
     engines:                 # list of engine names to run
         - kimhannom
         - paddleocrv5_nom
-        - gemini_vision
+        - nomna_ocr
     weights:                 # optional override of consensus.DEFAULT_WEIGHTS
         kimhannom: 1.2
 """
@@ -33,7 +33,7 @@ from ocr_engines.consensus import (
 )
 from ocr_engines.kimhannom import KimhannomEngine
 from ocr_engines.paddleocrv5_nom import PaddleOCRv5NomEngine
-from ocr_engines.trocr_nom import TrOCRNomEngine
+from ocr_engines.nomna_ocr import NomNaOCREngine
 
 from pipeline.step0_setup import load_config
 
@@ -41,7 +41,7 @@ from pipeline.step0_setup import load_config
 ENGINE_REGISTRY: dict[str, type[OCREngine]] = {
     "kimhannom": KimhannomEngine,
     "paddleocrv5_nom": PaddleOCRv5NomEngine,
-    "trocr_nom": TrOCRNomEngine,
+    "nomna_ocr": NomNaOCREngine,
 }
 
 

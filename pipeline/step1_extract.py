@@ -106,13 +106,13 @@ def process_book(config: dict, book_name: str, verbose: bool = True):
                 denoised = denoise_image(gray)
                 cv2.imwrite(str(denoised_dir / f"{page_name}.png"), denoised)
 
-        # 1c: OCR Nom page via API (use denoised image)
+        # 1c: OCR Nom page via API (raw image)
+        # Benchmarked (tests/bench_results/): raw > denoised by ~0.7pp coverage
+        # over 3 books × 13 pages. API expects noisy/framed input as context.
         ocr_columns = None
         if use_ocr_api:
-            denoised_path = denoised_dir / f"{page_name}.png"
-            ocr_image = str(denoised_path) if denoised_path.exists() else str(img_path)
             cache_path = str(data_dir / "detected" / f"{page_name}_ocr_cache.json")
-            ocr_columns = ocr_page(ocr_image, cache_path=cache_path, verbose=verbose)
+            ocr_columns = ocr_page(str(img_path), cache_path=cache_path, verbose=verbose)
 
         # 1d: Extract QN text
         if reocr:

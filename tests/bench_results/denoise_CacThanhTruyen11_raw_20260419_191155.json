@@ -1,0 +1,180 @@
+{
+  "book": "CacThanhTruyen11",
+  "preprocess": "raw",
+  "pages": [
+    {
+      "page": "page_0010",
+      "models": {
+        "raw": {
+          "ocr_cols": 9,
+          "qn_cols": 9,
+          "col_count_match": true,
+          "ocr_chars": 176,
+          "qn_syls": 178,
+          "char_count_ratio": 0.9887640449438202,
+          "aligned_pairs": 176,
+          "dict_hits": 108,
+          "dict_hit_rate": 0.6136363636363636,
+          "coverage": 0.6067415730337079,
+          "prep_ms": 0.0,
+          "shape": [
+            2009,
+            1333
+          ]
+        },
+        "current": {
+          "ocr_cols": 9,
+          "qn_cols": 9,
+          "col_count_match": true,
+          "ocr_chars": 177,
+          "qn_syls": 178,
+          "char_count_ratio": 0.9943820224719101,
+          "aligned_pairs": 177,
+          "dict_hits": 112,
+          "dict_hit_rate": 0.632768361581921,
+          "coverage": 0.6292134831460674,
+          "prep_ms": 0.0,
+          "shape": [
+            2009,
+            1333
+          ]
+        }
+      }
+    },
+    {
+      "page": "page_0012",
+      "models": {
+        "raw": {
+          "ocr_cols": 9,
+          "qn_cols": 9,
+          "col_count_match": true,
+          "ocr_chars": 193,
+          "qn_syls": 194,
+          "char_count_ratio": 0.9948453608247423,
+          "aligned_pairs": 193,
+          "dict_hits": 106,
+          "dict_hit_rate": 0.5492227979274611,
+          "coverage": 0.5463917525773195,
+          "prep_ms": 0.0,
+          "shape": [
+            2012,
+            1258
+          ]
+        },
+        "current": {
+          "ocr_cols": 9,
+          "qn_cols": 9,
+          "col_count_match": true,
+          "ocr_chars": 193,
+          "qn_syls": 194,
+          "char_count_ratio": 0.9948453608247423,
+          "aligned_pairs": 193,
+          "dict_hits": 107,
+          "dict_hit_rate": 0.5544041450777202,
+          "coverage": 0.5515463917525774,
+          "prep_ms": 0.0,
+          "shape": [
+            2012,
+            1258
+          ]
+        }
+      }
+    },
+    {
+      "page": "page_0014",
+      "models": {
+        "raw": {
+          "ocr_cols": 9,
+          "qn_cols": 9,
+          "col_count_match": true,
+          "ocr_chars": 196,
+          "qn_syls": 198,
+          "char_count_ratio": 0.98989898989899,
+          "aligned_pairs": 195,
+          "dict_hits": 119,
+          "dict_hit_rate": 0.6102564102564103,
+          "coverage": 0.601010101010101,
+          "prep_ms": 0.0,
+          "shape": [
+            2034,
+            1313
+          ]
+        },
+        "current": {
+          "ocr_cols": 9,
+          "qn_cols": 9,
+          "col_count_match": true,
+          "ocr_chars": 195,
+          "qn_syls": 198,
+          "char_count_ratio": 0.9848484848484849,
+          "aligned_pairs": 194,
+          "dict_hits": 116,
+          "dict_hit_rate": 0.5979381443298969,
+          "coverage": 0.5858585858585859,
+          "prep_ms": 0.0,
+          "shape": [
+            2034,
+            1313
+          ]
+        }
+      }
+    },
+    {
+      "page": "page_0016",
+      "models": {
+        "raw": {
+          "ocr_cols": 9,
+          "qn_cols": 9,
+          "col_count_match": true,
+          "ocr_chars": 199,
+          "qn_syls": 201,
+          "char_count_ratio": 0.9900497512437811,
+          "aligned_pairs": 195,
+          "dict_hits": 93,
+          "dict_hit_rate": 0.47692307692307695,
+          "coverage": 0.4626865671641791,
+          "prep_ms": 0.0,
+          "shape": [
+            2017,
+            1261
+          ]
+        },
+        "current": {
+          "ocr_cols": 9,
+          "qn_cols": 9,
+          "col_count_match": true,
+          "ocr_chars": 199,
+          "qn_syls": 201,
+          "char_count_ratio": 0.9900497512437811,
+          "aligned_pairs": 195,
+          "dict_hits": 92,
+          "dict_hit_rate": 0.4717948717948718,
+          "coverage": 0.4577114427860697,
+          "prep_ms": 0.0,
+          "shape": [
+            2017,
+            1261
+          ]
+        }
+      }
+    }
+  ],
+  "aggregate": {
+    "raw": {
+      "coverage": 0.5542074984463269,
+      "dict_hit_rate": 0.562509662185828,
+      "aligned": 189.75,
+      "cols_delta": 0.0,
+      "chars_delta": -1.75,
+      "pages": 4
+    },
+    "current": {
+      "coverage": 0.556082475885825,
+      "dict_hit_rate": 0.5642263806961024,
+      "aligned": 189.75,
+      "cols_delta": 0.0,
+      "chars_delta": -1.75,
+      "pages": 4
+    }
+  }
+}

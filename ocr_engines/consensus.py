@@ -26,7 +26,7 @@ from pathlib import Path
 DEFAULT_WEIGHTS = {
     "kimhannom": 1.2,
     "paddleocrv5_nom": 1.0,
-    "trocr_nom": 1.0,
+    "nomna_ocr": 1.0,
 }
 
 

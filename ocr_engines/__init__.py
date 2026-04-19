@@ -9,7 +9,7 @@ voting produces the final per-character decision.
 Engines:
     - kimhannom       : reuses Step 1 cache (Kimhannom HCMUS API)
     - paddleocrv5_nom : MinhDS fine-tuned PaddleOCRv5 (Han-Nom specialist)
-    - trocr_nom       : tt1225 TrOCR fine-tuned on Vietnamese Nom (local)
+    - nomna_ocr       : ds4v NomNaOCR CRNN (confirmed handwritten, column-level)
 """
 
 from .base import OCREngine, RecognitionResult

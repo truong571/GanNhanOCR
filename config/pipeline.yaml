@@ -39,6 +39,16 @@ step2:
   deletion_cost_normal: 1.2
   insertion_cost: 1.0
 
+step2_5:
+  engines:
+    - kimhannom
+    - paddleocrv5_nom
+    - trocr_nom
+  weights:
+    kimhannom: 1.2
+    paddleocrv5_nom: 1.0
+    trocr_nom: 1.0
+
 step3:
   use_dinov2: true
   dinov2_threshold: 0.75

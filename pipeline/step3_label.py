@@ -255,18 +255,24 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                 syllable = pair.get("syllable", "")
                 ocr_char = char_info.get("ocr_char") if char_info else None
 
-                # Resolve crop path for visual ranking
+                # Resolve crop path for visual ranking.
+                # Prefer the RAW crop (cropped directly from the original page
+                # render). The cleaned crop has gone through stroke
+                # normalisation / morph open / CC noise removal, which can
+                # damage thin strokes and shift DINOv2 embeddings — biasing
+                # the cosine similarity against fd_cache references that were
+                # generated from the same raw style.
                 ranking_crop_path = None
                 if char_info:
-                    cleaned_file = char_info.get("cleaned_file", "")
-                    if cleaned_file:
-                        p = data_dir / "detected" / cleaned_file
+                    crop_file = char_info.get("crop_file", "")
+                    if crop_file:
+                        p = data_dir / "detected" / crop_file
                         if p.exists():
                             ranking_crop_path = str(p)
                     if not ranking_crop_path:
-                        crop_file = char_info.get("crop_file", "")
-                        if crop_file:
-                            p = data_dir / "detected" / crop_file
+                        cleaned_file = char_info.get("cleaned_file", "")
+                        if cleaned_file:
+                            p = data_dir / "detected" / cleaned_file
                             if p.exists():
                                 ranking_crop_path = str(p)
 

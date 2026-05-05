@@ -36,11 +36,54 @@ class NumpyEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def _build_chars_from_ocr(ocr_col: list[dict]) -> list[dict]:
-    """Build char info list from OCR API column data."""
+def _build_chars_from_ocr(
+    ocr_col: list[dict],
+    binary: np.ndarray | None = None,
+) -> list[dict]:
+    """Build char info list from OCR API column data.
+
+    When `binary` is provided, replaces each OCR bbox's vertical extent with
+    a robust valley-segmented version. The Kimhannom OCR API often returns
+    near-uniform bboxes (equal-division) that cut characters in the middle.
+    Re-segmenting with the local horizontal projection finds real ink
+    boundaries and produces tight, single-character bboxes.
+
+    The OCR `char` text is preserved (1:1 mapping by index — robust segmenter
+    is configured to return exactly len(ocr_col) bboxes).
+    """
     chars = []
+    if binary is not None and len(ocr_col) >= 2:
+        x_left = min(int(oc["bbox"][0]) for oc in ocr_col)
+        x_right = max(int(oc["bbox"][2]) for oc in ocr_col)
+        y_top = min(int(oc["bbox"][1]) for oc in ocr_col)
+        y_bottom = max(int(oc["bbox"][3]) for oc in ocr_col)
+        # Pad slightly so ink at the column edges isn't clipped
+        pad_y = 8
+        ys1 = max(0, y_top - pad_y)
+        ys2 = min(binary.shape[0], y_bottom + pad_y)
+        new_bboxes = segment_characters_in_column(
+            binary,
+            (x_left, ys1, x_right, ys2),
+            expected_count=len(ocr_col),
+        )
+        if new_bboxes and len(new_bboxes) == len(ocr_col):
+            for i, ((cx1, cy1, cx2, cy2), oc) in enumerate(zip(new_bboxes, ocr_col)):
+                # Keep OCR's x-range (per-character) since OCR detects
+                # individual character widths; only y is from the segmenter.
+                ox1 = int(oc["bbox"][0])
+                ox2 = int(oc["bbox"][2])
+                chars.append({
+                    "char_idx": i,
+                    "bbox": [ox1, int(cy1), ox2, int(cy2)],
+                    "width": ox2 - ox1,
+                    "height": int(cy2 - cy1),
+                    "ocr_char": oc.get("char"),
+                })
+            return chars
+        # If segmenter failed for this column, fall through to OCR-only path.
+
     for i, oc in enumerate(ocr_col):
-        bbox = oc["bbox"]  # [x_left, y_top, x_right, y_bottom]
+        bbox = oc["bbox"]
         chars.append({
             "char_idx": i,
             "bbox": [int(b) for b in bbox],
@@ -96,9 +139,13 @@ def process_page(
         return [], {}
 
     # Load original grayscale (for cropping)
-    gray_img = cv2.imread(str(img_path), cv2.IMREAD_GRAYSCALE)
-    if gray_img is None:
+    # Read both color (for dataset crops) and grayscale (for image_size meta).
+    # Color preserves ink/paper hue — useful for downstream visualization and
+    # any future analysis that exploits color information.
+    color_img = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
+    if color_img is None:
         return [], {}
+    gray_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2GRAY)
 
     # Read transcription (syllables per column)
     with open(trans_path, "r", encoding="utf-8") as f:
@@ -125,17 +172,21 @@ def process_page(
     use_ocr_bbox = ocr_columns is not None
 
     if use_ocr_bbox:
-        # Use OCR API bboxes as character positions
+        # OCR provides char positions, but its bboxes are often uniform
+        # equal-division that cut characters mid-stroke. Pre-load the binary
+        # so _build_chars_from_ocr can re-segment vertically using valley
+        # detection while keeping the OCR char identification.
+        bin_path = str(denoised_path) if denoised_path.exists() else str(img_path)
+        _, binary = load_and_binarize(bin_path)
+        text_box = None
         for col_idx in range(n_columns):
             if col_idx < len(ocr_columns) and ocr_columns[col_idx]:
-                chars = _build_chars_from_ocr(ocr_columns[col_idx])
+                chars = _build_chars_from_ocr(ocr_columns[col_idx], binary=binary)
             else:
                 # Fallback for columns missing from OCR
-                if binary is None:
-                    bin_path = str(denoised_path) if denoised_path.exists() else str(img_path)
-                    _, binary = load_and_binarize(bin_path)
-                text_box = detect_text_box(binary)
-                col_bboxes = detect_columns(binary, text_box, n_expected=n_columns)
+                if text_box is None:
+                    text_box = detect_text_box(binary)
+                    col_bboxes = detect_columns(binary, text_box, n_expected=n_columns)
                 exp = len(syllables_per_col[col_idx]) if col_idx < len(syllables_per_col) else 10
                 chars = _build_chars_from_projection(binary, col_bboxes[col_idx], exp)
             chars_per_col.append(chars)
@@ -216,11 +267,14 @@ def process_page(
             crop_file = f"crops/{page_name}/col{col_num:02d}_char{char_idx:03d}.png"
             cleaned_file = f"crops_cleaned/{page_name}/col{col_num:02d}_char{char_idx:03d}.png"
 
-            # Crop from ORIGINAL image
-            crop = gray_img[cy1:cy2, cx1:cx2]
-            if crop.size > 0:
-                cv2.imwrite(str(data_dir / "detected" / crop_file), crop)
-                cleaned, _ = cleaner.clean(crop)
+            # Crop from ORIGINAL color image (preserves ink/paper colour).
+            # The cleaned variant uses grayscale because CharacterCleaner is
+            # designed for binarisation — it expects single-channel input.
+            crop_color = color_img[cy1:cy2, cx1:cx2]
+            if crop_color.size > 0:
+                cv2.imwrite(str(data_dir / "detected" / crop_file), crop_color)
+                gray_crop = gray_img[cy1:cy2, cx1:cx2]
+                cleaned, _ = cleaner.clean(gray_crop)
                 if cleaned is not None:
                     cv2.imwrite(str(data_dir / "detected" / cleaned_file), cleaned)
 

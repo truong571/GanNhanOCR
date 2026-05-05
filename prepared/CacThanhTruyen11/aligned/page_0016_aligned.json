@@ -4,15 +4,32 @@
       "char_idx": 0,
       "bbox": [
         1129,
-        58,
+        74,
         1235,
-        145
+        148
       ],
       "width": 106,
-      "height": 87,
+      "height": 74,
+      "ocr_char": "各"
+    },
+    "syllable": null,
+    "type": "deletion",
+    "column": 1
+  },
+  {
+    "char": {
+      "char_idx": 0,
+      "bbox": [
+        1129,
+        148,
+        1235,
+        209
+      ],
+      "width": 106,
+      "height": 61,
       "crop_file": "crops/page_0016/col01_char000.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char000.png",
-      "ocr_char": "各"
+      "ocr_char": "姉"
     },
     "syllable": "các",
     "type": "match",
@@ -23,15 +40,15 @@
       "char_idx": 1,
       "bbox": [
         1129,
-        145,
+        209,
         1235,
-        233
+        268
       ],
       "width": 106,
-      "height": 88,
+      "height": 59,
       "crop_file": "crops/page_0016/col01_char001.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char001.png",
-      "ocr_char": "姉"
+      "ocr_char": "色"
     },
     "syllable": "chị",
     "type": "match",
@@ -42,15 +59,15 @@
       "char_idx": 2,
       "bbox": [
         1129,
-        233,
+        268,
         1235,
-        320
+        351
       ],
       "width": 106,
-      "height": 87,
+      "height": 83,
       "crop_file": "crops/page_0016/col01_char002.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char002.png",
-      "ocr_char": "色"
+      "ocr_char": "佇"
     },
     "syllable": "đã",
     "type": "match",
@@ -61,15 +78,15 @@
       "char_idx": 3,
       "bbox": [
         1129,
-        320,
+        351,
         1235,
         408
       ],
       "width": 106,
-      "height": 88,
+      "height": 57,
       "crop_file": "crops/page_0016/col01_char003.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char003.png",
-      "ocr_char": "佇"
+      "ocr_char": "道"
     },
     "syllable": "giữ",
     "type": "match",
@@ -82,13 +99,13 @@
         1129,
         408,
         1235,
-        495
+        472
       ],
       "width": 106,
-      "height": 87,
+      "height": 64,
       "crop_file": "crops/page_0016/col01_char004.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char004.png",
-      "ocr_char": "道"
+      "ocr_char": "年"
     },
     "syllable": "đạo",
     "type": "match",
@@ -99,15 +116,15 @@
       "char_idx": 5,
       "bbox": [
         1129,
-        495,
+        472,
         1235,
-        583
+        551
       ],
       "width": 106,
-      "height": 88,
+      "height": 79,
       "crop_file": "crops/page_0016/col01_char005.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char005.png",
-      "ocr_char": "年"
+      "ocr_char": "共"
     },
     "syllable": "nên",
     "type": "match",
@@ -115,18 +132,35 @@
   },
   {
     "char": {
+      "char_idx": 7,
+      "bbox": [
+        1129,
+        551,
+        1235,
+        579
+      ],
+      "width": 106,
+      "height": 28,
+      "ocr_char": "塊"
+    },
+    "syllable": null,
+    "type": "deletion",
+    "column": 1
+  },
+  {
+    "char": {
       "char_idx": 6,
       "bbox": [
         1129,
-        583,
+        579,
         1235,
-        670
+        673
       ],
       "width": 106,
-      "height": 87,
+      "height": 94,
       "crop_file": "crops/page_0016/col01_char006.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char006.png",
-      "ocr_char": "共"
+      "ocr_char": "世"
     },
     "syllable": "cùng",
     "type": "match",
@@ -137,15 +171,15 @@
       "char_idx": 7,
       "bbox": [
         1129,
-        670,
+        673,
         1235,
-        758
+        714
       ],
       "width": 106,
-      "height": 88,
+      "height": 41,
       "crop_file": "crops/page_0016/col01_char007.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char007.png",
-      "ocr_char": "塊"
+      "ocr_char": "𫝄"
     },
     "syllable": "khỏi",
     "type": "match",
@@ -156,15 +190,15 @@
       "char_idx": 8,
       "bbox": [
         1129,
-        758,
+        714,
         1235,
-        845
+        795
       ],
       "width": 106,
-      "height": 87,
+      "height": 81,
       "crop_file": "crops/page_0016/col01_char008.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char008.png",
-      "ocr_char": "世"
+      "ocr_char": "丕"
     },
     "syllable": "thế",
     "type": "match",
@@ -175,15 +209,15 @@
       "char_idx": 9,
       "bbox": [
         1129,
-        845,
+        795,
         1235,
-        933
+        868
       ],
       "width": 106,
-      "height": 88,
+      "height": 73,
       "crop_file": "crops/page_0016/col01_char009.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char009.png",
-      "ocr_char": "𫝄"
+      "ocr_char": "衣"
     },
     "syllable": "Ấy",
     "type": "match",
@@ -194,15 +228,15 @@
       "char_idx": 10,
       "bbox": [
         1129,
-        933,
+        868,
         1235,
-        1021
+        950
       ],
       "width": 106,
-      "height": 88,
+      "height": 82,
       "crop_file": "crops/page_0016/col01_char010.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char010.png",
-      "ocr_char": "丕"
+      "ocr_char": "計"
     },
     "syllable": "vậy",
     "type": "match",
@@ -213,15 +247,15 @@
       "char_idx": 11,
       "bbox": [
         1129,
-        1021,
+        950,
         1235,
-        1108
+        999
       ],
       "width": 106,
-      "height": 87,
+      "height": 49,
       "crop_file": "crops/page_0016/col01_char011.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char011.png",
-      "ocr_char": "衣"
+      "ocr_char": "移"
     },
     "syllable": "I",
     "type": "match",
@@ -232,15 +266,15 @@
       "char_idx": 12,
       "bbox": [
         1129,
-        1108,
+        999,
         1235,
-        1196
+        1054
       ],
       "width": 106,
-      "height": 88,
+      "height": 55,
       "crop_file": "crops/page_0016/col01_char012.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char012.png",
-      "ocr_char": "計"
+      "ocr_char": "加"
     },
     "syllable": "ghê",
     "type": "match",
@@ -251,15 +285,15 @@
       "char_idx": 13,
       "bbox": [
         1129,
-        1196,
+        1054,
         1235,
-        1283
+        1104
       ],
       "width": 106,
-      "height": 87,
+      "height": 50,
       "crop_file": "crops/page_0016/col01_char013.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char013.png",
-      "ocr_char": "移"
+      "ocr_char": "汝"
     },
     "syllable": "rê",
     "type": "match",
@@ -270,15 +304,15 @@
       "char_idx": 14,
       "bbox": [
         1129,
-        1283,
+        1104,
         1235,
-        1371
+        1205
       ],
       "width": 106,
-      "height": 88,
+      "height": 101,
       "crop_file": "crops/page_0016/col01_char014.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char014.png",
-      "ocr_char": "加"
+      "ocr_char": "旦"
     },
     "syllable": "gia",
     "type": "match",
@@ -289,15 +323,15 @@
       "char_idx": 15,
       "bbox": [
         1129,
-        1371,
+        1205,
         1235,
-        1458
+        1286
       ],
       "width": 106,
-      "height": 87,
+      "height": 81,
       "crop_file": "crops/page_0016/col01_char015.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char015.png",
-      "ocr_char": "汝"
+      "ocr_char": "仍"
     },
     "syllable": "nhớ",
     "type": "match",
@@ -308,15 +342,15 @@
       "char_idx": 16,
       "bbox": [
         1129,
-        1458,
+        1286,
         1235,
-        1546
+        1330
       ],
       "width": 106,
-      "height": 88,
+      "height": 44,
       "crop_file": "crops/page_0016/col01_char016.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char016.png",
-      "ocr_char": "旦"
+      "ocr_char": "几"
     },
     "syllable": "đến",
     "type": "match",
@@ -327,15 +361,15 @@
       "char_idx": 17,
       "bbox": [
         1129,
-        1546,
+        1330,
         1235,
-        1633
+        1409
       ],
       "width": 106,
-      "height": 87,
+      "height": 79,
       "crop_file": "crops/page_0016/col01_char017.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char017.png",
-      "ocr_char": "仍"
+      "ocr_char": "欺"
     },
     "syllable": "những",
     "type": "match",
@@ -346,15 +380,15 @@
       "char_idx": 18,
       "bbox": [
         1129,
-        1633,
+        1409,
         1235,
-        1721
+        1458
       ],
       "width": 106,
-      "height": 88,
+      "height": 49,
       "crop_file": "crops/page_0016/col01_char018.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char018.png",
-      "ocr_char": "几"
+      "ocr_char": "群"
     },
     "syllable": "kẻ",
     "type": "match",
@@ -365,15 +399,15 @@
       "char_idx": 19,
       "bbox": [
         1129,
-        1721,
+        1458,
         1235,
-        1808
+        1539
       ],
       "width": 106,
-      "height": 87,
+      "height": 81,
       "crop_file": "crops/page_0016/col01_char019.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char019.png",
-      "ocr_char": "欺"
+      "ocr_char": "於"
     },
     "syllable": "khi",
     "type": "match",
@@ -383,16 +417,16 @@
     "char": {
       "char_idx": 20,
       "bbox": [
-        1129,
-        1808,
-        1235,
-        1896
+        1118,
+        1539,
+        1142,
+        1582
       ],
-      "width": 106,
-      "height": 88,
+      "width": 24,
+      "height": 43,
       "crop_file": "crops/page_0016/col01_char020.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char020.png",
-      "ocr_char": "群"
+      "ocr_char": "匕"
     },
     "syllable": "còn",
     "type": "match",
@@ -402,53 +436,19 @@
     "char": {
       "char_idx": 21,
       "bbox": [
-        1129,
-        1896,
-        1235,
-        1984
+        1118,
+        1582,
+        1142,
+        1663
       ],
-      "width": 106,
-      "height": 88,
+      "width": 24,
+      "height": 81,
       "crop_file": "crops/page_0016/col01_char021.png",
       "cleaned_file": "crops_cleaned/page_0016/col01_char021.png",
-      "ocr_char": "於"
+      "ocr_char": "工"
     },
     "syllable": "ở",
     "type": "match",
-    "column": 1
-  },
-  {
-    "char": {
-      "char_idx": 22,
-      "bbox": [
-        1118,
-        349,
-        1142,
-        384
-      ],
-      "width": 24,
-      "height": 35,
-      "ocr_char": "匕"
-    },
-    "syllable": null,
-    "type": "deletion",
-    "column": 1
-  },
-  {
-    "char": {
-      "char_idx": 23,
-      "bbox": [
-        1118,
-        384,
-        1142,
-        420
-      ],
-      "width": 24,
-      "height": 36,
-      "ocr_char": "工"
-    },
-    "syllable": null,
-    "type": "deletion",
     "column": 1
   },
   {
@@ -474,12 +474,12 @@
       "char_idx": 0,
       "bbox": [
         1003,
-        66,
+        287,
         1091,
-        153
+        327
       ],
       "width": 88,
-      "height": 87,
+      "height": 40,
       "crop_file": "crops/page_0016/col02_char000.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char000.png",
       "ocr_char": "世"
@@ -493,12 +493,12 @@
       "char_idx": 1,
       "bbox": [
         1003,
-        153,
+        327,
         1091,
-        241
+        419
       ],
       "width": 88,
-      "height": 88,
+      "height": 92,
       "crop_file": "crops/page_0016/col02_char001.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char001.png",
       "ocr_char": "間"
@@ -512,12 +512,12 @@
       "char_idx": 2,
       "bbox": [
         1003,
-        241,
+        419,
         1091,
-        329
+        459
       ],
       "width": 88,
-      "height": 88,
+      "height": 40,
       "crop_file": "crops/page_0016/col02_char002.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char002.png",
       "ocr_char": "麻"
@@ -531,12 +531,12 @@
       "char_idx": 3,
       "bbox": [
         1003,
-        329,
+        459,
         1091,
-        417
+        497
       ],
       "width": 88,
-      "height": 88,
+      "height": 38,
       "crop_file": "crops/page_0016/col02_char003.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char003.png",
       "ocr_char": "䓁"
@@ -550,12 +550,12 @@
       "char_idx": 4,
       "bbox": [
         1003,
-        417,
+        497,
         1091,
-        505
+        572
       ],
       "width": 88,
-      "height": 88,
+      "height": 75,
       "crop_file": "crops/page_0016/col02_char004.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char004.png",
       "ocr_char": "把"
@@ -569,12 +569,12 @@
       "char_idx": 5,
       "bbox": [
         1003,
-        505,
+        572,
         1091,
-        593
+        624
       ],
       "width": 88,
-      "height": 88,
+      "height": 52,
       "crop_file": "crops/page_0016/col02_char005.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char005.png",
       "ocr_char": "功"
@@ -588,12 +588,12 @@
       "char_idx": 6,
       "bbox": [
         1003,
-        593,
+        624,
         1091,
-        681
+        665
       ],
       "width": 88,
-      "height": 88,
+      "height": 41,
       "crop_file": "crops/page_0016/col02_char006.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char006.png",
       "ocr_char": "朱"
@@ -607,12 +607,12 @@
       "char_idx": 7,
       "bbox": [
         1003,
-        681,
+        665,
         1091,
-        769
+        722
       ],
       "width": 88,
-      "height": 88,
+      "height": 57,
       "crop_file": "crops/page_0016/col02_char007.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char007.png",
       "ocr_char": "不"
@@ -626,12 +626,12 @@
       "char_idx": 8,
       "bbox": [
         1003,
-        769,
+        722,
         1091,
-        857
+        785
       ],
       "width": 88,
-      "height": 88,
+      "height": 63,
       "crop_file": "crops/page_0016/col02_char008.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char008.png",
       "ocr_char": "些"
@@ -645,12 +645,12 @@
       "char_idx": 9,
       "bbox": [
         1003,
-        857,
+        785,
         1091,
-        945
+        832
       ],
       "width": 88,
-      "height": 88,
+      "height": 47,
       "crop_file": "crops/page_0016/col02_char009.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char009.png",
       "ocr_char": "希"
@@ -664,12 +664,12 @@
       "char_idx": 10,
       "bbox": [
         1003,
-        945,
+        832,
         1091,
-        1033
+        909
       ],
       "width": 88,
-      "height": 88,
+      "height": 77,
       "crop_file": "crops/page_0016/col02_char010.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char010.png",
       "ocr_char": "胼"
@@ -683,12 +683,12 @@
       "char_idx": 11,
       "bbox": [
         1003,
-        1033,
+        909,
         1091,
-        1121
+        954
       ],
       "width": 88,
-      "height": 88,
+      "height": 45,
       "crop_file": "crops/page_0016/col02_char011.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char011.png",
       "ocr_char": "朱"
@@ -702,12 +702,12 @@
       "char_idx": 12,
       "bbox": [
         1003,
-        1121,
+        954,
         1091,
-        1209
+        1011
       ],
       "width": 88,
-      "height": 88,
+      "height": 57,
       "crop_file": "crops/page_0016/col02_char012.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char012.png",
       "ocr_char": "特"
@@ -721,12 +721,12 @@
       "char_idx": 13,
       "bbox": [
         1003,
-        1209,
+        1011,
         1091,
-        1297
+        1062
       ],
       "width": 88,
-      "height": 88,
+      "height": 51,
       "crop_file": "crops/page_0016/col02_char013.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char013.png",
       "ocr_char": "巳"
@@ -740,12 +740,12 @@
       "char_idx": 14,
       "bbox": [
         1003,
-        1297,
+        1062,
         1091,
-        1385
+        1107
       ],
       "width": 88,
-      "height": 88,
+      "height": 45,
       "crop_file": "crops/page_0016/col02_char014.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char014.png",
       "ocr_char": "效"
@@ -759,12 +759,12 @@
       "char_idx": 15,
       "bbox": [
         1003,
-        1385,
+        1107,
         1091,
-        1473
+        1178
       ],
       "width": 88,
-      "height": 88,
+      "height": 71,
       "crop_file": "crops/page_0016/col02_char015.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char015.png",
       "ocr_char": "伐"
@@ -778,12 +778,12 @@
       "char_idx": 16,
       "bbox": [
         1003,
-        1473,
+        1178,
         1091,
-        1561
+        1223
       ],
       "width": 88,
-      "height": 88,
+      "height": 45,
       "crop_file": "crops/page_0016/col02_char016.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char016.png",
       "ocr_char": "女"
@@ -797,12 +797,12 @@
       "char_idx": 17,
       "bbox": [
         1003,
-        1561,
+        1223,
         1091,
-        1649
+        1283
       ],
       "width": 88,
-      "height": 88,
+      "height": 60,
       "crop_file": "crops/page_0016/col02_char017.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char017.png",
       "ocr_char": "常"
@@ -816,12 +816,12 @@
       "char_idx": 18,
       "bbox": [
         1003,
-        1649,
+        1283,
         1091,
-        1737
+        1353
       ],
       "width": 88,
-      "height": 88,
+      "height": 70,
       "crop_file": "crops/page_0016/col02_char018.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char018.png",
       "ocr_char": "享"
@@ -835,12 +835,12 @@
       "char_idx": 19,
       "bbox": [
         1003,
-        1737,
+        1353,
         1091,
-        1825
+        1399
       ],
       "width": 88,
-      "height": 88,
+      "height": 46,
       "crop_file": "crops/page_0016/col02_char019.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char019.png",
       "ocr_char": "事"
@@ -854,12 +854,12 @@
       "char_idx": 20,
       "bbox": [
         1003,
-        1825,
+        1399,
         1091,
-        1913
+        1462
       ],
       "width": 88,
-      "height": 88,
+      "height": 63,
       "crop_file": "crops/page_0016/col02_char020.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char020.png",
       "ocr_char": "重"
@@ -873,12 +873,12 @@
       "char_idx": 21,
       "bbox": [
         1003,
-        1913,
+        1462,
         1091,
-        2001
+        1514
       ],
       "width": 88,
-      "height": 88,
+      "height": 52,
       "crop_file": "crops/page_0016/col02_char021.png",
       "cleaned_file": "crops_cleaned/page_0016/col02_char021.png",
       "ocr_char": "見"
@@ -892,12 +892,12 @@
       "char_idx": 0,
       "bbox": [
         856,
-        48,
+        349,
         954,
-        135
+        413
       ],
       "width": 98,
-      "height": 87,
+      "height": 64,
       "ocr_char": "末"
     },
     "syllable": null,
@@ -909,12 +909,12 @@
       "char_idx": 0,
       "bbox": [
         856,
-        135,
+        413,
         954,
-        223
+        470
       ],
       "width": 98,
-      "height": 88,
+      "height": 57,
       "crop_file": "crops/page_0016/col03_char000.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char000.png",
       "ocr_char": "渚"
@@ -928,12 +928,12 @@
       "char_idx": 1,
       "bbox": [
         856,
-        223,
+        470,
         954,
-        311
+        520
       ],
       "width": 98,
-      "height": 88,
+      "height": 50,
       "crop_file": "crops/page_0016/col03_char001.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char001.png",
       "ocr_char": "体"
@@ -947,12 +947,12 @@
       "char_idx": 2,
       "bbox": [
         856,
-        311,
+        520,
         954,
-        398
+        560
       ],
       "width": 98,
-      "height": 87,
+      "height": 40,
       "crop_file": "crops/page_0016/col03_char002.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char002.png",
       "ocr_char": "腮"
@@ -966,12 +966,12 @@
       "char_idx": 3,
       "bbox": [
         856,
-        398,
+        560,
         954,
-        486
+        659
       ],
       "width": 98,
-      "height": 88,
+      "height": 99,
       "crop_file": "crops/page_0016/col03_char003.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char003.png",
       "ocr_char": "请"
@@ -985,12 +985,12 @@
       "char_idx": 4,
       "bbox": [
         856,
-        486,
+        659,
         954,
-        574
+        707
       ],
       "width": 98,
-      "height": 88,
+      "height": 48,
       "crop_file": "crops/page_0016/col03_char004.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char004.png",
       "ocr_char": "宜"
@@ -1004,12 +1004,12 @@
       "char_idx": 5,
       "bbox": [
         856,
-        574,
+        707,
         954,
-        661
+        747
       ],
       "width": 98,
-      "height": 87,
+      "height": 40,
       "crop_file": "crops/page_0016/col03_char005.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char005.png",
       "ocr_char": "寺"
@@ -1023,12 +1023,12 @@
       "char_idx": 6,
       "bbox": [
         856,
-        661,
+        747,
         954,
-        749
+        834
       ],
       "width": 98,
-      "height": 88,
+      "height": 87,
       "crop_file": "crops/page_0016/col03_char006.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char006.png",
       "ocr_char": "请"
@@ -1042,12 +1042,12 @@
       "char_idx": 7,
       "bbox": [
         856,
-        749,
+        834,
         954,
-        837
+        880
       ],
       "width": 98,
-      "height": 88,
+      "height": 46,
       "crop_file": "crops/page_0016/col03_char007.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char007.png",
       "ocr_char": "特"
@@ -1061,12 +1061,12 @@
       "char_idx": 8,
       "bbox": [
         856,
-        837,
+        880,
         954,
-        924
+        933
       ],
       "width": 98,
-      "height": 87,
+      "height": 53,
       "crop_file": "crops/page_0016/col03_char008.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char008.png",
       "ocr_char": "事"
@@ -1080,12 +1080,12 @@
       "char_idx": 9,
       "bbox": [
         856,
-        924,
+        933,
         954,
-        1012
+        1016
       ],
       "width": 98,
-      "height": 88,
+      "height": 83,
       "crop_file": "crops/page_0016/col03_char009.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char009.png",
       "ocr_char": "約"
@@ -1099,12 +1099,12 @@
       "char_idx": 10,
       "bbox": [
         856,
-        1012,
+        1016,
         954,
-        1100
+        1055
       ],
       "width": 98,
-      "height": 88,
+      "height": 39,
       "crop_file": "crops/page_0016/col03_char010.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char010.png",
       "ocr_char": "洶"
@@ -1118,12 +1118,12 @@
       "char_idx": 11,
       "bbox": [
         856,
-        1100,
+        1055,
         954,
-        1187
+        1108
       ],
       "width": 98,
-      "height": 87,
+      "height": 53,
       "crop_file": "crops/page_0016/col03_char011.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char011.png",
       "ocr_char": "異"
@@ -1137,12 +1137,12 @@
       "char_idx": 12,
       "bbox": [
         856,
-        1187,
+        1108,
         954,
-        1275
+        1200
       ],
       "width": 98,
-      "height": 88,
+      "height": 92,
       "crop_file": "crops/page_0016/col03_char012.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char012.png",
       "ocr_char": "重"
@@ -1156,12 +1156,12 @@
       "char_idx": 13,
       "bbox": [
         856,
-        1275,
+        1200,
         954,
-        1363
+        1247
       ],
       "width": 98,
-      "height": 88,
+      "height": 47,
       "crop_file": "crops/page_0016/col03_char013.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char013.png",
       "ocr_char": "体"
@@ -1175,12 +1175,12 @@
       "char_idx": 14,
       "bbox": [
         856,
-        1363,
+        1247,
         954,
-        1450
+        1292
       ],
       "width": 98,
-      "height": 87,
+      "height": 45,
       "crop_file": "crops/page_0016/col03_char014.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char014.png",
       "ocr_char": "事"
@@ -1194,12 +1194,12 @@
       "char_idx": 15,
       "bbox": [
         856,
-        1450,
+        1292,
         954,
-        1538
+        1346
       ],
       "width": 98,
-      "height": 88,
+      "height": 54,
       "crop_file": "crops/page_0016/col03_char015.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char015.png",
       "ocr_char": "理"
@@ -1213,12 +1213,12 @@
       "char_idx": 16,
       "bbox": [
         856,
-        1538,
+        1346,
         954,
-        1626
+        1394
       ],
       "width": 98,
-      "height": 88,
+      "height": 48,
       "crop_file": "crops/page_0016/col03_char016.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char016.png",
       "ocr_char": "次"
@@ -1232,12 +1232,12 @@
       "char_idx": 17,
       "bbox": [
         856,
-        1626,
+        1394,
         954,
-        1713
+        1476
       ],
       "width": 98,
-      "height": 87,
+      "height": 82,
       "crop_file": "crops/page_0016/col03_char017.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char017.png",
       "ocr_char": "唱"
@@ -1251,12 +1251,12 @@
       "char_idx": 18,
       "bbox": [
         856,
-        1713,
+        1476,
         954,
-        1801
+        1542
       ],
       "width": 98,
-      "height": 88,
+      "height": 66,
       "crop_file": "crops/page_0016/col03_char018.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char018.png",
       "ocr_char": "衣"
@@ -1270,12 +1270,12 @@
       "char_idx": 19,
       "bbox": [
         856,
-        1801,
+        1542,
         954,
-        1889
+        1608
       ],
       "width": 98,
-      "height": 88,
+      "height": 66,
       "crop_file": "crops/page_0016/col03_char019.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char019.png",
       "ocr_char": "干"
@@ -1289,12 +1289,12 @@
       "char_idx": 20,
       "bbox": [
         856,
-        1889,
+        1608,
         954,
-        1977
+        1657
       ],
       "width": 98,
-      "height": 88,
+      "height": 49,
       "crop_file": "crops/page_0016/col03_char020.png",
       "cleaned_file": "crops_cleaned/page_0016/col03_char020.png",
       "ocr_char": "計"
@@ -1314,12 +1314,12 @@
       "char_idx": 0,
       "bbox": [
         714,
-        55,
+        64,
         823,
-        139
+        151
       ],
       "width": 109,
-      "height": 84,
+      "height": 87,
       "crop_file": "crops/page_0016/col04_char000.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char000.png",
       "ocr_char": "移"
@@ -1333,12 +1333,12 @@
       "char_idx": 1,
       "bbox": [
         714,
-        139,
+        151,
         823,
-        224
+        215
       ],
       "width": 109,
-      "height": 85,
+      "height": 64,
       "crop_file": "crops/page_0016/col04_char001.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char001.png",
       "ocr_char": "如"
@@ -1352,12 +1352,12 @@
       "char_idx": 2,
       "bbox": [
         714,
-        224,
+        215,
         823,
-        309
+        274
       ],
       "width": 109,
-      "height": 85,
+      "height": 59,
       "crop_file": "crops/page_0016/col04_char002.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char002.png",
       "ocr_char": "白"
@@ -1371,12 +1371,12 @@
       "char_idx": 3,
       "bbox": [
         714,
-        309,
+        274,
         823,
-        394
+        360
       ],
       "width": 109,
-      "height": 85,
+      "height": 86,
       "crop_file": "crops/page_0016/col04_char003.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char003.png",
       "ocr_char": "礼"
@@ -1390,12 +1390,12 @@
       "char_idx": 4,
       "bbox": [
         714,
-        394,
+        360,
         823,
-        479
+        440
       ],
       "width": 109,
-      "height": 85,
+      "height": 80,
       "crop_file": "crops/page_0016/col04_char004.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char004.png",
       "ocr_char": "尺"
@@ -1409,12 +1409,12 @@
       "char_idx": 5,
       "bbox": [
         714,
-        479,
+        440,
         823,
-        564
+        518
       ],
       "width": 109,
-      "height": 85,
+      "height": 78,
       "crop_file": "crops/page_0016/col04_char005.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char005.png",
       "ocr_char": "固"
@@ -1428,12 +1428,12 @@
       "char_idx": 6,
       "bbox": [
         714,
-        564,
+        518,
         823,
-        649
+        592
       ],
       "width": 109,
-      "height": 85,
+      "height": 74,
       "crop_file": "crops/page_0016/col04_char006.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char006.png",
       "ocr_char": "人"
@@ -1447,12 +1447,12 @@
       "char_idx": 7,
       "bbox": [
         714,
-        649,
+        592,
         823,
-        733
+        696
       ],
       "width": 109,
-      "height": 84,
+      "height": 104,
       "crop_file": "crops/page_0016/col04_char007.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char007.png",
       "ocr_char": "觔"
@@ -1466,12 +1466,12 @@
       "char_idx": 8,
       "bbox": [
         714,
-        733,
+        696,
         823,
-        818
+        779
       ],
       "width": 109,
-      "height": 85,
+      "height": 83,
       "crop_file": "crops/page_0016/col04_char008.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char008.png",
       "ocr_char": "各"
@@ -1485,12 +1485,12 @@
       "char_idx": 9,
       "bbox": [
         714,
-        818,
+        779,
         823,
-        903
+        871
       ],
       "width": 109,
-      "height": 85,
+      "height": 92,
       "crop_file": "crops/page_0016/col04_char009.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char009.png",
       "ocr_char": "昆"
@@ -1504,12 +1504,12 @@
       "char_idx": 10,
       "bbox": [
         714,
-        903,
+        871,
         823,
-        988
+        975
       ],
       "width": 109,
-      "height": 85,
+      "height": 104,
       "crop_file": "crops/page_0016/col04_char010.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char010.png",
       "ocr_char": "威"
@@ -1523,12 +1523,12 @@
       "char_idx": 11,
       "bbox": [
         714,
-        988,
+        975,
         823,
-        1073
+        1052
       ],
       "width": 109,
-      "height": 85,
+      "height": 77,
       "crop_file": "crops/page_0016/col04_char011.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char011.png",
       "ocr_char": "燔"
@@ -1542,12 +1542,12 @@
       "char_idx": 12,
       "bbox": [
         714,
-        1073,
+        1052,
         823,
-        1158
+        1110
       ],
       "width": 109,
-      "height": 85,
+      "height": 58,
       "crop_file": "crops/page_0016/col04_char012.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char012.png",
       "ocr_char": "嗣"
@@ -1561,12 +1561,12 @@
       "char_idx": 13,
       "bbox": [
         714,
-        1158,
+        1110,
         823,
-        1243
+        1157
       ],
       "width": 109,
-      "height": 85,
+      "height": 47,
       "crop_file": "crops/page_0016/col04_char013.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char013.png",
       "ocr_char": "劄"
@@ -1580,12 +1580,12 @@
       "char_idx": 14,
       "bbox": [
         714,
-        1243,
+        1157,
         823,
-        1328
+        1259
       ],
       "width": 109,
-      "height": 85,
+      "height": 102,
       "crop_file": "crops/page_0016/col04_char014.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char014.png",
       "ocr_char": "各"
@@ -1599,12 +1599,12 @@
       "char_idx": 15,
       "bbox": [
         714,
-        1328,
+        1259,
         823,
-        1412
+        1345
       ],
       "width": 109,
-      "height": 84,
+      "height": 86,
       "crop_file": "crops/page_0016/col04_char015.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char015.png",
       "ocr_char": "垩"
@@ -1618,12 +1618,12 @@
       "char_idx": 16,
       "bbox": [
         714,
-        1412,
+        1345,
         823,
-        1497
+        1435
       ],
       "width": 109,
-      "height": 85,
+      "height": 90,
       "crop_file": "crops/page_0016/col04_char016.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char016.png",
       "ocr_char": "麻"
@@ -1637,12 +1637,12 @@
       "char_idx": 17,
       "bbox": [
         714,
-        1497,
+        1435,
         823,
-        1582
+        1528
       ],
       "width": 109,
-      "height": 85,
+      "height": 93,
       "crop_file": "crops/page_0016/col04_char017.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char017.png",
       "ocr_char": "扒"
@@ -1656,12 +1656,12 @@
       "char_idx": 18,
       "bbox": [
         714,
-        1582,
+        1528,
         823,
-        1667
+        1616
       ],
       "width": 109,
-      "height": 85,
+      "height": 88,
       "crop_file": "crops/page_0016/col04_char018.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char018.png",
       "ocr_char": "斫"
@@ -1675,12 +1675,12 @@
       "char_idx": 19,
       "bbox": [
         714,
-        1667,
+        1616,
         823,
-        1752
+        1662
       ],
       "width": 109,
-      "height": 85,
+      "height": 46,
       "crop_file": "crops/page_0016/col04_char019.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char019.png",
       "ocr_char": "如"
@@ -1694,12 +1694,12 @@
       "char_idx": 20,
       "bbox": [
         714,
-        1752,
+        1662,
         823,
-        1837
+        1767
       ],
       "width": 109,
-      "height": 85,
+      "height": 105,
       "crop_file": "crops/page_0016/col04_char020.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char020.png",
       "ocr_char": "人"
@@ -1713,12 +1713,12 @@
       "char_idx": 21,
       "bbox": [
         714,
-        1837,
+        1767,
         823,
-        1922
+        1854
       ],
       "width": 109,
-      "height": 85,
+      "height": 87,
       "crop_file": "crops/page_0016/col04_char021.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char021.png",
       "ocr_char": "不"
@@ -1732,12 +1732,12 @@
       "char_idx": 22,
       "bbox": [
         714,
-        1922,
+        1854,
         823,
-        2006
+        1921
       ],
       "width": 109,
-      "height": 84,
+      "height": 67,
       "crop_file": "crops/page_0016/col04_char022.png",
       "cleaned_file": "crops_cleaned/page_0016/col04_char022.png",
       "ocr_char": "㝵"
@@ -1751,12 +1751,12 @@
       "char_idx": 0,
       "bbox": [
         564,
-        52,
+        226,
         678,
-        140
+        298
       ],
       "width": 114,
-      "height": 88,
+      "height": 72,
       "ocr_char": "人"
     },
     "syllable": null,
@@ -1768,12 +1768,12 @@
       "char_idx": 0,
       "bbox": [
         564,
-        140,
+        298,
         678,
-        229
+        357
       ],
       "width": 114,
-      "height": 89,
+      "height": 59,
       "crop_file": "crops/page_0016/col05_char000.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char000.png",
       "ocr_char": "色"
@@ -1787,12 +1787,12 @@
       "char_idx": 1,
       "bbox": [
         564,
-        229,
+        357,
         678,
-        317
+        425
       ],
       "width": 114,
-      "height": 88,
+      "height": 68,
       "crop_file": "crops/page_0016/col05_char001.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char001.png",
       "ocr_char": "特"
@@ -1806,12 +1806,12 @@
       "char_idx": 2,
       "bbox": [
         564,
-        317,
+        425,
         678,
-        406
+        466
       ],
       "width": 114,
-      "height": 89,
+      "height": 41,
       "crop_file": "crops/page_0016/col05_char002.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char002.png",
       "ocr_char": "賊"
@@ -1825,12 +1825,12 @@
       "char_idx": 3,
       "bbox": [
         564,
-        406,
+        466,
         678,
-        494
+        566
       ],
       "width": 114,
-      "height": 88,
+      "height": 100,
       "crop_file": "crops/page_0016/col05_char003.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char003.png",
       "ocr_char": "異"
@@ -1844,12 +1844,12 @@
       "char_idx": 4,
       "bbox": [
         564,
-        494,
+        566,
         678,
-        583
+        649
       ],
       "width": 114,
-      "height": 89,
+      "height": 83,
       "crop_file": "crops/page_0016/col05_char004.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char004.png",
       "ocr_char": "思"
@@ -1863,12 +1863,12 @@
       "char_idx": 5,
       "bbox": [
         564,
-        583,
+        649,
         678,
-        672
+        705
       ],
       "width": 114,
-      "height": 89,
+      "height": 56,
       "crop_file": "crops/page_0016/col05_char005.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char005.png",
       "ocr_char": "共"
@@ -1882,12 +1882,12 @@
       "char_idx": 6,
       "bbox": [
         564,
-        672,
+        705,
         678,
-        760
+        742
       ],
       "width": 114,
-      "height": 88,
+      "height": 37,
       "crop_file": "crops/page_0016/col05_char006.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char006.png",
       "ocr_char": "壳"
@@ -1901,12 +1901,12 @@
       "char_idx": 7,
       "bbox": [
         564,
-        760,
+        742,
         678,
-        849
+        814
       ],
       "width": 114,
-      "height": 89,
+      "height": 72,
       "crop_file": "crops/page_0016/col05_char007.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char007.png",
       "ocr_char": "卅"
@@ -1920,12 +1920,12 @@
       "char_idx": 8,
       "bbox": [
         564,
-        849,
+        814,
         678,
-        937
+        899
       ],
       "width": 114,
-      "height": 88,
+      "height": 85,
       "crop_file": "crops/page_0016/col05_char008.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char008.png",
       "ocr_char": "庒"
@@ -1939,12 +1939,12 @@
       "char_idx": 9,
       "bbox": [
         564,
-        937,
+        899,
         678,
-        1026
+        987
       ],
       "width": 114,
-      "height": 89,
+      "height": 88,
       "crop_file": "crops/page_0016/col05_char009.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char009.png",
       "ocr_char": "𨸲"
@@ -1958,12 +1958,12 @@
       "char_idx": 10,
       "bbox": [
         564,
-        1026,
+        987,
         678,
-        1115
+        1051
       ],
       "width": 114,
-      "height": 89,
+      "height": 64,
       "crop_file": "crops/page_0016/col05_char010.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char010.png",
       "ocr_char": "𩔗"
@@ -1977,12 +1977,12 @@
       "char_idx": 11,
       "bbox": [
         564,
-        1115,
+        1051,
         678,
-        1203
+        1092
       ],
       "width": 114,
-      "height": 88,
+      "height": 41,
       "crop_file": "crops/page_0016/col05_char011.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char011.png",
       "ocr_char": "竈"
@@ -1996,12 +1996,12 @@
       "char_idx": 12,
       "bbox": [
         564,
-        1203,
+        1092,
         678,
-        1292
+        1186
       ],
       "width": 114,
-      "height": 89,
+      "height": 94,
       "crop_file": "crops/page_0016/col05_char012.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char012.png",
       "ocr_char": "恪"
@@ -2015,12 +2015,12 @@
       "char_idx": 13,
       "bbox": [
         564,
-        1292,
+        1186,
         678,
-        1380
+        1243
       ],
       "width": 114,
-      "height": 88,
+      "height": 57,
       "crop_file": "crops/page_0016/col05_char013.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char013.png",
       "ocr_char": "爲"
@@ -2034,12 +2034,12 @@
       "char_idx": 14,
       "bbox": [
         564,
-        1380,
+        1243,
         678,
-        1469
+        1313
       ],
       "width": 114,
-      "height": 89,
+      "height": 70,
       "crop_file": "crops/page_0016/col05_char014.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char014.png",
       "ocr_char": "拱"
@@ -2053,12 +2053,12 @@
       "char_idx": 15,
       "bbox": [
         564,
-        1469,
+        1313,
         678,
-        1558
+        1372
       ],
       "width": 114,
-      "height": 89,
+      "height": 59,
       "crop_file": "crops/page_0016/col05_char015.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char015.png",
       "ocr_char": "兴"
@@ -2072,12 +2072,12 @@
       "char_idx": 16,
       "bbox": [
         564,
-        1558,
+        1372,
         678,
-        1646
+        1434
       ],
       "width": 114,
-      "height": 88,
+      "height": 62,
       "crop_file": "crops/page_0016/col05_char016.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char016.png",
       "ocr_char": "𩔖"
@@ -2091,12 +2091,12 @@
       "char_idx": 17,
       "bbox": [
         564,
-        1646,
+        1434,
         678,
-        1735
+        1507
       ],
       "width": 114,
-      "height": 89,
+      "height": 73,
       "crop_file": "crops/page_0016/col05_char017.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char017.png",
       "ocr_char": "㝵"
@@ -2110,12 +2110,12 @@
       "char_idx": 18,
       "bbox": [
         564,
-        1735,
+        1507,
         678,
-        1823
+        1563
       ],
       "width": 114,
-      "height": 88,
+      "height": 56,
       "crop_file": "crops/page_0016/col05_char018.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char018.png",
       "ocr_char": "些"
@@ -2129,12 +2129,12 @@
       "char_idx": 19,
       "bbox": [
         564,
-        1823,
+        1563,
         678,
-        1912
+        1643
       ],
       "width": 114,
-      "height": 89,
+      "height": 80,
       "crop_file": "crops/page_0016/col05_char019.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char019.png",
       "ocr_char": "共"
@@ -2148,12 +2148,12 @@
       "char_idx": 20,
       "bbox": [
         564,
-        1912,
+        1643,
         678,
-        2001
+        1720
       ],
       "width": 114,
-      "height": 89,
+      "height": 77,
       "crop_file": "crops/page_0016/col05_char020.png",
       "cleaned_file": "crops_cleaned/page_0016/col05_char020.png",
       "ocr_char": "固"
@@ -2167,12 +2167,12 @@
       "char_idx": 0,
       "bbox": [
         427,
-        55,
+        299,
         527,
-        143
+        341
       ],
       "width": 100,
-      "height": 88,
+      "height": 42,
       "crop_file": "crops/page_0016/col06_char000.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char000.png",
       "ocr_char": "曷"
@@ -2186,12 +2186,12 @@
       "char_idx": 1,
       "bbox": [
         427,
-        143,
+        341,
         527,
-        231
+        384
       ],
       "width": 100,
-      "height": 88,
+      "height": 43,
       "crop_file": "crops/page_0016/col06_char001.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char001.png",
       "ocr_char": "胡"
@@ -2205,12 +2205,12 @@
       "char_idx": 2,
       "bbox": [
         427,
-        231,
+        384,
         527,
-        319
+        424
       ],
       "width": 100,
-      "height": 88,
+      "height": 40,
       "crop_file": "crops/page_0016/col06_char002.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char002.png",
       "ocr_char": "要"
@@ -2224,12 +2224,12 @@
       "char_idx": 3,
       "bbox": [
         427,
-        319,
+        424,
         527,
-        407
+        452
       ],
       "width": 100,
-      "height": 88,
+      "height": 28,
       "crop_file": "crops/page_0016/col06_char003.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char003.png",
       "ocr_char": "对"
@@ -2243,12 +2243,12 @@
       "char_idx": 4,
       "bbox": [
         427,
-        407,
+        452,
         527,
-        495
+        488
       ],
       "width": 100,
-      "height": 88,
+      "height": 36,
       "crop_file": "crops/page_0016/col06_char004.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char004.png",
       "ocr_char": "共"
@@ -2262,12 +2262,12 @@
       "char_idx": 5,
       "bbox": [
         427,
-        495,
+        488,
         527,
-        584
+        545
       ],
       "width": 100,
-      "height": 89,
+      "height": 57,
       "crop_file": "crops/page_0016/col06_char005.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char005.png",
       "ocr_char": "涕"
@@ -2281,12 +2281,12 @@
       "char_idx": 6,
       "bbox": [
         427,
-        584,
+        545,
         527,
-        672
+        593
       ],
       "width": 100,
-      "height": 88,
+      "height": 48,
       "crop_file": "crops/page_0016/col06_char006.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char006.png",
       "ocr_char": "燒"
@@ -2300,12 +2300,12 @@
       "char_idx": 7,
       "bbox": [
         427,
-        672,
+        593,
         527,
-        760
+        632
       ],
       "width": 100,
-      "height": 88,
+      "height": 39,
       "crop_file": "crops/page_0016/col06_char007.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char007.png",
       "ocr_char": "斫"
@@ -2319,12 +2319,12 @@
       "char_idx": 8,
       "bbox": [
         427,
-        760,
+        632,
         527,
-        848
+        673
       ],
       "width": 100,
-      "height": 88,
+      "height": 41,
       "crop_file": "crops/page_0016/col06_char008.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char008.png",
       "ocr_char": "懬"
@@ -2338,12 +2338,12 @@
       "char_idx": 9,
       "bbox": [
         427,
-        848,
+        673,
         527,
-        936
+        708
       ],
       "width": 100,
-      "height": 88,
+      "height": 35,
       "crop_file": "crops/page_0016/col06_char009.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char009.png",
       "ocr_char": "思"
@@ -2357,12 +2357,12 @@
       "char_idx": 10,
       "bbox": [
         427,
-        936,
+        708,
         527,
-        1025
+        757
       ],
       "width": 100,
-      "height": 89,
+      "height": 49,
       "crop_file": "crops/page_0016/col06_char010.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char010.png",
       "ocr_char": "欺"
@@ -2376,12 +2376,12 @@
       "char_idx": 11,
       "bbox": [
         427,
-        1025,
+        757,
         527,
-        1113
+        798
       ],
       "width": 100,
-      "height": 88,
+      "height": 41,
       "crop_file": "crops/page_0016/col06_char011.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char011.png",
       "ocr_char": "昇"
@@ -2395,12 +2395,12 @@
       "char_idx": 12,
       "bbox": [
         427,
-        1113,
+        798,
         527,
-        1201
+        829
       ],
       "width": 100,
-      "height": 88,
+      "height": 31,
       "crop_file": "crops/page_0016/col06_char012.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char012.png",
       "ocr_char": "洋"
@@ -2414,12 +2414,12 @@
       "char_idx": 13,
       "bbox": [
         427,
-        1201,
+        829,
         527,
-        1289
+        876
       ],
       "width": 100,
-      "height": 88,
+      "height": 47,
       "crop_file": "crops/page_0016/col06_char013.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char013.png",
       "ocr_char": "孟"
@@ -2433,12 +2433,12 @@
       "char_idx": 14,
       "bbox": [
         427,
-        1289,
+        876,
         527,
-        1377
+        892
       ],
       "width": 100,
-      "height": 88,
+      "height": 16,
       "crop_file": "crops/page_0016/col06_char014.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char014.png",
       "ocr_char": "麻"
@@ -2452,12 +2452,12 @@
       "char_idx": 15,
       "bbox": [
         427,
-        1377,
+        892,
         527,
-        1465
+        960
       ],
       "width": 100,
-      "height": 88,
+      "height": 68,
       "crop_file": "crops/page_0016/col06_char015.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char015.png",
       "ocr_char": "破"
@@ -2471,12 +2471,12 @@
       "char_idx": 16,
       "bbox": [
         427,
-        1465,
+        960,
         527,
-        1554
+        1009
       ],
       "width": 100,
-      "height": 89,
+      "height": 49,
       "crop_file": "crops/page_0016/col06_char016.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char016.png",
       "ocr_char": "特"
@@ -2490,12 +2490,12 @@
       "char_idx": 17,
       "bbox": [
         427,
-        1554,
+        1009,
         527,
-        1642
+        1038
       ],
       "width": 100,
-      "height": 88,
+      "height": 29,
       "crop_file": "crops/page_0016/col06_char017.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char017.png",
       "ocr_char": "仍"
@@ -2509,12 +2509,12 @@
       "char_idx": 18,
       "bbox": [
         427,
-        1642,
+        1038,
         527,
-        1730
+        1079
       ],
       "width": 100,
-      "height": 88,
+      "height": 41,
       "crop_file": "crops/page_0016/col06_char018.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char018.png",
       "ocr_char": "事"
@@ -2528,12 +2528,12 @@
       "char_idx": 19,
       "bbox": [
         427,
-        1730,
+        1079,
         527,
-        1818
+        1123
       ],
       "width": 100,
-      "height": 88,
+      "height": 44,
       "crop_file": "crops/page_0016/col06_char019.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char019.png",
       "ocr_char": "逆"
@@ -2547,12 +2547,12 @@
       "char_idx": 20,
       "bbox": [
         427,
-        1818,
+        1123,
         527,
-        1906
+        1159
       ],
       "width": 100,
-      "height": 88,
+      "height": 36,
       "crop_file": "crops/page_0016/col06_char020.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char020.png",
       "ocr_char": "共"
@@ -2566,12 +2566,12 @@
       "char_idx": 21,
       "bbox": [
         427,
-        1906,
+        1159,
         527,
-        1995
+        1200
       ],
       "width": 100,
-      "height": 89,
+      "height": 41,
       "crop_file": "crops/page_0016/col06_char021.png",
       "cleaned_file": "crops_cleaned/page_0016/col06_char021.png",
       "ocr_char": "𠇮"
@@ -2585,12 +2585,12 @@
       "char_idx": 0,
       "bbox": [
         279,
-        47,
+        349,
         388,
-        135
+        387
       ],
       "width": 109,
-      "height": 88,
+      "height": 38,
       "crop_file": "crops/page_0016/col07_char000.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char000.png",
       "ocr_char": "時"
@@ -2604,12 +2604,12 @@
       "char_idx": 1,
       "bbox": [
         279,
-        135,
+        387,
         388,
-        224
+        490
       ],
       "width": 109,
-      "height": 89,
+      "height": 103,
       "crop_file": "crops/page_0016/col07_char001.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char001.png",
       "ocr_char": "些"
@@ -2623,12 +2623,12 @@
       "char_idx": 2,
       "bbox": [
         279,
-        224,
+        490,
         388,
-        313
+        554
       ],
       "width": 109,
-      "height": 89,
+      "height": 64,
       "crop_file": "crops/page_0016/col07_char002.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char002.png",
       "ocr_char": "拱"
@@ -2642,12 +2642,12 @@
       "char_idx": 3,
       "bbox": [
         279,
-        313,
+        554,
         388,
-        402
+        592
       ],
       "width": 109,
-      "height": 89,
+      "height": 38,
       "crop_file": "crops/page_0016/col07_char003.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char003.png",
       "ocr_char": "忌"
@@ -2661,12 +2661,12 @@
       "char_idx": 4,
       "bbox": [
         279,
-        402,
+        592,
         388,
-        491
+        669
       ],
       "width": 109,
-      "height": 89,
+      "height": 77,
       "crop_file": "crops/page_0016/col07_char004.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char004.png",
       "ocr_char": "𮟃"
@@ -2680,9 +2680,9 @@
       "char_idx": 5,
       "bbox": [
         279,
-        491,
+        669,
         388,
-        579
+        757
       ],
       "width": 109,
       "height": 88,
@@ -2699,12 +2699,12 @@
       "char_idx": 6,
       "bbox": [
         279,
-        579,
+        757,
         388,
-        668
+        831
       ],
       "width": 109,
-      "height": 89,
+      "height": 74,
       "crop_file": "crops/page_0016/col07_char006.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char006.png",
       "ocr_char": "燒"
@@ -2718,12 +2718,12 @@
       "char_idx": 7,
       "bbox": [
         279,
-        668,
+        831,
         388,
-        757
+        859
       ],
       "width": 109,
-      "height": 89,
+      "height": 28,
       "crop_file": "crops/page_0016/col07_char007.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char007.png",
       "ocr_char": "真"
@@ -2737,12 +2737,12 @@
       "char_idx": 8,
       "bbox": [
         279,
-        757,
+        859,
         388,
-        846
+        943
       ],
       "width": 109,
-      "height": 89,
+      "height": 84,
       "crop_file": "crops/page_0016/col07_char008.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char008.png",
       "ocr_char": "各"
@@ -2756,12 +2756,12 @@
       "char_idx": 9,
       "bbox": [
         279,
-        846,
+        943,
         388,
-        935
+        1040
       ],
       "width": 109,
-      "height": 89,
+      "height": 97,
       "crop_file": "crops/page_0016/col07_char009.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char009.png",
       "ocr_char": "垩"
@@ -2775,12 +2775,12 @@
       "char_idx": 10,
       "bbox": [
         279,
-        935,
+        1040,
         388,
-        1024
+        1088
       ],
       "width": 109,
-      "height": 89,
+      "height": 48,
       "crop_file": "crops/page_0016/col07_char010.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char010.png",
       "ocr_char": "麻"
@@ -2794,12 +2794,12 @@
       "char_idx": 11,
       "bbox": [
         279,
-        1024,
+        1088,
         388,
-        1112
+        1146
       ],
       "width": 109,
-      "height": 88,
+      "height": 58,
       "crop_file": "crops/page_0016/col07_char011.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char011.png",
       "ocr_char": "享"
@@ -2813,12 +2813,12 @@
       "char_idx": 12,
       "bbox": [
         279,
-        1112,
+        1146,
         388,
-        1201
+        1215
       ],
       "width": 109,
-      "height": 89,
+      "height": 69,
       "crop_file": "crops/page_0016/col07_char012.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char012.png",
       "ocr_char": "福"
@@ -2832,12 +2832,12 @@
       "char_idx": 13,
       "bbox": [
         279,
-        1201,
+        1215,
         388,
-        1290
+        1285
       ],
       "width": 109,
-      "height": 89,
+      "height": 70,
       "crop_file": "crops/page_0016/col07_char013.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char013.png",
       "ocr_char": "共"
@@ -2851,12 +2851,12 @@
       "char_idx": 14,
       "bbox": [
         279,
-        1290,
+        1285,
         388,
-        1379
+        1329
       ],
       "width": 109,
-      "height": 89,
+      "height": 44,
       "crop_file": "crops/page_0016/col07_char014.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char014.png",
       "ocr_char": "各"
@@ -2870,12 +2870,12 @@
       "char_idx": 15,
       "bbox": [
         279,
-        1379,
+        1329,
         388,
-        1468
+        1416
       ],
       "width": 109,
-      "height": 89,
+      "height": 87,
       "crop_file": "crops/page_0016/col07_char015.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char015.png",
       "ocr_char": "垩"
@@ -2889,12 +2889,12 @@
       "char_idx": 16,
       "bbox": [
         279,
-        1468,
+        1416,
         388,
-        1556
+        1495
       ],
       "width": 109,
-      "height": 88,
+      "height": 79,
       "crop_file": "crops/page_0016/col07_char016.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char016.png",
       "ocr_char": "女"
@@ -2908,12 +2908,12 @@
       "char_idx": 17,
       "bbox": [
         279,
-        1556,
+        1495,
         388,
-        1645
+        1547
       ],
       "width": 109,
-      "height": 89,
+      "height": 52,
       "crop_file": "crops/page_0016/col07_char017.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char017.png",
       "ocr_char": "固"
@@ -2927,12 +2927,12 @@
       "char_idx": 18,
       "bbox": [
         279,
-        1645,
+        1547,
         388,
-        1734
+        1626
       ],
       "width": 109,
-      "height": 89,
+      "height": 79,
       "crop_file": "crops/page_0016/col07_char018.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char018.png",
       "ocr_char": "理"
@@ -2946,12 +2946,12 @@
       "char_idx": 19,
       "bbox": [
         279,
-        1734,
+        1626,
         388,
-        1823
+        1698
       ],
       "width": 109,
-      "height": 89,
+      "height": 72,
       "crop_file": "crops/page_0016/col07_char019.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char019.png",
       "ocr_char": "之"
@@ -2965,12 +2965,12 @@
       "char_idx": 20,
       "bbox": [
         279,
-        1823,
+        1698,
         388,
-        1912
+        1737
       ],
       "width": 109,
-      "height": 89,
+      "height": 39,
       "crop_file": "crops/page_0016/col07_char020.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char020.png",
       "ocr_char": "麻"
@@ -2984,12 +2984,12 @@
       "char_idx": 21,
       "bbox": [
         279,
-        1912,
+        1737,
         388,
-        2001
+        1827
       ],
       "width": 109,
-      "height": 89,
+      "height": 90,
       "crop_file": "crops/page_0016/col07_char021.png",
       "cleaned_file": "crops_cleaned/page_0016/col07_char021.png",
       "ocr_char": "体"
@@ -3003,12 +3003,12 @@
       "char_idx": 0,
       "bbox": [
         152,
-        53,
+        237,
         259,
-        142
+        320
       ],
       "width": 107,
-      "height": 89,
+      "height": 83,
       "crop_file": "crops/page_0016/col08_char000.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char000.png",
       "ocr_char": "各"
@@ -3022,12 +3022,12 @@
       "char_idx": 1,
       "bbox": [
         152,
-        142,
+        320,
         259,
-        231
+        397
       ],
       "width": 107,
-      "height": 89,
+      "height": 77,
       "crop_file": "crops/page_0016/col08_char001.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char001.png",
       "ocr_char": "垩"
@@ -3041,12 +3041,12 @@
       "char_idx": 2,
       "bbox": [
         152,
-        231,
+        397,
         259,
-        320
+        467
       ],
       "width": 107,
-      "height": 89,
+      "height": 70,
       "crop_file": "crops/page_0016/col08_char002.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char002.png",
       "ocr_char": "怖"
@@ -3060,12 +3060,12 @@
       "char_idx": 3,
       "bbox": [
         152,
-        320,
+        467,
         259,
-        409
+        500
       ],
       "width": 107,
-      "height": 89,
+      "height": 33,
       "crop_file": "crops/page_0016/col08_char003.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char003.png",
       "ocr_char": "蚪"
@@ -3079,12 +3079,12 @@
       "char_idx": 4,
       "bbox": [
         152,
-        409,
+        500,
         259,
-        498
+        593
       ],
       "width": 107,
-      "height": 89,
+      "height": 93,
       "crop_file": "crops/page_0016/col08_char004.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char004.png",
       "ocr_char": "跡"
@@ -3098,12 +3098,12 @@
       "char_idx": 5,
       "bbox": [
         152,
-        498,
+        593,
         259,
-        587
+        686
       ],
       "width": 107,
-      "height": 89,
+      "height": 93,
       "crop_file": "crops/page_0016/col08_char005.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char005.png",
       "ocr_char": "於"
@@ -3117,12 +3117,12 @@
       "char_idx": 6,
       "bbox": [
         152,
-        587,
+        686,
         259,
-        676
+        748
       ],
       "width": 107,
-      "height": 89,
+      "height": 62,
       "crop_file": "crops/page_0016/col08_char006.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char006.png",
       "ocr_char": "命"
@@ -3136,12 +3136,12 @@
       "char_idx": 7,
       "bbox": [
         152,
-        676,
+        748,
         259,
-        765
+        840
       ],
       "width": 107,
-      "height": 89,
+      "height": 92,
       "crop_file": "crops/page_0016/col08_char007.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char007.png",
       "ocr_char": "麻"
@@ -3155,12 +3155,12 @@
       "char_idx": 8,
       "bbox": [
         152,
-        765,
+        840,
         259,
-        854
+        890
       ],
       "width": 107,
-      "height": 89,
+      "height": 50,
       "crop_file": "crops/page_0016/col08_char008.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char008.png",
       "ocr_char": "罢"
@@ -3174,12 +3174,12 @@
       "char_idx": 9,
       "bbox": [
         152,
-        854,
+        890,
         259,
-        943
+        986
       ],
       "width": 107,
-      "height": 89,
+      "height": 96,
       "crop_file": "crops/page_0016/col08_char009.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char009.png",
       "ocr_char": "蚪"
@@ -3193,12 +3193,12 @@
       "char_idx": 10,
       "bbox": [
         152,
-        943,
+        986,
         259,
-        1032
+        1054
       ],
       "width": 107,
-      "height": 89,
+      "height": 68,
       "crop_file": "crops/page_0016/col08_char010.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char010.png",
       "ocr_char": "伐"
@@ -3212,12 +3212,12 @@
       "char_idx": 11,
       "bbox": [
         152,
-        1032,
+        1054,
         259,
-        1121
+        1136
       ],
       "width": 107,
-      "height": 89,
+      "height": 82,
       "crop_file": "crops/page_0016/col08_char011.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char011.png",
       "ocr_char": "特"
@@ -3231,12 +3231,12 @@
       "char_idx": 12,
       "bbox": [
         152,
-        1121,
+        1136,
         259,
-        1210
+        1207
       ],
       "width": 107,
-      "height": 89,
+      "height": 71,
       "crop_file": "crops/page_0016/col08_char012.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char012.png",
       "ocr_char": "福"
@@ -3250,12 +3250,12 @@
       "char_idx": 13,
       "bbox": [
         152,
-        1210,
+        1207,
         259,
-        1299
+        1278
       ],
       "width": 107,
-      "height": 89,
+      "height": 71,
       "crop_file": "crops/page_0016/col08_char013.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char013.png",
       "ocr_char": "庒"
@@ -3269,12 +3269,12 @@
       "char_idx": 14,
       "bbox": [
         152,
-        1299,
+        1278,
         259,
-        1388
+        1328
       ],
       "width": 107,
-      "height": 89,
+      "height": 50,
       "crop_file": "crops/page_0016/col08_char014.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char014.png",
       "ocr_char": "兮"
@@ -3288,9 +3288,9 @@
       "char_idx": 15,
       "bbox": [
         152,
-        1388,
+        1328,
         259,
-        1477
+        1417
       ],
       "width": 107,
       "height": 89,
@@ -3307,12 +3307,12 @@
       "char_idx": 16,
       "bbox": [
         152,
-        1477,
+        1417,
         259,
-        1566
+        1491
       ],
       "width": 107,
-      "height": 89,
+      "height": 74,
       "crop_file": "crops/page_0016/col08_char016.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char016.png",
       "ocr_char": "歇"
@@ -3326,12 +3326,12 @@
       "char_idx": 17,
       "bbox": [
         152,
-        1566,
+        1491,
         259,
-        1655
+        1600
       ],
       "width": 107,
-      "height": 89,
+      "height": 109,
       "crop_file": "crops/page_0016/col08_char017.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char017.png",
       "ocr_char": "麻"
@@ -3345,12 +3345,12 @@
       "char_idx": 18,
       "bbox": [
         152,
-        1655,
+        1600,
         259,
-        1744
+        1648
       ],
       "width": 107,
-      "height": 89,
+      "height": 48,
       "crop_file": "crops/page_0016/col08_char018.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char018.png",
       "ocr_char": "紛"
@@ -3364,12 +3364,12 @@
       "char_idx": 19,
       "bbox": [
         152,
-        1744,
+        1648,
         259,
-        1833
+        1714
       ],
       "width": 107,
-      "height": 89,
+      "height": 66,
       "crop_file": "crops/page_0016/col08_char019.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char019.png",
       "ocr_char": "沛"
@@ -3383,12 +3383,12 @@
       "char_idx": 20,
       "bbox": [
         152,
-        1833,
+        1714,
         259,
-        1922
+        1799
       ],
       "width": 107,
-      "height": 89,
+      "height": 85,
       "crop_file": "crops/page_0016/col08_char020.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char020.png",
       "ocr_char": "呌"
@@ -3402,12 +3402,12 @@
       "char_idx": 21,
       "bbox": [
         152,
-        1922,
+        1799,
         259,
-        2011
+        1877
       ],
       "width": 107,
-      "height": 89,
+      "height": 78,
       "crop_file": "crops/page_0016/col08_char021.png",
       "cleaned_file": "crops_cleaned/page_0016/col08_char021.png",
       "ocr_char": "召"
@@ -3421,12 +3421,12 @@
       "char_idx": 0,
       "bbox": [
         7,
-        60,
+        278,
         109,
-        147
+        322
       ],
       "width": 102,
-      "height": 87,
+      "height": 44,
       "crop_file": "crops/page_0016/col09_char000.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char000.png",
       "ocr_char": "如"
@@ -3440,12 +3440,12 @@
       "char_idx": 1,
       "bbox": [
         7,
-        147,
+        322,
         109,
-        235
+        355
       ],
       "width": 102,
-      "height": 88,
+      "height": 33,
       "crop_file": "crops/page_0016/col09_char001.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char001.png",
       "ocr_char": "而"
@@ -3459,12 +3459,12 @@
       "char_idx": 2,
       "bbox": [
         7,
-        235,
+        355,
         109,
-        323
+        398
       ],
       "width": 102,
-      "height": 88,
+      "height": 43,
       "crop_file": "crops/page_0016/col09_char002.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char002.png",
       "ocr_char": "丕"
@@ -3478,12 +3478,12 @@
       "char_idx": 3,
       "bbox": [
         7,
-        323,
+        398,
         109,
-        411
+        441
       ],
       "width": 102,
-      "height": 88,
+      "height": 43,
       "crop_file": "crops/page_0016/col09_char003.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char003.png",
       "ocr_char": "朱"
@@ -3497,12 +3497,12 @@
       "char_idx": 4,
       "bbox": [
         7,
-        411,
+        441,
         109,
-        499
+        487
       ],
       "width": 102,
-      "height": 88,
+      "height": 46,
       "crop_file": "crops/page_0016/col09_char004.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char004.png",
       "ocr_char": "特"
@@ -3516,12 +3516,12 @@
       "char_idx": 5,
       "bbox": [
         7,
-        499,
+        487,
         109,
-        587
+        536
       ],
       "width": 102,
-      "height": 88,
+      "height": 49,
       "crop_file": "crops/page_0016/col09_char005.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char005.png",
       "ocr_char": "分"
@@ -3535,12 +3535,12 @@
       "char_idx": 6,
       "bbox": [
         7,
-        587,
+        536,
         109,
-        675
+        565
       ],
       "width": 102,
-      "height": 88,
+      "height": 29,
       "crop_file": "crops/page_0016/col09_char006.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char006.png",
       "ocr_char": "盃"
@@ -3554,12 +3554,12 @@
       "char_idx": 7,
       "bbox": [
         7,
-        675,
+        565,
         109,
-        762
+        619
       ],
       "width": 102,
-      "height": 87,
+      "height": 54,
       "crop_file": "crops/page_0016/col09_char007.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char007.png",
       "ocr_char": "共"
@@ -3573,12 +3573,12 @@
       "char_idx": 8,
       "bbox": [
         7,
-        762,
+        619,
         109,
-        850
+        647
       ],
       "width": 102,
-      "height": 88,
+      "height": 28,
       "crop_file": "crops/page_0016/col09_char008.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char008.png",
       "ocr_char": "各"
@@ -3592,12 +3592,12 @@
       "char_idx": 9,
       "bbox": [
         7,
-        850,
+        647,
         109,
-        938
+        700
       ],
       "width": 102,
-      "height": 88,
+      "height": 53,
       "crop_file": "crops/page_0016/col09_char009.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char009.png",
       "ocr_char": "要"
@@ -3611,12 +3611,12 @@
       "char_idx": 10,
       "bbox": [
         7,
-        938,
+        700,
         109,
-        1026
+        735
       ],
       "width": 102,
-      "height": 88,
+      "height": 35,
       "crop_file": "crops/page_0016/col09_char010.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char010.png",
       "ocr_char": "些"
@@ -3630,12 +3630,12 @@
       "char_idx": 11,
       "bbox": [
         7,
-        1026,
+        735,
         109,
-        1114
+        775
       ],
       "width": 102,
-      "height": 88,
+      "height": 40,
       "crop_file": "crops/page_0016/col09_char011.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char011.png",
       "ocr_char": "於"
@@ -3649,12 +3649,12 @@
       "char_idx": 12,
       "bbox": [
         7,
-        1114,
+        775,
         109,
-        1202
+        830
       ],
       "width": 102,
-      "height": 88,
+      "height": 55,
       "crop_file": "crops/page_0016/col09_char012.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char012.png",
       "ocr_char": "連"
@@ -3668,12 +3668,12 @@
       "char_idx": 13,
       "bbox": [
         7,
-        1202,
+        830,
         109,
-        1290
+        868
       ],
       "width": 102,
-      "height": 88,
+      "height": 38,
       "crop_file": "crops/page_0016/col09_char013.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char013.png",
       "ocr_char": "乔"
@@ -3687,12 +3687,12 @@
       "char_idx": 14,
       "bbox": [
         7,
-        1290,
+        868,
         109,
-        1377
+        890
       ],
       "width": 102,
-      "height": 87,
+      "height": 22,
       "crop_file": "crops/page_0016/col09_char014.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char014.png",
       "ocr_char": "希"
@@ -3706,12 +3706,12 @@
       "char_idx": 15,
       "bbox": [
         7,
-        1377,
+        890,
         109,
-        1465
+        954
       ],
       "width": 102,
-      "height": 88,
+      "height": 64,
       "crop_file": "crops/page_0016/col09_char015.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char015.png",
       "ocr_char": "些"
@@ -3725,12 +3725,12 @@
       "char_idx": 16,
       "bbox": [
         7,
-        1465,
+        954,
         109,
-        1553
+        1006
       ],
       "width": 102,
-      "height": 88,
+      "height": 52,
       "crop_file": "crops/page_0016/col09_char016.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char016.png",
       "ocr_char": "粤"
@@ -3744,12 +3744,12 @@
       "char_idx": 17,
       "bbox": [
         7,
-        1553,
+        1006,
         109,
-        1641
+        1037
       ],
       "width": 102,
-      "height": 88,
+      "height": 31,
       "crop_file": "crops/page_0016/col09_char017.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char017.png",
       "ocr_char": "厅"
@@ -3763,12 +3763,12 @@
       "char_idx": 18,
       "bbox": [
         7,
-        1641,
+        1037,
         109,
-        1729
+        1074
       ],
       "width": 102,
-      "height": 88,
+      "height": 37,
       "crop_file": "crops/page_0016/col09_char018.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char018.png",
       "ocr_char": "主"
@@ -3782,12 +3782,12 @@
       "char_idx": 19,
       "bbox": [
         7,
-        1729,
+        1074,
         109,
-        1817
+        1120
       ],
       "width": 102,
-      "height": 88,
+      "height": 46,
       "crop_file": "crops/page_0016/col09_char019.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char019.png",
       "ocr_char": "丈"
@@ -3801,12 +3801,12 @@
       "char_idx": 20,
       "bbox": [
         7,
-        1817,
+        1120,
         109,
-        1905
+        1155
       ],
       "width": 102,
-      "height": 88,
+      "height": 35,
       "crop_file": "crops/page_0016/col09_char020.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char020.png",
       "ocr_char": "秋"
@@ -3820,12 +3820,12 @@
       "char_idx": 21,
       "bbox": [
         7,
-        1905,
+        1155,
         109,
-        1993
+        1207
       ],
       "width": 102,
-      "height": 88,
+      "height": 52,
       "crop_file": "crops/page_0016/col09_char021.png",
       "cleaned_file": "crops_cleaned/page_0016/col09_char021.png",
       "ocr_char": "衝"

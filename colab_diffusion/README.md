@@ -42,17 +42,22 @@ Generating them on Colab GPU is ~10× faster and free.
 
 ### On Colab
 
-1. Clone the repo (or upload):
-
-   ```python
-   !git clone https://github.com/<you>/GanNhanOCR.git
-   %cd GanNhanOCR
+1. Set runtime to **GPU** (Runtime → Change runtime type → T4 / A100).
+2. Open `colab_diffusion/generate_fd_cache.ipynb` directly via:
    ```
-
-2. Open `colab_diffusion/generate_fd_cache.ipynb` and run all cells.
-   Make sure the runtime is set to **GPU** (Runtime → Change runtime type).
-3. The notebook generates one `fd_cache_<book>.zip` per book and offers
-   them for download.
+   https://colab.research.google.com/github/truong571/GanNhanOCR/blob/main/colab_diffusion/generate_fd_cache.ipynb
+   ```
+3. Run all cells top to bottom. The notebook is self-contained:
+   - Cell 2: clones `https://github.com/truong571/GanNhanOCR.git`
+   - Cell 3: verifies FontDiffusion checkpoint files (incl. `unet.safetensors`)
+   - Cell 3a (optional): downloads missing `unet.safetensors` from HuggingFace Hub
+   - Cell 4: refreshes `exports/` (idempotent)
+   - Cell 5: loads FontDiffusion (~1 min)
+   - Cell 6: generates ~10,500 images across 6 books (~30-50 min on T4)
+   - Cell 7: downloads each `fd_cache_<book>.zip` to your local browser
+4. **If `unet.safetensors` is missing on git** (size limits), either:
+   - Upload it manually to `/content/GanNhanOCR/font_diffusion/ckpt/DRO-20260227-19P2/checkpoint_step_6000/` via the Colab file panel, or
+   - Use cell 3a after pushing it to your HuggingFace Hub repo.
 
 ### Back on Mac
 

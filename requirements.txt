@@ -1,3 +1,4 @@
+# Core pipeline (required)
 numpy
 opencv-python
 scipy
@@ -5,17 +6,26 @@ PyYAML
 requests
 Pillow
 PyMuPDF
-pygame
+openpyxl
+
+# Step 3 visual ranking (DINOv2)
 torch
 torchvision
-paddleocr
-vietocr
+transformers
+huggingface-hub
+safetensors
+
+# FontDiffusion (mandatory for tier-3 visual ranking)
 diffusers
 accelerate
-safetensors
 einops
-info-nce-pytorch
 kornia
+info-nce-pytorch
+fonttools
+pygame
+scikit-image
 datasets
-huggingface-hub
-openpyxl
+
+# Optional — Quoc Ngu detection in Step 1 (lazy-imported)
+# paddleocr
+# vietocr

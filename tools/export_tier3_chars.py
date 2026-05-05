@@ -1,13 +1,13 @@
 """Export list of tier 3 candidate characters for FontDiffusion generation.
 
 Run locally:
-  python scripts/export_tier3_chars.py config/pipeline.yaml CacThanhTruyen2
+  python tools/export_tier3_chars.py config/pipeline.yaml CacThanhTruyen2
 
 Output:
   prepared/CacThanhTruyen2/tier3_chars.txt — one char per line
   prepared/CacThanhTruyen2/tier3_style.png — style reference image
 
-Upload these 2 files + FontDiffusion code to Colab/Kaggle,
+Upload these 2 files + font_diffusion code to Colab/Kaggle,
 run generate_fd_cache.ipynb, download fd_cache.zip, extract locally.
 """
 
@@ -19,8 +19,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lib.dictionary import load_qn_to_nom, build_nom_to_qn, load_similarity_dict, cjk_block_score
-from lib.ranker import tier1_dictionary_lookup, tier2_similar_expansion
+from core.text.dictionary import load_qn_to_nom, build_nom_to_qn, load_similarity_dict, cjk_block_score
+from core.ranking.ranker import tier1_dictionary_lookup, tier2_similar_expansion
 from pipeline.step0_setup import load_config
 
 
@@ -56,7 +56,7 @@ def main():
             if matched and char:
                 continue
             if ocr_char:
-                sim_char, _ = tier2_similar_expansion(ocr_char, s2, similar_dict)
+                sim_char, _, _ = tier2_similar_expansion(ocr_char, s2, similar_dict)
                 if sim_char:
                     continue
 
@@ -96,7 +96,7 @@ def main():
     print(f"\nUpload to Colab/Kaggle:")
     print(f"  1. {chars_path}")
     print(f"  2. {styles_dir}/ (folder with {style_count} style images)")
-    print(f"  3. FontDiffusion/ folder")
+    print(f"  3. font_diffusion/ folder")
     print(f"  4. Run generate_fd_cache.ipynb")
     print(f"  5. Download fd_cache.zip -> extract to {data_dir}/fd_cache/")
 

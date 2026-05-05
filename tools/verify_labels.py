@@ -321,13 +321,13 @@ def main():
         sys.exit(1)
 
     # Font
-    base = Path(__file__).parent
-    font_path = str(base / "FontDiffusion" / "fonts" / "NomNaTong-Regular.ttf")
+    base = Path(__file__).parent.parent
+    font_path = str(base / "font_diffusion" / "fonts" / "NomNaTong-Regular.ttf")
     font = load_font(font_path, size=80)
 
     # Dictionary
     try:
-        from lib.dictionary import load_qn_to_nom
+        from core.text.dictionary import load_qn_to_nom
         dict_path = base / "Dict" / "QuocNgu_SinoNom_TongHop3.csv"
         trans_dict = load_qn_to_nom(str(dict_path))
         print(f"  Dictionary: {len(trans_dict)} entries")

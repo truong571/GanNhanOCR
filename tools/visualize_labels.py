@@ -35,9 +35,9 @@ except ImportError:
 def _find_font(prepared_dir: Path) -> str:
     """Find NomNaTong font."""
     candidates = [
-        prepared_dir / "../../FontDiffusion/fonts/NomNaTong-Regular.ttf",
-        Path("FontDiffusion/fonts/NomNaTong-Regular.ttf"),
-        Path(__file__).parent.parent / "FontDiffusion/fonts/NomNaTong-Regular.ttf",
+        prepared_dir / "../../font_diffusion/fonts/NomNaTong-Regular.ttf",
+        Path("font_diffusion/fonts/NomNaTong-Regular.ttf"),
+        Path(__file__).parent.parent / "font_diffusion/fonts/NomNaTong-Regular.ttf",
     ]
     for p in candidates:
         if p.exists():

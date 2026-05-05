@@ -32,7 +32,7 @@ except ImportError:
 def load_font(size: int):
     """Load font Nôm cho rendering chữ."""
     font_paths = [
-        Path(__file__).parent.parent / "FontDiffusion/fonts/NomNaTong-Regular.ttf",
+        Path(__file__).parent.parent / "font_diffusion/fonts/NomNaTong-Regular.ttf",
     ]
     for fp in font_paths:
         if fp.exists():

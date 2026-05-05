@@ -1,8 +1,8 @@
 """Debug 1 column: xuat Excel chi tiet tung buoc pipeline.
 
 Usage:
-  python scripts/debug_column.py CacThanhTruyen2 page_0012 2
-  python scripts/debug_column.py CacThanhTruyen2 page_0012 2 --out debug.xlsx
+  python tools/debug_column.py CacThanhTruyen2 page_0012 2
+  python tools/debug_column.py CacThanhTruyen2 page_0012 2 --out debug.xlsx
 """
 
 import argparse

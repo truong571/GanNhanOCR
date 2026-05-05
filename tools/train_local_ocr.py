@@ -1,7 +1,7 @@
 """Train Local CNN OCR from labeled dataset (tier 1 matched only).
 
 Usage:
-  python scripts/train_local_ocr.py
+  python tools/train_local_ocr.py
 
 Input:  dataset/all/labels.csv + crops
 Output: models/local_ocr.pth + models/class_map.json

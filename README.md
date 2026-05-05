@@ -38,7 +38,7 @@ PDF sach co (Han Nom + Quoc Ngu)
 ### Yeu cau
 
 - Python 3.10+
-- Font NomNaTong (co san tai `FontDiffusion/fonts/NomNaTong-Regular.ttf`)
+- Font NomNaTong (co san tai `font_diffusion/fonts/NomNaTong-Regular.ttf`)
 - Token API Kimhannom (dat trong file `.env`)
 
 ### Tao moi truong ao va cai thu vien
@@ -185,7 +185,7 @@ GanNhanOCR/
 │   ├── embed_ranker.py
 │   └── iterative_refine.py
 │
-├── FontDiffusion/                  # Font style transfer model
+├── font_diffusion/                 # Font style transfer model
 │   └── fonts/NomNaTong-Regular.ttf
 │
 ├── Dict/                           # Tu dien
@@ -223,7 +223,7 @@ paths:
   output_dir: dataset
   qn_to_nom_dict: Dict/QuocNgu_SinoNom_TongHop3.csv
   similar_dict: Dict/SinoNom_Similar_Dic_v2.csv
-  font_path: FontDiffusion/fonts/NomNaTong-Regular.ttf
+  font_path: font_diffusion/fonts/NomNaTong-Regular.ttf
 
 step1:
   dpi: 300

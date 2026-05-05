@@ -15,12 +15,12 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from lib.alignment import levenshtein_align
-from lib.char_segmenter import segment_characters_in_column
-from lib.column_detector import detect_columns, auto_detect_n_columns
-from lib.crop_cleaner import CharacterCleaner
-from lib.dictionary import load_qn_to_nom
-from lib.image_processing import load_and_binarize, detect_text_box
+from core.text.alignment import levenshtein_align
+from core.image.char_segmenter import segment_characters_in_column
+from core.image.column_detector import detect_columns, auto_detect_n_columns
+from core.image.crop_cleaner import CharacterCleaner
+from core.text.dictionary import load_qn_to_nom
+from core.image.image_processing import load_and_binarize, detect_text_box
 
 from pipeline.step0_setup import load_config
 

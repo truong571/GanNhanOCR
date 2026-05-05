@@ -9,6 +9,13 @@
 
 set -euo pipefail
 
+# Load .env (SN_OCR_TOKEN, GEMINI_API_KEY, ...) so child processes see them
+if [[ -f .env ]]; then
+    set -a
+    source .env
+    set +a
+fi
+
 CONFIG="${CONFIG:-config/pipeline.yaml}"
 STEP="${STEP:-all}"
 BOOK="${BOOK:-all}"
@@ -26,7 +33,6 @@ while [[ $# -gt 0 ]]; do
             echo "  0     Setup & validation"
             echo "  1     Extract data from PDF"
             echo "  2     Levenshtein alignment"
-            echo "  2.5   Multi-engine OCR + consensus voting"
             echo "  3     3-tier label assignment"
             echo "  4     Export dataset"
             echo "  all   Run all steps (default)"
@@ -77,15 +83,6 @@ if [[ "$STEP" == "all" || "$STEP" == "2" ]]; then
         echo ""
         echo ">>> Step 2: Align — $book"
         python3 -m pipeline.step2_align "$CONFIG" "$book"
-    done
-fi
-
-# Step 2.5: Multi-engine OCR + consensus
-if [[ "$STEP" == "all" || "$STEP" == "2.5" ]]; then
-    for book in $BOOKS; do
-        echo ""
-        echo ">>> Step 2.5: Multi-engine OCR + consensus — $book"
-        python3 -m pipeline.step2_5_recognize "$CONFIG" "$book"
     done
 fi
 

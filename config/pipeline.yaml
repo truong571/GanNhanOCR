@@ -13,6 +13,12 @@ books:
   - name: SachThanhTruyen2
     pdf: Data/SachThanhTruyen2.pdf
     reocr: false
+  - name: SachThanhTruyen4
+    pdf: Data/SachThanhTruyen4.pdf
+    reocr: false
+  - name: SachThanhTruyen11
+    pdf: Data/SachThanhTruyen11.pdf
+    reocr: false
 
 paths:
   data_dir: prepared
@@ -20,9 +26,9 @@ paths:
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom_TongHop3.csv
   similar_dict: Dict/SinoNom_Similar_Dic_v2.csv
-  font_path: FontDiffusion/fonts/NomNaTong-Regular.ttf
-  fontdiffusion_ckpt: FontDiffusion/ckpt/DRO-20260227-19P2/checkpoint_step_6000
-  fontdiffusion_phase1_ckpt: FontDiffusion/ckpt/FST/checkpoint_step_1500
+  font_path: font_diffusion/fonts/NomNaTong-Regular.ttf
+  fontdiffusion_ckpt: font_diffusion/ckpt/DRO-20260227-19P2/checkpoint_step_6000
+  fontdiffusion_phase1_ckpt: font_diffusion/ckpt/FST/checkpoint_step_1500
 
 step1:
   dpi: 300
@@ -39,20 +45,13 @@ step2:
   deletion_cost_normal: 1.2
   insertion_cost: 1.0
 
-step2_5:
-  engines:
-    - kimhannom
-    - paddleocrv5_nom
-    - nomna_ocr
-  weights:
-    kimhannom: 1.2
-    paddleocrv5_nom: 1.0
-    nomna_ocr: 1.0
-
 step3:
   use_dinov2: true
-  dinov2_threshold: 0.75
+  dinov2_model: dinov2_vitb14_reg   # Base + registers — best for fine-grained chu-Nom
+  dinov2_threshold: 0.75            # cosine similarity threshold for matched=True
+  classical_threshold: 0.55         # classical CV fallback (Hu+IoU+projection)
   use_fontdiffusion: true
+  require_fontdiffusion: true       # if true: tier 3 ONLY uses fd_cache (no font-rendered fallback)
 
 step4:
   min_samples_per_class: 1

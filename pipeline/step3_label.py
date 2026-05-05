@@ -16,15 +16,15 @@ import json
 import sys
 from pathlib import Path
 
-from lib.dictionary import (
+from core.text.dictionary import (
     load_qn_to_nom, build_nom_to_qn, load_similarity_dict,
 )
-from lib.ranker import (
+from core.ranking.ranker import (
     assign_label, get_dinov2_ranker,
     tier1_dictionary_lookup, tier2_similar_expansion,
     tier3_visual_comparison,
 )
-from lib.dictionary import cjk_block_score
+from core.text.dictionary import cjk_block_score
 
 from pipeline.step0_setup import load_config
 
@@ -60,18 +60,18 @@ def _collect_tier3_candidates(
 
             # Try tier 2
             if ocr_char:
-                sim_char, sim_matched = tier2_similar_expansion(
+                sim_char, sim_matched, _ = tier2_similar_expansion(
                     ocr_char, s2, similar_dict,
                 )
                 if sim_char:
                     continue
 
-            # Needs tier 3 — collect top 5 candidate chars only
-            similar_chars = similar_dict.get(ocr_char, []) if ocr_char else []
-            all_cands = list(dict.fromkeys(s2 + similar_chars))
-            filtered = [c for c in all_cands if cjk_block_score(c) > 0.1]
+            # Needs tier 3 — collect QN->Nom dict candidates only.
+            # Tier 3 ranks strictly within s2; similar_dict lookalikes are no
+            # longer used at this stage (would risk picking an out-of-dict char).
+            filtered = [c for c in s2 if cjk_block_score(c) > 0.1]
             if not filtered:
-                filtered = all_cands
+                filtered = list(s2)
             candidates.update(filtered[:20])
 
     return candidates
@@ -101,7 +101,8 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
     dinov2 = None
     if step3_cfg.get("use_dinov2", False):
         font_path = paths.get("font_path")
-        dinov2 = get_dinov2_ranker(font_path)
+        dinov2_model = step3_cfg.get("dinov2_model", "dinov2_vitb14_reg")
+        dinov2 = get_dinov2_ranker(font_path, model_name=dinov2_model)
         if dinov2 and verbose:
             print("    DINOv2 ranker loaded.")
 
@@ -122,74 +123,102 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
     # fd_cache = {char: generated_image_path}
     fd_cache: dict[str, str] = {}
     fontdiffusion_ckpt = None
+    require_fd = step3_cfg.get("require_fontdiffusion", True)
 
     if step3_cfg.get("use_fontdiffusion", False):
         ckpt = paths.get("fontdiffusion_ckpt")
         phase1_ckpt = paths.get("fontdiffusion_phase1_ckpt")
 
-        if ckpt and Path(ckpt).exists():
+        # Load pre-generated cache from disk
+        cache_base = data_dir / "fd_cache"
+        if cache_base.exists():
+            for png in cache_base.rglob("U+*.png"):
+                hex_str = png.stem.replace("U+", "")
+                try:
+                    char = chr(int(hex_str, 16))
+                    fd_cache[char] = str(png)
+                except ValueError:
+                    pass
+
+        if verbose and fd_cache:
+            print(f"    FontDiffusion cache: {len(fd_cache)} images loaded from disk")
+
+        # Determine which chars still need generation
+        if verbose:
+            print(f"\n  Scanning tier 3 candidates...")
+        tier3_chars = _collect_tier3_candidates(
+            aligned_files, data_dir, qn_to_nom, nom_to_qn, similar_dict,
+        )
+        missing_chars = sorted(c for c in tier3_chars if c not in fd_cache)
+        if verbose:
+            print(f"    Found {len(tier3_chars)} unique chars needing tier 3")
+            print(f"    FontDiffusion cache missing: {len(missing_chars)} chars")
+
+        ckpt_ok = ckpt and Path(ckpt).exists()
+        if ckpt_ok:
             fontdiffusion_ckpt = ckpt
 
-            # Load pre-generated cache from disk (generated on Colab/Kaggle)
-            cache_base = data_dir / "fd_cache"
-            if cache_base.exists():
-                for png in cache_base.rglob("U+*.png"):
-                    # Parse char from filename: U+7D93.png -> 經
-                    hex_str = png.stem.replace("U+", "")
-                    try:
-                        char = chr(int(hex_str, 16))
-                        fd_cache[char] = str(png)
-                    except ValueError:
-                        pass
-
-            if verbose and fd_cache:
-                print(f"    FontDiffusion cache: {len(fd_cache)} images loaded from disk")
-
-            # If no cache, try generating locally
-            if not fd_cache:
-                if verbose:
-                    print(f"\n  Pass 1: Scanning tier 3 candidates...")
-
-                tier3_chars = _collect_tier3_candidates(
-                    aligned_files, data_dir, qn_to_nom, nom_to_qn, similar_dict,
-                )
-                if verbose:
-                    print(f"    Found {len(tier3_chars)} unique chars needing tier 3")
-
-                if tier3_chars:
-                    style_image = None
-                    for af in aligned_files:
-                        with open(af) as f:
-                            alignment = json.load(f)
-                        for pair in alignment:
-                            if pair["type"] == "match" and pair.get("char"):
-                                cf = pair["char"].get("crop_file", "")
-                                if cf:
-                                    p = data_dir / "detected" / cf
-                                    if p.exists():
-                                        style_image = str(p)
-                                        break
-                        if style_image:
-                            break
-
+            if missing_chars:
+                # Find a representative crop from this book to use as style image
+                style_image = None
+                for af in aligned_files:
+                    with open(af, encoding="utf-8") as f:
+                        alignment = json.load(f)
+                    for pair in alignment:
+                        if pair["type"] == "match" and pair.get("char"):
+                            cf = pair["char"].get("crop_file", "")
+                            if cf:
+                                p = data_dir / "detected" / cf
+                                if p.exists():
+                                    style_image = str(p)
+                                    break
                     if style_image:
-                        try:
-                            from lib.fontdiffusion_gen import FontDiffusionGenerator
-                            generator = FontDiffusionGenerator(
-                                ckpt_dir=ckpt,
-                                phase1_ckpt_dir=phase1_ckpt,
-                                font_path=font_path or "FontDiffusion/fonts/NomNaTong-Regular.ttf",
-                                cache_dir=str(cache_base),
-                            )
-                            fd_cache = generator.generate(
-                                list(tier3_chars), style_image, style_name=book_name,
-                            )
-                            if verbose:
-                                print(f"    FontDiffusion: {len(fd_cache)} images generated")
-                        except Exception as e:
-                            print(f"    FontDiffusion error: {e}", file=sys.stderr)
-        elif verbose:
-            print(f"    FontDiffusion: checkpoint not found at {ckpt}")
+                        break
+
+                if not style_image:
+                    msg = (
+                        f"[step3] No style image found for {book_name}; cannot "
+                        f"generate FontDiffusion cache for {len(missing_chars)} chars."
+                    )
+                    print(msg, file=sys.stderr)
+                else:
+                    try:
+                        from core.ranking.fontdiffusion_gen import FontDiffusionGenerator
+
+                        generator = FontDiffusionGenerator(
+                            ckpt_dir=ckpt,
+                            phase1_ckpt_dir=phase1_ckpt,
+                            font_path=font_path or "font_diffusion/fonts/NomNaTong-Regular.ttf",
+                            cache_dir=str(cache_base),
+                        )
+                        generated = generator.generate(
+                            missing_chars, style_image, style_name=book_name,
+                        )
+                        fd_cache.update(generated)
+                        if verbose:
+                            print(f"    FontDiffusion: {len(generated)} images generated")
+                    except Exception as e:
+                        print(f"[step3] FontDiffusion error for {book_name}: "
+                              f"{type(e).__name__}: {e}", file=sys.stderr)
+            elif verbose:
+                print("    FontDiffusion cache already covers tier 3 candidates")
+        elif verbose and missing_chars:
+            print(f"    [warn] FontDiffusion checkpoint not found at '{ckpt}'; "
+                  f"{len(missing_chars)} chars cannot be generated locally.",
+                  file=sys.stderr)
+
+        # Hard-fail ONLY when cache is empty AND require_fontdiffusion=true.
+        # When cache covers most chars, missing ones simply fall through to
+        # final fallback (tier=1, matched=False) — honest, not silently wrong.
+        if require_fd and not fd_cache:
+            raise RuntimeError(
+                f"[step3] No FontDiffusion cache available for {book_name} and "
+                f"generation could not produce any images. Either:\n"
+                f"  1. Generate cache via colab_diffusion/ on Colab, OR\n"
+                f"  2. Set require_fontdiffusion=false in config (uses font-rendered "
+                f"     fallback, lower accuracy).\n"
+                f"  Aborting to avoid producing low-quality labels."
+            )
 
     # ── Pass 2: Label all pairs ──
     if verbose:
@@ -253,6 +282,9 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                     dinov2_ranker=dinov2,
                     fontdiffusion_ckpt=fontdiffusion_ckpt,
                     fd_cache=fd_cache,
+                    dinov2_threshold=step3_cfg.get("dinov2_threshold", 0.75),
+                    classical_threshold=step3_cfg.get("classical_threshold", 0.55),
+                    require_fontdiffusion=step3_cfg.get("require_fontdiffusion", True),
                 )
 
                 is_matched = bool(result["matched"])
@@ -271,6 +303,11 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                     "bbox": char_info.get("bbox") if char_info else None,
                     "crop_file": char_info.get("crop_file") if char_info else None,
                 }
+                # Diagnostic scores (only present when tier 3 ran or tier 1 sanity demoted)
+                if result.get("visual_score") is not None:
+                    label["visual_score"] = result["visual_score"]
+                if result.get("sanity_score") is not None:
+                    label["sanity_score"] = result["sanity_score"]
                 tier_counts[result["tier"]] += 1
                 if is_matched:
                     matched_count += 1

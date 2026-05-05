@@ -1,7 +1,0 @@
-# Minimal deps for tests/bench_*.py — avoids vietocr/paddleocr/torch
-# which fail to install on Python 3.13 due to Pillow 10.2.0 constraint.
-numpy
-opencv-python
-scipy
-PyYAML
-requests

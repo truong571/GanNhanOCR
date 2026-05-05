@@ -1,0 +1,19 @@
+# Minimal extras for this experiment. The Transformers/tokenizers pins follow
+# the official DeepSeek-OCR requirements.
+torch
+torchvision
+transformers==4.46.3
+tokenizers==0.20.3
+accelerate
+safetensors
+huggingface-hub
+Pillow
+PyYAML
+opencv-python
+einops
+easydict
+addict
+matplotlib
+
+# Optional and CUDA-oriented. Install only on a compatible CUDA machine:
+# flash-attn==2.7.3

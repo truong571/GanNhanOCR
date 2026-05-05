@@ -1,1 +1,0 @@
-# GanNhanOCR - Library modules

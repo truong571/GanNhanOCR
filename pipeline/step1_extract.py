@@ -12,14 +12,14 @@ from pathlib import Path
 import cv2
 import numpy as np
 
-from lib.pdf_parser import (
+from core.pdf.pdf_parser import (
     is_image_page, extract_book_page_number, extract_nom_image,
     extract_quocngu_text, build_transcription_columns,
 )
-from lib.image_processing import denoise_image
-from lib.ocr_api import ocr_page
-from lib.qn_ocr import ocr_qn_page
-from lib.text_utils import normalize_syllables
+from core.image.image_processing import denoise_image
+from core.ocr.ocr_api import ocr_page
+from core.ocr.qn_ocr import ocr_qn_page
+from core.text.text_utils import normalize_syllables
 
 from pipeline.step0_setup import load_config
 
@@ -122,7 +122,7 @@ def process_book(config: dict, book_name: str, verbose: bool = True):
             tmp_path = str(data_dir / "transcriptions" / f"{page_name}_qn_tmp.png")
             pix.save(tmp_path)
             ocr_text = ocr_qn_page(tmp_path, verbose=verbose)
-            from lib.pdf_parser import parse_numbered_lines
+            from core.pdf.pdf_parser import parse_numbered_lines
             import re
             ocr_text = re.sub(r"\n\d+\s*$", "", ocr_text.strip())
             raw_lines = parse_numbered_lines(ocr_text)

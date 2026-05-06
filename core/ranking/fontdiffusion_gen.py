@@ -73,7 +73,7 @@ class FontDiffusionGenerator:
         args.fst_ckpt_path = self.ckpt_dir
         args.ttf_path = self.font_path
         args.device = self.device
-        args.use_fst = True
+        args.use_fst = False  # production weights at HF repo root are non-FST
         args.batch_size = self.batch_size
         args.character_input = True
         args.save_image = False

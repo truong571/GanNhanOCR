@@ -2,7 +2,10 @@
 
 **Tu dong gan nhan Unicode cho kho ngu lieu Han Nom viet tay tu ban dich Quoc ngu**
 
-He thong xu ly sach Han Nom viet tay (PDF) ket hop ban dich Quoc ngu, tu dong gan nhan Unicode cho tung ky tu Nom thong qua 3 tang tra cuu: tu dien song huong, ky tu tuong tu, va so khop anh (DINOv2).
+He thong xu ly sach Han Nom viet tay (PDF) ket hop ban dich Quoc ngu, tu dong
+gan nhan Unicode cho tung ky tu Nom thong qua 3 tang tra cuu: tu dien song
+huong, ky tu tuong tu, va so khop anh DINOv2 voi anh tham chieu sinh boi
+FontDiffusion.
 
 ---
 
@@ -24,12 +27,20 @@ PDF sach co (Han Nom + Quoc Ngu)
 ├── Buoc 3: Label ─── Gan nhan 3 tang
 │     • Tang 1: Tu dien song huong (QN↔Nom)
 │     • Tang 2: Mo rong qua chu tuong tu
-│     • Tang 3: So khop anh (DINOv2 cosine similarity)
+│     • Tang 3: So khop anh (DINOv2 cosine vs anh sinh boi FontDiffusion)
 │
 └── Buoc 4: Export ─── Gop sach → Loc chat luong → dataset cuoi cung
 ```
 
-**Nguyen tac cot loi:** `processed_image` chi dung noi bo cho OCR. Moi anh luu ra dataset deu la crop tu `original_image`.
+**Sinh anh tham chieu (FontDiffusion):** chay 1 lan tren Kaggle GPU bang
+[`kaggle_diffusion/diffusion_run.ipynb`](kaggle_diffusion/diffusion_run.ipynb)
+de tao **universal cache** ~21,837 ky tu chu Nom (toan bo CJK ranges trong font
+NomNaTong). Cache nay duoc luu len HuggingFace Hub roi keo ve
+`prepared/_universal_fd_cache/`. Tat ca 6 cuon sach dung chung 1 cache nay,
+khong can sinh lai.
+
+**Nguyen tac cot loi:** `processed_image` chi dung noi bo cho OCR. Moi anh luu
+ra dataset deu la crop tu `original_image`.
 
 ---
 
@@ -68,74 +79,49 @@ Doi domain: them `SN_DOMAIN=domain.khac.vn` vao `.env`.
 
 ---
 
-## Cach chay
+## Quy trinh chay (lan dau)
 
-### Chay toan bo pipeline
+### Buoc A — Sinh universal fd_cache tren Kaggle (1 lan duy nhat)
+
+Lam theo [`kaggle_diffusion/README.md`](kaggle_diffusion/README.md):
+
+1. Chay `python kaggle_diffusion/build_char_universe.py` tren may local de tao
+   `kaggle_diffusion/exports/char_universe.txt` (~21,837 ky tu).
+2. Tao 1 dataset repo tren HuggingFace Hub, dat ten tuy y (mac dinh notebook
+   dung `mdnt571/gannhanocr-universal-fd-cache`).
+3. Mo `kaggle_diffusion/diffusion_run.ipynb` tren Kaggle (GPU T4 x2).
+4. Notebook tu sinh, push moi 500 ky tu, resume duoc neu Kaggle reset
+   (~10–12h tong).
+5. Sau khi xong, keo cache ve may local:
+   ```bash
+   huggingface-cli download mdnt571/gannhanocr-universal-fd-cache \
+     --repo-type=dataset \
+     --local-dir prepared/_universal_fd_cache/
+   ```
+
+### Buoc B — Chay pipeline 6 cuon
 
 ```bash
-./run_pipeline.sh
+./run_pipeline.sh                    # tat ca 6 cuon, du 5 buoc 0→4
 ```
 
-### Chay tung buoc
+Hoac chay tung phan:
 
 ```bash
-# Buoc 0: Setup
+./run_pipeline.sh --step 1                          # chi buoc 1, tat ca sach
+./run_pipeline.sh --book CacThanhTruyen2            # 1 sach, du 5 buoc
+./run_pipeline.sh --step 3 --book CacThanhTruyen4   # buoc 3, 1 sach
+./run_pipeline.sh --config config/pipeline.yaml     # chi dinh config
+```
+
+Hoac goi tung step Python:
+
+```bash
 python -m pipeline.step0_setup config/pipeline.yaml
-
-# Buoc 1: Tach du lieu tu PDF
 python -m pipeline.step1_extract config/pipeline.yaml CacThanhTruyen2
-
-# Buoc 2: Can chinh Levenshtein
-python -m pipeline.step2_align config/pipeline.yaml CacThanhTruyen2
-
-# Buoc 3: Gan nhan 3 tang
-python -m pipeline.step3_label config/pipeline.yaml CacThanhTruyen2
-
-# Buoc 4: Xuat dataset
-python -m pipeline.step4_export config/pipeline.yaml
-```
-
-### Tuy chon run_pipeline.sh
-
-```bash
-./run_pipeline.sh --step 1                     # Chi chay buoc 1
-./run_pipeline.sh --book CacThanhTruyen2       # Chi 1 sach
-./run_pipeline.sh --step 3 --book CacThanhTruyen4   # Buoc 3, 1 sach
-./run_pipeline.sh --config config/custom.yaml  # Config khac
-```
-
----
-
-## Kiem tra tung buoc (tests/)
-
-Moi test chay pipeline roi in bao cao de nguoi dung kiem tra bang mat.
-Chay **tuan tu** — moi buoc can output cua buoc truoc.
-
-```bash
-# Buoc 0: Kiem tra config, thu muc, dictionaries
-python tests/test_step0.py
-
-# Buoc 1: Extract 1 book, kiem tra anh goc vs denoised, crops, OCR cache
-python tests/test_step1.py CacThanhTruyen2
-
-# Buoc 2: Alignment, kiem tra match/deletion/insertion, syllable count
-python tests/test_step2.py CacThanhTruyen2
-
-# Buoc 3: Labeling, kiem tra tier, verify crop_file tro toi anh goc
-python tests/test_step3.py CacThanhTruyen2
-
-# Buoc 4: Export, kiem tra split, verify dataset khong chua anh da xu ly
-python tests/test_step4.py
-```
-
-Moi test in **PASS/FAIL** cho cac diem quan trong. Doc output va mo file thu cong de xac nhan.
-
----
-
-## Push code len GitHub
-
-```bash
-./push.sh "noi dung commit"
+python -m pipeline.step2_align   config/pipeline.yaml CacThanhTruyen2
+python -m pipeline.step3_label   config/pipeline.yaml CacThanhTruyen2
+python -m pipeline.step4_export  config/pipeline.yaml
 ```
 
 ---
@@ -145,66 +131,56 @@ Moi test in **PASS/FAIL** cho cac diem quan trong. Doc output va mo file thu con
 ```
 GanNhanOCR/
 ├── config/
-│   └── pipeline.yaml              # Cau hinh trung tam
+│   └── pipeline.yaml             # Cau hinh trung tam (6 sach)
 │
-├── lib/                            # Thu vien modules
-│   ├── text_utils.py               # Text cleaning, saint names, syllables
-│   ├── dictionary.py               # Dict loading, reverse lookup, specificity
-│   ├── pdf_parser.py               # PDF page classification, image/text extraction
-│   ├── image_processing.py         # Denoise, binarize, text box detection
-│   ├── column_detector.py          # Column detection (projection + ruling lines)
-│   ├── char_segmenter.py           # Character segmentation (projection profile)
-│   ├── crop_cleaner.py             # Sauvola binarization, cleanup, 64x64 resize
-│   ├── ocr_api.py                  # Kimhannom OCR API client
-│   ├── qn_ocr.py                   # PaddleOCR + VietOCR for QN text
-│   ├── alignment.py                # Levenshtein DP alignment
-│   ├── ranker.py                   # 3-tier ranking (dict → similar → DINOv2)
-│   └── dinov2_ranker.py            # DINOv2 cosine similarity ranker
+├── core/                         # Thu vien shared (import boi pipeline/)
+│   ├── image/                    # Crop, denoise, column/char segmentation
+│   ├── pdf/                      # PDF parser
+│   ├── ocr/                      # Kimhannom API client + QN OCR
+│   ├── ranking/                  # Ranker 3-tang + DINOv2 + FontDiffusion
+│   └── text/                     # Dictionary, syllable utils
 │
-├── pipeline/                       # Pipeline steps
+├── pipeline/                     # 5 buoc thuc thi
 │   ├── step0_setup.py
 │   ├── step1_extract.py
 │   ├── step2_align.py
 │   ├── step3_label.py
 │   └── step4_export.py
 │
-├── tests/                          # Kiem tra tung buoc
-│   ├── test_step0.py
-│   ├── test_step1.py
-│   ├── test_step2.py
-│   ├── test_step3.py
-│   └── test_step4.py
+├── kaggle_diffusion/             # One-shot generator universal fd_cache
+│   ├── README.md
+│   ├── build_char_universe.py    # Trich xuat 21k ky tu tu font NomNaTong
+│   ├── extract_book_chars.py     # Trich xuat ky tu rieng tung sach (optional)
+│   ├── run_local_sanity.py       # Sanity check truoc khi day Kaggle
+│   ├── diffusion_run.ipynb       # Notebook chinh (universal cache)
+│   ├── diffusion_per_book.ipynb  # Bien the per-book (neu can style rieng)
+│   └── exports/                  # char_universe.txt + .json
 │
-├── tools/                          # Visualization
-│   ├── verify_labels.py
-│   ├── visualize_labels.py
-│   └── visualize_results.py
+├── font_diffusion/               # Submodule FontDiffuser (model + ckpt)
 │
-├── embedding/                      # Deep Metric Learning (nang cao)
-│   ├── train_embedding.py
-│   ├── embed_ranker.py
-│   └── iterative_refine.py
+├── deep_seek-OCR/                # Nhanh nghien cuu OCR DeepSeek (chua tich hop)
 │
-├── font_diffusion/                 # Font style transfer model
-│   └── fonts/NomNaTong-Regular.ttf
-│
-├── Dict/                           # Tu dien
-│   ├── QuocNgu_SinoNom_TongHop3.csv
-│   └── SinoNom_Similar_Dic_v2.csv
-│
-├── Data/                           # PDF dau vao (chi chua file goc)
-│
-├── prepared/                       # Output trung gian cua pipeline (moi book 1 folder)
-│
-├── dataset/                        # Ket qua cuoi cung
-│   ├── CacThanhTruyen2/            #   tung book rieng
-│   ├── CacThanhTruyen4/
-│   └── all/                        #   gop tat ca book
+├── Data/                         # PDF goc 6 cuon (KHONG commit)
+├── Dict/                         # Tu dien QN↔Nom + Similar dic
+├── prepared/                     # Output trung gian (S0→S3) per-book
+│   ├── _universal_fd_cache/      # Universal FontDiffusion cache (tu Kaggle)
+│   ├── CacThanhTruyen2/
+│   │   ├── pages/                # Anh trang goc
+│   │   ├── pages_denoised/       # Anh khu nhieu (chi dung cho OCR)
+│   │   ├── detected/             # Crops + bbox + OCR cache
+│   │   ├── aligned/              # Levenshtein alignment JSON
+│   │   ├── labeled/              # labels.csv tung sach
+│   │   └── fd_cache/             # (optional) per-book FD cache override
+│   └── ...
+├── dataset/                      # Output cuoi cung (S4)
+│   ├── CacThanhTruyen2/
+│   ├── ...
+│   └── all/                      # Gop tat ca sach
 │
 ├── requirements.txt
-├── run_pipeline.sh
-├── push.sh
-├── .env                            # Token API (KHONG commit)
+├── run_pipeline.sh               # Orchestrator chinh
+├── push.sh                       # Push len GitHub
+├── .env                          # Token API (KHONG commit)
 └── README.md
 ```
 
@@ -214,30 +190,32 @@ GanNhanOCR/
 
 ```yaml
 books:
-  - name: CacThanhTruyen2
-    pdf: Data/CacThanhTruyen2.pdf
-    reocr: false          # true neu can re-OCR trang QN bang PaddleOCR+VietOCR
+  - { name: CacThanhTruyen2,   pdf: Data/CacThanhTruyen2.pdf,   reocr: false }
+  - { name: CacThanhTruyen4,   pdf: Data/CacThanhTruyen4.pdf,   reocr: false }
+  - { name: CacThanhTruyen11,  pdf: Data/CacThanhTruyen11.pdf,  reocr: false }
+  - { name: SachThanhTruyen2,  pdf: Data/SachThanhTruyen2.pdf,  reocr: false }
+  - { name: SachThanhTruyen4,  pdf: Data/SachThanhTruyen4.pdf,  reocr: false }
+  - { name: SachThanhTruyen11, pdf: Data/SachThanhTruyen11.pdf, reocr: false }
 
 paths:
   data_dir: prepared
   output_dir: dataset
   qn_to_nom_dict: Dict/QuocNgu_SinoNom_TongHop3.csv
-  similar_dict: Dict/SinoNom_Similar_Dic_v2.csv
-  font_path: font_diffusion/fonts/NomNaTong-Regular.ttf
+  similar_dict:   Dict/SinoNom_Similar_Dic_v2.csv
+  font_path:      font_diffusion/fonts/NomNaTong-Regular.ttf
+  fontdiffusion_ckpt:        font_diffusion/ckpt/PROD
+  fontdiffusion_phase1_ckpt: font_diffusion/ckpt/PROD
+  fd_cache_universal:        prepared/_universal_fd_cache
 
-step1:
-  dpi: 300
-  denoise: true
-  crop_size: 64
-  sauvola_k: 0.2
-  use_ocr_api: true       # Dung Kimhannom API
-
+step1: { dpi: 300, denoise: true, crop_size: 64, sauvola_k: 0.2, use_ocr_api: true }
+step2: { deletion_cost_small: 0.3, deletion_cost_medium: 0.6, deletion_cost_normal: 1.2 }
 step3:
-  use_dinov2: true         # DINOv2 cho tang 3
+  use_dinov2: true
+  dinov2_model: dinov2_vitb14_reg
   dinov2_threshold: 0.75
-
-step4:
-  min_samples_per_class: 3
+  use_fontdiffusion: true
+  require_fontdiffusion: true     # tier 3 chi dung anh trong fd_cache
+step4: { min_samples_per_class: 1 }
 ```
 
 ---
@@ -246,17 +224,15 @@ step4:
 
 ### Buoc 1 — Tach du lieu
 
-1. **Phan loai trang**: `is_image_page()` phan biet trang Han Nom vs trang Quoc Ngu
+1. **Phan loai trang**: phan biet trang Han Nom vs trang Quoc Ngu
 2. **Trich xuat anh**: Render PDF → `pages/` (anh goc) + `pages_denoised/` (khu nhieu)
-3. **OCR trang Nom**: Upload anh **khu nhieu** len Kimhannom API → bbox + transcription
+3. **OCR trang Nom**: Upload anh khu nhieu len Kimhannom API → bbox + transcription
 4. **Phan tach ky tu**: Projection Profile cat tung ky tu tu cot
-5. **Crop ky tu**: Crop tu anh **goc** (`crops/`) + Sauvola cleanup (`crops_cleaned/`)
+5. **Crop ky tu**: Crop tu anh **goc** vao `crops/` + Sauvola cleanup vao `crops_cleaned/`
 6. **Trich xuat text QN**: Doc text tu PDF (hoac PaddleOCR + VietOCR khi `reocr=true`)
-7. **Normalize syllables**: Tach ten thanh (dominhgo → do minh co) ngay tu buoc nay
+7. **Normalize syllables**: Tach ten thanh ngay tu buoc nay
 
 ### Buoc 2 — Can chinh Levenshtein
-
-Can chinh N ky tu detected voi M am tiet QN bang Levenshtein DP:
 
 | Chieu cao ky tu | Chi phi xoa | Ly do |
 |-----------------|-------------|-------|
@@ -266,26 +242,24 @@ Can chinh N ky tu detected voi M am tiet QN bang Levenshtein DP:
 
 ### Buoc 3 — Gan nhan 3 tang
 
-**Tang 1: Tu dien song huong**
-- QN → Nom: tra tap ung vien S2
-- Nom OCR → QN: tra nguoc S1
-- S2 co 1 ung vien duy nhat → matched (DEN)
-- OCR nam trong S2 VA QN nam trong S1 → matched (DEN)
+**Tang 1: Tu dien song huong (QN↔Nom)** — neu S2 co duy nhat 1 ung vien hoac
+OCR ∈ S2 va QN ∈ S1 → matched.
 
-**Tang 2: Chu tuong tu**
-- Tra SinoNom_Similar_Dic cho chu OCR
-- Tim chu tuong tu nam trong S2 → matched (DEN)
+**Tang 2: Chu tuong tu** — tra `SinoNom_Similar_Dic`, tim chu tuong tu nam
+trong S2 → matched.
 
-**Tang 3: So khop anh (DINOv2)**
-- Tap ung vien = S2 ∪ danh sach tuong tu
-- Render font NomNaTong → DINOv2 embedding → cosine similarity
-- Score > 0.75 → matched (DEN), nguoc lai → unmatched (DO)
+**Tang 3: So khop anh (DINOv2 + FontDiffusion)** — tap ung vien la S2; voi moi
+ung vien, lay anh tu `fd_cache` (universal hoac per-book), tinh cosine
+similarity DINOv2 voi crop. Score > 0.75 → matched, nguoc lai → unmatched.
+
+Voi `require_fontdiffusion: true`, tang 3 **CHI** dung anh trong fd_cache;
+khong fallback ve render tu font, dam bao do dong nhat ve style.
 
 ### Buoc 4 — Xuat dataset
 
 - Gop labels.csv tu tat ca sach
 - Loc crop loi (trang, qua den, kich thuoc bat thuong)
-- Loai class hiem (< 3 mau)
+- Loai class hiem (`min_samples_per_class`)
 - Xuat rieng tung book + gop tat ca vao `all/`
 
 ---
@@ -294,8 +268,8 @@ Can chinh N ky tu detected voi M am tiet QN bang Levenshtein DP:
 
 | Trang thai | Mau | Y nghia |
 |------------|-----|---------|
-| `matched = True` | **DEN** | Nhan dung (xac nhan qua tu dien hoac visual) |
-| `matched = False` | **DO** | Nhan sai hoac khong xac nhan duoc |
+| `matched = True`  | **DEN** | Nhan dung (xac nhan qua tu dien hoac visual) |
+| `matched = False` | **DO**  | Nhan sai hoac khong xac nhan duoc |
 
 Khong dung confidence score. Chi co 2 trang thai.
 
@@ -313,46 +287,21 @@ crops/page_0012/col01_char000.png,經,U+7D93,kinh,True,1,"[100,200,150,260]",pag
 | Truong | Mo ta |
 |--------|-------|
 | `crop_file` | Duong dan anh crop **goc** (tu `crops/`, khong phai `crops_cleaned/`) |
-| `nom_char` | Ky tu Nom (Unicode) |
-| `unicode` | Ma Unicode `U+XXXX` |
-| `syllable` | Am doc Quoc ngu |
-| `matched` | `True` (den) / `False` (do) |
-| `tier` | Tang da gan: 1 (dict), 2 (similar), 3 (visual), 0 (none) |
-| `bbox` | Bounding box `[x1,y1,x2,y2]` |
-| `page` | Ten trang |
-| `source` | Ten bo sach |
-
-### Output cuoi cung
-
-```
-dataset/
-├── CacThanhTruyen2/       # Du lieu rieng tung book
-│   ├── labels.csv
-│   ├── class_map.json
-│   └── metadata.json
-├── CacThanhTruyen4/
-│   ├── labels.csv
-│   ├── class_map.json
-│   └── metadata.json
-└── all/                   # Gop tat ca book
-    ├── labels.csv
-    ├── class_map.json
-    └── metadata.json
-```
+| `nom_char`  | Ky tu Nom (Unicode) |
+| `unicode`   | Ma Unicode `U+XXXX` |
+| `syllable`  | Am doc Quoc ngu |
+| `matched`   | `True` (den) / `False` (do) |
+| `tier`      | Tang da gan: 1 (dict), 2 (similar), 3 (visual), 0 (none) |
+| `bbox`      | Bounding box `[x1,y1,x2,y2]` |
+| `page`      | Ten trang |
+| `source`    | Ten bo sach |
 
 ---
 
-## Visualization
+## Push code len GitHub
 
 ```bash
-# Ve bbox + nhan len anh goc (den=dung, do=sai)
-python tools/visualize_labels.py Data/prepared/CacThanhTruyen2
-
-# Chi 1 trang
-python tools/visualize_labels.py Data/prepared/CacThanhTruyen2 --page 12
-
-# Xuat PDF
-python tools/visualize_labels.py Data/prepared/CacThanhTruyen2 --pdf output.pdf
+./push.sh "noi dung commit"
 ```
 
 ---
@@ -371,7 +320,8 @@ python tools/visualize_labels.py Data/prepared/CacThanhTruyen2 --pdf output.pdf
 | Can chinh | Levenshtein DP (variable deletion cost) |
 | Tra tu dien | Song huong QN↔Nom + Fuzzy matching |
 | Chu tuong tu | SinoNom_Similar_Dic |
-| So khop anh | DINOv2 ViT-S/14 cosine similarity |
+| Sinh anh tham chieu | FontDiffuser (NomNaTong style transfer) tren Kaggle T4 |
+| So khop anh | DINOv2 ViT-B/14 + registers, cosine similarity |
 | Xuat dataset | Merge + Quality filter + Class map |
 
 ---

@@ -129,19 +129,38 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
         ckpt = paths.get("fontdiffusion_ckpt")
         phase1_ckpt = paths.get("fontdiffusion_phase1_ckpt")
 
-        # Load pre-generated cache from disk
-        cache_base = data_dir / "fd_cache"
-        if cache_base.exists():
-            for png in cache_base.rglob("U+*.png"):
+        # Load pre-generated caches from disk.
+        # 1) Universal cache — produced once on Kaggle for the full NomNaTong
+        #    universe (~21k chars), shared by every book.
+        # 2) Per-book cache — local override, e.g. when fd_cache_universal is
+        #    missing a char or a per-book style is preferred.
+        universal_cache = Path(
+            paths.get("fd_cache_universal", "prepared/_universal_fd_cache")
+        )
+        if universal_cache.exists():
+            for png in universal_cache.rglob("U+*.png"):
                 hex_str = png.stem.replace("U+", "")
                 try:
                     char = chr(int(hex_str, 16))
                     fd_cache[char] = str(png)
                 except ValueError:
                     pass
+            if verbose and fd_cache:
+                print(f"    FontDiffusion universal cache: {len(fd_cache)} images")
 
-        if verbose and fd_cache:
-            print(f"    FontDiffusion cache: {len(fd_cache)} images loaded from disk")
+        cache_base = data_dir / "fd_cache"
+        if cache_base.exists():
+            local_added = 0
+            for png in cache_base.rglob("U+*.png"):
+                hex_str = png.stem.replace("U+", "")
+                try:
+                    char = chr(int(hex_str, 16))
+                    fd_cache[char] = str(png)  # per-book overrides universal
+                    local_added += 1
+                except ValueError:
+                    pass
+            if verbose and local_added:
+                print(f"    FontDiffusion per-book cache: +{local_added} overrides")
 
         # Determine which chars still need generation
         if verbose:

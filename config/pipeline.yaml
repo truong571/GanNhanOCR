@@ -33,6 +33,9 @@ paths:
   # core/ranking/fontdiffusion_gen.py but kept for forward compatibility.
   fontdiffusion_ckpt: font_diffusion/ckpt/PROD
   fontdiffusion_phase1_ckpt: font_diffusion/ckpt/PROD
+  # Universal FontDiffusion cache produced by kaggle_diffusion/diffusion_run.ipynb
+  # (~21k NomNaTong glyphs). Pulled once with `huggingface-cli download`.
+  fd_cache_universal: prepared/_universal_fd_cache
 
 step1:
   dpi: 300

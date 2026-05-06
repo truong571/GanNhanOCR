@@ -33,8 +33,7 @@ class FontDiffusionGenerator:
         self.phase1_ckpt_dir = phase1_ckpt_dir
         self.font_path = font_path
         self.batch_size = batch_size
-        self.cache_dir = Path(cache_dir)
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.cache_dir = cache_dir  # uses property setter below — coerces to Path
 
         if device is None:
             if torch.cuda.is_available():
@@ -49,6 +48,17 @@ class FontDiffusionGenerator:
         self.font_manager = None
         self.args = None
         self._loaded = False
+
+    @property
+    def cache_dir(self) -> Path:
+        return self._cache_dir
+
+    @cache_dir.setter
+    def cache_dir(self, value) -> None:
+        # Coerce any input (str, Path, …) to Path so / operator always works,
+        # regardless of whether callers reassign with a string later.
+        self._cache_dir = Path(value)
+        self._cache_dir.mkdir(parents=True, exist_ok=True)
 
     def _build_args(self) -> Namespace:
         """Build args namespace from FontDiffusion's own parser defaults."""

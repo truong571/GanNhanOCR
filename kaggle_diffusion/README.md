@@ -11,7 +11,7 @@ re-generation; the pipeline pulls images from this cache directly.
 kaggle_diffusion/
 ├── README.md                         (this file)
 ├── build_char_universe.py            run on Mac → produces exports/
-├── generate_universal_fd_cache.ipynb run on Kaggle (P100 GPU, ~6-8 h)
+├── generate_universal_fd_cache.ipynb run on Kaggle (T4 GPU, ~10-12 h)
 ├── exports/
 │   ├── char_universe.txt             21,837 chars, one per line
 │   └── char_universe.json            block distribution metadata
@@ -55,7 +55,7 @@ kaggle_diffusion/
 
 1. Open https://www.kaggle.com/code → New Notebook
 2. File → Import notebook → upload `generate_universal_fd_cache.ipynb`
-3. Settings → Accelerator → **GPU P100** (much faster than T4)
+3. Settings → Accelerator → **GPU T4 x2** (Kaggle's PyTorch 2.10 dropped Pascal P100 support — T4 sm_75 is the only fully-compatible Kaggle GPU as of 2026)
 4. Settings → Internet → On
 5. `HF_REPO` is already set to `mdnt571/gannhanocr-universal-fd-cache` in cell 2 — change if you want a different repo name
 6. Run all cells
@@ -112,7 +112,7 @@ The universal cache covers any chu-Nom char in any Nom manuscript.
 - **21,837** = NomNaTong glyph count ∩ CJK Unified/Compat/Ext A-F. Excludes
   PUA, ASCII, symbols.
 - **~1.5 GB final size** = 21,837 PNGs at 256×256 grayscale, ~70 KB each.
-- **~6-8 h on P100** = 21,837 chars at ~1 s/char average. The first batch is
+- **~10-12 h on T4** = 21,837 chars at ~1.7 s/char average. The first batch is
   slower (model warm-up), later batches stabilise around 0.7-1 s.
 
 ## Choosing a different style

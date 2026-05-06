@@ -57,7 +57,7 @@ kaggle_diffusion/
 2. File → Import notebook → upload `generate_universal_fd_cache.ipynb`
 3. Settings → Accelerator → **GPU P100** (much faster than T4)
 4. Settings → Internet → On
-5. Edit cell 2's `HF_REPO` to your repo (e.g. `truongmdn/gannhanocr-universal-fd-cache`)
+5. `HF_REPO` is already set to `mdnt571/gannhanocr-universal-fd-cache` in cell 2 — change if you want a different repo name
 6. Run all cells
 
 What happens:
@@ -79,7 +79,7 @@ it left off.
 
 ```sh
 cd /path/to/GanNhanOCR
-huggingface-cli download truongmdn/gannhanocr-universal-fd-cache \
+huggingface-cli download mdnt571/gannhanocr-universal-fd-cache \
     --repo-type=dataset \
     --local-dir prepared/_universal_fd_cache/
 

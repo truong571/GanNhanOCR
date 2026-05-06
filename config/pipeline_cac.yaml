@@ -1,0 +1,49 @@
+# Pipeline config — fresh run for the 3 Cac* books only.
+# Used as a one-off to verify the FontDiffusion checkpoint fix end-to-end.
+
+books:
+  - name: CacThanhTruyen2
+    pdf: Data/CacThanhTruyen2.pdf
+    reocr: false
+  - name: CacThanhTruyen4
+    pdf: Data/CacThanhTruyen4.pdf
+    reocr: false
+  - name: CacThanhTruyen11
+    pdf: Data/CacThanhTruyen11.pdf
+    reocr: false
+
+paths:
+  data_dir: prepared
+  output_dir: dataset
+  dict_dir: Dict
+  qn_to_nom_dict: Dict/QuocNgu_SinoNom_TongHop3.csv
+  similar_dict: Dict/SinoNom_Similar_Dic_v2.csv
+  font_path: font_diffusion/fonts/NomNaTong-Regular.ttf
+  fontdiffusion_ckpt: font_diffusion/ckpt/PROD
+  fontdiffusion_phase1_ckpt: font_diffusion/ckpt/PROD
+
+step1:
+  dpi: 300
+  denoise: true
+  crop_size: 64
+  sauvola_k: 0.2
+  sauvola_window: 25
+  min_stroke: 2
+  use_ocr_api: true
+
+step2:
+  deletion_cost_small: 0.3
+  deletion_cost_medium: 0.6
+  deletion_cost_normal: 1.2
+  insertion_cost: 1.0
+
+step3:
+  use_dinov2: true
+  dinov2_model: dinov2_vitb14_reg
+  dinov2_threshold: 0.75
+  classical_threshold: 0.55
+  use_fontdiffusion: true
+  require_fontdiffusion: true
+
+step4:
+  min_samples_per_class: 1

@@ -5,9 +5,6 @@ __pycache__/
 .DS_Store
 .claude/
 *.log
-
-# Binary blobs — never commit (sync via HF Hub / Kaggle Datasets instead).
-# push.sh has a runtime safety net that rejects these even if forced.
 *.png
 *.xlsx
 *.pdf

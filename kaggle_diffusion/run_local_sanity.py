@@ -32,14 +32,14 @@ from core.ranking.fontdiffusion_gen import FontDiffusionGenerator
 
 # ─── Tuned defaults (match diffusion_run.ipynb cell 7.5) ─────────────────────
 HF_REPO = "dzungpham/font-diffusion-weights"
-STYLE_BOOK = "SachThanhTruyen2"
+STYLE_NAME_ID = "medoid"  # produced by kaggle_diffusion/build_style_medoid.py
 GUIDANCE_SCALE = 2.0
 ERODE_ITERS = 2
 TEST_CHARS = ["一", "二", "三", "人", "月"]
 
 CKPT_DIR = PROJECT_ROOT / "font_diffusion" / "ckpt" / "PROD"
 FONT_PATH = PROJECT_ROOT / "font_diffusion" / "fonts" / "NomNaTong-Regular.ttf"
-STYLE_PATH = PROJECT_ROOT / "kaggle_diffusion" / "style_references" / f"{STYLE_BOOK}.png"
+STYLE_PATH = PROJECT_ROOT / "kaggle_diffusion" / "style_references" / f"{STYLE_NAME_ID}.png"
 OUT_DIR = PROJECT_ROOT / "kaggle_diffusion" / "sanity_test_output"
 
 

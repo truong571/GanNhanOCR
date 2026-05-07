@@ -51,6 +51,10 @@ step2:
   deletion_cost_medium: 0.6
   deletion_cost_normal: 1.2
   insertion_cost: 1.0
+  # Expand each char bbox by this fraction of (w, h) on each side before cropping,
+  # so the saved PNG captures the full glyph (descenders, top diacritics, side
+  # radicals) even at the cost of a sliver of neighbour ink.
+  crop_pad_frac: 0.18
 
 step3:
   use_dinov2: true

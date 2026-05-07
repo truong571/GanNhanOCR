@@ -120,6 +120,7 @@ def process_page(
     data_dir: Path,
     qn_to_nom: dict,
     step1_cfg: dict,
+    step2_cfg: dict | None = None,
     verbose: bool = False,
 ) -> tuple[list[dict], dict]:
     """Full pipeline for one page: align using OCR bbox → crop from original.
@@ -260,9 +261,24 @@ def process_page(
             "chars": [],
         }
 
+        pad_frac = (step2_cfg or {}).get("crop_pad_frac", 0.0)
+        H_img, W_img = gray_img.shape
+
         for char_idx, char_info in enumerate(matched_chars):
             bbox = char_info["bbox"]
             cx1, cy1, cx2, cy2 = bbox
+
+            # Expand bbox so the full glyph is captured (descenders / diacritics /
+            # side radicals). May overlap neighbours — accepted trade-off.
+            if pad_frac > 0.0:
+                w = cx2 - cx1
+                h = cy2 - cy1
+                px = int(round(w * pad_frac))
+                py = int(round(h * pad_frac))
+                cx1 = max(0, cx1 - px)
+                cy1 = max(0, cy1 - py)
+                cx2 = min(W_img, cx2 + px)
+                cy2 = min(H_img, cy2 + py)
 
             crop_file = f"crops/{page_name}/col{col_num:02d}_char{char_idx:03d}.png"
             cleaned_file = f"crops_cleaned/{page_name}/col{col_num:02d}_char{char_idx:03d}.png"
@@ -333,6 +349,7 @@ def align_book(config: dict, book_name: str, verbose: bool = True):
     """Run align + crop for all pages of a book."""
     paths = config["paths"]
     step1_cfg = config.get("step1", {})
+    step2_cfg = config.get("step2", {})
     data_dir = Path(paths["data_dir"]) / book_name
 
     qn_to_nom = load_qn_to_nom(paths["qn_to_nom_dict"])
@@ -360,7 +377,7 @@ def align_book(config: dict, book_name: str, verbose: bool = True):
         page_name = trans_path.stem
 
         alignment, stats = process_page(
-            page_name, data_dir, qn_to_nom, step1_cfg, verbose=verbose,
+            page_name, data_dir, qn_to_nom, step1_cfg, step2_cfg, verbose=verbose,
         )
 
         if not alignment:

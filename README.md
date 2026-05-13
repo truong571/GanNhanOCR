@@ -70,39 +70,32 @@ source .venv/bin/activate
 
 Tao file `.env` tai thu muc goc. Co 2 cach cau hinh OCR token:
 
-**Cach 1 — Auto-refresh (khuyen nghi)**
+**Cach 1 — Auto-login (khuyen nghi)**
 
-Code se tu refresh `idToken` qua Firebase Secure Token API moi khi sap het han.
-Chi can lay 2 gia tri 1 lan duy nhat, sau do pipeline chay mai khong can thao tac tay.
+Code se tu POST email/password den `/account/login` cua HCMUS moi khi
+cache idToken con <5 phut, lay token moi (60 min TTL). Pipeline chay mai
+khong can thao tac tay.
 
 ```
-SN_OCR_REFRESH_TOKEN=AMf-vBy...    # refresh_token (vinh vien)
-SN_OCR_FIREBASE_API_KEY=AIzaSy...  # Web API key cua project clc-ham-non
+SN_OCR_USERNAME=your_email@example.com   # tai khoan dang ky tools.clc.hcmus.edu.vn
+SN_OCR_PASSWORD=your_password
 ```
 
-**Lay 2 gia tri tu DevTools:**
-
-1. Mo `https://tools.clc.hcmus.edu.vn` (hoac `https://kimhannom.fit.hcmus.edu.vn`),
-   dang nhap voi account cua ban.
-2. Mo **DevTools** (F12) -> tab **Application** (Chrome) hoac **Storage** (Firefox).
-3. **Local Storage** -> chon domain -> tim key bat dau bang `firebase:authUser:`.
-   Click vao do, JSON co cac field:
-   - `stsTokenManager.refreshToken` -> `SN_OCR_REFRESH_TOKEN`
-   - `apiKey` -> `SN_OCR_FIREBASE_API_KEY` (bat dau bang `AIzaSy`)
-4. Paste 2 chuoi do vao `.env`.
-
-`apiKey` la public (Google design cho client-side), khong phai secret.
-`refreshToken` la secret — neu lo, attacker co the gen idToken mai mai.
+Vi sao khong dung Firebase refresh_token? HCMUS dat Firebase API key o
+server-side (khong lo cho client) nen khong the goi `securetoken.googleapis.com`
+truc tiep. Auto-login don gian va hieu qua hon — co the goi /account/login
+bat ky luc nao de lay token moi.
 
 **Cach 2 — Manual token (rotate moi 1 gio)**
 
-Neu khong muon setup auto-refresh, paste idToken thu cong:
+Neu khong muon luu password trong `.env`, paste idToken thu cong:
 
 ```
 SN_OCR_TOKEN=eyJhbGciOiJSUzI1NiIs...  # Firebase ID token, het han sau 1h
 ```
 
-Sau 1 gio phai mo DevTools lay token moi.
+Lay tu DevTools: F12 -> Storage -> Cookies -> `tools.clc.hcmus.edu.vn` ->
+chon cookie `token` -> copy full value. Sau 1 gio phai lay lai.
 
 **Check trang thai token:**
 
@@ -110,10 +103,10 @@ Sau 1 gio phai mo DevTools lay token moi.
 python3 scripts/check_ocr_token.py
 ```
 
-In ra `idToken` con bao lau, auto-refresh co dang active khong.
+In ra `idToken` con bao lau, auto-login co dang active khong.
 
 **Doi domain:** them `SN_DOMAIN=domain.khac.vn` vao `.env`.
-API mac dinh: `https://kimhannom.fit.hcmus.edu.vn`.
+API mac dinh: `https://tools.clc.hcmus.edu.vn`.
 
 ---
 

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Check current OCR token state — manual or auto-refresh.
+"""Check current OCR token state — auto-login or manual.
 
 Usage:
     python3 scripts/check_ocr_token.py
 
 Reads .env, reports:
-  • Which auth method is configured (refresh vs manual)
+  • Which auth method is configured (auto-login vs manual)
   • If manual: TTL remaining
-  • If refresh: triggers a refresh + reports new TTL
+  • If auto-login: triggers a login + reports new TTL
 """
 import base64
 import json
@@ -44,8 +44,8 @@ def decode_jwt_exp(token: str) -> float:
         return 0.0
 
 
-refresh_token = os.environ.get("SN_OCR_REFRESH_TOKEN", "").strip()
-api_key = os.environ.get("SN_OCR_FIREBASE_API_KEY", "").strip()
+username = os.environ.get("SN_OCR_USERNAME", "").strip()
+password = os.environ.get("SN_OCR_PASSWORD", "").strip()
 manual_token = os.environ.get("SN_OCR_TOKEN", "").strip()
 
 print("=" * 60)
@@ -67,45 +67,45 @@ if manual_token:
 else:
     print(f"    (not set)")
 
-# Auto-refresh state
-print("\n[2] Auto-refresh (SN_OCR_REFRESH_TOKEN + SN_OCR_FIREBASE_API_KEY)")
-if refresh_token and api_key:
-    print(f"    SN_OCR_REFRESH_TOKEN:    set (length={len(refresh_token)})")
-    print(f"    SN_OCR_FIREBASE_API_KEY: set (prefix={api_key[:8]}...)")
-    print(f"\n    → Test refresh call...")
+# Auto-login state
+print("\n[2] Auto-login (SN_OCR_USERNAME + SN_OCR_PASSWORD)")
+if username and password:
+    print(f"    SN_OCR_USERNAME: {username}")
+    print(f"    SN_OCR_PASSWORD: {'•' * len(password)} (length={len(password)})")
+    print(f"\n    → Test login call...")
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    from core.ocr.ocr_api import _refresh_firebase_token
-    result = _refresh_firebase_token(refresh_token, api_key)
+    from core.ocr.ocr_api import _login_hcmus
+    result = _login_hcmus(username, password)
     if result:
         new_token, new_exp = result
         eta = new_exp - time.time()
         new_exp_dt = datetime.fromtimestamp(new_exp, timezone.utc).astimezone()
-        print(f"    ✓ Refresh thành công")
+        print(f"    ✓ Login thành công")
         print(f"    New idToken length: {len(new_token)}")
         print(f"    Hết hạn:            {new_exp_dt.isoformat()}")
         print(f"    Còn:                {fmt_eta(eta)}")
-        print(f"\n    Auto-refresh sẽ tự gọi mỗi khi cache token còn <5 phút.")
-        print(f"    Refresh token vĩnh viễn (đến khi anh đổi password / logout).")
+        print(f"\n    Auto-login sẽ tự chạy mỗi khi cache token còn <5 phút.")
+        print(f"    Password vĩnh viễn (đến khi anh đổi password / disable account).")
     else:
-        print(f"    ✗ Refresh thất bại (xem stderr ở trên)")
+        print(f"    ✗ Login thất bại (xem stderr ở trên)")
 else:
-    if not refresh_token:
-        print(f"    SN_OCR_REFRESH_TOKEN:    (not set)")
-    if not api_key:
-        print(f"    SN_OCR_FIREBASE_API_KEY: (not set)")
-    print(f"\n    → Chưa setup auto-refresh. Xem README để biết cách lấy.")
+    if not username:
+        print(f"    SN_OCR_USERNAME: (not set)")
+    if not password:
+        print(f"    SN_OCR_PASSWORD: (not set)")
+    print(f"\n    → Chưa setup auto-login. Xem README.")
 
 # Recommendation
 print("\n" + "=" * 60)
-if refresh_token and api_key:
-    print("✓ Auto-refresh đang active — pipeline chạy mãi không cần thao tác tay.")
+if username and password:
+    print("✓ Auto-login đang active — pipeline chạy mãi không cần thao tác tay.")
 elif manual_token:
     eta = decode_jwt_exp(manual_token) - time.time()
     if eta > 0:
         print(f"⚠️  Đang dùng manual token. Hết hạn trong {fmt_eta(eta)}.")
-        print(f"    → Setup auto-refresh để không phải rotate mỗi giờ.")
+        print(f"    → Setup auto-login để không phải rotate mỗi giờ.")
     else:
-        print("✗ Manual token đã hết hạn. Rotate hoặc setup auto-refresh.")
+        print("✗ Manual token đã hết hạn. Rotate hoặc setup auto-login.")
 else:
     print("✗ Chưa có token nào. OCR sẽ fail.")
 print("=" * 60)

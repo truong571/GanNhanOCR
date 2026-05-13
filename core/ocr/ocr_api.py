@@ -47,28 +47,41 @@ def _jwt_exp(token: str) -> float:
         return 0.0
 
 
-def _refresh_firebase_token(refresh_token: str, api_key: str) -> tuple[str, float] | None:
-    """Exchange a Firebase refresh_token for a fresh idToken via Google Secure Token API.
+def _login_hcmus(username: str, password: str) -> tuple[str, float] | None:
+    """POST email/password to https://<SN_DOMAIN>/account/login.
 
-    Returns (id_token, exp_epoch_seconds) on success, None on failure.
-    The refresh_token itself is long-lived (until user revokes / changes password).
+    HCMUS backend handles Firebase auth server-side and sets `token` cookie
+    with a fresh 1-hour idToken. Returns (id_token, exp_epoch_seconds) on
+    success, None on failure.
     """
-    url = f"https://securetoken.googleapis.com/v1/token?key={api_key}"
+    url = f"https://{_SN_DOMAIN}/account/login"
     try:
-        resp = requests.post(
+        session = requests.Session()
+        # Browser-like headers — server blocks default `python-requests` UA with 403
+        session.post(
             url,
-            data={"grant_type": "refresh_token", "refresh_token": refresh_token},
-            timeout=10,
+            data={"UserName": username, "Password": password},
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": "Mozilla/5.0",
+                "Referer": url,
+                "Origin": f"https://{_SN_DOMAIN}",
+            },
+            verify=False,
+            timeout=15,
+            allow_redirects=True,
         )
-        resp.raise_for_status()
-        data = resp.json()
-        id_token = data.get("id_token") or data.get("access_token", "")
-        if not id_token:
+        token = session.cookies.get("token", "")
+        if not token:
+            print("[OCR] Auto-login failed: no `token` cookie in response", file=sys.stderr)
             return None
-        ttl = int(data.get("expires_in", 3600))
-        return id_token, time.time() + ttl
+        exp = _jwt_exp(token)
+        if not exp:
+            print("[OCR] Auto-login: token returned but JWT not parseable", file=sys.stderr)
+            exp = time.time() + 3600   # fallback 1h
+        return token, exp
     except Exception as e:
-        print(f"[OCR] Token refresh failed: {type(e).__name__}: {e}", file=sys.stderr)
+        print(f"[OCR] Auto-login error: {type(e).__name__}: {e}", file=sys.stderr)
         return None
 
 
@@ -77,8 +90,11 @@ def _get_ocr_token() -> str:
 
     Resolution order:
       1. Cached token (if still valid for >5 min).
-      2. Auto-refresh via `SN_OCR_REFRESH_TOKEN` + `SN_OCR_FIREBASE_API_KEY`.
-      3. Fallback to manual `SN_OCR_TOKEN` (expires in 1h, must rotate by hand).
+      2. Auto-login via `SN_OCR_USERNAME` + `SN_OCR_PASSWORD` (POSTs to
+         /account/login, extracts fresh idToken from `token` cookie).
+         HCMUS doesn't expose Firebase API key, so re-login is the only
+         way to get a fresh token from script.
+      3. Fallback to manual `SN_OCR_TOKEN` (expires in 1h, rotate by hand).
     """
     now = time.time()
 
@@ -88,18 +104,18 @@ def _get_ocr_token() -> str:
     if cached_token and cached_exp > now + 300:
         return str(cached_token)
 
-    # 2. Auto-refresh path
-    refresh_token = os.environ.get("SN_OCR_REFRESH_TOKEN", "").strip()
-    api_key = os.environ.get("SN_OCR_FIREBASE_API_KEY", "").strip()
-    if refresh_token and api_key:
-        result = _refresh_firebase_token(refresh_token, api_key)
+    # 2. Auto-login path
+    username = os.environ.get("SN_OCR_USERNAME", "").strip()
+    password = os.environ.get("SN_OCR_PASSWORD", "").strip()
+    if username and password:
+        result = _login_hcmus(username, password)
         if result:
             new_token, new_exp = result
             _token_cache["token"] = new_token
             _token_cache["exp"] = new_exp
             ttl_min = (new_exp - now) / 60
             print(
-                f"[OCR] Auto-refreshed idToken (valid {ttl_min:.0f} min)",
+                f"[OCR] Auto-login OK (token valid {ttl_min:.0f} min)",
                 file=sys.stderr,
             )
             return new_token
@@ -111,8 +127,7 @@ def _get_ocr_token() -> str:
         if exp and exp < now:
             print(
                 f"[OCR] WARNING: SN_OCR_TOKEN expired {(now - exp) / 60:.0f} min ago. "
-                f"Either rotate it manually OR set SN_OCR_REFRESH_TOKEN + "
-                f"SN_OCR_FIREBASE_API_KEY for auto-refresh.",
+                f"Set SN_OCR_USERNAME + SN_OCR_PASSWORD for auto-login.",
                 file=sys.stderr,
             )
         _token_cache["token"] = manual_token
@@ -121,8 +136,8 @@ def _get_ocr_token() -> str:
 
     print(
         "[OCR] ERROR: No OCR token. Set one of:\n"
-        "  • SN_OCR_REFRESH_TOKEN + SN_OCR_FIREBASE_API_KEY  (recommended; auto-refresh)\n"
-        "  • SN_OCR_TOKEN                                     (manual, 1h TTL)",
+        "  • SN_OCR_USERNAME + SN_OCR_PASSWORD  (recommended; auto-login each hour)\n"
+        "  • SN_OCR_TOKEN                       (manual, 1h TTL)",
         file=sys.stderr,
     )
     return ""

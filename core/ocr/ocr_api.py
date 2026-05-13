@@ -1,9 +1,11 @@
 """OCR API clients: HCMUS SinoNom OCR (kimhannom.fit.hcmus.edu.vn)."""
 
+import base64
 import hashlib
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 import requests
@@ -11,8 +13,8 @@ import urllib3
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Auto-load .env file if exists
-_env_path = Path(__file__).parent.parent / ".env"
+# Auto-load .env from project root (3 levels up: core/ocr/ocr_api.py → repo root)
+_env_path = Path(__file__).resolve().parent.parent.parent / ".env"
 if _env_path.exists():
     with open(_env_path) as _f:
         for _line in _f:
@@ -29,17 +31,101 @@ if _env_path.exists():
 
 _SN_DOMAIN = os.environ.get("SN_DOMAIN", "kimhannom.fit.hcmus.edu.vn")
 
+# In-memory cache for refreshed Firebase ID token (idToken lives 1h).
+# {'token': <jwt>, 'exp': <epoch_seconds>}
+_token_cache: dict[str, object] = {"token": "", "exp": 0.0}
+
+
+def _jwt_exp(token: str) -> float:
+    """Decode JWT payload's exp claim (epoch seconds). Returns 0.0 if not parseable."""
+    try:
+        payload = token.split(".")[1]
+        payload += "=" * (-len(payload) % 4)
+        data = json.loads(base64.urlsafe_b64decode(payload))
+        return float(data.get("exp", 0))
+    except Exception:
+        return 0.0
+
+
+def _refresh_firebase_token(refresh_token: str, api_key: str) -> tuple[str, float] | None:
+    """Exchange a Firebase refresh_token for a fresh idToken via Google Secure Token API.
+
+    Returns (id_token, exp_epoch_seconds) on success, None on failure.
+    The refresh_token itself is long-lived (until user revokes / changes password).
+    """
+    url = f"https://securetoken.googleapis.com/v1/token?key={api_key}"
+    try:
+        resp = requests.post(
+            url,
+            data={"grant_type": "refresh_token", "refresh_token": refresh_token},
+            timeout=10,
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        id_token = data.get("id_token") or data.get("access_token", "")
+        if not id_token:
+            return None
+        ttl = int(data.get("expires_in", 3600))
+        return id_token, time.time() + ttl
+    except Exception as e:
+        print(f"[OCR] Token refresh failed: {type(e).__name__}: {e}", file=sys.stderr)
+        return None
+
 
 def _get_ocr_token() -> str:
-    """Get OCR token from environment variable."""
-    token = os.environ.get("SN_OCR_TOKEN", "")
-    if not token:
-        print(
-            "[OCR] WARNING: SN_OCR_TOKEN not set. "
-            'Set it via: export SN_OCR_TOKEN="<your_token>"',
-            file=sys.stderr,
-        )
-    return token
+    """Return a valid Firebase ID token for the HCMUS OCR API.
+
+    Resolution order:
+      1. Cached token (if still valid for >5 min).
+      2. Auto-refresh via `SN_OCR_REFRESH_TOKEN` + `SN_OCR_FIREBASE_API_KEY`.
+      3. Fallback to manual `SN_OCR_TOKEN` (expires in 1h, must rotate by hand).
+    """
+    now = time.time()
+
+    # 1. Cache hit (with 5-min safety margin)
+    cached_token = _token_cache.get("token", "")
+    cached_exp = float(_token_cache.get("exp", 0.0) or 0.0)
+    if cached_token and cached_exp > now + 300:
+        return str(cached_token)
+
+    # 2. Auto-refresh path
+    refresh_token = os.environ.get("SN_OCR_REFRESH_TOKEN", "").strip()
+    api_key = os.environ.get("SN_OCR_FIREBASE_API_KEY", "").strip()
+    if refresh_token and api_key:
+        result = _refresh_firebase_token(refresh_token, api_key)
+        if result:
+            new_token, new_exp = result
+            _token_cache["token"] = new_token
+            _token_cache["exp"] = new_exp
+            ttl_min = (new_exp - now) / 60
+            print(
+                f"[OCR] Auto-refreshed idToken (valid {ttl_min:.0f} min)",
+                file=sys.stderr,
+            )
+            return new_token
+
+    # 3. Fallback to manual token
+    manual_token = os.environ.get("SN_OCR_TOKEN", "").strip()
+    if manual_token:
+        exp = _jwt_exp(manual_token)
+        if exp and exp < now:
+            print(
+                f"[OCR] WARNING: SN_OCR_TOKEN expired {(now - exp) / 60:.0f} min ago. "
+                f"Either rotate it manually OR set SN_OCR_REFRESH_TOKEN + "
+                f"SN_OCR_FIREBASE_API_KEY for auto-refresh.",
+                file=sys.stderr,
+            )
+        _token_cache["token"] = manual_token
+        _token_cache["exp"] = exp
+        return manual_token
+
+    print(
+        "[OCR] ERROR: No OCR token. Set one of:\n"
+        "  • SN_OCR_REFRESH_TOKEN + SN_OCR_FIREBASE_API_KEY  (recommended; auto-refresh)\n"
+        "  • SN_OCR_TOKEN                                     (manual, 1h TTL)",
+        file=sys.stderr,
+    )
+    return ""
 
 
 def upload_image(image_path: str) -> str | None:

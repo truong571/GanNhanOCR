@@ -68,14 +68,52 @@ source .venv/bin/activate
 
 ### Cau hinh API
 
-Tao file `.env` tai thu muc goc:
+Tao file `.env` tai thu muc goc. Co 2 cach cau hinh OCR token:
+
+**Cach 1 — Auto-refresh (khuyen nghi)**
+
+Code se tu refresh `idToken` qua Firebase Secure Token API moi khi sap het han.
+Chi can lay 2 gia tri 1 lan duy nhat, sau do pipeline chay mai khong can thao tac tay.
 
 ```
-SN_OCR_TOKEN=<token_cua_ban>
+SN_OCR_REFRESH_TOKEN=AMf-vBy...    # refresh_token (vinh vien)
+SN_OCR_FIREBASE_API_KEY=AIzaSy...  # Web API key cua project clc-ham-non
 ```
 
-API mac dinh: `https://kimhannom.fit.hcmus.edu.vn`
-Doi domain: them `SN_DOMAIN=domain.khac.vn` vao `.env`.
+**Lay 2 gia tri tu DevTools:**
+
+1. Mo `https://tools.clc.hcmus.edu.vn` (hoac `https://kimhannom.fit.hcmus.edu.vn`),
+   dang nhap voi account cua ban.
+2. Mo **DevTools** (F12) -> tab **Application** (Chrome) hoac **Storage** (Firefox).
+3. **Local Storage** -> chon domain -> tim key bat dau bang `firebase:authUser:`.
+   Click vao do, JSON co cac field:
+   - `stsTokenManager.refreshToken` -> `SN_OCR_REFRESH_TOKEN`
+   - `apiKey` -> `SN_OCR_FIREBASE_API_KEY` (bat dau bang `AIzaSy`)
+4. Paste 2 chuoi do vao `.env`.
+
+`apiKey` la public (Google design cho client-side), khong phai secret.
+`refreshToken` la secret — neu lo, attacker co the gen idToken mai mai.
+
+**Cach 2 — Manual token (rotate moi 1 gio)**
+
+Neu khong muon setup auto-refresh, paste idToken thu cong:
+
+```
+SN_OCR_TOKEN=eyJhbGciOiJSUzI1NiIs...  # Firebase ID token, het han sau 1h
+```
+
+Sau 1 gio phai mo DevTools lay token moi.
+
+**Check trang thai token:**
+
+```sh
+python3 scripts/check_ocr_token.py
+```
+
+In ra `idToken` con bao lau, auto-refresh co dang active khong.
+
+**Doi domain:** them `SN_DOMAIN=domain.khac.vn` vao `.env`.
+API mac dinh: `https://kimhannom.fit.hcmus.edu.vn`.
 
 ---
 

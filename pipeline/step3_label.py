@@ -97,12 +97,18 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
         print(f"    QN->Nom: {len(qn_to_nom)} entries")
         print(f"    Similar: {len(similar_dict)} entries")
 
-    # Optional: DINOv2 ranker
+    # Optional: DINOv2 ranker with persistent on-disk embedding cache.
+    # Cache lives under prepared/_dinov2_cache/ — shared across books so the
+    # 22k fd_cache embeddings only get computed once.
     dinov2 = None
     if step3_cfg.get("use_dinov2", False):
         font_path = paths.get("font_path")
         dinov2_model = step3_cfg.get("dinov2_model", "dinov2_vitb14_reg")
-        dinov2 = get_dinov2_ranker(font_path, model_name=dinov2_model)
+        emb_cache_dir = str(Path(paths["data_dir"]) / "_dinov2_cache")
+        dinov2 = get_dinov2_ranker(
+            font_path, model_name=dinov2_model,
+            embedding_cache_dir=emb_cache_dir,
+        )
         if dinov2 and verbose:
             print("    DINOv2 ranker loaded.")
 
@@ -172,6 +178,17 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
         if verbose:
             print(f"    Found {len(tier3_chars)} unique chars needing tier 3")
             print(f"    FontDiffusion cache missing: {len(missing_chars)} chars")
+
+        # If config says skip_local_fd_gen → never generate FD images locally.
+        # Missing chars will simply have no Tier-3 candidate; alignment falls
+        # to Tier 2 or unmatched. Recommended on Mac CPU (FD gen ~7s/img is a
+        # real bottleneck) — offload to Kaggle GPU instead.
+        skip_local_gen = step3_cfg.get("skip_local_fd_gen", False)
+        if skip_local_gen and missing_chars:
+            if verbose:
+                print(f"    [skip_local_fd_gen] NOT generating {len(missing_chars)} "
+                      f"missing FD images locally — generate on Kaggle later.")
+            missing_chars = []
 
         ckpt_ok = ckpt and Path(ckpt).exists()
         if ckpt_ok:
@@ -379,6 +396,13 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
     }
     with open(labeled_dir / "summary.json", "w", encoding="utf-8") as f:
         json.dump(summary, f, ensure_ascii=False, indent=2)
+
+    # Persist DINOv2 embeddings — next book / next run skips re-embedding.
+    if dinov2 is not None and hasattr(dinov2, "save_cache"):
+        try:
+            dinov2.save_cache()
+        except Exception as e:
+            print(f"  [DINOv2 cache] save failed: {e}", file=sys.stderr)
 
     if verbose:
         print(f"\n  Summary:")

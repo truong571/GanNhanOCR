@@ -36,7 +36,7 @@ PDF sach co (Han Nom + Quoc Ngu)
 [`kaggle_diffusion/diffusion_run.ipynb`](kaggle_diffusion/diffusion_run.ipynb)
 de tao **universal cache** ~21,837 ky tu chu Nom (toan bo CJK ranges trong font
 NomNaTong). Cache nay duoc luu len HuggingFace Hub roi keo ve
-`prepared/_universal_fd_cache/`. Tat ca 6 cuon sach dung chung 1 cache nay,
+`prepared/_universal_fd_cache/`. Tat ca 3 cuon sach dung chung 1 cache nay,
 khong can sinh lai.
 
 **Nguyen tac cot loi:** `processed_image` chi dung noi bo cho OCR. Moi anh luu
@@ -130,18 +130,18 @@ Lam theo [`kaggle_diffusion/README.md`](kaggle_diffusion/README.md):
      --local-dir prepared/_universal_fd_cache/
    ```
 
-### Buoc B — Chay pipeline 6 cuon
+### Buoc B — Chay pipeline 3 cuon
 
 ```bash
-./run_pipeline.sh                    # tat ca 6 cuon, du 5 buoc 0→4
+./run_pipeline.sh                    # tat ca 3 cuon, du 5 buoc 0→4
 ```
 
 Hoac chay tung phan:
 
 ```bash
 ./run_pipeline.sh --step 1                          # chi buoc 1, tat ca sach
-./run_pipeline.sh --book CacThanhTruyen2            # 1 sach, du 5 buoc
-./run_pipeline.sh --step 3 --book CacThanhTruyen4   # buoc 3, 1 sach
+./run_pipeline.sh --book SachThanhTruyen2            # 1 sach, du 5 buoc
+./run_pipeline.sh --step 3 --book SachThanhTruyen4   # buoc 3, 1 sach
 ./run_pipeline.sh --config config/pipeline.yaml     # chi dinh config
 ```
 
@@ -149,9 +149,9 @@ Hoac goi tung step Python:
 
 ```bash
 python -m pipeline.step0_setup config/pipeline.yaml
-python -m pipeline.step1_extract config/pipeline.yaml CacThanhTruyen2
-python -m pipeline.step2_align   config/pipeline.yaml CacThanhTruyen2
-python -m pipeline.step3_label   config/pipeline.yaml CacThanhTruyen2
+python -m pipeline.step1_extract config/pipeline.yaml SachThanhTruyen2
+python -m pipeline.step2_align   config/pipeline.yaml SachThanhTruyen2
+python -m pipeline.step3_label   config/pipeline.yaml SachThanhTruyen2
 python -m pipeline.step4_export  config/pipeline.yaml
 ```
 
@@ -162,7 +162,7 @@ python -m pipeline.step4_export  config/pipeline.yaml
 ```
 GanNhanOCR/
 ├── config/
-│   └── pipeline.yaml             # Cau hinh trung tam (6 sach)
+│   └── pipeline.yaml             # Cau hinh trung tam (3 sach)
 │
 ├── core/                         # Thu vien shared (import boi pipeline/)
 │   ├── image/                    # Crop, denoise, column/char segmentation
@@ -191,11 +191,11 @@ GanNhanOCR/
 │
 ├── deep_seek-OCR/                # Nhanh nghien cuu OCR DeepSeek (chua tich hop)
 │
-├── Data/                         # PDF goc 6 cuon (KHONG commit)
+├── Data/                         # PDF goc 3 cuon (KHONG commit)
 ├── Dict/                         # Tu dien QN↔Nom + Similar dic
 ├── prepared/                     # Output trung gian (S0→S3) per-book
 │   ├── _universal_fd_cache/      # Universal FontDiffusion cache (tu Kaggle)
-│   ├── CacThanhTruyen2/
+│   ├── SachThanhTruyen2/
 │   │   ├── pages/                # Anh trang goc
 │   │   ├── pages_denoised/       # Anh khu nhieu (chi dung cho OCR)
 │   │   ├── detected/             # Crops + bbox + OCR cache
@@ -204,7 +204,7 @@ GanNhanOCR/
 │   │   └── fd_cache/             # (optional) per-book FD cache override
 │   └── ...
 ├── dataset/                      # Output cuoi cung (S4)
-│   ├── CacThanhTruyen2/
+│   ├── SachThanhTruyen2/
 │   ├── ...
 │   └── all/                      # Gop tat ca sach
 │
@@ -221,12 +221,9 @@ GanNhanOCR/
 
 ```yaml
 books:
-  - { name: CacThanhTruyen2,   pdf: Data/CacThanhTruyen2.pdf,   reocr: false }
-  - { name: CacThanhTruyen4,   pdf: Data/CacThanhTruyen4.pdf,   reocr: false }
-  - { name: CacThanhTruyen11,  pdf: Data/CacThanhTruyen11.pdf,  reocr: false }
-  - { name: SachThanhTruyen2,  pdf: Data/SachThanhTruyen2.pdf,  reocr: false }
-  - { name: SachThanhTruyen4,  pdf: Data/SachThanhTruyen4.pdf,  reocr: false }
-  - { name: SachThanhTruyen11, pdf: Data/SachThanhTruyen11.pdf, reocr: false }
+  - { name: SachThanhTruyen2,  pdf: Data/SachThanhTruyen2.pdf,  reocr: true }
+  - { name: SachThanhTruyen4,  pdf: Data/SachThanhTruyen4.pdf,  reocr: true }
+  - { name: SachThanhTruyen11, pdf: Data/SachThanhTruyen11.pdf, reocr: true }
 
 paths:
   data_dir: prepared
@@ -312,7 +309,7 @@ Khong dung confidence score. Chi co 2 trang thai.
 
 ```csv
 crop_file,nom_char,unicode,syllable,matched,tier,bbox,page,source
-crops/page_0012/col01_char000.png,經,U+7D93,kinh,True,1,"[100,200,150,260]",page_0012,CacThanhTruyen2
+crops/page_0012/col01_char000.png,經,U+7D93,kinh,True,1,"[100,200,150,260]",page_0012,SachThanhTruyen2
 ```
 
 | Truong | Mo ta |

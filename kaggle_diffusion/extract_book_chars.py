@@ -5,7 +5,7 @@ matches, collects unique chars that fall through to tier 3 (need FontDiffusion).
 
 Output (under kaggle_diffusion/exports/):
     chars_<book>.txt          one char per line
-    chars_cac_union.txt       union across the 3 Cac books (dedup)
+    chars_sach_union.txt      union across the 3 Sach books (dedup)
     book_chars_summary.json   counts and book→char mapping
 
 Run:
@@ -30,7 +30,7 @@ from core.text.dictionary import (
     load_similarity_dict,
 )
 
-BOOKS = ["CacThanhTruyen2", "CacThanhTruyen4", "CacThanhTruyen11"]
+BOOKS = ["SachThanhTruyen2", "SachThanhTruyen4", "SachThanhTruyen11"]
 OUT_DIR = PROJECT_ROOT / "kaggle_diffusion" / "exports"
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -67,7 +67,7 @@ def main() -> None:
         summary[book] = {"count": len(chars_sorted), "file": out.name}
         union.update(chars_sorted)
 
-    union_path = OUT_DIR / "chars_cac_union.txt"
+    union_path = OUT_DIR / "chars_sach_union.txt"
     union_path.write_text("\n".join(sorted(union)) + "\n", encoding="utf-8")
     print(f"\n  UNION (dedup across 3 books): {len(union):>5d} chars → {union_path.name}")
     summary["__union__"] = {"count": len(union), "file": union_path.name}

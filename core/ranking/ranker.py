@@ -205,13 +205,22 @@ def visual_similarity(crop_img: np.ndarray, rendered: np.ndarray) -> float:
 _dinov2_ranker = None
 
 
-def get_dinov2_ranker(font_path: str | None = None, model_name: str = "dinov2_vitb14_reg"):
-    """Lazy-load DINOv2 ranker singleton."""
+def get_dinov2_ranker(font_path: str | None = None,
+                      model_name: str = "dinov2_vitb14_reg",
+                      embedding_cache_dir: str | None = None):
+    """Lazy-load DINOv2 ranker singleton.
+
+    embedding_cache_dir: if given, the ranker persists crop+fd_cache embeddings
+    there so subsequent step-3 re-runs skip ~50k+22k model inferences.
+    """
     global _dinov2_ranker
     if _dinov2_ranker is None:
         try:
             from core.ranking.dinov2_ranker import DINOv2Ranker
-            _dinov2_ranker = DINOv2Ranker(font_path=font_path, model_name=model_name)
+            _dinov2_ranker = DINOv2Ranker(
+                font_path=font_path, model_name=model_name,
+                embedding_cache_dir=embedding_cache_dir,
+            )
         except Exception as e:
             print(f"[RANKER] DINOv2 not available: {e}", file=sys.stderr)
             _dinov2_ranker = False

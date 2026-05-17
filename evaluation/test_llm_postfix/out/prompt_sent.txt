@@ -1,0 +1,609 @@
+Bạn là chuyên gia ngôn ngữ tiếng Việt, am hiểu văn Công giáo thế kỷ 17-19.
+
+Nhiệm vụ: kiểm tra các cặp bigram tiếng Việt nghi ngờ là lỗi OCR.
+Với mỗi cặp, quyết định:
+  - "FIX"    : cặp WRONG đúng là lỗi → trả lại version CORRECT
+  - "KEEP"   : cặp WRONG thật ra là tiếng Việt hợp lệ → giữ nguyên
+  - "OTHER"  : cả 2 cặp đều sai, trả version đúng
+
+QUY TẮC NGHIÊM NGẶT:
+1. GIỮ NGUYÊN tên thánh, địa danh phiên âm (Pha-lan-sa, Ghê-rê, Phê-rô, I-na-xu).
+2. GIỮ NGUYÊN từ cổ Công giáo (bổn đạo, đứng tinh, vít vồ, vít vô, ấy thì).
+3. Văn TK19 dùng "chăng" (= không), "rằng" (= that), "liền" (= immediately).
+   Nhưng "răng" (= tooth), "chăng" (= perhaps), "liên" (= continuous) cũng valid.
+   PHẢI xét ngữ cảnh trước (prev word) để quyết định.
+4. Phân biệt:
+   - "nói rằng / quở rằng" — quote marker → "rằng"
+   - "đau răng / nhổ răng" — tooth → "răng"
+   - "chẳng có / chẳng phải" — negation → "chẳng"
+   - "chăng có lẽ / lẽ nào chăng" — interrogative → "chăng"
+
+Output: JSON map {id: action} với action ∈ {"FIX", "KEEP", "OTHER:correct_word"}.
+
+
+Các cặp cần kiểm tra (prev = từ đứng trước, wrong = từ nghi ngờ, suggested = từ thay thế đề xuất):
+
+{
+  "0": {
+    "prev": "Đức",
+    "wrong": "Chứa",
+    "suggested": "Chúa"
+  },
+  "1": {
+    "prev": "cho",
+    "wrong": "Đến",
+    "suggested": "đến"
+  },
+  "2": {
+    "prev": "làm",
+    "wrong": "vây",
+    "suggested": "vậy"
+  },
+  "3": {
+    "prev": "làm",
+    "wrong": "vay",
+    "suggested": "vậy"
+  },
+  "4": {
+    "prev": "làm",
+    "wrong": "Vậy",
+    "suggested": "vậy"
+  },
+  "5": {
+    "prev": "linh",
+    "wrong": "hôn",
+    "suggested": "hồn"
+  },
+  "6": {
+    "prev": "Chúa",
+    "wrong": "trời",
+    "suggested": "Trời"
+  },
+  "7": {
+    "prev": "Chúa",
+    "wrong": "Gie",
+    "suggested": "Giê"
+  },
+  "8": {
+    "prev": "sự",
+    "wrong": "ay",
+    "suggested": "ấy"
+  },
+  "9": {
+    "prev": "Trời",
+    "wrong": "chớ",
+    "suggested": "cho"
+  },
+  "10": {
+    "prev": "các",
+    "wrong": "thay",
+    "suggested": "thầy"
+  },
+  "11": {
+    "prev": "ấy",
+    "wrong": "Mà",
+    "suggested": "mà"
+  },
+  "12": {
+    "prev": "cho",
+    "wrong": "Người",
+    "suggested": "người"
+  },
+  "13": {
+    "prev": "Đức",
+    "wrong": "Chua",
+    "suggested": "Chúa"
+  },
+  "14": {
+    "prev": "Đức",
+    "wrong": "CHÚA",
+    "suggested": "Chúa"
+  },
+  "15": {
+    "prev": "Đức",
+    "wrong": "chứa",
+    "suggested": "Chúa"
+  },
+  "16": {
+    "prev": "làm",
+    "wrong": "Cho",
+    "suggested": "cho"
+  },
+  "17": {
+    "prev": "mọi",
+    "wrong": "sư",
+    "suggested": "sự"
+  },
+  "18": {
+    "prev": "ông",
+    "wrong": "THÁNH",
+    "suggested": "Thánh"
+  },
+  "19": {
+    "prev": "tên",
+    "wrong": "La",
+    "suggested": "là"
+  },
+  "20": {
+    "prev": "thì",
+    "wrong": "Người",
+    "suggested": "người"
+  },
+  "21": {
+    "prev": "thì",
+    "wrong": "ngươi",
+    "suggested": "người"
+  },
+  "22": {
+    "prev": "ở",
+    "wrong": "tren",
+    "suggested": "trên"
+  },
+  "23": {
+    "prev": "vì",
+    "wrong": "dạo",
+    "suggested": "đạo"
+  },
+  "24": {
+    "prev": "một",
+    "wrong": "lan",
+    "suggested": "lần"
+  },
+  "25": {
+    "prev": "có",
+    "wrong": "nhieu",
+    "suggested": "nhiều"
+  },
+  "26": {
+    "prev": "Thánh",
+    "wrong": "Ay",
+    "suggested": "ấy"
+  },
+  "27": {
+    "prev": "ấy",
+    "wrong": "Thì",
+    "suggested": "thì"
+  },
+  "28": {
+    "prev": "ấy",
+    "wrong": "THÌ",
+    "suggested": "thì"
+  },
+  "29": {
+    "prev": "một",
+    "wrong": "ngÀY",
+    "suggested": "ngày"
+  },
+  "30": {
+    "prev": "mà",
+    "wrong": "chẳNG",
+    "suggested": "chăng"
+  },
+  "31": {
+    "prev": "những",
+    "wrong": "kể",
+    "suggested": "kẻ"
+  },
+  "32": {
+    "prev": "chẳng",
+    "wrong": "cổ",
+    "suggested": "có"
+  },
+  "33": {
+    "prev": "người",
+    "wrong": "nư",
+    "suggested": "nữ"
+  },
+  "34": {
+    "prev": "chúa",
+    "wrong": "tròi",
+    "suggested": "Trời"
+  },
+  "35": {
+    "prev": "thì",
+    "wrong": "mời",
+    "suggested": "mới"
+  },
+  "36": {
+    "prev": "thì",
+    "wrong": "moi",
+    "suggested": "mới"
+  },
+  "37": {
+    "prev": "thì",
+    "wrong": "mỏi",
+    "suggested": "mới"
+  },
+  "38": {
+    "prev": "Giê",
+    "wrong": "sư",
+    "suggested": "su"
+  },
+  "39": {
+    "prev": "ra",
+    "wrong": "đội",
+    "suggested": "đời"
+  },
+  "40": {
+    "prev": "vì",
+    "wrong": "chung",
+    "suggested": "chưng"
+  },
+  "41": {
+    "prev": "có",
+    "wrong": "Ý",
+    "suggested": "ý"
+  },
+  "42": {
+    "prev": "làm",
+    "wrong": "Vay",
+    "suggested": "vậy"
+  },
+  "43": {
+    "prev": "chăng",
+    "wrong": "phai",
+    "suggested": "phải"
+  },
+  "44": {
+    "prev": "người",
+    "wrong": "con",
+    "suggested": "còn"
+  },
+  "45": {
+    "prev": "người",
+    "wrong": "Con",
+    "suggested": "còn"
+  },
+  "46": {
+    "prev": "những",
+    "wrong": "sư",
+    "suggested": "sự"
+  },
+  "47": {
+    "prev": "mình",
+    "wrong": "ma",
+    "suggested": "mà"
+  },
+  "48": {
+    "prev": "mà",
+    "wrong": "bỏi",
+    "suggested": "bởi"
+  },
+  "49": {
+    "prev": "sự",
+    "wrong": "gi",
+    "suggested": "gì"
+  },
+  "50": {
+    "prev": "chăng",
+    "wrong": "Có",
+    "suggested": "có"
+  },
+  "51": {
+    "prev": "đạo",
+    "wrong": "đức",
+    "suggested": "Đức"
+  },
+  "52": {
+    "prev": "phép",
+    "wrong": "Lạ",
+    "suggested": "lạ"
+  },
+  "53": {
+    "prev": "phép",
+    "wrong": "la",
+    "suggested": "lạ"
+  },
+  "54": {
+    "prev": "mà",
+    "wrong": "lam",
+    "suggested": "làm"
+  },
+  "55": {
+    "prev": "là",
+    "wrong": "ké",
+    "suggested": "kẻ"
+  },
+  "56": {
+    "prev": "chịu",
+    "wrong": "dạo",
+    "suggested": "đạo"
+  },
+  "57": {
+    "prev": "cùng",
+    "wrong": "Người",
+    "suggested": "người"
+  },
+  "58": {
+    "prev": "địa",
+    "wrong": "nguc",
+    "suggested": "ngục"
+  },
+  "59": {
+    "prev": "ri",
+    "wrong": "ở",
+    "suggested": "ô"
+  },
+  "60": {
+    "prev": "sự",
+    "wrong": "ây",
+    "suggested": "ấy"
+  },
+  "61": {
+    "prev": "bốn",
+    "wrong": "đao",
+    "suggested": "đạo"
+  },
+  "62": {
+    "prev": "cho",
+    "wrong": "Khỏi",
+    "suggested": "khỏi"
+  },
+  "63": {
+    "prev": "cho",
+    "wrong": "no",
+    "suggested": "nó"
+  },
+  "64": {
+    "prev": "cho",
+    "wrong": "nổ",
+    "suggested": "nó"
+  },
+  "65": {
+    "prev": "ấy",
+    "wrong": "ma",
+    "suggested": "mà"
+  },
+  "66": {
+    "prev": "người",
+    "wrong": "lam",
+    "suggested": "làm"
+  },
+  "67": {
+    "prev": "cho",
+    "wrong": "ke",
+    "suggested": "kẻ"
+  },
+  "68": {
+    "prev": "cho",
+    "wrong": "Kẻ",
+    "suggested": "kẻ"
+  },
+  "69": {
+    "prev": "bà",
+    "wrong": "THÁNH",
+    "suggested": "Thánh"
+  },
+  "70": {
+    "prev": "bà",
+    "wrong": "ThánH",
+    "suggested": "Thánh"
+  },
+  "71": {
+    "prev": "đến",
+    "wrong": "Ông",
+    "suggested": "ông"
+  },
+  "72": {
+    "prev": "này",
+    "wrong": "ĐƯỢC",
+    "suggested": "được"
+  },
+  "73": {
+    "prev": "Ong",
+    "wrong": "thánh",
+    "suggested": "Thánh"
+  },
+  "74": {
+    "prev": "viết",
+    "wrong": "VỒ",
+    "suggested": "vồ"
+  },
+  "75": {
+    "prev": "ngày",
+    "wrong": "Sau",
+    "suggested": "sau"
+  },
+  "76": {
+    "prev": "cho",
+    "wrong": "nen",
+    "suggested": "nên"
+  },
+  "77": {
+    "prev": "người",
+    "wrong": "chảng",
+    "suggested": "chăng"
+  },
+  "78": {
+    "prev": "người",
+    "wrong": "cháng",
+    "suggested": "chăng"
+  },
+  "79": {
+    "prev": "thì",
+    "wrong": "dậy",
+    "suggested": "dạy"
+  },
+  "80": {
+    "prev": "người",
+    "wrong": "ma",
+    "suggested": "mà"
+  },
+  "81": {
+    "prev": "Có",
+    "wrong": "mot",
+    "suggested": "một"
+  },
+  "82": {
+    "prev": "trước",
+    "wrong": "mất",
+    "suggested": "mặt"
+  },
+  "83": {
+    "prev": "thì",
+    "wrong": "đức",
+    "suggested": "Đức"
+  },
+  "84": {
+    "prev": "nhưng",
+    "wrong": "ma",
+    "suggested": "mà"
+  },
+  "85": {
+    "prev": "đến",
+    "wrong": "noi",
+    "suggested": "nơi"
+  },
+  "86": {
+    "prev": "Câu",
+    "wrong": "rut",
+    "suggested": "rút"
+  },
+  "87": {
+    "prev": "kẻ",
+    "wrong": "Khó",
+    "suggested": "khó"
+  },
+  "88": {
+    "prev": "vì",
+    "wrong": "đức",
+    "suggested": "Đức"
+  },
+  "89": {
+    "prev": "công",
+    "wrong": "nghiep",
+    "suggested": "nghiệp"
+  },
+  "90": {
+    "prev": "an",
+    "wrong": "ui",
+    "suggested": "ủi"
+  },
+  "91": {
+    "prev": "an",
+    "wrong": "úi",
+    "suggested": "ủi"
+  },
+  "92": {
+    "prev": "mà",
+    "wrong": "thổi",
+    "suggested": "thôi"
+  },
+  "93": {
+    "prev": "rằng",
+    "wrong": "TÔI",
+    "suggested": "Tôi"
+  },
+  "94": {
+    "prev": "rằng",
+    "wrong": "Tội",
+    "suggested": "Tôi"
+  },
+  "95": {
+    "prev": "vậy",
+    "wrong": "Thì",
+    "suggested": "thì"
+  },
+  "96": {
+    "prev": "vậy",
+    "wrong": "thí",
+    "suggested": "thì"
+  },
+  "97": {
+    "prev": "con",
+    "wrong": "mat",
+    "suggested": "mắt"
+  },
+  "98": {
+    "prev": "khóc",
+    "wrong": "loc",
+    "suggested": "lóc"
+  },
+  "99": {
+    "prev": "người",
+    "wrong": "chiu",
+    "suggested": "chịu"
+  },
+  "100": {
+    "prev": "bấy",
+    "wrong": "nhieu",
+    "suggested": "nhiêu"
+  },
+  "101": {
+    "prev": "bà",
+    "wrong": "ay",
+    "suggested": "ấy"
+  },
+  "102": {
+    "prev": "người",
+    "wrong": "thí",
+    "suggested": "thì"
+  },
+  "103": {
+    "prev": "thì",
+    "wrong": "cùng",
+    "suggested": "cũng"
+  },
+  "104": {
+    "prev": "thì",
+    "wrong": "cứng",
+    "suggested": "cũng"
+  },
+  "105": {
+    "prev": "thì",
+    "wrong": "cung",
+    "suggested": "cũng"
+  },
+  "106": {
+    "prev": "ra",
+    "wrong": "Ma",
+    "suggested": "mà"
+  },
+  "107": {
+    "prev": "Khi",
+    "wrong": "ay",
+    "suggested": "ấy"
+  },
+  "108": {
+    "prev": "thì",
+    "wrong": "Ong",
+    "suggested": "ông"
+  },
+  "109": {
+    "prev": "người",
+    "wrong": "đá",
+    "suggested": "đã"
+  },
+  "110": {
+    "prev": "ăn",
+    "wrong": "Năn",
+    "suggested": "năn"
+  },
+  "111": {
+    "prev": "Thánh",
+    "wrong": "phê",
+    "suggested": "Phê"
+  },
+  "112": {
+    "prev": "làm",
+    "wrong": "Sự",
+    "suggested": "sự"
+  },
+  "113": {
+    "prev": "làm",
+    "wrong": "khôn",
+    "suggested": "khốn"
+  },
+  "114": {
+    "prev": "chịu",
+    "wrong": "chet",
+    "suggested": "chết"
+  }
+}
+
+Trả về JSON map với key = id, value:
+  - "FIX"               : confirm suggested là đúng
+  - "KEEP"              : wrong thực ra là valid trong văn cảnh này
+  - "OTHER:abc"         : cả 2 đều sai, dùng "abc"
+
+CHỈ trả JSON, không giải thích.

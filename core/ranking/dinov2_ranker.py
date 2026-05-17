@@ -37,6 +37,7 @@ class DINOv2Ranker:
         font_path: str | None = None,
         font_size: int = 180,
         device: str | None = None,
+        embedding_cache_dir: str | None = None,
     ):
         if not HAS_TORCH:
             raise RuntimeError("PyTorch required: pip install torch torchvision")
@@ -51,6 +52,7 @@ class DINOv2Ranker:
 
         self.device = torch.device(device)
         self.font_size = font_size
+        self.model_name = model_name
 
         print(f"  Loading DINOv2 ({model_name}) on {device}...", end=" ", flush=True)
         self.model = torch.hub.load("facebookresearch/dinov2", model_name, verbose=False)
@@ -67,9 +69,48 @@ class DINOv2Ranker:
 
         self.font_path = font_path
         self._pygame_font = None
-        self._font_cache = {}
-        self._crop_cache = {}
-        self._char_cache = {}
+        self._font_cache: dict = {}
+        self._crop_cache: dict = {}
+        self._char_cache: dict = {}
+
+        # Optional persistent on-disk embedding cache. Re-runs of step 3 load
+        # embeddings from disk instead of re-running the model on every crop +
+        # every fd_cache image (~50k + 22k embeddings, very slow on CPU).
+        self._embedding_cache_dir: Path | None = (
+            Path(embedding_cache_dir) if embedding_cache_dir else None
+        )
+        self._crop_cache_dirty = False
+        if self._embedding_cache_dir is not None:
+            self._load_persistent_cache()
+
+    def _persistent_cache_path(self) -> Path:
+        # Single .npz keyed by file path (str). Per-model isolation.
+        return self._embedding_cache_dir / f"crop_emb_{self.model_name}.npz"
+
+    def _load_persistent_cache(self) -> None:
+        f = self._persistent_cache_path()
+        if not f.exists():
+            return
+        try:
+            data = np.load(str(f), allow_pickle=False)
+            for k in data.files:
+                arr = data[k]
+                self._crop_cache[k] = torch.from_numpy(arr).to(self.device)
+            print(f"  [DINOv2 cache] loaded {len(self._crop_cache):,} embeddings "
+                  f"from {f.name}")
+        except Exception as e:
+            print(f"  [DINOv2 cache] failed to load {f.name}: {e}")
+
+    def save_cache(self) -> None:
+        """Persist accumulated embeddings to disk. Caller invokes after step 3."""
+        if self._embedding_cache_dir is None or not self._crop_cache_dirty:
+            return
+        f = self._persistent_cache_path()
+        f.parent.mkdir(parents=True, exist_ok=True)
+        arrays = {k: v.detach().cpu().numpy() for k, v in self._crop_cache.items()}
+        np.savez(str(f), **arrays)
+        self._crop_cache_dirty = False
+        print(f"  [DINOv2 cache] saved {len(arrays):,} embeddings to {f.name}")
 
     def _init_pygame_font(self):
         if self._pygame_font is not None:
@@ -144,6 +185,7 @@ class DINOv2Ranker:
             return None
         emb = self._embed(img)
         self._crop_cache[crop_path] = emb
+        self._crop_cache_dirty = True
         return emb
 
     def _embed_char(self, char: str) -> torch.Tensor | None:

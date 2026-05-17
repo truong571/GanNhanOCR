@@ -26,6 +26,13 @@ pygame
 scikit-image
 datasets
 
-# Optional — Quoc Ngu detection in Step 1 (lazy-imported)
-# paddleocr
-# vietocr
+# Quoc Ngu re-OCR for Sach* books (Step 1, when reocr=true). Lazy-imported.
+# vietocr's pip metadata pins old Pillow/prefetch_generator; install with --no-deps
+# then add runtime deps explicitly:
+#   pip install --no-deps vietocr
+#   pip install gdown prefetch_generator pyyaml lmdb einops
+vietocr
+gdown
+prefetch_generator
+lmdb
+einops

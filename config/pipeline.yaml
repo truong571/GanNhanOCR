@@ -1,24 +1,19 @@
 # GanNhanOCR Pipeline Configuration
 
+  # Only Sach* — Cac* "Tuyển tập Các Thánh Truyện" books are curated subsets
+  # of the corresponding Sach* "Sách Các Thánh Truyện" full books (same scans,
+  # same text), so processing both would double-count training data.
+  # All books re-OCR'd with VietOCR (2-pass beam + greedy for text + confidence).
 books:
-  - name: CacThanhTruyen2
-    pdf: Data/CacThanhTruyen2.pdf
-    reocr: false
-  - name: CacThanhTruyen4
-    pdf: Data/CacThanhTruyen4.pdf
-    reocr: false
-  - name: CacThanhTruyen11
-    pdf: Data/CacThanhTruyen11.pdf
-    reocr: false
   - name: SachThanhTruyen2
     pdf: Data/SachThanhTruyen2.pdf
-    reocr: false
+    reocr: true
   - name: SachThanhTruyen4
     pdf: Data/SachThanhTruyen4.pdf
-    reocr: false
+    reocr: true
   - name: SachThanhTruyen11
     pdf: Data/SachThanhTruyen11.pdf
-    reocr: false
+    reocr: true
 
 paths:
   data_dir: prepared
@@ -63,6 +58,11 @@ step3:
   classical_threshold: 0.55         # classical CV fallback (Hu+IoU+projection)
   use_fontdiffusion: true
   require_fontdiffusion: true       # if true: tier 3 ONLY uses fd_cache (no font-rendered fallback)
+  # When true, step 3 will NOT try to generate missing FontDiffusion images
+  # locally (~7s/img on Mac CPU = bottleneck). Chars missing from fd_cache get
+  # no Tier-3 candidate — they fall through to Tier 2 or unmatched.
+  # Offload generation to Kaggle via kaggle_diffusion/diffusion_run.ipynb.
+  skip_local_fd_gen: true
 
 step4:
   min_samples_per_class: 1

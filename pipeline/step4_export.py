@@ -2,11 +2,11 @@
 
 Output structure:
   dataset/
-    CacThanhTruyen2/    <- per-book
+    SachThanhTruyen2/   <- per-book
       labels.csv
       class_map.json
       metadata.json
-    CacThanhTruyen4/
+    SachThanhTruyen4/
       ...
     all/                <- merged from all books
       labels.csv
@@ -110,7 +110,53 @@ def build_class_map(rows: list[dict]) -> dict:
 FIELDNAMES = [
     "crop_file", "nom_char", "unicode", "syllable", "matched",
     "tier", "bbox", "page", "source",
+    # QN OCR quality signal — page-level (one number per source page, applied
+    # to every char on that page). Empty for books not using reocr.
+    "qn_page_confidence", "qn_low_conf",
 ]
+
+
+def load_qn_page_confidence(book_data_dir: Path) -> dict[str, dict]:
+    """Read prepared/<book>/manifest.json -> {page_name: {mean, n_low_conf}}.
+
+    Returns empty dict if manifest missing or has no confidence data
+    (book wasn't re-OCR'd with VietOCR).
+    """
+    manifest_path = book_data_dir / "manifest.json"
+    if not manifest_path.exists():
+        return {}
+    import json as _json
+    with open(manifest_path, encoding="utf-8") as f:
+        manifest = _json.load(f)
+    out: dict[str, dict] = {}
+    for p in manifest.get("pages", []):
+        bp = p.get("book_page")
+        conf = p.get("qn_page_confidence")
+        if bp is None or not conf:
+            continue
+        out[f"page_{int(bp):04d}"] = conf
+    return out
+
+
+def attach_qn_confidence(rows: list[dict], book_data_dir: Path) -> None:
+    """In-place: add qn_page_confidence + qn_low_conf to each row."""
+    page_conf = load_qn_page_confidence(book_data_dir)
+    if not page_conf:
+        for r in rows:
+            r.setdefault("qn_page_confidence", "")
+            r.setdefault("qn_low_conf", "")
+        return
+    for r in rows:
+        page = r.get("page", "")
+        info = page_conf.get(page)
+        if info:
+            r["qn_page_confidence"] = info.get("mean", "")
+            # Mark whole-page as low-conf if mean < 0.7 OR any line was very low
+            r["qn_low_conf"] = (info.get("mean", 1.0) < 0.7
+                                or info.get("n_low_conf", 0) > 0)
+        else:
+            r["qn_page_confidence"] = ""
+            r["qn_low_conf"] = ""
 
 
 def save_csv(rows: list[dict], path: Path):
@@ -276,6 +322,9 @@ def export_dataset(config: dict, verbose: bool = True):
 
         rows = load_labels(labels_csv, name)
         base_dirs[name] = data_dir / name
+
+        # Attach QN OCR confidence (per-page) — read from manifest.json
+        attach_qn_confidence(rows, data_dir / name)
 
         # Filter: remove gaps
         rows = [r for r in rows if r.get("nom_char")]

@@ -16,11 +16,8 @@ kaggle_diffusion/
 │   ├── char_universe.txt             21,837 chars, one per line
 │   └── char_universe.json            block distribution metadata
 └── style_references/
-    ├── CacThanhTruyen2.png           ⭐ used as universal style image
-    ├── CacThanhTruyen4.png           (alternatives if you want to A/B)
-    ├── CacThanhTruyen11.png
-    ├── SachThanhTruyen2.png
-    ├── SachThanhTruyen4.png
+    ├── SachThanhTruyen2.png          ⭐ used as universal style image
+    ├── SachThanhTruyen4.png          (alternatives if you want to A/B)
     └── SachThanhTruyen11.png
 ```
 
@@ -118,10 +115,9 @@ The universal cache covers any chu-Nom char in any Nom manuscript.
 ## Choosing a different style
 
 The universal cache is generated using one style image. The default is
-`style_references/CacThanhTruyen2.png` (chosen for clean scan quality).
+`style_references/SachThanhTruyen2.png` (chosen for clean scan quality).
 
 To use a different style, edit `STYLE_BOOK` in cell 8 to one of:
-`CacThanhTruyen4`, `CacThanhTruyen11`, `SachThanhTruyen2`,
 `SachThanhTruyen4`, `SachThanhTruyen11`.
 
 To produce **multiple style variants** (e.g., a separate cache per book

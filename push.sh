@@ -8,16 +8,25 @@
 
 set -e
 
+# Disable any pager — some shells alias git to auto-paginate.
+export GIT_PAGER=cat
+export PAGER=cat
+export LESS=FRX
+unset GIT_EXTERNAL_DIFF
+
 MSG="${1:-update code}"
 
-git add -A
+# Use raw git path to bypass any shell alias/function called `git`.
+GIT=$(command -v git)
+
+"$GIT" add -A
 echo ""
 echo "=== Files staged ==="
-git diff --cached --name-status
+"$GIT" --no-pager diff --cached --name-status | cat
 echo ""
 
 # Refuse to commit any *.png / *.xlsx that slipped through (e.g. forced add).
-LEAKED=$(git diff --cached --name-only | grep -E '\.(png|xlsx)$' || true)
+LEAKED=$("$GIT" --no-pager diff --cached --name-only | grep -E '\.(png|xlsx)$' || true)
 if [[ -n "$LEAKED" ]]; then
     echo "ERROR: refusing to push — these tracked files match png/xlsx blocklist:"
     echo "$LEAKED"
@@ -25,13 +34,13 @@ if [[ -n "$LEAKED" ]]; then
     exit 1
 fi
 
-if git diff --cached --quiet; then
+if "$GIT" diff --cached --quiet; then
     echo "Nothing to commit."
     exit 0
 fi
 
 echo "Committing: $MSG"
-git commit -m "$MSG"
-git push origin main
+"$GIT" commit -m "$MSG"
+"$GIT" push origin main
 echo ""
 echo "Done."

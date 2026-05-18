@@ -140,19 +140,36 @@ def process_page_structural(
         cols = nom_cols_hybrid(ocr_columns, min_len=4)
         col_method = "hybrid_no_image"
 
-    n_align = min(len(cols), len(qn_keys))
     page_col_match = (len(cols) == len(qn_keys))
     qn_parse_ok = (len(qn_lines) == 9)
     nom_suspect = (col_method == "suspect")
-    page_ok = (page_col_match and qn_parse_ok and not nom_suspect)
+
+    # PARTIAL-ALIGNMENT recovery: if QN parsed < 9 but Nôm has enough cols to
+    # cover the highest QN line id, pair by line_id (nom_cols[k-1] ↔ line k).
+    # This handles pages where VietOCR dropped a leading or trailing line
+    # marker but the Nôm image still has all 9 cols.
+    max_qn = max(qn_keys) if qn_keys else 0
+    partial_recovery = (not qn_parse_ok and not nom_suspect
+                        and len(cols) >= max_qn and max_qn > 0)
+    page_ok = ((page_col_match and qn_parse_ok and not nom_suspect)
+               or partial_recovery)
+
+    # Iteration plan: list of (nom_idx, qn_line_id) pairs.
+    if partial_recovery:
+        iter_pairs = [(line_id - 1, line_id) for line_id in qn_keys
+                      if (line_id - 1) < len(cols)]
+    else:
+        n_align = min(len(cols), len(qn_keys))
+        iter_pairs = [(i, qn_keys[i]) for i in range(n_align)]
 
     # Build per-col char lists (apply marker strip / reseg).
     col_chars: list[list[dict]] = []
     col_ok_flags: list[bool] = []
+    col_ids: list[int] = []
 
-    for i in range(n_align):
-        cluster = cols[i]
-        qn_line = qn_lines[qn_keys[i]]
+    for nom_idx, line_id in iter_pairs:
+        cluster = cols[nom_idx]
+        qn_line = qn_lines[line_id]
         actual = len(cluster["chars"])
         expected = len(qn_line)
         count_ok = True
@@ -200,6 +217,7 @@ def process_page_structural(
 
         col_chars.append(chars_used)
         col_ok_flags.append(count_ok)
+        col_ids.append(line_id)
 
     # ── Crop generation + detection JSON ──
     crop_size = step1_cfg.get("crop_size", 64)
@@ -219,10 +237,9 @@ def process_page_structural(
     page_crops_dir = crops_dir / page_name
     page_cleaned_dir = cleaned_dir / page_name
 
-    for i in range(n_align):
-        col_num = qn_keys[i]
+    for i, col_num in enumerate(col_ids):
         chars = col_chars[i]
-        syllables = qn_lines[qn_keys[i]]
+        syllables = qn_lines[col_num]
 
         if chars:
             page_crops_dir.mkdir(parents=True, exist_ok=True)
@@ -302,6 +319,7 @@ def process_page_structural(
         "qn_src": qn_src,
         "qn_parse_ok": qn_parse_ok,
         "page_col_match": page_col_match,
+        "partial_recovery": partial_recovery,
         "alignment_ok_all": page_ok and all(col_ok_flags),
         "columns": detection_columns,
     }

@@ -42,7 +42,18 @@ def _has_letters(s, n=2):
 
 
 def _strip_prefix_noise(line):
-    m = re.match(r"^([^\d\n]{1,12})(\d.*)$", line)
+    # Two-path strip to balance recall vs false-positive on mid-sentence digits:
+    #
+    # Path 1 — PUNCT-ONLY PREFIX (e.g., '- 1 ra', '* 3 text'): max 4 chars of
+    # only symbols/whitespace before the digit. Loose sep after digit accepted
+    # (so '- 1  ra' with space-only sep still works for missing-marker case).
+    m = re.match(r"^([^\w\d\n]{1,4})(\d.*)$", line)
+    if m:
+        return m.group(2)
+    # Path 2 — SHORT WORD PREFIX (e.g., 'Thế 7. text'): 1-12 chars including
+    # letters. Strict — digit MUST be followed by hard sep [.,:;] to avoid
+    # treating 'trên ấy 4 năm' as marker 4.
+    m = re.match(r"^([^\d\n]{1,12})(\d{1,2}[.,:;].*)$", line)
     if m and len(m.group(1).strip()) <= 10 and not any(c.isdigit() for c in m.group(1)):
         return m.group(2)
     return line
@@ -93,7 +104,13 @@ def _try_marker(line: str, target: int, max_lines: int = 9):
         m = re.match(r"^(\d{1,2})(?!\d)(.*)$", cand)
         if not m or int(m.group(1)) != target:
             continue
+        raw_digits = m.group(1)
         tail = m.group(2)
+
+        # Reject leading-zero forms like '03' — these are page numbers, not
+        # markers. Standalone '3' is fine; '03' is not.
+        if len(raw_digits) > 1 and raw_digits[0] == "0":
+            continue
 
         # Case A: standalone (entire tail is just punct/whitespace).
         if re.fullmatch(r"[.,:;\-\s]*", tail):

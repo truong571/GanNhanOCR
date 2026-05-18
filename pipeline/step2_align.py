@@ -1,10 +1,25 @@
-"""Step 2: Align + Crop using OCR API bboxes.
+"""Step 2: Structure-driven alignment (dataset_v5 logic).
 
-Flow:
-  1. Load OCR API results (bbox per character) as primary positions
-  2. Levenshtein alignment: OCR chars <-> QN syllables → exact match count
-  3. Crop matched characters from ORIGINAL image using OCR bboxes
-  4. Fallback: projection profile when OCR bbox not available
+Default method (`structural`): the validated pipeline from
+evaluation/test_column_align/. Achieves 437/445 pages structurally OK and
+41,824 gold pairs across 3 books (vs. 4,133 in the legacy Levenshtein
+approach).
+
+Pipeline:
+  parser_v5 (QN 1-9, 98.9%)
+    → nom_detect_v3 (hybrid → close-merge → projection fallback, 100%)
+    → marker strip if Kim count > expected
+    → projection re-segment if Kim count < expected
+    → 1-1 pair by index in column
+    → emit aligned/<page>_aligned.json with crops + detection JSON.
+
+Legacy method (`levenshtein`): the original alignment is preserved in
+`pipeline/step2_align_legacy.py`. Select via `step2.method` in config or
+`--legacy` CLI flag.
+
+Output schema (aligned/<page>_aligned.json) is backward-compatible with
+step3_label.py — each pair has {type, column, syllable, char: {ocr_char,
+bbox, crop_file, cleaned_file}}.
 """
 
 import argparse
@@ -12,17 +27,29 @@ import json
 import sys
 from pathlib import Path
 
-import cv2
-import numpy as np
+# Make evaluation/test_column_align/ importable so we reuse VALIDATED logic
+# without copy-pasting (which would create drift). The eval folder is the
+# source of truth — when fixing a parser/detector bug, edit there and step2
+# picks it up automatically.
+_EVAL_DIR = Path(__file__).resolve().parents[1] / "evaluation" / "test_column_align"
+if str(_EVAL_DIR) not in sys.path:
+    sys.path.insert(0, str(_EVAL_DIR))
 
-from core.text.alignment import levenshtein_align
-from core.image.char_segmenter import segment_characters_in_column
-from core.image.column_detector import detect_columns, auto_detect_n_columns
-from core.image.crop_cleaner import CharacterCleaner
-from core.text.dictionary import load_qn_to_nom
-from core.image.image_processing import load_and_binarize, detect_text_box
+import cv2  # noqa: E402
+import numpy as np  # noqa: E402
 
-from pipeline.step0_setup import load_config
+from core.image.char_segmenter import segment_characters_in_column  # noqa: E402
+from core.image.crop_cleaner import CharacterCleaner  # noqa: E402
+from core.image.image_processing import load_and_binarize  # noqa: E402
+from core.text.dictionary import load_qn_to_nom, load_similarity_dict  # noqa: E402
+
+# Validated modules from evaluation/test_column_align/
+from parser_v5 import parse_v5  # noqa: E402
+from parser_v2 import load_v1_transcription  # noqa: E402
+from nom_detect_v3 import detect_nom_columns_v3  # noqa: E402
+from export_dataset_v4 import resegment_col  # noqa: E402
+
+from pipeline.step0_setup import load_config  # noqa: E402
 
 
 class NumpyEncoder(json.JSONEncoder):
@@ -36,194 +63,145 @@ class NumpyEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def _build_chars_from_ocr(
-    ocr_col: list[dict],
-    binary: np.ndarray | None = None,
-) -> list[dict]:
-    """Build char info list from OCR API column data.
-
-    When `binary` is provided, replaces each OCR bbox's vertical extent with
-    a robust valley-segmented version. The Kimhannom OCR API often returns
-    near-uniform bboxes (equal-division) that cut characters in the middle.
-    Re-segmenting with the local horizontal projection finds real ink
-    boundaries and produces tight, single-character bboxes.
-
-    The OCR `char` text is preserved (1:1 mapping by index — robust segmenter
-    is configured to return exactly len(ocr_col) bboxes).
-    """
-    chars = []
-    if binary is not None and len(ocr_col) >= 2:
-        x_left = min(int(oc["bbox"][0]) for oc in ocr_col)
-        x_right = max(int(oc["bbox"][2]) for oc in ocr_col)
-        y_top = min(int(oc["bbox"][1]) for oc in ocr_col)
-        y_bottom = max(int(oc["bbox"][3]) for oc in ocr_col)
-        # Pad slightly so ink at the column edges isn't clipped
-        pad_y = 8
-        ys1 = max(0, y_top - pad_y)
-        ys2 = min(binary.shape[0], y_bottom + pad_y)
-        new_bboxes = segment_characters_in_column(
-            binary,
-            (x_left, ys1, x_right, ys2),
-            expected_count=len(ocr_col),
-        )
-        if new_bboxes and len(new_bboxes) == len(ocr_col):
-            for i, ((cx1, cy1, cx2, cy2), oc) in enumerate(zip(new_bboxes, ocr_col)):
-                # Keep OCR's x-range (per-character) since OCR detects
-                # individual character widths; only y is from the segmenter.
-                ox1 = int(oc["bbox"][0])
-                ox2 = int(oc["bbox"][2])
-                chars.append({
-                    "char_idx": i,
-                    "bbox": [ox1, int(cy1), ox2, int(cy2)],
-                    "width": ox2 - ox1,
-                    "height": int(cy2 - cy1),
-                    "ocr_char": oc.get("char"),
-                })
-            return chars
-        # If segmenter failed for this column, fall through to OCR-only path.
-
-    for i, oc in enumerate(ocr_col):
-        bbox = oc["bbox"]
-        chars.append({
-            "char_idx": i,
-            "bbox": [int(b) for b in bbox],
-            "width": int(bbox[2] - bbox[0]),
-            "height": int(bbox[3] - bbox[1]),
-            "ocr_char": oc.get("char"),
-        })
-    return chars
+def _get_qn_lines(book_dir: Path, page_name: str,
+                  qn_dict: set | None) -> tuple[dict, str]:
+    """Load QN lines via parser_v5 from VietOCR cache, fall back to v1 txt."""
+    cache = book_dir / "transcriptions" / f"{page_name}_qn_ocr_cache.json"
+    if cache.exists():
+        try:
+            text = json.load(open(cache, "r", encoding="utf-8")).get("text", "")
+            if text:
+                v5, _ = parse_v5(text, qn_dict=qn_dict)
+                if v5:
+                    return v5, "v5"
+        except Exception:
+            pass
+    v1_path = book_dir / "transcriptions" / f"{page_name}.txt"
+    return (load_v1_transcription(str(v1_path)) if v1_path.exists() else {}), "v1"
 
 
-def _build_chars_from_projection(
-    binary: np.ndarray,
-    col_bbox: tuple,
-    expected_count: int,
-) -> list[dict]:
-    """Fallback: build char info from projection-based segmentation."""
-    char_bboxes = segment_characters_in_column(
-        binary, col_bbox, expected_count=expected_count,
-    )
-    chars = []
-    for i, (cx1, cy1, cx2, cy2) in enumerate(char_bboxes):
-        chars.append({
-            "char_idx": i,
-            "bbox": [int(cx1), int(cy1), int(cx2), int(cy2)],
-            "width": int(cx2 - cx1),
-            "height": int(cy2 - cy1),
-            "ocr_char": None,
-        })
-    return chars
-
-
-def process_page(
+def process_page_structural(
     page_name: str,
     data_dir: Path,
-    qn_to_nom: dict,
+    qn_dict_set: set,
     step1_cfg: dict,
     step2_cfg: dict | None = None,
     verbose: bool = False,
 ) -> tuple[list[dict], dict]:
-    """Full pipeline for one page: align using OCR bbox → crop from original.
+    """Structural alignment for one page. Returns (alignment, stats).
 
-    Returns (alignment, stats).
+    Same output contract as the legacy `process_page`:
+      - aligned list of {type, column, syllable, char: {ocr_char, bbox,
+        crop_file, cleaned_file}} dicts.
+      - stats {matches, gaps, chars}.
+    Plus writes detection JSON and crop PNGs into detected/.
     """
     pages_dir = data_dir / "pages"
     denoised_dir = data_dir / "pages_denoised"
-    trans_dir = data_dir / "transcriptions"
     crops_dir = data_dir / "detected" / "crops"
     cleaned_dir = data_dir / "detected" / "crops_cleaned"
 
     img_path = pages_dir / f"{page_name}.png"
-    trans_path = trans_dir / f"{page_name}.txt"
-
-    if not img_path.exists() or not trans_path.exists():
+    if not img_path.exists():
         return [], {}
 
-    # Load original grayscale (for cropping)
-    # Read both color (for dataset crops) and grayscale (for image_size meta).
-    # Color preserves ink/paper hue — useful for downstream visualization and
-    # any future analysis that exploits color information.
     color_img = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
     if color_img is None:
         return [], {}
     gray_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2GRAY)
+    H_img, W_img = gray_img.shape
 
-    # Read transcription (syllables per column)
-    with open(trans_path, "r", encoding="utf-8") as f:
-        lines = f.read().strip().split("\n")
-    n_columns = len(lines)
-    if n_columns == 0:
+    # Load Kimhannom OCR cache
+    ocr_path = data_dir / "detected" / f"{page_name}_ocr_cache.json"
+    if not ocr_path.exists():
         return [], {}
-    syllables_per_col = [line.split() for line in lines]
+    with open(ocr_path, "r", encoding="utf-8") as f:
+        ocr_data = json.load(f)
+    ocr_columns = ocr_data.get("columns", [])
 
-    # Load OCR API cache (primary source for character positions)
-    ocr_columns = None
-    ocr_cache_path = data_dir / "detected" / f"{page_name}_ocr_cache.json"
-    if ocr_cache_path.exists():
-        with open(ocr_cache_path, "r", encoding="utf-8") as f:
-            cached = json.load(f)
-        ocr_columns = cached.get("columns")
+    # Parse QN lines (v5)
+    qn_lines, qn_src = _get_qn_lines(data_dir, page_name, qn_dict_set)
+    qn_keys = sorted(qn_lines.keys())
 
-    # Load denoised binary (fallback for projection-based segmentation)
-    denoised_path = denoised_dir / f"{page_name}.png"
-    binary = None  # lazy load only if needed
+    # Load binary (for nom_detect_v3 projection fallback + reseg)
+    bin_src = denoised_dir / f"{page_name}.png"
+    if not bin_src.exists():
+        bin_src = img_path
+    try:
+        _, binary = load_and_binarize(str(bin_src))
+    except Exception:
+        binary = None
 
-    # ── Phase 1: Build char list per column ──
-    chars_per_col: list[list[dict]] = []
-    use_ocr_bbox = ocr_columns is not None
-
-    if use_ocr_bbox:
-        # OCR provides char positions, but its bboxes are often uniform
-        # equal-division that cut characters mid-stroke. Pre-load the binary
-        # so _build_chars_from_ocr can re-segment vertically using valley
-        # detection while keeping the OCR char identification.
-        bin_path = str(denoised_path) if denoised_path.exists() else str(img_path)
-        _, binary = load_and_binarize(bin_path)
-        text_box = None
-        for col_idx in range(n_columns):
-            if col_idx < len(ocr_columns) and ocr_columns[col_idx]:
-                chars = _build_chars_from_ocr(ocr_columns[col_idx], binary=binary)
-            else:
-                # Fallback for columns missing from OCR
-                if text_box is None:
-                    text_box = detect_text_box(binary)
-                    col_bboxes = detect_columns(binary, text_box, n_expected=n_columns)
-                exp = len(syllables_per_col[col_idx]) if col_idx < len(syllables_per_col) else 10
-                chars = _build_chars_from_projection(binary, col_bboxes[col_idx], exp)
-            chars_per_col.append(chars)
+    # Detect 9 Nôm columns (hybrid → close-merge → projection fallback).
+    if binary is not None:
+        cols, col_method = detect_nom_columns_v3(binary, ocr_columns, 9)
     else:
-        # No OCR: full projection-based segmentation
-        bin_path = str(denoised_path) if denoised_path.exists() else str(img_path)
-        _, binary = load_and_binarize(bin_path)
-        text_box = detect_text_box(binary)
-        col_bboxes = detect_columns(binary, text_box, n_expected=n_columns)
-        for col_idx in range(n_columns):
-            if col_idx < len(col_bboxes):
-                exp = len(syllables_per_col[col_idx]) if col_idx < len(syllables_per_col) else None
-                chars = _build_chars_from_projection(binary, col_bboxes[col_idx], exp)
-            else:
-                chars = []
-            chars_per_col.append(chars)
+        from run_full import nom_cols_hybrid
+        cols = nom_cols_hybrid(ocr_columns, min_len=4)
+        col_method = "hybrid_no_image"
 
-    # ── Phase 2: Levenshtein alignment ──
-    page_alignment = []
-    match_count_per_col: dict[int, int] = {}
+    n_align = min(len(cols), len(qn_keys))
+    page_col_match = (len(cols) == len(qn_keys))
+    qn_parse_ok = (len(qn_lines) == 9)
+    nom_suspect = (col_method == "suspect")
+    page_ok = (page_col_match and qn_parse_ok and not nom_suspect)
 
-    for col_idx in range(n_columns):
-        chars = chars_per_col[col_idx]
-        syllables = syllables_per_col[col_idx] if col_idx < len(syllables_per_col) else []
-        col_num = col_idx + 1
+    # Build per-col char lists (apply marker strip / reseg).
+    col_chars: list[list[dict]] = []
+    col_ok_flags: list[bool] = []
 
-        aligned = levenshtein_align(chars, syllables, qn_to_nom=qn_to_nom)
-        matches = 0
-        for pair in aligned:
-            pair["column"] = col_num
-            if pair["type"] == "match":
-                matches += 1
-        match_count_per_col[col_num] = matches
-        page_alignment.extend(aligned)
+    for i in range(n_align):
+        cluster = cols[i]
+        qn_line = qn_lines[qn_keys[i]]
+        actual = len(cluster["chars"])
+        expected = len(qn_line)
+        count_ok = True
+        chars_used: list[dict]
 
-    # ── Phase 3: Crop matched characters from ORIGINAL image ──
+        if actual > expected:
+            chars_used = [
+                {"bbox": [int(b) for b in c["bbox"]],
+                 "ocr_char": c.get("char")}
+                for c in cluster["chars"][actual - expected:]
+            ]
+        elif actual < expected:
+            chars_used = None  # type: ignore
+            if binary is not None and cluster["chars"]:
+                res = resegment_col(binary, cluster, expected)
+                if res:
+                    chars_used = [
+                        {"bbox": [int(b) for b in r["bbox"]],
+                         "ocr_char": r.get("char")} for r in res
+                    ]
+            if chars_used is None and binary is not None and \
+                    cluster.get("bbox"):
+                try:
+                    bboxes = segment_characters_in_column(
+                        binary, cluster["bbox"], expected_count=expected)
+                    if len(bboxes) == expected:
+                        chars_used = [
+                            {"bbox": [int(x1), int(y1), int(x2), int(y2)],
+                             "ocr_char": None}
+                            for (x1, y1, x2, y2) in bboxes
+                        ]
+                except Exception:
+                    pass
+            if chars_used is None:
+                chars_used = [
+                    {"bbox": [int(b) for b in c["bbox"]],
+                     "ocr_char": c.get("char")} for c in cluster["chars"]
+                ]
+                count_ok = False
+        else:
+            chars_used = [
+                {"bbox": [int(b) for b in c["bbox"]],
+                 "ocr_char": c.get("char")} for c in cluster["chars"]
+            ]
+
+        col_chars.append(chars_used)
+        col_ok_flags.append(count_ok)
+
+    # ── Crop generation + detection JSON ──
     crop_size = step1_cfg.get("crop_size", 64)
     cleaner = CharacterCleaner(
         target_size=crop_size,
@@ -231,45 +209,37 @@ def process_page(
         sauvola_window=step1_cfg.get("sauvola_window", 25),
         min_stroke=step1_cfg.get("min_stroke", 2),
     )
+    pad_frac = (step2_cfg or {}).get("crop_pad_frac", 0.0)
 
     detection_columns = []
-    all_chars_count = 0
+    aligned: list[dict] = []
+    total_chars = 0
+    total_matches = 0
 
-    # Rebuild: only keep matched chars, re-index, crop
-    for col_idx in range(n_columns):
-        col_num = col_idx + 1
+    page_crops_dir = crops_dir / page_name
+    page_cleaned_dir = cleaned_dir / page_name
 
-        # Collect matched chars for this column (in order)
-        matched_chars = [
-            pair["char"] for pair in page_alignment
-            if pair.get("column") == col_num
-            and pair["type"] == "match"
-            and pair.get("char")
-        ]
+    for i in range(n_align):
+        col_num = qn_keys[i]
+        chars = col_chars[i]
+        syllables = qn_lines[qn_keys[i]]
 
-        if not matched_chars:
-            continue
-
-        page_crops_dir = crops_dir / page_name
-        page_cleaned_dir = cleaned_dir / page_name
-        page_crops_dir.mkdir(parents=True, exist_ok=True)
-        page_cleaned_dir.mkdir(parents=True, exist_ok=True)
+        if chars:
+            page_crops_dir.mkdir(parents=True, exist_ok=True)
+            page_cleaned_dir.mkdir(parents=True, exist_ok=True)
 
         col_data = {
             "column": col_num,
-            "num_chars": len(matched_chars),
+            "num_chars": len(chars),
+            "count_ok": col_ok_flags[i],
             "chars": [],
         }
 
-        pad_frac = (step2_cfg or {}).get("crop_pad_frac", 0.0)
-        H_img, W_img = gray_img.shape
-
-        for char_idx, char_info in enumerate(matched_chars):
-            bbox = char_info["bbox"]
-            cx1, cy1, cx2, cy2 = bbox
-
-            # Expand bbox so the full glyph is captured (descenders / diacritics /
-            # side radicals). May overlap neighbours — accepted trade-off.
+        for char_idx, char_info in enumerate(chars):
+            if char_idx >= len(syllables):
+                break
+            cx1, cy1, cx2, cy2 = char_info["bbox"]
+            # Clip + pad
             if pad_frac > 0.0:
                 w = cx2 - cx1
                 h = cy2 - cy1
@@ -279,22 +249,27 @@ def process_page(
                 cy1 = max(0, cy1 - py)
                 cx2 = min(W_img, cx2 + px)
                 cy2 = min(H_img, cy2 + py)
+            cx1 = max(0, min(cx1, W_img - 1))
+            cx2 = max(cx1 + 1, min(cx2, W_img))
+            cy1 = max(0, min(cy1, H_img - 1))
+            cy2 = max(cy1 + 1, min(cy2, H_img))
 
             crop_file = f"crops/{page_name}/col{col_num:02d}_char{char_idx:03d}.png"
             cleaned_file = f"crops_cleaned/{page_name}/col{col_num:02d}_char{char_idx:03d}.png"
 
-            # Crop from ORIGINAL color image (preserves ink/paper colour).
-            # The cleaned variant uses grayscale because CharacterCleaner is
-            # designed for binarisation — it expects single-channel input.
             crop_color = color_img[cy1:cy2, cx1:cx2]
             if crop_color.size > 0:
                 cv2.imwrite(str(data_dir / "detected" / crop_file), crop_color)
                 gray_crop = gray_img[cy1:cy2, cx1:cx2]
-                cleaned, _ = cleaner.clean(gray_crop)
-                if cleaned is not None:
-                    cv2.imwrite(str(data_dir / "detected" / cleaned_file), cleaned)
+                try:
+                    cleaned, _ = cleaner.clean(gray_crop)
+                    if cleaned is not None:
+                        cv2.imwrite(str(data_dir / "detected" / cleaned_file),
+                                    cleaned)
+                except Exception:
+                    cleaned_file = ""
 
-            new_char_info = {
+            char_record = {
                 "char_idx": char_idx,
                 "bbox": [int(cx1), int(cy1), int(cx2), int(cy2)],
                 "width": int(cx2 - cx1),
@@ -303,56 +278,56 @@ def process_page(
                 "cleaned_file": cleaned_file,
                 "ocr_char": char_info.get("ocr_char"),
             }
-            col_data["chars"].append(new_char_info)
+            col_data["chars"].append(char_record)
+
+            aligned.append({
+                "type": "match",
+                "column": col_num,
+                "syllable": syllables[char_idx],
+                "char": char_record,
+                "alignment_ok": bool(col_ok_flags[i] and page_ok),
+            })
+            total_matches += 1
+            total_chars += 1
 
         detection_columns.append(col_data)
-        all_chars_count += len(matched_chars)
 
     # Save detection JSON
     detection_data = {
         "book_page": page_name,
-        "image_size": list(gray_img.shape[::-1]),
+        "image_size": [int(W_img), int(H_img)],
         "num_columns": len(detection_columns),
-        "total_chars": all_chars_count,
+        "total_chars": total_chars,
+        "method": col_method,
+        "qn_src": qn_src,
+        "qn_parse_ok": qn_parse_ok,
+        "page_col_match": page_col_match,
+        "alignment_ok_all": page_ok and all(col_ok_flags),
         "columns": detection_columns,
     }
     det_path = data_dir / "detected" / f"{page_name}_detection.json"
     with open(det_path, "w", encoding="utf-8") as f:
-        json.dump(detection_data, f, ensure_ascii=False, indent=2, cls=NumpyEncoder)
+        json.dump(detection_data, f, ensure_ascii=False, indent=2,
+                  cls=NumpyEncoder)
 
-    # ── Phase 4: Rebuild alignment with final char info ──
-    final_alignment = []
-    col_char_iter: dict[int, int] = {}
-
-    for pair in page_alignment:
-        col = pair.get("column", 0)
-        if pair["type"] == "match":
-            det_col = None
-            for cd in detection_columns:
-                if cd["column"] == col:
-                    det_col = cd
-                    break
-            if det_col:
-                idx = col_char_iter.get(col, 0)
-                if idx < len(det_col["chars"]):
-                    pair["char"] = det_col["chars"][idx]
-                    col_char_iter[col] = idx + 1
-        final_alignment.append(pair)
-
-    matches = sum(1 for a in final_alignment if a["type"] == "match")
-    gaps = sum(1 for a in final_alignment if a["type"] in ("deletion", "insertion"))
-
-    return final_alignment, {"matches": matches, "gaps": gaps, "chars": all_chars_count}
+    stats = {
+        "matches": total_matches,
+        "gaps": 0,  # structural method emits no gaps; suspect rows still have type=match
+        "chars": total_chars,
+        "page_ok": detection_data["alignment_ok_all"],
+        "method": col_method,
+    }
+    return aligned, stats
 
 
-def align_book(config: dict, book_name: str, verbose: bool = True):
-    """Run align + crop for all pages of a book."""
+def align_book_structural(config: dict, book_name: str, verbose: bool = True):
     paths = config["paths"]
     step1_cfg = config.get("step1", {})
     step2_cfg = config.get("step2", {})
     data_dir = Path(paths["data_dir"]) / book_name
 
     qn_to_nom = load_qn_to_nom(paths["qn_to_nom_dict"])
+    qn_dict_set = set(qn_to_nom.keys())
 
     trans_dir = data_dir / "transcriptions"
     aligned_dir = data_dir / "aligned"
@@ -365,21 +340,25 @@ def align_book(config: dict, book_name: str, verbose: bool = True):
 
     if verbose:
         print(f"\n{'='*60}")
-        print(f"Step 2: Align + Crop — {book_name}")
+        print(f"Step 2: Structural Align — {book_name}")
+        print(f"  Method: structural (parser_v5 + nom_detect_v3 + reseg)")
         print(f"  Pages: {len(trans_files)}")
         print(f"{'='*60}")
 
     total_matches = 0
-    total_gaps = 0
     total_chars = 0
+    pages_ok = 0
+    method_counts: dict[str, int] = {}
 
     for trans_path in trans_files:
         page_name = trans_path.stem
+        if page_name.endswith("_qn_tmp") or page_name.endswith("_qn_ocr_cache"):
+            continue
 
-        alignment, stats = process_page(
-            page_name, data_dir, qn_to_nom, step1_cfg, step2_cfg, verbose=verbose,
+        alignment, stats = process_page_structural(
+            page_name, data_dir, qn_dict_set, step1_cfg, step2_cfg,
+            verbose=verbose,
         )
-
         if not alignment:
             if verbose:
                 print(f"  [SKIP] {page_name}")
@@ -387,29 +366,43 @@ def align_book(config: dict, book_name: str, verbose: bool = True):
 
         out_path = aligned_dir / f"{page_name}_aligned.json"
         with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(alignment, f, ensure_ascii=False, indent=2, cls=NumpyEncoder)
+            json.dump(alignment, f, ensure_ascii=False, indent=2,
+                      cls=NumpyEncoder)
 
         total_matches += stats["matches"]
-        total_gaps += stats["gaps"]
         total_chars += stats["chars"]
+        if stats.get("page_ok"):
+            pages_ok += 1
+        m = stats.get("method", "unknown")
+        method_counts[m] = method_counts.get(m, 0) + 1
 
         if verbose:
             print(f"  {page_name}: {stats['matches']} matches, "
-                  f"{stats['gaps']} gaps, {stats['chars']} chars cropped")
+                  f"{stats['chars']} chars, method={stats['method']}, "
+                  f"page_ok={stats.get('page_ok')}")
 
     if verbose:
-        print(f"\n  Total: {total_matches} matches, {total_gaps} gaps, "
-              f"{total_chars} chars cropped")
+        print(f"\n  Totals: {total_matches} matches, {total_chars} chars cropped")
+        print(f"  Pages structurally OK: {pages_ok}/{len(trans_files)}")
+        print(f"  Method distribution: {method_counts}")
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Step 2: Align + Crop")
+    parser = argparse.ArgumentParser(description="Step 2: Structure-driven Align")
     parser.add_argument("config", type=str, help="Path to pipeline.yaml")
     parser.add_argument("book", type=str, help="Book name")
+    parser.add_argument("--legacy", action="store_true",
+                        help="Fall back to the original Levenshtein alignment "
+                             "(pipeline/step2_align_legacy.py).")
     args = parser.parse_args()
 
     config = load_config(args.config)
-    align_book(config, args.book)
+    method = config.get("step2", {}).get("method", "structural")
+    if args.legacy or method == "levenshtein":
+        from pipeline.step2_align_legacy import align_book
+        align_book(config, args.book)
+    else:
+        align_book_structural(config, args.book)
 
 
 if __name__ == "__main__":

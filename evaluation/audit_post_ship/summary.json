@@ -1,0 +1,1302 @@
+{
+  "A_han_singleton": {
+    "n_han_singletons": 1415,
+    "n_records_in_pool": 1415,
+    "tier_distribution": {
+      "1": 123,
+      "3": 1134,
+      "2": 158
+    },
+    "matched_distribution": {
+      "true": 1329,
+      "false": 86
+    },
+    "ocr_present": 1387,
+    "ocr_null": 28,
+    "ocr_agrees_nom": 121,
+    "sample_50": [
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0228",
+        "col": 8,
+        "syllable": "giơ",
+        "ocr_char": "畧",
+        "nom_char": "剶",
+        "tier": "3",
+        "matched": "False",
+        "visual_score": 0.747,
+        "cand_rank": 0,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0228/col08_char002.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0142",
+        "col": 8,
+        "syllable": "dấu",
+        "ocr_char": "呌",
+        "nom_char": "鬥",
+        "tier": "3",
+        "matched": "False",
+        "visual_score": 0.745,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0142/col08_char001.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0042",
+        "col": 9,
+        "syllable": "tăm",
+        "ocr_char": "沿",
+        "nom_char": "籤",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.87,
+        "cand_rank": 8,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0042/col09_char011.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0050",
+        "col": 1,
+        "syllable": "cấu",
+        "ocr_char": "礼",
+        "nom_char": "彀",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.903,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0050/col01_char003.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0022",
+        "col": 8,
+        "syllable": "hôn",
+        "ocr_char": "㸔",
+        "nom_char": "焄",
+        "tier": "3",
+        "matched": "False",
+        "visual_score": 0.729,
+        "cand_rank": 9,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0022/col08_char020.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0312",
+        "col": 7,
+        "syllable": "thí",
+        "ocr_char": "丄",
+        "nom_char": "弑",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.922,
+        "cand_rank": 6,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0312/col07_char000.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0190",
+        "col": 3,
+        "syllable": "lối",
+        "ocr_char": "事",
+        "nom_char": "礌",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.943,
+        "cand_rank": 4,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0190/col03_char006.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0130",
+        "col": 6,
+        "syllable": "thở",
+        "ocr_char": "疝",
+        "nom_char": "呲",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.842,
+        "cand_rank": 2,
+        "n_candidates": 5,
+        "crop_file": "crops/page_0130/col06_char009.png"
+      },
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0276",
+        "col": 9,
+        "syllable": "giục",
+        "ocr_char": "伐",
+        "nom_char": "豚",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.875,
+        "cand_rank": 4,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0276/col09_char015.png"
+      },
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0106",
+        "col": 2,
+        "syllable": "dỗ",
+        "ocr_char": "唯",
+        "nom_char": "捬",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.861,
+        "cand_rank": 5,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0106/col02_char003.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0108",
+        "col": 6,
+        "syllable": "ô",
+        "ocr_char": "每",
+        "nom_char": "戽",
+        "tier": "2",
+        "matched": "True",
+        "visual_score": null,
+        "cand_rank": 8,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0108/col06_char019.png"
+      },
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0164",
+        "col": 3,
+        "syllable": "Nhất",
+        "ocr_char": "瑪",
+        "nom_char": "搋",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.909,
+        "cand_rank": 4,
+        "n_candidates": 6,
+        "crop_file": "crops/page_0164/col03_char006.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0234",
+        "col": 8,
+        "syllable": "vò",
+        "ocr_char": "捕",
+        "nom_char": "趶",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.87,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0234/col08_char018.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0050",
+        "col": 9,
+        "syllable": "Khi",
+        "ocr_char": null,
+        "nom_char": "机",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.89,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0050/col09_char017.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0048",
+        "col": 5,
+        "syllable": "phôn",
+        "ocr_char": "魄",
+        "nom_char": "噴",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.871,
+        "cand_rank": 1,
+        "n_candidates": 2,
+        "crop_file": "crops/page_0048/col05_char023.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0118",
+        "col": 7,
+        "syllable": "bọt",
+        "ocr_char": "浡",
+        "nom_char": "浡",
+        "tier": "1",
+        "matched": "True",
+        "visual_score": null,
+        "cand_rank": 1,
+        "n_candidates": 6,
+        "crop_file": "crops/page_0118/col07_char009.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0304",
+        "col": 6,
+        "syllable": "trao",
+        "ocr_char": "梓",
+        "nom_char": "捞",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.854,
+        "cand_rank": 5,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0304/col06_char003.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0326",
+        "col": 8,
+        "syllable": "háo",
+        "ocr_char": "好",
+        "nom_char": "好",
+        "tier": "1",
+        "matched": "True",
+        "visual_score": null,
+        "cand_rank": 1,
+        "n_candidates": 7,
+        "crop_file": "crops/page_0326/col08_char006.png"
+      },
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0048",
+        "col": 1,
+        "syllable": "rất",
+        "ocr_char": "眾",
+        "nom_char": "栗",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.803,
+        "cand_rank": 4,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0048/col01_char016.png"
+      },
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0178",
+        "col": 4,
+        "syllable": "gái",
+        "ocr_char": "妙",
+        "nom_char": "匄",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.873,
+        "cand_rank": 4,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0178/col04_char000.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0044",
+        "col": 3,
+        "syllable": "thử",
+        "ocr_char": "矣",
+        "nom_char": "癙",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.9,
+        "cand_rank": 9,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0044/col03_char020.png"
+      },
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0126",
+        "col": 8,
+        "syllable": "thợ",
+        "ocr_char": "役",
+        "nom_char": "洘",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.765,
+        "cand_rank": 0,
+        "n_candidates": 9,
+        "crop_file": "crops/page_0126/col08_char012.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0272",
+        "col": 9,
+        "syllable": "nuôi",
+        "ocr_char": "仍",
+        "nom_char": "芮",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.928,
+        "cand_rank": 7,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0272/col09_char005.png"
+      },
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0248",
+        "col": 6,
+        "syllable": "rủa",
+        "ocr_char": "曽",
+        "nom_char": "喽",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.825,
+        "cand_rank": 0,
+        "n_candidates": 3,
+        "crop_file": "crops/page_0248/col06_char011.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0232",
+        "col": 2,
+        "syllable": "thắng",
+        "ocr_char": "焉",
+        "nom_char": "乗",
+        "tier": "3",
+        "matched": "False",
+        "visual_score": 0.703,
+        "cand_rank": 0,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0232/col02_char019.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0310",
+        "col": 3,
+        "syllable": "lã",
+        "ocr_char": "𭰖",
+        "nom_char": "鋁",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.808,
+        "cand_rank": 5,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0310/col03_char003.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0274",
+        "col": 4,
+        "syllable": "ngón",
+        "ocr_char": "魏",
+        "nom_char": "抏",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.845,
+        "cand_rank": 2,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0274/col04_char001.png"
+      },
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0160",
+        "col": 9,
+        "syllable": "như",
+        "ocr_char": "栘",
+        "nom_char": "袽",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.855,
+        "cand_rank": 9,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0160/col09_char001.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0052",
+        "col": 8,
+        "syllable": "Tao",
+        "ocr_char": "𫊫",
+        "nom_char": "缫",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.859,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0052/col08_char002.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0020",
+        "col": 3,
+        "syllable": "nuốt",
+        "ocr_char": "啐",
+        "nom_char": "啐",
+        "tier": "1",
+        "matched": "True",
+        "visual_score": null,
+        "cand_rank": 3,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0020/col03_char017.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0212",
+        "col": 4,
+        "syllable": "bi",
+        "ocr_char": "也",
+        "nom_char": "餟",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.922,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0212/col04_char006.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0234",
+        "col": 9,
+        "syllable": "mật",
+        "ocr_char": "審",
+        "nom_char": "沕",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.783,
+        "cand_rank": 6,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0234/col09_char008.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0128",
+        "col": 8,
+        "syllable": "lu",
+        "ocr_char": "先",
+        "nom_char": "籚",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.817,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0128/col08_char015.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0206",
+        "col": 8,
+        "syllable": "băng",
+        "ocr_char": "平",
+        "nom_char": "斆",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.795,
+        "cand_rank": 8,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0206/col08_char006.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0298",
+        "col": 4,
+        "syllable": "dứt",
+        "ocr_char": "坦",
+        "nom_char": "担",
+        "tier": "2",
+        "matched": "True",
+        "visual_score": null,
+        "cand_rank": 6,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0298/col04_char014.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0124",
+        "col": 2,
+        "syllable": "ni",
+        "ocr_char": "眉",
+        "nom_char": "铌",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.929,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0124/col02_char017.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0116",
+        "col": 9,
+        "syllable": "thứ",
+        "ocr_char": "兹",
+        "nom_char": "恐",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.791,
+        "cand_rank": 6,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0116/col09_char008.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0184",
+        "col": 3,
+        "syllable": "cầu",
+        "ocr_char": "㝵",
+        "nom_char": "橋",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.904,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0184/col03_char002.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0124",
+        "col": 3,
+        "syllable": "lỗ",
+        "ocr_char": "禹",
+        "nom_char": "澛",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.907,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0124/col03_char017.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0158",
+        "col": 2,
+        "syllable": "xương",
+        "ocr_char": "留",
+        "nom_char": "菖",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.778,
+        "cand_rank": 8,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0158/col02_char022.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0136",
+        "col": 4,
+        "syllable": "chặt",
+        "ocr_char": "實",
+        "nom_char": "儨",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.82,
+        "cand_rank": 0,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0136/col04_char001.png"
+      },
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0180",
+        "col": 5,
+        "syllable": "Trằng",
+        "ocr_char": "奴",
+        "nom_char": "蓢",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.931,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0180/col05_char013.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0040",
+        "col": 6,
+        "syllable": "tai",
+        "ocr_char": "烖",
+        "nom_char": "烖",
+        "tier": "1",
+        "matched": "True",
+        "visual_score": null,
+        "cand_rank": 9,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0040/col06_char000.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0060",
+        "col": 1,
+        "syllable": "phó",
+        "ocr_char": "朱",
+        "nom_char": "褔",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.899,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0060/col01_char013.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0288",
+        "col": 8,
+        "syllable": "lếch",
+        "ocr_char": "祝",
+        "nom_char": "厯",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.885,
+        "cand_rank": 1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0288/col08_char015.png"
+      },
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0090",
+        "col": 9,
+        "syllable": "ta",
+        "ocr_char": "沙",
+        "nom_char": "莎",
+        "tier": "2",
+        "matched": "True",
+        "visual_score": null,
+        "cand_rank": -1,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0090/col09_char016.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0166",
+        "col": 9,
+        "syllable": "len",
+        "ocr_char": "星",
+        "nom_char": "縺",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.902,
+        "cand_rank": 2,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0166/col09_char013.png"
+      },
+      {
+        "source": "SachThanhTruyen4",
+        "page": "page_0182",
+        "col": 5,
+        "syllable": "ván",
+        "ocr_char": "飯",
+        "nom_char": "鈑",
+        "tier": "2",
+        "matched": "True",
+        "visual_score": null,
+        "cand_rank": 2,
+        "n_candidates": 6,
+        "crop_file": "crops/page_0182/col05_char020.png"
+      },
+      {
+        "source": "SachThanhTruyen2",
+        "page": "page_0094",
+        "col": 1,
+        "syllable": "tâm",
+        "ocr_char": "尋",
+        "nom_char": "芯",
+        "tier": "3",
+        "matched": "True",
+        "visual_score": 0.844,
+        "cand_rank": 5,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0094/col01_char016.png"
+      },
+      {
+        "source": "SachThanhTruyen11",
+        "page": "page_0112",
+        "col": 5,
+        "syllable": "cứu",
+        "ocr_char": "救",
+        "nom_char": "救",
+        "tier": "1",
+        "matched": "True",
+        "visual_score": null,
+        "cand_rank": 8,
+        "n_candidates": 10,
+        "crop_file": "crops/page_0112/col05_char002.png"
+      }
+    ],
+    "sample_suspect_breakdown": {
+      "ocr_agrees_with_nom": 5,
+      "ocr_disagree_but_high_vis": 12,
+      "ocr_disagree_mid_vis": 19,
+      "ocr_disagree_low_vis": 13,
+      "no_ocr": 1,
+      "rank_high_in_cand": 14,
+      "not_in_cand": 13
+    }
+  },
+  "B_unmatched": {
+    "n_total_unmatched": 1925,
+    "by_source": {
+      "SachThanhTruyen2": 447,
+      "SachThanhTruyen4": 976,
+      "SachThanhTruyen11": 502
+    },
+    "by_tier": {
+      "3": 1925
+    },
+    "by_bucket_with_nom_char": {
+      "HAN_BASIC": 1420,
+      "NOM_EXT_B_PLUS": 335,
+      "CJK_EXT_A": 169,
+      "OTHER": 1
+    },
+    "n_no_syllable": 0,
+    "n_t0": 0,
+    "t3_unmatched_visual_score": {
+      "n": 1925,
+      "min": 0.635,
+      "p25": 0.713,
+      "median": 0.729,
+      "p75": 0.74,
+      "max": 0.75,
+      "lt_0.70": 243,
+      "0.70-0.75": 1650,
+      "ge_0.75": 32
+    },
+    "samples_per_book": {
+      "SachThanhTruyen2": [
+        {
+          "page": "page_0098",
+          "col": 3,
+          "syl": "Đức",
+          "ocr": "知",
+          "tier": "3",
+          "nom": "䙷"
+        },
+        {
+          "page": "page_0054",
+          "col": 4,
+          "syl": "già",
+          "ocr": "雜",
+          "tier": "3",
+          "nom": "嗻"
+        },
+        {
+          "page": "page_0118",
+          "col": 5,
+          "syl": "Thầy",
+          "ocr": "㮣",
+          "tier": "3",
+          "nom": "賴"
+        },
+        {
+          "page": "page_0222",
+          "col": 9,
+          "syl": "giây",
+          "ocr": "寺",
+          "tier": "3",
+          "nom": "𠔇"
+        },
+        {
+          "page": "page_0022",
+          "col": 3,
+          "syl": "su",
+          "ocr": "主",
+          "tier": "3",
+          "nom": "樞"
+        },
+        {
+          "page": "page_0030",
+          "col": 9,
+          "syl": "đầy",
+          "ocr": "弄",
+          "tier": "3",
+          "nom": "台"
+        },
+        {
+          "page": "page_0302",
+          "col": 3,
+          "syl": "ấy",
+          "ocr": "津",
+          "tier": "3",
+          "nom": "乙"
+        },
+        {
+          "page": "page_0168",
+          "col": 4,
+          "syl": "tao",
+          "ocr": "𫊫",
+          "tier": "3",
+          "nom": "糙"
+        },
+        {
+          "page": "page_0040",
+          "col": 4,
+          "syl": "nghĩ",
+          "ocr": "丐",
+          "tier": "3",
+          "nom": "蚁"
+        },
+        {
+          "page": "page_0110",
+          "col": 3,
+          "syl": "cùng",
+          "ocr": "牙",
+          "tier": "3",
+          "nom": "珙"
+        },
+        {
+          "page": "page_0196",
+          "col": 5,
+          "syl": "vồ",
+          "ocr": "高",
+          "tier": "3",
+          "nom": "撫"
+        },
+        {
+          "page": "page_0026",
+          "col": 8,
+          "syl": "Rất",
+          "ocr": "懦",
+          "tier": "3",
+          "nom": "𫇐"
+        },
+        {
+          "page": "page_0156",
+          "col": 3,
+          "syl": "lửa",
+          "ocr": "恕",
+          "tier": "3",
+          "nom": "火"
+        },
+        {
+          "page": "page_0074",
+          "col": 7,
+          "syl": "chước",
+          "ocr": "砧",
+          "tier": "3",
+          "nom": "硳"
+        },
+        {
+          "page": "page_0020",
+          "col": 3,
+          "syl": "tử",
+          "ocr": "每",
+          "tier": "3",
+          "nom": "秄"
+        },
+        {
+          "page": "page_0036",
+          "col": 6,
+          "syl": "A",
+          "ocr": "眉",
+          "tier": "3",
+          "nom": "哑"
+        },
+        {
+          "page": "page_0126",
+          "col": 4,
+          "syl": "khi",
+          "ocr": "旦",
+          "tier": "3",
+          "nom": "諆"
+        },
+        {
+          "page": "page_0124",
+          "col": 2,
+          "syl": "tội",
+          "ocr": "遜",
+          "tier": "3",
+          "nom": "辠"
+        },
+        {
+          "page": "page_0030",
+          "col": 1,
+          "syl": "đạo",
+          "ocr": "知",
+          "tier": "3",
+          "nom": "盜"
+        },
+        {
+          "page": "page_0082",
+          "col": 4,
+          "syl": "xưa",
+          "ocr": "𭃡",
+          "tier": "3",
+          "nom": "㧅"
+        }
+      ],
+      "SachThanhTruyen4": [
+        {
+          "page": "page_0028",
+          "col": 5,
+          "syl": "chẳng",
+          "ocr": null,
+          "tier": "3",
+          "nom": "亟"
+        },
+        {
+          "page": "page_0162",
+          "col": 5,
+          "syl": "người",
+          "ocr": "身",
+          "tier": "3",
+          "nom": "匕"
+        },
+        {
+          "page": "page_0128",
+          "col": 4,
+          "syl": "lại",
+          "ocr": "渚",
+          "tier": "3",
+          "nom": "又"
+        },
+        {
+          "page": "page_0022",
+          "col": 5,
+          "syl": "Thánh",
+          "ocr": "皇",
+          "tier": "3",
+          "nom": "㗂"
+        },
+        {
+          "page": "page_0268",
+          "col": 9,
+          "syl": "người",
+          "ocr": "丄",
+          "tier": "3",
+          "nom": "圤"
+        },
+        {
+          "page": "page_0172",
+          "col": 1,
+          "syl": "khi",
+          "ocr": "朱",
+          "tier": "3",
+          "nom": "諆"
+        },
+        {
+          "page": "page_0044",
+          "col": 2,
+          "syl": "còn",
+          "ocr": "丕",
+          "tier": "3",
+          "nom": "存"
+        },
+        {
+          "page": "page_0304",
+          "col": 6,
+          "syl": "nghĩa",
+          "ocr": "委",
+          "tier": "3",
+          "nom": "义"
+        },
+        {
+          "page": "page_0072",
+          "col": 8,
+          "syl": "những",
+          "ocr": "事",
+          "tier": "3",
+          "nom": "仙"
+        },
+        {
+          "page": "page_0190",
+          "col": 5,
+          "syl": "le",
+          "ocr": "爾",
+          "tier": "3",
+          "nom": "𠲥"
+        },
+        {
+          "page": "page_0188",
+          "col": 9,
+          "syl": "kẻ",
+          "ocr": "蜍",
+          "tier": "3",
+          "nom": "計"
+        },
+        {
+          "page": "page_0178",
+          "col": 1,
+          "syl": "vui",
+          "ocr": "實",
+          "tier": "3",
+          "nom": "衃"
+        },
+        {
+          "page": "page_0022",
+          "col": 7,
+          "syl": "sang",
+          "ocr": "丄",
+          "tier": "3",
+          "nom": "戈"
+        },
+        {
+          "page": "page_0176",
+          "col": 3,
+          "syl": "dây",
+          "ocr": "㕠",
+          "tier": "3",
+          "nom": "移"
+        },
+        {
+          "page": "page_0178",
+          "col": 8,
+          "syl": "lem",
+          "ocr": null,
+          "tier": "3",
+          "nom": "淋"
+        },
+        {
+          "page": "page_0120",
+          "col": 5,
+          "syl": "chực",
+          "ocr": "身",
+          "tier": "3",
+          "nom": "𠅺"
+        },
+        {
+          "page": "page_0020",
+          "col": 3,
+          "syl": "mà",
+          "ocr": "竈",
+          "tier": "3",
+          "nom": "罵"
+        },
+        {
+          "page": "page_0072",
+          "col": 7,
+          "syl": "xứ",
+          "ocr": "丄",
+          "tier": "3",
+          "nom": "処"
+        },
+        {
+          "page": "page_0018",
+          "col": 6,
+          "syl": "khó",
+          "ocr": "中",
+          "tier": "3",
+          "nom": "瘔"
+        },
+        {
+          "page": "page_0164",
+          "col": 4,
+          "syl": "mẹ",
+          "ocr": "夷",
+          "tier": "3",
+          "nom": "袄"
+        }
+      ],
+      "SachThanhTruyen11": [
+        {
+          "page": "page_0252",
+          "col": 2,
+          "syl": "Chúa",
+          "ocr": "秋",
+          "tier": "3",
+          "nom": "炷"
+        },
+        {
+          "page": "page_0054",
+          "col": 5,
+          "syl": "phải",
+          "ocr": "藥",
+          "tier": "3",
+          "nom": "仕"
+        },
+        {
+          "page": "page_0098",
+          "col": 9,
+          "syl": "Thánh",
+          "ocr": "他",
+          "tier": "3",
+          "nom": "垩"
+        },
+        {
+          "page": "page_0138",
+          "col": 9,
+          "syl": "dạy",
+          "ocr": "奴",
+          "tier": "3",
+          "nom": "曳"
+        },
+        {
+          "page": "page_0058",
+          "col": 4,
+          "syl": "pha",
+          "ocr": "之",
+          "tier": "3",
+          "nom": "葩"
+        },
+        {
+          "page": "page_0162",
+          "col": 9,
+          "syl": "Giê",
+          "ocr": "主",
+          "tier": "3",
+          "nom": "支"
+        },
+        {
+          "page": "page_0046",
+          "col": 4,
+          "syl": "có",
+          "ocr": null,
+          "tier": "3",
+          "nom": "固"
+        },
+        {
+          "page": "page_0168",
+          "col": 9,
+          "syl": "tha",
+          "ocr": "固",
+          "tier": "3",
+          "nom": "它"
+        },
+        {
+          "page": "page_0108",
+          "col": 9,
+          "syl": "Phi",
+          "ocr": "口",
+          "tier": "3",
+          "nom": "伾"
+        },
+        {
+          "page": "page_0166",
+          "col": 3,
+          "syl": "khác",
+          "ocr": "蜍",
+          "tier": "3",
+          "nom": "吉"
+        },
+        {
+          "page": "page_0240",
+          "col": 9,
+          "syl": "chịu",
+          "ocr": "時",
+          "tier": "3",
+          "nom": "𠮥"
+        },
+        {
+          "page": "page_0200",
+          "col": 6,
+          "syl": "cho",
+          "ocr": "補",
+          "tier": "3",
+          "nom": "株"
+        },
+        {
+          "page": "page_0072",
+          "col": 4,
+          "syl": "cô",
+          "ocr": "眉",
+          "tier": "3",
+          "nom": "喿"
+        },
+        {
+          "page": "page_0044",
+          "col": 8,
+          "syl": "MÔNG",
+          "ocr": "極",
+          "tier": "3",
+          "nom": "梦"
+        },
+        {
+          "page": "page_0170",
+          "col": 2,
+          "syl": "rô",
+          "ocr": null,
+          "tier": "3",
+          "nom": "鱸"
+        },
+        {
+          "page": "page_0186",
+          "col": 1,
+          "syl": "Đức",
+          "ocr": "自",
+          "tier": "3",
+          "nom": "䙷"
+        },
+        {
+          "page": "page_0074",
+          "col": 3,
+          "syl": "mà",
+          "ocr": "庻",
+          "tier": "3",
+          "nom": "女"
+        },
+        {
+          "page": "page_0122",
+          "col": 5,
+          "syl": "trăm",
+          "ocr": "果",
+          "tier": "3",
+          "nom": "啉"
+        },
+        {
+          "page": "page_0042",
+          "col": 7,
+          "syl": "thầy",
+          "ocr": "把",
+          "tier": "3",
+          "nom": "賴"
+        },
+        {
+          "page": "page_0162",
+          "col": 9,
+          "syl": "Thánh",
+          "ocr": "并",
+          "tier": "3",
+          "nom": "𠄵"
+        }
+      ]
+    }
+  },
+  "C_class_weights": {
+    "N_records": 83652,
+    "K_classes": 5703,
+    "weight_stats": {
+      "min": 0.01,
+      "p25": 1.834,
+      "median": 4.889,
+      "p75": 14.668,
+      "p95": 14.668,
+      "max": 14.668
+    },
+    "rare_grouping_proposals": {
+      "<= 1": {
+        "n_rare_classes": 2006,
+        "n_rare_records": 2006,
+        "pct_classes_removed": 35.17,
+        "pct_records_in_rare": 2.4,
+        "new_K": 3698,
+        "classes_kept": 3697
+      },
+      "<= 2": {
+        "n_rare_classes": 2817,
+        "n_rare_records": 3628,
+        "pct_classes_removed": 49.4,
+        "pct_records_in_rare": 4.34,
+        "new_K": 2887,
+        "classes_kept": 2886
+      },
+      "<= 3": {
+        "n_rare_classes": 3298,
+        "n_rare_records": 5071,
+        "pct_classes_removed": 57.83,
+        "pct_records_in_rare": 6.06,
+        "new_K": 2406,
+        "classes_kept": 2405
+      },
+      "<= 5": {
+        "n_rare_classes": 3836,
+        "n_rare_records": 7430,
+        "pct_classes_removed": 67.26,
+        "pct_records_in_rare": 8.88,
+        "new_K": 1868,
+        "classes_kept": 1867
+      },
+      "<= 10": {
+        "n_rare_classes": 4512,
+        "n_rare_records": 12611,
+        "pct_classes_removed": 79.12,
+        "pct_records_in_rare": 15.08,
+        "new_K": 1192,
+        "classes_kept": 1191
+      }
+    },
+    "csv_output": "evaluation/audit_post_ship/class_weights_balanced.csv"
+  }
+}

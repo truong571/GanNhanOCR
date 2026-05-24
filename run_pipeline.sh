@@ -82,6 +82,19 @@ echo "  Steps:  $STEP"
 echo "  Books:  $(echo $BOOKS | tr '\n' ' ')"
 echo "================================================================"
 
+# Step -1: Sync FontDiffusion cache v2 from Hugging Face Hub
+# Set SYNC_FD_CACHE=0 để bỏ qua (mặc định: bật, tự pull + flatten vào prepared/)
+if [[ "${SYNC_FD_CACHE:-1}" == "1" ]]; then
+    echo ""
+    echo ">>> Step -1: Sync FD cache v2 from Hugging Face"
+    if [[ -d gannhanocr-fd-cache-v2/.git ]]; then
+        (cd gannhanocr-fd-cache-v2 && git pull --ff-only)
+    else
+        git clone https://huggingface.co/datasets/mdnt571/gannhanocr-fd-cache-v2
+    fi
+    "$PY" evaluation/test_swap_fd_cache_v2.py --apply
+fi
+
 # Step 0: Setup
 if [[ "$STEP" == "all" || "$STEP" == "0" ]]; then
     echo ""

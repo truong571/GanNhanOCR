@@ -25,6 +25,7 @@ from core.ranking.ranker import (
     tier3_visual_comparison,
 )
 from core.text.dictionary import cjk_block_score
+from core.text.loanword import find_loan_spans, should_demote_loan_syllable
 
 from pipeline.step0_setup import load_config
 
@@ -265,12 +266,27 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
     matched_count = 0
     unmatched_count = 0
     gap_count = 0
+    loan_demoted_count = 0
 
     for aligned_path in aligned_files:
         page_name = aligned_path.stem.replace("_aligned", "")
 
         with open(aligned_path, "r", encoding="utf-8") as f:
             alignment = json.load(f)
+
+        # Catholic-transliteration spans per column (Bà Ma ri a → Maria, ...).
+        # Pairs inside a span are demoted ONLY when qn_to_nom has no entry for
+        # the syllable; if dict has a Hán phonetic mapping (e.g. "Bà" → 婆)
+        # the label is kept — those are valid Han-shared labels.
+        match_pairs_by_col: dict[int, list[dict]] = {}
+        for p in alignment:
+            if p.get("type") == "match":
+                match_pairs_by_col.setdefault(p.get("column"), []).append(p)
+        loan_span_per_col: dict[int, set[int]] = {
+            col: find_loan_spans([p.get("syllable") or "" for p in pairs])
+            for col, pairs in match_pairs_by_col.items()
+        }
+        col_pos_counter: dict[int, int] = {}
 
         page_labels = []
         for pair in alignment:
@@ -290,6 +306,38 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
                 char_info = pair.get("char", {})
                 syllable = pair.get("syllable", "")
                 ocr_char = char_info.get("ocr_char") if char_info else None
+
+                # Loanword guard (F1' relaxed): if this position is in a
+                # Catholic transliteration span AND qn_to_nom has no entry
+                # for the syllable, skip the 3-tier assignment — there is no
+                # valid Nom mapping. Han phonetic chars that ARE in the dict
+                # (e.g. "Bà" → 婆) remain labeled normally.
+                col_id = pair.get("column")
+                idx_in_col = col_pos_counter.get(col_id, 0)
+                col_pos_counter[col_id] = idx_in_col + 1
+                if (idx_in_col in loan_span_per_col.get(col_id, set())
+                        and should_demote_loan_syllable(syllable, qn_to_nom)):
+                    label = {
+                        "page": page_name,
+                        "column": col_id,
+                        "type": "match",
+                        "syllable": syllable,
+                        "nom_char": None,
+                        "unicode": None,
+                        "matched": False,
+                        "tier": 0,
+                        "nom_candidates": [],
+                        "ocr_char": ocr_char,
+                        "bbox": char_info.get("bbox") if char_info else None,
+                        "crop_file": char_info.get("crop_file") if char_info else None,
+                        "loan_demoted": True,
+                    }
+                    tier_counts[0] += 1
+                    unmatched_count += 1
+                    loan_demoted_count += 1
+                    page_labels.append(label)
+                    all_labels.append(label)
+                    continue
 
                 # Resolve crop path for visual ranking.
                 # Prefer the RAW crop (cropped directly from the original page
@@ -392,6 +440,7 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
         "matched": matched_count,
         "unmatched": unmatched_count,
         "gaps": gap_count,
+        "loan_demoted": loan_demoted_count,
         "tiers": {str(k): v for k, v in tier_counts.items()},
     }
     with open(labeled_dir / "summary.json", "w", encoding="utf-8") as f:
@@ -417,6 +466,7 @@ def label_book(config: dict, book_name: str, verbose: bool = True):
         print(f"    Tier 2 (similar): {tier_counts[2]}")
         print(f"    Tier 3 (visual):  {tier_counts[3]}")
         print(f"    Tier 0 (none):    {tier_counts[0]}")
+        print(f"    Loan demoted:     {loan_demoted_count}")
         print(f"  Output: {labeled_dir}/")
 
 

@@ -1,0 +1,84 @@
+{
+  "debug_p12_p14": {
+    "name": "debug_p12_p14",
+    "n_total_records": 373,
+    "n_with_nom_char": 372,
+    "by_bucket": {
+      "HAN_BASIC": 322,
+      "NOM_EXT_B_PLUS": 36,
+      "CJK_EXT_A": 14
+    },
+    "by_bucket_pct": {
+      "HAN_BASIC": 86.56,
+      "NOM_EXT_B_PLUS": 9.68,
+      "CJK_EXT_A": 3.76
+    },
+    "by_bucket_tier": {
+      "HAN_BASIC|T1": 203,
+      "HAN_BASIC|T3": 92,
+      "HAN_BASIC|T2": 27,
+      "NOM_EXT_B_PLUS|T3": 33,
+      "CJK_EXT_A|T3": 3,
+      "CJK_EXT_A|T1": 11,
+      "NOM_EXT_B_PLUS|T2": 1,
+      "NOM_EXT_B_PLUS|T1": 2
+    },
+    "by_bucket_matched_true": {
+      "HAN_BASIC": 314,
+      "NOM_EXT_B_PLUS": 33,
+      "CJK_EXT_A": 14
+    },
+    "by_bucket_matched_false": {
+      "HAN_BASIC": 8,
+      "NOM_EXT_B_PLUS": 3,
+      "CJK_EXT_A": 0
+    }
+  },
+  "dataset_all": {
+    "name": "dataset_all",
+    "n_total_records": 83564,
+    "n_with_nom_char": 83564,
+    "by_bucket": {
+      "HAN_BASIC": 68227,
+      "CJK_EXT_A": 2448,
+      "NOM_EXT_B_PLUS": 9988,
+      "NOM_PUA": 2327,
+      "OTHER": 574
+    },
+    "by_bucket_pct": {
+      "HAN_BASIC": 81.65,
+      "CJK_EXT_A": 2.93,
+      "NOM_EXT_B_PLUS": 11.95,
+      "NOM_PUA": 2.78,
+      "OTHER": 0.69
+    },
+    "by_bucket_tier": {
+      "HAN_BASIC|T1": 36368,
+      "HAN_BASIC|T3": 28170,
+      "CJK_EXT_A|T3": 940,
+      "NOM_EXT_B_PLUS|T3": 9115,
+      "HAN_BASIC|T2": 3689,
+      "NOM_PUA|T3": 2327,
+      "CJK_EXT_A|T1": 1178,
+      "NOM_EXT_B_PLUS|T2": 483,
+      "NOM_EXT_B_PLUS|T1": 390,
+      "OTHER|T3": 561,
+      "CJK_EXT_A|T2": 330,
+      "OTHER|T1": 13
+    },
+    "by_bucket_matched_true": {
+      "HAN_BASIC": 67196,
+      "CJK_EXT_A": 2403,
+      "NOM_EXT_B_PLUS": 9744,
+      "NOM_PUA": 2220,
+      "OTHER": 561
+    },
+    "by_bucket_matched_false": {
+      "HAN_BASIC": 1031,
+      "CJK_EXT_A": 45,
+      "NOM_EXT_B_PLUS": 244,
+      "NOM_PUA": 107,
+      "OTHER": 13
+    }
+  }
+}

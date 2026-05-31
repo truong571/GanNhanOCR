@@ -1,4 +1,5 @@
 """OCR API clients: HCMUS SinoNom OCR (kimhannom.fit.hcmus.edu.vn)."""
+from __future__ import annotations
 
 import base64
 import hashlib
@@ -195,10 +196,109 @@ def recognize(file_name: str) -> list[dict] | None:
     return None
 
 
-def boxes_to_columns(boxes: list[dict]) -> list[list[dict]]:
+def _merge_fragment_columns(result: list[list[dict]]) -> list[list[dict]]:
+    """Hậu xử lý cột OCR để về đúng số cột thật (kinhhannom hay tách/gộp nhầm
+    do chữ viết tay lệch x). 5 luật:
+      (A) Bỏ CỘT RỖNG (ô trống không ký tự).
+      (1) Gộp MẢNH VỤN 1-2 ký tự sát cột bên (< 0.6 nhịp) vào cột đó.
+      (2) Gộp CẶP SÁT (gap < 0.35 nhịp, tổng <= 1.3*median) = cột tách đôi giữa thân.
+      (3) Gộp box NGẮN (<0.8 cao trung bình) + CHỒNG x vào hàng xóm (detection trùng).
+      (4) Bỏ "CỘT MA" GIỮA (chen giữa 2 cột, cả 2 khe < 0.7 nhịp = chú thích/nhiễu).
+    Cột thật — kể cả cột chương NGẮN ở rìa — cách hàng xóm ~1 nhịp nên không bị
+    gộp/xoá; chỉ mảnh vụn/cột-ma/trùng mới bị xử lý.
+    """
+    import statistics
+
+    def cx(col):
+        return statistics.mean([c["bbox"][0] for c in col]) if col else 0
+
+    def col_h(col):
+        ys = [c["bbox"][1] for c in col] + [c["bbox"][3] for c in col]
+        return (max(ys) - min(ys)) if ys else 0
+
+    def col_xr(col):
+        return (min(c["bbox"][0] for c in col), max(c["bbox"][2] for c in col))
+
+    if len(result) <= 1:
+        return result
+    sizes = [len(c) for c in result if c]
+    if not sizes:
+        return result
+    med_size = statistics.median(sizes)
+    centers = [cx(c) for c in result]
+    spacings = sorted(abs(centers[i] - centers[i + 1]) for i in range(len(centers) - 1))
+    med_space = statistics.median(spacings) if spacings else 100
+    frag_max = max(2, int(0.25 * med_size))
+
+    # (A) BỎ CỘT RỖNG: ô kinhhannom nhận trống (không ký tự) -> không thành cột.
+    cols = [list(c) for c in result if len(c) > 0]
+    changed = True
+    while changed and len(cols) > 1:
+        changed = False
+        # (1) Mảnh vụn nhỏ -> gộp vào hàng xóm gần nhất
+        for i, c in enumerate(cols):
+            if 0 < len(c) <= frag_max:
+                nbrs = [k for k in (i - 1, i + 1) if 0 <= k < len(cols)]
+                j = min(nbrs, key=lambda k: abs(cx(cols[k]) - cx(c)))
+                if abs(cx(cols[j]) - cx(c)) < 0.6 * med_space:
+                    cols[j] = sorted(cols[j] + c, key=lambda b: b["y_center"])
+                    cols.pop(i)
+                    changed = True
+                    break
+        if changed:
+            continue
+        # (2) Cặp cột SÁT nhau (gap < 0.35 nhịp) mà TỔNG cỡ ~1 cột thường
+        # (<= 1.3*median) -> 1 cột bị tách đôi giữa thân -> gộp.
+        # (Cột thật cách ~1 nhịp; cặp tách-đôi-L/R mỗi nửa đủ chữ -> tổng lớn,
+        #  KHÔNG gộp để tránh nhân đôi ký tự.)
+        for i in range(len(cols) - 1):
+            gap = abs(cx(cols[i]) - cx(cols[i + 1]))
+            if gap < 0.35 * med_space and len(cols[i]) + len(cols[i + 1]) <= 1.3 * med_size:
+                cols[i] = sorted(cols[i] + cols[i + 1], key=lambda b: b["y_center"])
+                cols.pop(i + 1)
+                changed = True
+                break
+        if changed:
+            continue
+        # (3) Cột THỪA = NGẮN bất thường (<0.80 chiều cao trung bình) VÀ CHỒNG x
+        # với hàng xóm -> detection thừa/trùng của kinhhannom -> gộp vào hàng xóm.
+        # (Cột thật đứng cạnh nhau KHÔNG chồng x nên không bị gộp.)
+        med_h = statistics.median([col_h(c) for c in cols])
+        for i, c in enumerate(cols):
+            if col_h(c) < 0.80 * med_h:
+                xl, xr = col_xr(c)
+                ov = None
+                for k in (i - 1, i + 1):
+                    if 0 <= k < len(cols):
+                        xl2, xr2 = col_xr(cols[k])
+                        if (min(xr, xr2) - max(xl, xl2)) > 0.25 * (xr - xl):
+                            ov = k
+                if ov is not None:
+                    cols[ov] = sorted(cols[ov] + c, key=lambda b: b["y_center"])
+                    cols.pop(i)
+                    changed = True
+                    break
+        if changed:
+            continue
+        # (4) "CỘT MA" GIỮA: cột chen giữa 2 cột chính, CẢ HAI khe x < 0.7 nhịp
+        # (chú thích nhỏ/nhiễu giữa cột) -> XOÁ khỏi 9 cột chính.
+        # (Cột thật — kể cả cột chương ngắn ở rìa — cách hàng xóm ~1 nhịp nên
+        #  không bị xoá; chỉ cột chen-giữa-cả-2-bên mới dính.)
+        for i in range(1, len(cols) - 1):
+            gl = abs(cx(cols[i]) - cx(cols[i - 1]))
+            gr = abs(cx(cols[i]) - cx(cols[i + 1]))
+            if gl < 0.7 * med_space and gr < 0.7 * med_space:
+                cols.pop(i)
+                changed = True
+                break
+    return cols
+
+
+def boxes_to_columns(boxes: list[dict], merge_fragments: bool = True) -> list[list[dict]]:
     """Convert OCR boxes to columns, each column = list of {char, y_center, bbox}.
 
     Sorted: columns right->left, within column top->bottom.
+    merge_fragments=True: gộp mảnh vụn 1-2 ký tự bị tách nhầm -> không DƯ cột.
     """
     if not boxes:
         return []
@@ -240,15 +340,61 @@ def boxes_to_columns(boxes: list[dict]) -> list[list[dict]]:
                              x_right, int(y_top + char_h * (idx + 1))],
                 })
         result.append(chars_with_pos)
+
+    if merge_fragments:
+        result = _merge_fragment_columns(result)
+    # An toàn: bỏ MỌI cột rỗng (ô kinhhannom nhận trống, không ký tự) -> dữ liệu
+    # cột sạch để bước sau gán Hán-Nôm <-> Quốc Ngữ chính xác theo số ký tự.
+    result = [c for c in result if c]
     return result
+
+
+def _ocr_one_pass(image_path: str, use_frame: bool, frame_pad: int):
+    """1 lượt: (crop khung pad) -> upload -> recognize -> trả boxes thô + có-crop."""
+    upload_path = image_path
+    tmp_crop = None
+    framed = False
+    if use_frame:
+        try:
+            import tempfile
+            import cv2
+            from core.image.frame_detector import crop_to_frame
+            bgr = cv2.imread(str(image_path))
+            if bgr is not None:
+                crop = crop_to_frame(bgr, pad=frame_pad)
+                tmp_crop = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+                tmp_crop.close()
+                cv2.imwrite(tmp_crop.name, crop)
+                upload_path = tmp_crop.name
+                framed = True
+        except Exception as e:
+            print(f"[OCR] frame-crop failed ({e}), dùng ảnh gốc", file=sys.stderr)
+    file_name = upload_image(upload_path)
+    if tmp_crop is not None:
+        try:
+            os.unlink(tmp_crop.name)
+        except OSError:
+            pass
+    if not file_name:
+        return None, framed
+    return recognize(file_name), framed
 
 
 def ocr_page(
     image_path: str,
     cache_path: str | None = None,
     verbose: bool = False,
+    use_frame: bool = True,
+    frame_pad: int = 12,
+    expected_cols: int = 9,
+    retry_pad: int = 30,
 ) -> list[list[dict]] | None:
-    """OCR a full page image. Returns columns of char dicts with caching."""
+    """OCR 1 trang -> các cột char dicts (có cache).
+
+    use_frame=True: crop khung 9 cột (loại số 1-9, số trang, viền) TRƯỚC khi OCR.
+    Nếu số cột != expected_cols (mặc định 9), TỰ RETRY với pad lớn hơn (retry_pad)
+    -> khôi phục cột chương ngắn ở rìa bị crop sát cắt mất. Giữ kết quả gần 9 nhất.
+    """
     if cache_path:
         cache_file = Path(cache_path)
         if cache_file.exists():
@@ -259,24 +405,25 @@ def ocr_page(
             return cached.get("columns")
 
     if verbose:
-        print(f"    [OCR] Uploading {Path(image_path).name}...")
-
-    file_name = upload_image(image_path)
-    if not file_name:
-        return None
-
-    if verbose:
-        print("    [OCR] Running OCR...")
-
-    boxes = recognize(file_name)
+        print(f"    [OCR] {Path(image_path).name} (pad={frame_pad})...")
+    boxes, framed = _ocr_one_pass(image_path, use_frame, frame_pad)
     if boxes is None:
         return None
-
     columns = boxes_to_columns(boxes)
 
+    # RETRY với pad lớn nếu chưa đúng số cột (chỉ khi đang crop khung)
+    if use_frame and len(columns) != expected_cols and retry_pad > frame_pad:
+        if verbose:
+            print(f"    [OCR] {len(columns)} cột != {expected_cols} -> retry pad={retry_pad}")
+        b2, _ = _ocr_one_pass(image_path, use_frame, retry_pad)
+        if b2 is not None:
+            c2 = boxes_to_columns(b2)
+            # giữ kết quả GẦN expected nhất
+            if abs(len(c2) - expected_cols) < abs(len(columns) - expected_cols):
+                columns, boxes, frame_pad = c2, b2, retry_pad
+
     if verbose:
-        total_chars = sum(len(c) for c in columns)
-        print(f"    [OCR] Got {len(columns)} columns, {total_chars} chars")
+        print(f"    [OCR] -> {len(columns)} cột, {sum(len(c) for c in columns)} chữ")
 
     if cache_path:
         cache_file = Path(cache_path)
@@ -284,10 +431,9 @@ def ocr_page(
         with open(image_path, "rb") as fh:
             img_hash = hashlib.md5(fh.read()).hexdigest()
         cache_data = {
-            "image": image_path,
-            "image_hash": img_hash,
-            "columns": columns,
-            "boxes_raw": boxes,
+            "image": image_path, "image_hash": img_hash,
+            "framed": framed, "frame_pad": frame_pad,
+            "n_columns": len(columns), "columns": columns, "boxes_raw": boxes,
         }
         with open(cache_file, "w", encoding="utf-8") as f:
             json.dump(cache_data, f, ensure_ascii=False, indent=2)

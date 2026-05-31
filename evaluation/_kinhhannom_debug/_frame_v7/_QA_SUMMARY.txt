@@ -1,0 +1,24 @@
+========================================================================
+KẾT QUẢ KHUNG (frame) — _frame_v7   |  445 trang / 3 cuốn
+========================================================================
+QA: PASS 444 (khung 100% đúng)   WARN 1 (nghi lật, báo giả)   FAIL 0
+   - 0 kẹp số 1-9, 0 kẹp số trang, 0 cắt cột, 0 fallback
+
+CƠ CHẾ LOẠI SỐ 1-9 / SỐ TRANG (mới nhất - connected components):
+  Số 1-9 + mũi tên + số trang = đốm NHỎ; chữ Nôm = đốm LỚN.
+  Mép khung = đỉnh/đáy của chữ-lớn -> số (đốm nhỏ) nằm ngoài khung.
+  Xử lý được cả trang mật độ tăng đều không có 'hố' (vd page_0144),
+  có giới hạn an toàn 15% -> không sập khung.
+  Xem _REVIEW_marker_fixed.png (gồm 0144,0118,0130,0142,0170,0212,0218,0186).
+
+LẬT NGƯỢC:
+  - page_0186 (ST4): ĐÃ XOAY 180° thẳng trong data/SachThanhTruyen4.pdf
+    (ảnh nhúng) + prepared/. Nay đúng chiều.
+  - page_0066 (ST11): WARN báo giả (số 1-9 mờ), thực ra ĐÚNG chiều -> giữ.
+
+THƯ MỤC:
+  <cuốn>/frame|crop|summary.csv  _contact_<cuốn>.png  _qa/<cuốn>_qa.csv
+  _REVIEW_marker_fixed.png  _REVIEW_flipped.png
+
+Chạy lại QA: python3 evaluation/qa_frames.py
+========================================================================

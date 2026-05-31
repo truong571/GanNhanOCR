@@ -1,7 +1,8 @@
 """Step 2: Structure-driven alignment (dataset_v5 logic).
 
-Default method (`structural`): the validated pipeline from
-evaluation/test_column_align/. Achieves 437/445 pages structurally OK and
+Default method (`structural`): the validated pipeline, nay nằm trong CODE
+CHÍNH tại core/align/ (parser_v5, nom_detect_v3, run_full, ... — chuyển từ
+evaluation/test_column_align/ cũ). Achieves 437/445 pages structurally OK and
 41,824 gold pairs across 3 books (vs. 4,133 in the legacy Levenshtein
 approach).
 
@@ -27,14 +28,6 @@ import json
 import sys
 from pathlib import Path
 
-# Make evaluation/test_column_align/ importable so we reuse VALIDATED logic
-# without copy-pasting (which would create drift). The eval folder is the
-# source of truth — when fixing a parser/detector bug, edit there and step2
-# picks it up automatically.
-_EVAL_DIR = Path(__file__).resolve().parents[1] / "evaluation" / "test_column_align"
-if str(_EVAL_DIR) not in sys.path:
-    sys.path.insert(0, str(_EVAL_DIR))
-
 import cv2  # noqa: E402
 import numpy as np  # noqa: E402
 
@@ -43,11 +36,12 @@ from core.image.crop_cleaner import CharacterCleaner  # noqa: E402
 from core.image.image_processing import load_and_binarize  # noqa: E402
 from core.text.dictionary import load_qn_to_nom, load_similarity_dict  # noqa: E402
 
-# Validated modules from evaluation/test_column_align/
-from parser_v5 import parse_v5  # noqa: E402
-from parser_v2 import load_v1_transcription  # noqa: E402
-from nom_detect_v3 import detect_nom_columns_v3  # noqa: E402
-from export_dataset_v4 import resegment_col  # noqa: E402
+# Logic align cột Nôm <-> Quốc Ngữ — đã chuyển vào CODE CHÍNH (core/align/),
+# không còn trỏ tới evaluation/test_column_align.
+from core.align.parser_v5 import parse_v5  # noqa: E402
+from core.align.parser_v2 import load_v1_transcription  # noqa: E402
+from core.align.nom_detect_v3 import detect_nom_columns_v3  # noqa: E402
+from core.align.export_dataset_v4 import resegment_col  # noqa: E402
 
 from pipeline.step0_setup import load_config  # noqa: E402
 
@@ -136,7 +130,7 @@ def process_page_structural(
     if binary is not None:
         cols, col_method = detect_nom_columns_v3(binary, ocr_columns, 9)
     else:
-        from run_full import nom_cols_hybrid
+        from core.align.run_full import nom_cols_hybrid
         cols = nom_cols_hybrid(ocr_columns, min_len=4)
         col_method = "hybrid_no_image"
 

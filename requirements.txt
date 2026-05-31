@@ -1,38 +1,65 @@
+# ============================================================================
+# CÁCH CÀI (macOS, Python 3.14 — đã test trên 3.14.5: torch MPS OK, vietocr OK)
+# Chạy đúng theo thứ tự dưới để ra đúng version đã pin:
+#
+#   python3.14 -m venv .venv
+#   source .venv/bin/activate
+#   pip install --upgrade pip
+#   pip install -r requirements.txt
+#   pip install --no-deps vietocr==0.3.13     # cài RIÊNG, xem mục VietOCR bên dưới
+#
+# LƯU Ý:
+#   * pygame KHÔNG có wheel cho Python 3.14 -> dùng pygame-ce (drop-in, import vẫn là
+#     "import pygame", có pygame.freetype, kèm sẵn SDL). KHÔNG cài "pygame".
+#   * vietocr PHẢI cài với --no-deps: metadata của nó pin albumentations/imgaug -> kéo
+#     theo Pillow 10.2.0 (không có wheel cho 3.14, build từ source là lỗi). Các deps
+#     runtime mà vietocr cần khi OCR (gdown, prefetch_generator, PyYAML, lmdb, einops,
+#     torch, torchvision, numpy, opencv, Pillow) đều đã có sẵn trong file này.
+#   * safetensors pin bản 0.8.0rc0 vì đó là bản có wheel cho Python 3.14.
+# ============================================================================
+
 # Core pipeline (required)
-numpy
-opencv-python
-scipy
-PyYAML
-requests
-Pillow
-PyMuPDF
-openpyxl
+numpy==2.4.6
+opencv-python==4.13.0.92
+scipy==1.17.1
+PyYAML==6.0.3
+requests==2.34.2
+Pillow==12.2.0
+PyMuPDF==1.27.2.3
+openpyxl==3.1.5
 
 # Step 3 visual ranking (DINOv2)
-torch
-torchvision
-transformers
-huggingface-hub
-safetensors
+torch==2.12.0
+torchvision==0.27.0
+transformers==5.9.0
+huggingface_hub==1.17.0
+safetensors==0.8.0rc0
 
 # FontDiffusion (mandatory for tier-3 visual ranking)
-diffusers
-accelerate
-einops
-kornia
-info-nce-pytorch
-fonttools
-pygame
-scikit-image
-datasets
+diffusers==0.38.0
+accelerate==1.13.0
+einops==0.8.2
+kornia==0.8.3
+info-nce-pytorch==0.1.4
+fonttools==4.63.0
+pygame-ce==2.5.7          # thay cho pygame (py3.14 không có wheel pygame); import vẫn là "pygame"
+scikit-image==0.26.0
+datasets==4.8.5
 
-# Quoc Ngu re-OCR for Sach* books (Step 1, when reocr=true). Lazy-imported.
-# vietocr's pip metadata pins old Pillow/prefetch_generator; install with --no-deps
-# then add runtime deps explicitly:
-#   pip install --no-deps vietocr
-#   pip install gdown prefetch_generator pyyaml lmdb einops
-vietocr
-gdown
-prefetch_generator
-lmdb
-einops
+# Quoc Ngu re-OCR cho sách Sach* (Step 1, khi reocr=true). Lazy-import.
+# Các deps runtime của vietocr (đã pin để cài kèm phần trên):
+gdown==6.1.0
+prefetch_generator==1.0.3
+lmdb==2.2.0
+# (einops==0.8.2 và PyYAML==6.0.3 đã pin ở các mục trên)
+
+# --- VietOCR: cài RIÊNG sau cùng, KHÔNG để pip tự resolve deps ---
+#   pip install --no-deps vietocr==0.3.13
+# (đừng bỏ comment dòng dưới — để vậy sẽ khiến `pip install -r` kéo Pillow cũ và build lỗi)
+# vietocr==0.3.13
+
+# python3.14 -m venv .venv
+# source .venv/bin/activate
+# pip install --upgrade pip
+# pip install -r requirements.txt
+# pip install --no-deps vietocr==0.3.13

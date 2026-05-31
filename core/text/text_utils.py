@@ -1,4 +1,5 @@
 """Text cleaning, syllable splitting, and saint name normalization."""
+from __future__ import annotations
 
 import re
 import unicodedata

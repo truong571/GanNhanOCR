@@ -1,0 +1,49 @@
+{
+  "pages": 445,
+  "columns_on_equal_col_pages": 3393,
+  "overall": {
+    "old": {
+      "pairs": 81232,
+      "confirmed": 41415,
+      "confirm_rate": 0.5098
+    },
+    "new": {
+      "pairs": 80286,
+      "confirmed": 47757,
+      "confirm_rate": 0.5948
+    }
+  },
+  "by_column_type": {
+    "matched": {
+      "cols": 2719,
+      "old_pairs": 56702,
+      "old_conf": 34429,
+      "new_pairs": 56260,
+      "new_conf": 35042
+    },
+    "diverged": {
+      "cols": 1202,
+      "old_pairs": 24530,
+      "old_conf": 6986,
+      "new_pairs": 24026,
+      "new_conf": 12715
+    }
+  },
+  "head_to_head_columns": {
+    "new_better": 1357,
+    "new_worse": 0,
+    "tie": 2564
+  },
+  "new_tiers": {
+    "GOLD": 45349,
+    "REVIEW": 34937
+  },
+  "new_rules": {
+    "s1_inter_s2_direct": 40567,
+    "diverged_column": 13719,
+    "unconfirmed": 20729,
+    "out_of_dict_no_visual": 412,
+    "s1_inter_s2_similar": 4782,
+    "s2_singleton_unconfirmed": 77
+  }
+}

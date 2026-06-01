@@ -105,13 +105,13 @@ def process_page_structural(
     gray_img = cv2.cvtColor(color_img, cv2.COLOR_BGR2GRAY)
     H_img, W_img = gray_img.shape
 
-    # Load Kimhannom OCR cache
+    # Load Kimhannom OCR cache (in FULL-PAGE coords; migrates old frame-cropped
+    # caches on the fly so crops land on the real glyphs, not the left margin).
     ocr_path = data_dir / "detected" / f"{page_name}_ocr_cache.json"
     if not ocr_path.exists():
         return [], {}
-    with open(ocr_path, "r", encoding="utf-8") as f:
-        ocr_data = json.load(f)
-    ocr_columns = ocr_data.get("columns", [])
+    from core.ocr.ocr_api import load_columns_fullpage
+    ocr_columns = load_columns_fullpage(str(ocr_path), str(img_path))
 
     # Parse QN lines (v5)
     qn_lines, qn_src = _get_qn_lines(data_dir, page_name, qn_dict_set)

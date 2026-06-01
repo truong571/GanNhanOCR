@@ -1,0 +1,224 @@
+"""Production-faithful page alignment, with a swappable pairing block.
+
+This mirrors pipeline/step2_align.py::process_page_structural EXACTLY for the
+column-detection + QN-parsing front end (so the comparison is apples-to-apples
+with what the real labeler sees), and swaps ONLY the inner Nôm↔QN pairing:
+
+    mode="old" : the current logic — force-equalize counts (truncate leading
+                 extras / re-segment when too few) then emit 1-1 by INDEX.
+                 Faithful copy of step2_align.py lines ~164-214 + emit.
+    mode="new" : banded dictionary-anchored DP (anchor_align.realign_column).
+                 Genuine gaps are NOT emitted as labels (they go to REVIEW);
+                 the column is never tail-shifted.
+
+No crops / no JSON are written here — this is the evaluation harness. The
+production wiring (where this replaces the pairing in step2 and feeds step3/4)
+is documented in FLOW.md §8.
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import cv2  # noqa: E402
+import numpy as np  # noqa: E402
+
+# Production front-end pieces (identical to step2_align.py) ------------------
+from pipeline.step2_align import _get_qn_lines           # parse_v5 QN parsing
+from core.align.nom_detect_v3 import detect_nom_columns_v3
+from core.align.export_dataset_v4 import resegment_col
+from core.image.char_segmenter import segment_characters_in_column
+from core.image.image_processing import load_and_binarize
+
+from evaluation.ver_new.anchor_align import realign_column, matched_pairs
+from evaluation.ver_new.consensus import decide_label
+from evaluation.ver_new.bbox_fix import frame_offset, correct_columns
+
+
+def _detect(page_name: str, data_dir: Path, qn_dict_set: set):
+    """Replicate the detection + QN parse + iter-plan of process_page_structural.
+
+    Returns (cols, qn_lines, iter_pairs, binary, page_ok) or None if the page
+    cannot be processed.
+    """
+    pages_dir = data_dir / "pages"
+    denoised_dir = data_dir / "pages_denoised"
+    img_path = pages_dir / f"{page_name}.png"
+    if not img_path.exists():
+        return None
+    color_img = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
+    if color_img is None:
+        return None
+
+    ocr_path = data_dir / "detected" / f"{page_name}_ocr_cache.json"
+    if not ocr_path.exists():
+        return None
+    ocr_data = json.load(open(ocr_path, encoding="utf-8"))
+    ocr_columns = ocr_data.get("columns", [])
+    # FIX bbox offset: OCR ran on a frame-cropped image, so bboxes are in
+    # cropped coords. Map them back to full-page coords before any cropping.
+    # Skip if the cache is already full-page (new ocr_api format) -> no double-shift.
+    if ocr_data.get("coords_space") != "fullpage":
+        ox, oy = frame_offset(str(img_path), ocr_data.get("framed"),
+                              ocr_data.get("frame_pad", 12))
+        correct_columns(ocr_columns, ox, oy)
+
+    qn_lines, _ = _get_qn_lines(data_dir, page_name, qn_dict_set)
+    qn_keys = sorted(qn_lines.keys())
+    if not qn_keys:
+        return None
+
+    bin_src = denoised_dir / f"{page_name}.png"
+    if not bin_src.exists():
+        bin_src = img_path
+    try:
+        _, binary = load_and_binarize(str(bin_src))
+    except Exception:
+        binary = None
+
+    if binary is not None:
+        cols, col_method = detect_nom_columns_v3(binary, ocr_columns, 9)
+    else:
+        from core.align.run_full import nom_cols_hybrid
+        cols, col_method = nom_cols_hybrid(ocr_columns, min_len=4), "hybrid_no_image"
+
+    page_col_match = (len(cols) == len(qn_keys))
+    qn_parse_ok = (len(qn_lines) == 9)
+    nom_suspect = (col_method == "suspect")
+    max_qn = max(qn_keys) if qn_keys else 0
+    partial_recovery = (not qn_parse_ok and not nom_suspect
+                        and len(cols) >= max_qn and max_qn > 0)
+    page_ok = ((page_col_match and qn_parse_ok and not nom_suspect)
+               or partial_recovery)
+
+    if partial_recovery:
+        iter_pairs = [(lid - 1, lid) for lid in qn_keys if (lid - 1) < len(cols)]
+    else:
+        n_align = min(len(cols), len(qn_keys))
+        iter_pairs = [(i, qn_keys[i]) for i in range(n_align)]
+    return cols, qn_lines, iter_pairs, binary, page_ok
+
+
+def _pair_old(cluster: dict, syllables: list[str], binary) -> list[dict]:
+    """Faithful copy of step2's count force-equalize + index emit."""
+    actual, expected = len(cluster["chars"]), len(syllables)
+    if actual > expected:                    # too many -> drop LEADING extras
+        chars_used = [{"bbox": c["bbox"], "ocr_char": c.get("char")}
+                      for c in cluster["chars"][actual - expected:]]
+    elif actual < expected:                  # too few -> re-segment the image
+        chars_used = None
+        if binary is not None and cluster["chars"]:
+            res = resegment_col(binary, cluster, expected)
+            if res:
+                chars_used = [{"bbox": r["bbox"], "ocr_char": r.get("char")} for r in res]
+        if chars_used is None and binary is not None and cluster.get("bbox"):
+            try:
+                bb = segment_characters_in_column(binary, cluster["bbox"],
+                                                  expected_count=expected)
+                if len(bb) == expected:
+                    chars_used = [{"bbox": list(b), "ocr_char": None} for b in bb]
+            except Exception:
+                pass
+        if chars_used is None:
+            chars_used = [{"bbox": c["bbox"], "ocr_char": c.get("char")}
+                          for c in cluster["chars"]]
+    else:
+        chars_used = [{"bbox": c["bbox"], "ocr_char": c.get("char")}
+                      for c in cluster["chars"]]
+    out = []
+    for k in range(min(len(chars_used), len(syllables))):
+        out.append({"ocr_char": chars_used[k]["ocr_char"],
+                    "bbox": chars_used[k]["bbox"], "syllable": syllables[k]})
+    return out
+
+
+def _reseg_column(cluster) -> list | None:
+    """Rebuild per-char boxes from the OCR y-CENTERS (which are reliable) with
+    MIDPOINT boundaries between consecutive chars, so no crop can span into a
+    neighbouring character (the cause of 'merged 2-char' crops). x-range = the
+    robust column width (median of char x). Returns one box per OCR char (same
+    order), or None. Combined with bbox_fix.tighten_box (x/y ink trim) this gives
+    a clean single-glyph crop. Valley re-segmentation was tried but mis-packs
+    when the column x-window catches neighbour ink — midpoints are far more
+    robust because they trust only the detected centres.
+    """
+    chars = cluster.get("chars") or []
+    if not chars:
+        return None
+    cys = [(c["bbox"][1] + c["bbox"][3]) / 2.0 for c in chars]
+    x1 = int(np.median([c["bbox"][0] for c in chars]))
+    x2 = int(np.median([c["bbox"][2] for c in chars]))
+    if x2 <= x1:
+        return None
+    n = len(cys)
+    pitch = float(np.median(np.diff(cys))) if n >= 2 else 80.0
+    if not (pitch > 0):
+        pitch = 80.0
+    m = pitch * 0.10  # small overlap so tall glyphs keep their tails; far less
+    # than pitch/2 so a neighbour's CENTRE can never enter this box (no merging)
+    boxes = []
+    for i, cy in enumerate(cys):
+        top = (cys[i - 1] + cy) / 2.0 - m if i > 0 else cy - pitch / 2.0
+        bot = (cys[i + 1] + cy) / 2.0 + m if i < n - 1 else cy + pitch / 2.0
+        boxes.append([x1, int(round(top)), x2, int(round(bot))])
+    return boxes
+
+
+def _pair_new(cluster: dict, syllables: list[str], qn_to_nom, similar,
+              binary=None, reseg: bool = True) -> tuple[list[dict], int]:
+    """Banded anchored DP — emit only matches, gaps go unlabelled (REVIEW).
+
+    With reseg=True the emitted bbox comes from a fresh column re-segmentation
+    (valley-based) instead of the loose OCR per-char box, so crops stop merging
+    or clipping neighbouring characters. Falls back to the OCR box if the
+    re-segmentation count doesn't match.
+    """
+    ops = realign_column(cluster["chars"], syllables, qn_to_nom, similar)
+    mp = matched_pairs(ops)
+    nom_chars = cluster["chars"]
+    reseg_boxes = _reseg_column(cluster) if reseg else None
+    out = []
+    for p in mp:
+        i = p["nom_idx"]
+        bbox = reseg_boxes[i] if reseg_boxes else nom_chars[i].get("bbox")
+        out.append({"ocr_char": p["ocr_char"], "bbox": bbox,
+                    "syllable": p["syllable"], "confirmed": p["confirmed"]})
+    # number of syllables left without a Nôm box (Nôm OCR misses) -> REVIEW
+    n_gap = sum(1 for o in ops if o["op"] == "ins")
+    return out, n_gap
+
+
+def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
+               qn_to_nom: dict, similar: dict, mode: str) -> dict | None:
+    """Align one page in the given mode. Returns per-page record with pairs."""
+    det = _detect(page_name, data_dir, qn_dict_set)
+    if det is None:
+        return None
+    cols, qn_lines, iter_pairs, binary, page_ok = det
+
+    pairs: list[dict] = []
+    n_gap_total = 0
+    for nom_idx, line_id in iter_pairs:
+        cluster = cols[nom_idx]
+        syllables = qn_lines[line_id]
+        if not syllables:
+            continue
+        matched = (len(cluster["chars"]) == len(syllables))
+        if mode == "old":
+            col_pairs = _pair_old(cluster, syllables, binary)
+            for p in col_pairs:
+                p.update(column=line_id, matched=matched)
+            pairs.extend(col_pairs)
+        else:
+            col_pairs, n_gap = _pair_new(cluster, syllables, qn_to_nom, similar,
+                                         binary=binary)
+            n_gap_total += n_gap
+            # anchored flag: confirmed match flanked by a confirmed neighbour
+            conf = [p["confirmed"] for p in col_pairs]
+            for k, p in enumerate(col_pairs):
+                nbr = (k > 0 and conf[k - 1]) or (k + 1 < len(col_pairs) and conf[k + 1])
+                p.update(column=line_id, matched=matched,
+                         anchored=bool(p["confirmed"] and nbr))
+            pairs.extend(col_pairs)
+    return {"page": page_name, "page_ok": page_ok, "pairs": pairs,
+            "n_review_gap": n_gap_total}

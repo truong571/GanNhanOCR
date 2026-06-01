@@ -380,6 +380,76 @@ def _ocr_one_pass(image_path: str, use_frame: bool, frame_pad: int):
     return recognize(file_name), framed
 
 
+# ---------------------------------------------------------------------------
+# Frame-crop coordinate fix
+# ---------------------------------------------------------------------------
+# When use_frame=True the OCR runs on a FRAME-CROPPED image, so the boxes it
+# returns are in cropped-image coordinates. Downstream (step2_align.py) crops
+# the FULL page, so boxes must be translated back to full-page coords by the
+# crop origin (max(0, frame_x0 - pad), max(0, frame_y0 - pad)). Without this
+# the whole column grid is shifted ~1.7 columns left and the leftmost columns
+# become blank crops (~30% of all crops). This is a PURE translation (no scale).
+
+_frame_off_cache: dict[str, tuple[int, int]] = {}
+
+
+def _frame_offset(image_path: str, frame_pad: int) -> tuple[int, int]:
+    """Crop origin (ox, oy) to add to cropped-coord boxes -> full-page coords."""
+    key = f"{image_path}|{frame_pad}"
+    if key in _frame_off_cache:
+        return _frame_off_cache[key]
+    off = (0, 0)
+    try:
+        import cv2
+        from core.image.frame_detector import detect_frame_hybrid
+        bgr = cv2.imread(str(image_path))
+        if bgr is not None:
+            fx0, fy0, _, _ = detect_frame_hybrid(bgr)
+            off = (max(0, int(fx0) - int(frame_pad)),
+                   max(0, int(fy0) - int(frame_pad)))
+    except Exception as e:
+        print(f"[OCR] frame-offset failed ({e}); using (0,0)", file=sys.stderr)
+    _frame_off_cache[key] = off
+    return off
+
+
+def _translate_columns(columns, ox: int, oy: int):
+    if ox == 0 and oy == 0:
+        return columns
+    for col in columns:
+        for c in col:
+            b = c.get("bbox")
+            if b and len(b) == 4:
+                c["bbox"] = [b[0] + ox, b[1] + oy, b[2] + ox, b[3] + oy]
+    return columns
+
+
+def _translate_boxes(boxes, ox: int, oy: int):
+    if not boxes or (ox == 0 and oy == 0):
+        return boxes
+    for bx in boxes:
+        pts = bx.get("points")
+        if pts:
+            bx["points"] = [[p[0] + ox, p[1] + oy] for p in pts]
+    return boxes
+
+
+def load_columns_fullpage(cache_path: str, image_path: str):
+    """Read a cached OCR result and return columns in FULL-PAGE coords.
+
+    New caches are stored with coords_space='fullpage' (already correct). Old
+    caches (frame-cropped coords) are migrated on the fly via the frame offset.
+    Idempotent — safe to call on either format.
+    """
+    with open(cache_path, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    cols = data.get("columns", [])
+    if data.get("coords_space") == "fullpage" or not data.get("framed"):
+        return cols
+    ox, oy = _frame_offset(image_path, data.get("frame_pad", 12))
+    return _translate_columns(cols, ox, oy)
+
+
 def ocr_page(
     image_path: str,
     cache_path: str | None = None,
@@ -398,11 +468,10 @@ def ocr_page(
     if cache_path:
         cache_file = Path(cache_path)
         if cache_file.exists():
-            with open(cache_file, "r", encoding="utf-8") as f:
-                cached = json.load(f)
             if verbose:
                 print(f"    [OCR] Loaded cache: {cache_file.name}")
-            return cached.get("columns")
+            # full-page coords (migrates old frame-cropped caches on the fly)
+            return load_columns_fullpage(str(cache_file), image_path)
 
     if verbose:
         print(f"    [OCR] {Path(image_path).name} (pad={frame_pad})...")
@@ -422,6 +491,12 @@ def ocr_page(
             if abs(len(c2) - expected_cols) < abs(len(columns) - expected_cols):
                 columns, boxes, frame_pad = c2, b2, retry_pad
 
+    # Map frame-cropped boxes back to FULL-PAGE coords (see _frame_offset).
+    if framed:
+        ox, oy = _frame_offset(image_path, frame_pad)
+        _translate_columns(columns, ox, oy)
+        _translate_boxes(boxes, ox, oy)
+
     if verbose:
         print(f"    [OCR] -> {len(columns)} cột, {sum(len(c) for c in columns)} chữ")
 
@@ -433,6 +508,7 @@ def ocr_page(
         cache_data = {
             "image": image_path, "image_hash": img_hash,
             "framed": framed, "frame_pad": frame_pad,
+            "coords_space": "fullpage",  # boxes already translated above
             "n_columns": len(columns), "columns": columns, "boxes_raw": boxes,
         }
         with open(cache_file, "w", encoding="utf-8") as f:

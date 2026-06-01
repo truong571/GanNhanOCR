@@ -1,37 +1,39 @@
-"""Build the FINAL labeled dataset end-to-end (the NEW pipeline, no A/B).
+"""Build the FINAL labeled dataset end-to-end (NEW pipeline, no A/B).
 
-One command: production-faithful column detection (detect_nom_columns_v3) +
-QN parse (parse_v5) -> banded anchored-DP alignment -> 3-signal consensus
-(S1 OCR + S2 dictionary + optional S3 DINOv2/FontDiffusion) -> materialize the
-GOLD (and SILVER with --use-s3) character crops + a labels manifest.
+Two passes:
+  PASS 1 — align every page (production-faithful: detect_nom_columns_v3 + parse_v5
+           + bbox_fix offset + banded anchored DP + re-segment) and tier each pair
+           via consensus.decide_label.
+  PROMOTE — cross-page-consistent REVIEW "unconfirmed" pairs -> SYLLABLE tier
+           (semantic/nghĩa borrowings the phonetic dict can't contain). [#6]
+  SPLIT  — leakage-safe train/val/test by group=(book,page,column). [#4]
+  PASS 2 — materialize crops (GOLD + SILVER + SYLLABLE; +REVIEW with --crop-review)
+           with per-crop quality columns (ink%, size, md5, seg_flag). [#3,#5]
 
-Output (default evaluation/ver_new/dataset_out/):
-  gold/<book>_<page>_c<col>_<idx>.png      cropped Nôm glyph, dict-confirmed
-  silver/<book>_<page>_c<col>_<idx>.png    visual-recovered (only with --use-s3)
-  labels.csv                               every pair: image, book, page, column,
-                                           ocr_char, syllable, label, tier, rule, s3_cosine, bbox
-  summary.json
+Tiers (label_level separates char- vs syllable-supervision):
+  GOLD     label_level=char     dict-confirmed char (direct, or unique similar-bridge)
+  SILVER   label_level=char     visual S3 (OFF until a Nôm-trained model replaces DINOv2)
+  SYLLABLE label_level=syllable char unconfirmed but syllable reliable & cross-page-consistent
+  REVIEW   label_level=''       not usable as a label (kept in manifest with bbox)
 
 Run:
   cd /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR
-  # GOLD dataset (fast, dictionary only, no model):
   .venv/bin/python evaluation/ver_new/build_dataset.py
-  # GOLD + SILVER (adds DINOv2/FD visual recovery via gannhanocr-fd, ~30-45 min):
-  .venv/bin/python evaluation/ver_new/build_dataset.py --use-s3
-  # quick smoke:
-  .venv/bin/python evaluation/ver_new/build_dataset.py --use-s3 --limit 10
+  # options: --no-tighten --pad 0.12 --limit N --out <dir> --crop-review --use-s3
 """
 from __future__ import annotations
 
 import argparse
 import csv
 import glob
+import hashlib
 import json
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
 
 import cv2
+import numpy as np
 
 REPO = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO))
@@ -42,9 +44,13 @@ from evaluation.ver_new.align_production import align_page          # noqa: E402
 from evaluation.ver_new.consensus import decide_label              # noqa: E402
 from evaluation.ver_new.bbox_fix import tighten_box                # noqa: E402
 
+# SYLLABLE-tier gate (cross-page consistency of an unconfirmed char's reading).
+SYL_MIN_OCC = 5      # the (char,syllable) must occur >= this many times corpus-wide
+SYL_MIN_PAGES = 3    # on >= this many distinct pages
+SYL_MIN_PURITY = 0.6  # and be the dominant syllable for that char by this share
+
 
 def maybe_s3(p, page_png, qn_to_nom, vs3):
-    """S3 only where it can change the tier: anchored, non-dict-confirmed pairs."""
     if vs3 is None or not p.get("ocr_char"):
         return None
     if not (p.get("matched") or p.get("anchored")):
@@ -55,9 +61,16 @@ def maybe_s3(p, page_png, qn_to_nom, vs3):
     return vs3.compute(page_png, p.get("bbox"), p["ocr_char"], cands)
 
 
-def save_crop(img, bbox, pad, path: Path, tighten: bool = True) -> bool:
+def _seg_flag(crop_gray) -> str:
+    """Cheap advisory flag: 'tall' crops may be a merged 2-glyph or a tall char."""
+    h, w = crop_gray.shape[:2]
+    return "tall" if h > 1.8 * max(w, 1) else "ok"
+
+
+def save_crop(img, bbox, pad, path: Path, tighten: bool = True) -> dict | None:
+    """Cut + (tighten) + save a crop; return per-crop quality stats or None."""
     if img is None or not bbox:
-        return False
+        return None
     H, W = img.shape[:2]
     x1, y1, x2, y2 = (int(v) for v in bbox)
     pw, ph = int((x2 - x1) * pad), int((y2 - y1) * pad)
@@ -65,29 +78,38 @@ def save_crop(img, bbox, pad, path: Path, tighten: bool = True) -> bool:
     x2, y2 = min(W, x2 + pw), min(H, y2 + ph)
     crop = img[y1:y2, x1:x2]
     if crop.size == 0:
-        return False
+        return None
+    gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
     if tighten:
-        gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
         tb = tighten_box(gray)
         if tb is not None:
             a, c, b, d = tb
             crop = crop[c:d, a:b]
+            gray = gray[c:d, a:b]
+    if crop.size == 0:
+        return None
     path.parent.mkdir(parents=True, exist_ok=True)
     cv2.imwrite(str(path), crop)
-    return True
+    ch, cw = crop.shape[:2]
+    return {
+        "ink": round(float((gray < 128).mean()), 3),
+        "w": cw, "h": ch,
+        "md5": hashlib.md5(path.read_bytes()).hexdigest()[:12],
+        "seg": _seg_flag(gray),
+    }
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--config", default=str(REPO / "config" / "pipeline.yaml"))
     ap.add_argument("--out", default=str(Path(__file__).resolve().parent / "dataset_out"))
-    ap.add_argument("--use-s3", action="store_true",
-                    help="enable visual S3 (DINOv2+FontDiffusion) -> adds SILVER tier")
-    ap.add_argument("--limit", type=int, default=0, help="max pages per book (0=all)")
-    ap.add_argument("--no-crops", action="store_true", help="write labels.csv only, no PNGs")
-    ap.add_argument("--no-tighten", action="store_true",
-                    help="skip binary-projection tightening (keep loose OCR bbox)")
-    ap.add_argument("--pad", type=float, default=0.12, help="bbox pad fraction per side")
+    ap.add_argument("--use-s3", action="store_true")
+    ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--no-crops", action="store_true")
+    ap.add_argument("--no-tighten", action="store_true")
+    ap.add_argument("--crop-review", action="store_true",
+                    help="also materialize REVIEW crops (kept in labels.csv either way)")
+    ap.add_argument("--pad", type=float, default=0.12)
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -102,17 +124,14 @@ def main():
     vs3 = None
     if args.use_s3:
         from evaluation.ver_new.visual_signal import VisualS3
-        print("Loading S3 (DINOv2 + FontDiffusion cache gannhanocr-fd)...", flush=True)
+        print("Loading S3 (DINOv2+FD) ...", flush=True)
         vs3 = VisualS3(REPO, font_path=str(REPO / paths["font_path"]),
                        fd_dir=str(REPO / paths["fd_cache_universal"]),
                        cache_dir=str(out / "emb_cache"))
-        print(f"  FD glyph index: {len(vs3.fd_index)} chars", flush=True)
 
-    labels = []
-    counts = Counter()
+    # ---------- PASS 1: align all pages, collect records (no crop yet) ----------
+    records = []
     pages_done = 0
-    n_s3 = 0
-
     for b in config["books"]:
         book = b["name"]
         data_dir = data_root / book
@@ -120,8 +139,7 @@ def main():
         trans = [t for t in trans if not t.endswith("_qn_ocr_cache.json")]
         if args.limit:
             trans = trans[:args.limit]
-        print(f"[{book}] {len(trans)} pages ...", flush=True)
-
+        print(f"[align] {book}: {len(trans)} pages ...", flush=True)
         for pi, tf in enumerate(trans):
             page = Path(tf).stem
             try:
@@ -132,57 +150,126 @@ def main():
             if rec is None:
                 continue
             pages_done += 1
-            if (pi + 1) % 20 == 0:
-                print(f"    {pi + 1}/{len(trans)} trang | GOLD {counts['GOLD']} "
-                      f"SILVER {counts['SILVER']} (S3 {n_s3})", flush=True)
             page_png = str(data_dir / "pages" / f"{page}.png")
-            img = None if args.no_crops else cv2.imread(page_png, cv2.IMREAD_COLOR)
-
             for idx, p in enumerate(rec["pairs"]):
                 s3 = maybe_s3(p, page_png, qn_to_nom, vs3) if vs3 else None
-                if s3 is not None:
-                    n_s3 += 1
                 dec = decide_label(p.get("ocr_char"), p["syllable"], p.get("matched", False),
                                    qn_to_nom, similar, s3=s3, anchored=p.get("anchored", False))
-                counts[dec.tier] += 1
-                img_rel = ""
-                if dec.tier in ("GOLD", "SILVER") and not args.no_crops:
-                    fname = f"{book[12:]}_{page}_c{p['column']:02d}_{idx:03d}.png"
-                    if save_crop(img, p.get("bbox"), args.pad, out / dec.tier.lower() / fname,
-                                 tighten=not args.no_tighten):
-                        img_rel = f"{dec.tier.lower()}/{fname}"
-                labels.append({
-                    "image": img_rel, "book": book[12:], "page": page,
-                    "column": p["column"], "ocr_char": p.get("ocr_char") or "",
-                    "syllable": p["syllable"], "label": dec.label or "",
-                    "tier": dec.tier, "rule": dec.rule_id,
-                    "s3_cosine": round(s3.cosine, 3) if s3 else "",
-                    "bbox": json.dumps(p.get("bbox")),
+                records.append({
+                    "book": book[12:], "page": page, "column": p["column"], "idx": idx,
+                    "page_png": page_png, "ocr_char": p.get("ocr_char") or "",
+                    "syllable": p["syllable"], "bbox": p.get("bbox"),
+                    "tier": dec.tier, "rule": dec.rule_id, "label": dec.label or "",
                 })
 
-    # ---- write manifest ---------------------------------------------------
+    # ---------- PROMOTE: cross-page-consistent unconfirmed -> SYLLABLE [#6] ----------
+    cnt = defaultdict(Counter)            # ocr_char -> Counter(syllable)
+    pages_of = defaultdict(lambda: defaultdict(set))
+    for r in records:
+        if r["tier"] == "REVIEW" and r["rule"] == "unconfirmed_no_s3" and r["ocr_char"]:
+            cnt[r["ocr_char"]][r["syllable"]] += 1
+            pages_of[r["ocr_char"]][r["syllable"]].add((r["book"], r["page"]))
+    syl_ok = set()                        # (ocr_char, syllable) that pass the gate
+    for ch, c in cnt.items():
+        syl, n = c.most_common(1)[0]
+        if (n >= SYL_MIN_OCC and len(pages_of[ch][syl]) >= SYL_MIN_PAGES
+                and n / sum(c.values()) >= SYL_MIN_PURITY):
+            syl_ok.add((ch, syl))
+    n_promoted = 0
+    for r in records:
+        if (r["tier"] == "REVIEW" and r["rule"] == "unconfirmed_no_s3"
+                and (r["ocr_char"], r["syllable"]) in syl_ok):
+            r["tier"], r["rule"] = "SYLLABLE", "nghia_consensus"
+            n_promoted += 1
+
+    # label_level + unicode
+    for r in records:
+        if r["tier"] in ("GOLD", "SILVER"):
+            r["label_level"] = "char"
+            lab = r["label"]
+            r["unicode"] = f"U+{ord(lab):04X}" if len(lab) == 1 else ""
+        elif r["tier"] == "SYLLABLE":
+            r["label_level"] = "syllable"   # char unconfirmed; syllable is the target
+            r["label"], r["unicode"] = "", ""
+        else:
+            r["label_level"], r["unicode"] = "", ""
+
+    # ---------- SPLIT: leakage-safe by group=(book,page,column) [#4] ----------
+    def split_of(group: str) -> str:
+        h = int(hashlib.md5(group.encode()).hexdigest(), 16) % 100
+        return "train" if h < 80 else ("val" if h < 90 else "test")
+    for r in records:
+        r["split_group"] = f"{r['book']}|{r['page']}|c{r['column']}"
+    # singleton char classes -> force their WHOLE GROUP into train, so val/test
+    # per-class metrics are well-defined AND a column never spans two splits.
+    ccnt = Counter(r["label"] for r in records if r["label_level"] == "char" and r["label"])
+    singleton_groups = {r["split_group"] for r in records
+                        if r["label_level"] == "char" and r["label"] and ccnt[r["label"]] == 1}
+    for r in records:
+        g = r["split_group"]
+        r["split"] = "train" if g in singleton_groups else split_of(g)
+
+    # ---------- PASS 2: materialize crops + quality columns [#3,#5] ----------
+    crop_tiers = {"GOLD", "SILVER", "SYLLABLE"} | ({"REVIEW"} if args.crop_review else set())
+    by_page = defaultdict(list)
+    for r in records:
+        by_page[r["page_png"]].append(r)
+    labels = []
+    for png, recs in by_page.items():
+        need = (not args.no_crops) and any(r["tier"] in crop_tiers for r in recs)
+        img = cv2.imread(png, cv2.IMREAD_COLOR) if need else None
+        for r in recs:
+            img_rel = q = None
+            if img is not None and r["tier"] in crop_tiers:
+                fn = f"{r['book']}_{r['page']}_c{r['column']:02d}_{r['idx']:03d}.png"
+                q = save_crop(img, r.get("bbox"), args.pad, out / r["tier"].lower() / fn,
+                              tighten=not args.no_tighten)
+                if q:
+                    img_rel = f"{r['tier'].lower()}/{fn}"
+            labels.append({
+                "image": img_rel or "", "book": r["book"], "page": r["page"],
+                "column": r["column"], "ocr_char": r["ocr_char"], "syllable": r["syllable"],
+                "label": r["label"], "unicode": r["unicode"], "label_level": r["label_level"],
+                "tier": r["tier"], "rule": r["rule"],
+                "ink_pct": q["ink"] if q else "", "crop_w": q["w"] if q else "",
+                "crop_h": q["h"] if q else "", "image_md5": q["md5"] if q else "",
+                "seg_flag": q["seg"] if q else "",
+                "split": r["split"], "split_group": r["split_group"],
+                "bbox": json.dumps(r.get("bbox")),
+            })
+
+    # ---------- write manifest + summary ----------
+    fields = ["image", "book", "page", "column", "ocr_char", "syllable", "label",
+              "unicode", "label_level", "tier", "rule", "ink_pct", "crop_w", "crop_h",
+              "image_md5", "seg_flag", "split", "split_group", "bbox"]
     with open(out / "labels.csv", "w", encoding="utf-8", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=["image", "book", "page", "column", "ocr_char",
-                                          "syllable", "label", "tier", "rule",
-                                          "s3_cosine", "bbox"])
+        w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader(); w.writerows(labels)
-    summary = {"pages": pages_done, "use_s3": bool(vs3), "s3_computed": n_s3,
-               "tiers": dict(counts), "total_labels": len(labels),
-               "usable_gold_silver": counts["GOLD"] + counts["SILVER"]}
+
+    tiers = Counter(r["tier"] for r in records)
+    splits = Counter((r["tier"], r["split"]) for r in records if r["label_level"])
+    char_classes = len(set(r["label"] for r in records if r["label_level"] == "char" and r["label"]))
+    summary = {
+        "pages": pages_done, "total_pairs": len(records),
+        "tiers": dict(tiers), "syllable_promoted": n_promoted,
+        "char_classes": char_classes,
+        "usable_char": tiers["GOLD"] + tiers["SILVER"],
+        "usable_total": tiers["GOLD"] + tiers["SILVER"] + tiers["SYLLABLE"],
+        "split_counts": {f"{t}/{s}": n for (t, s), n in sorted(splits.items())},
+    }
     json.dump(summary, open(out / "summary.json", "w", encoding="utf-8"),
               ensure_ascii=False, indent=2)
 
     print("\n" + "=" * 64)
-    print(f" DATASET BUILT -> {out}")
+    print(f" DATASET -> {out}")
     print("=" * 64)
-    print(f" pages {pages_done} | total labels {len(labels)}")
-    for t in ("GOLD", "SILVER", "REVIEW"):
-        crop_note = "" if args.no_crops or t == "REVIEW" else f" -> {t.lower()}/*.png"
-        print(f"   {t:7s}: {counts.get(t,0):6d}{crop_note}")
-    print(f" USABLE (gold+silver): {counts['GOLD']+counts['SILVER']}")
-    if vs3 is not None:
-        print(f" S3 computed on {n_s3} crops (FD refs {vs3.n_fd}, font refs {vs3.n_font})")
-    print(f" manifest: {out}/labels.csv   summary: {out}/summary.json")
+    print(f" pages {pages_done} | pairs {len(records)} | char classes {char_classes}")
+    for t in ("GOLD", "SILVER", "SYLLABLE", "REVIEW"):
+        print(f"   {t:9s}: {tiers.get(t, 0)}")
+    print(f" SYLLABLE promoted from REVIEW: {n_promoted}")
+    print(f" USABLE char-level (GOLD+SILVER): {summary['usable_char']}  | "
+          f"+syllable: {summary['usable_total']}")
+    print(f" manifest: {out}/labels.csv  ({len(fields)} cột)")
 
 
 if __name__ == "__main__":

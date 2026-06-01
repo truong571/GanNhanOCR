@@ -1,0 +1,6 @@
+# Kaggle already has torch + torchvision + opencv + numpy preinstalled on the
+# GPU image; this file is for a local/clean env. Pin loosely.
+torch>=2.0
+torchvision>=0.15
+opencv-python-headless>=4.8
+numpy>=1.24

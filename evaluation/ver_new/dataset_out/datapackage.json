@@ -1,0 +1,133 @@
+{
+  "profile": "tabular-data-package",
+  "name": "nom-quocngu-character-crops",
+  "title": "Chu-Nom character crops aligned to Quoc-Ngu syllables",
+  "description": "Per-character woodblock chu-Nom crops cross-labeled with SinoNom character + Unicode + Quoc-Ngu syllable, from a parallel Nom-QuocNgu corpus (Sach Cac Thanh Truyen 2/4/11).",
+  "licenses": [
+    {
+      "name": "research-use",
+      "title": "Academic/research use"
+    }
+  ],
+  "resources": [
+    {
+      "name": "labels",
+      "path": "labels.csv",
+      "profile": "tabular-data-resource",
+      "format": "csv",
+      "mediatype": "text/csv",
+      "encoding": "utf-8",
+      "schema": {
+        "fields": [
+          {
+            "name": "image",
+            "type": "string",
+            "description": "Relative path to the crop PNG (renamed from 'image' for the HF imagefolder convention). Empty for REVIEW rows that have no crop."
+          },
+          {
+            "name": "book",
+            "type": "string",
+            "description": "Source book id (SachThanhTruyen 2/4/11)."
+          },
+          {
+            "name": "page",
+            "type": "string",
+            "description": "Source page id (page_XXXX)."
+          },
+          {
+            "name": "column",
+            "type": "integer",
+            "description": "Column index on the page (1-9, right-to-left)."
+          },
+          {
+            "name": "ocr_char",
+            "type": "string",
+            "description": "Raw SinoNom character from the HCMUS OCR (may be a misread)."
+          },
+          {
+            "name": "syllable",
+            "type": "string",
+            "description": "Quốc-Ngữ syllable from VietOCR (the reading)."
+          },
+          {
+            "name": "label",
+            "type": "string",
+            "description": "Confirmed SinoNom character (target). Empty when char-level is not confirmed (label_level=syllable)."
+          },
+          {
+            "name": "unicode",
+            "type": "string",
+            "description": "Unicode code point of `label`, e.g. U+56FA."
+          },
+          {
+            "name": "label_level",
+            "type": "string",
+            "description": "Supervision level: 'char' (label is the character), 'syllable' (only the syllable is trusted), or '' (REVIEW)."
+          },
+          {
+            "name": "tier",
+            "type": "string",
+            "description": "Trust tier: GOLD | SILVER | SYLLABLE | REVIEW."
+          },
+          {
+            "name": "rule",
+            "type": "string",
+            "description": "Decision rule that produced the label (e.g. s1_inter_s2_direct, s1_inter_s2_similar, nghia_consensus)."
+          },
+          {
+            "name": "ink_pct",
+            "type": "number",
+            "description": "Fraction of dark (ink) pixels in the crop (quality signal)."
+          },
+          {
+            "name": "crop_w",
+            "type": "integer",
+            "description": "Crop width in pixels."
+          },
+          {
+            "name": "crop_h",
+            "type": "integer",
+            "description": "Crop height in pixels."
+          },
+          {
+            "name": "image_md5",
+            "type": "string",
+            "description": "12-hex MD5 of the crop file (dedup/provenance)."
+          },
+          {
+            "name": "seg_flag",
+            "type": "string",
+            "description": "Segmentation flag: 'ok' or 'tall' (possible merged/tall glyph)."
+          },
+          {
+            "name": "split",
+            "type": "string",
+            "description": "Dataset split: train | val | test (leakage-safe, grouped by book/page/column)."
+          },
+          {
+            "name": "split_group",
+            "type": "string",
+            "description": "Group key (book|page|column) guaranteeing a physical column never spans two splits."
+          },
+          {
+            "name": "bbox",
+            "type": "string",
+            "description": "Character bounding box on the full page, JSON [x1,y1,x2,y2] (xyxy)."
+          }
+        ],
+        "primaryKey": [
+          "image"
+        ],
+        "missingValues": [
+          ""
+        ]
+      }
+    }
+  ],
+  "count_of_rows": 82268,
+  "stats": {
+    "GOLD": 51195,
+    "REVIEW": 23392,
+    "SYLLABLE": 7681
+  }
+}

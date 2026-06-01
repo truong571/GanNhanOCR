@@ -56,9 +56,8 @@ while [[ $# -gt 0 ]]; do
             echo "Steps:"
             echo "  0     Setup & validation"
             echo "  1     Extract data from PDF (crop khung -> kinhhannom -> 9 cột)"
-            echo "  2     Levenshtein alignment"
-            echo "  3     3-tier label assignment"
-            echo "  4     Export dataset"
+            echo "  2     Build dataset (ver_new: banded-DP align + consensus tiers"
+            echo "        + re-segment + bbox-fix -> crops + labels.csv + 3 standards)"
             echo "  all   Run all steps (default)"
             echo ""
             echo "Options:"
@@ -140,29 +139,19 @@ if [[ "$STEP" == "all" || "$STEP" == "1" ]]; then
     done
 fi
 
-# Step 2: Align
+# Step 2: Build dataset (ver_new). Banded dict-anchored alignment + 3-signal
+# consensus tiers (GOLD/SYLLABLE/REVIEW) + column re-segment + frame-bbox fix
+# -> crops + labels.csv + 3 international standards. SUPERSEDES the old
+# step2-align(index) / step3-label(DINOv2, proven non-discriminative) /
+# step4-export path; those module files are kept for reference but no longer run.
+# See evaluation/ver_new/FLOW.md.
 if [[ "$STEP" == "all" || "$STEP" == "2" ]]; then
-    for book in $BOOKS; do
-        echo ""
-        echo ">>> Step 2: Align — $book"
-        "$PY" -m pipeline.step2_align "$CONFIG" "$book"
-    done
-fi
-
-# Step 3: Label
-if [[ "$STEP" == "all" || "$STEP" == "3" ]]; then
-    for book in $BOOKS; do
-        echo ""
-        echo ">>> Step 3: Label — $book"
-        "$PY" -m pipeline.step3_label "$CONFIG" "$book"
-    done
-fi
-
-# Step 4: Export
-if [[ "$STEP" == "all" || "$STEP" == "4" ]]; then
     echo ""
-    echo ">>> Step 4: Export Dataset"
-    "$PY" -m pipeline.step4_export "$CONFIG"
+    echo ">>> Step 2: Build dataset (ver_new: align + consensus + crops + labels)"
+    "$PY" evaluation/ver_new/build_dataset.py --config "$CONFIG"
+    echo ""
+    echo ">>> Step 2b: Export standards (HF imagefolder + Frictionless + Croissant)"
+    "$PY" evaluation/ver_new/to_standard.py
 fi
 
 echo ""

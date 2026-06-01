@@ -1,0 +1,374 @@
+{
+  "@context": {
+    "@language": "en",
+    "@vocab": "https://schema.org/",
+    "sc": "https://schema.org/",
+    "cr": "http://mlcommons.org/croissant/",
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    },
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "references": {
+      "@id": "cr:references",
+      "@type": "@id"
+    },
+    "source": {
+      "@id": "cr:source",
+      "@type": "@id"
+    },
+    "field": {
+      "@id": "cr:field",
+      "@type": "@id"
+    },
+    "fileProperty": {
+      "@id": "cr:fileProperty",
+      "@type": "@vocab"
+    },
+    "format": {
+      "@id": "cr:format"
+    },
+    "includes": {
+      "@id": "cr:includes"
+    },
+    "extract": {
+      "@id": "cr:extract"
+    },
+    "column": {
+      "@id": "cr:column"
+    },
+    "recordSet": {
+      "@id": "cr:recordSet",
+      "@type": "@id"
+    },
+    "examples": {
+      "@id": "cr:examples",
+      "@type": "@json"
+    },
+    "repeated": {
+      "@id": "cr:repeated"
+    }
+  },
+  "@type": "sc:Dataset",
+  "conformsTo": "http://mlcommons.org/croissant/1.0",
+  "name": "nom-quocngu-character-crops",
+  "description": "Per-character woodblock chu-Nom crops cross-labeled with SinoNom character + Unicode + Quoc-Ngu syllable.",
+  "license": "research-use",
+  "url": "local",
+  "version": "1.0.0",
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "labels.csv",
+      "name": "labels.csv",
+      "contentUrl": "labels.csv",
+      "encodingFormat": "text/csv",
+      "sha256": "n/a"
+    },
+    {
+      "@type": "cr:FileSet",
+      "@id": "crops",
+      "name": "crops",
+      "encodingFormat": "image/png",
+      "includes": "*/*.png"
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "records",
+      "name": "records",
+      "description": "82268 labeled character crops.",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "records/file_name",
+          "name": "file_name",
+          "description": "Relative path to the crop PNG (renamed from 'image' for the HF imagefolder convention). Empty for REVIEW rows that have no crop.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "image"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/book",
+          "name": "book",
+          "description": "Source book id (SachThanhTruyen 2/4/11).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "book"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/page",
+          "name": "page",
+          "description": "Source page id (page_XXXX).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "page"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/column",
+          "name": "column",
+          "description": "Column index on the page (1-9, right-to-left).",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "column"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/ocr_char",
+          "name": "ocr_char",
+          "description": "Raw SinoNom character from the HCMUS OCR (may be a misread).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "ocr_char"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/syllable",
+          "name": "syllable",
+          "description": "Quốc-Ngữ syllable from VietOCR (the reading).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "syllable"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/label",
+          "name": "label",
+          "description": "Confirmed SinoNom character (target). Empty when char-level is not confirmed (label_level=syllable).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "label"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/unicode",
+          "name": "unicode",
+          "description": "Unicode code point of `label`, e.g. U+56FA.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "unicode"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/label_level",
+          "name": "label_level",
+          "description": "Supervision level: 'char' (label is the character), 'syllable' (only the syllable is trusted), or '' (REVIEW).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "label_level"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/tier",
+          "name": "tier",
+          "description": "Trust tier: GOLD | SILVER | SYLLABLE | REVIEW.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "tier"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/rule",
+          "name": "rule",
+          "description": "Decision rule that produced the label (e.g. s1_inter_s2_direct, s1_inter_s2_similar, nghia_consensus).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "rule"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/ink_pct",
+          "name": "ink_pct",
+          "description": "Fraction of dark (ink) pixels in the crop (quality signal).",
+          "dataType": "sc:Float",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "ink_pct"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/crop_w",
+          "name": "crop_w",
+          "description": "Crop width in pixels.",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "crop_w"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/crop_h",
+          "name": "crop_h",
+          "description": "Crop height in pixels.",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "crop_h"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/image_md5",
+          "name": "image_md5",
+          "description": "12-hex MD5 of the crop file (dedup/provenance).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "image_md5"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/seg_flag",
+          "name": "seg_flag",
+          "description": "Segmentation flag: 'ok' or 'tall' (possible merged/tall glyph).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "seg_flag"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/split",
+          "name": "split",
+          "description": "Dataset split: train | val | test (leakage-safe, grouped by book/page/column).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "split"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/split_group",
+          "name": "split_group",
+          "description": "Group key (book|page|column) guaranteeing a physical column never spans two splits.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "split_group"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/bbox",
+          "name": "bbox",
+          "description": "Character bounding box on the full page, JSON [x1,y1,x2,y2] (xyxy).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "bbox"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,11 +1,21 @@
 {
   "pages": 445,
-  "use_s3": false,
-  "s3_computed": 0,
+  "total_pairs": 82268,
   "tiers": {
-    "GOLD": 50502,
-    "REVIEW": 31766
+    "GOLD": 51195,
+    "REVIEW": 23392,
+    "SYLLABLE": 7681
   },
-  "total_labels": 82268,
-  "usable_gold_silver": 50502
+  "syllable_promoted": 7681,
+  "char_classes": 1591,
+  "usable_char": 51195,
+  "usable_total": 58876,
+  "split_counts": {
+    "GOLD/test": 4716,
+    "GOLD/train": 41743,
+    "GOLD/val": 4736,
+    "SYLLABLE/test": 735,
+    "SYLLABLE/train": 6219,
+    "SYLLABLE/val": 727
+  }
 }

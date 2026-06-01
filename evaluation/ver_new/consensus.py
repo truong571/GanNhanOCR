@@ -68,16 +68,22 @@ def decide_label(ocr_char: str | None,
     R = qn_to_nom.get(syl, [])
     gold_ok = column_count_matched or anchored
 
-    # --- GOLD : S1 ∩ S2 dictionary confirmation (S3-independent) ----------
-    direct = bool(ocr_char and ocr_char in R)
-    similar = False
-    if not direct and ocr_char and similar_dict:
-        sims = similar_dict.get(ocr_char, [])
-        similar = any(s in R for s in sims)
-    if gold_ok and (direct or similar):
-        return LabelDecision(ocr_char, syllable, "GOLD",
-                             "s1_inter_s2_direct" if direct else "s1_inter_s2_similar",
-                             True)
+    # --- GOLD (direct): ocr_char IS a dict reading of the syllable. The OCR
+    #     char (S1) and the QN syllable (S2) cross-confirm each other, so the
+    #     char label is reliable ON ITS OWN — even in a diverged column (the
+    #     banded DP only pairs a confirmed char here when it confirms). [#2]
+    if ocr_char and ocr_char in R:
+        return LabelDecision(ocr_char, syllable, "GOLD", "s1_inter_s2_direct", True)
+
+    # --- GOLD (similar-bridge): ocr_char is NOT a reading of the syllable, but a
+    #     visually-SIMILAR char IS. The OCR misread a lookalike; the TRUE label is
+    #     that bridge char (NOT ocr_char). Emit the bridge, only when unique and
+    #     the column is anchored/matched (this path is weaker than direct). [#1]
+    if gold_ok and ocr_char and similar_dict:
+        bridges = list(dict.fromkeys(s for s in similar_dict.get(ocr_char, []) if s in R))
+        if len(bridges) == 1:
+            return LabelDecision(bridges[0], syllable, "GOLD", "s1_inter_s2_similar", True)
+        # 0 bridges -> not similar; >=2 -> ambiguous -> fall through to REVIEW
 
     # --- SILVER : vision breaks the tie (needs S3) ------------------------
     if gold_ok and s3 is not None and s3.cosine >= TAU_SILVER and s3.margin >= DELTA_SILVER:

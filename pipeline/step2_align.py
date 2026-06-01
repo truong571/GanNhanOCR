@@ -403,18 +403,12 @@ def main():
     parser = argparse.ArgumentParser(description="Step 2: Structure-driven Align")
     parser.add_argument("config", type=str, help="Path to pipeline.yaml")
     parser.add_argument("book", type=str, help="Book name")
-    parser.add_argument("--legacy", action="store_true",
-                        help="Fall back to the original Levenshtein alignment "
-                             "(pipeline/step2_align_legacy.py).")
     args = parser.parse_args()
 
     config = load_config(args.config)
-    method = config.get("step2", {}).get("method", "structural")
-    if args.legacy or method == "levenshtein":
-        from pipeline.step2_align_legacy import align_book
-        align_book(config, args.book)
-    else:
-        align_book_structural(config, args.book)
+    # Only the structural aligner exists; the old --legacy/levenshtein branch
+    # pointed at pipeline/step2_align_legacy.py which was never present (dead).
+    align_book_structural(config, args.book)
 
 
 if __name__ == "__main__":

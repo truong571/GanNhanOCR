@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import time
 from pathlib import Path
 
@@ -25,6 +26,35 @@ import sys
 sys.path.insert(0, str(HERE))
 from model import NomEmbedder, ArcMargin          # noqa: E402
 from dataset import NomDataset                     # noqa: E402
+
+
+def _save_ck(path, net, head, opt, sched, scaler, ep, best, args, classes):
+    """Full training state -> resumable. Keeps 'backbone' key for infer.py."""
+    torch.save({"backbone": net.state_dict(), "head": head.state_dict(),
+                "opt": opt.state_dict(), "sched": sched.state_dict(),
+                "scaler": scaler.state_dict(), "epoch": ep, "best": best,
+                "embed_dim": args.embed, "img": args.img, "classes": classes}, path)
+
+
+def _hf_push(repo, files, token):
+    """Upload checkpoint files to a HF model repo (survives Kaggle restart)."""
+    from huggingface_hub import HfApi, create_repo
+    create_repo(repo, repo_type="model", exist_ok=True, token=token)
+    api = HfApi()
+    for f in files:
+        if Path(f).exists():
+            api.upload_file(path_or_fileobj=str(f), path_in_repo=Path(f).name,
+                            repo_id=repo, repo_type="model", token=token)
+
+
+def _hf_pull(repo, name, dst, token) -> bool:
+    from huggingface_hub import hf_hub_download
+    import shutil
+    try:
+        p = hf_hub_download(repo_id=repo, filename=name, repo_type="model", token=token)
+        shutil.copy(p, dst); return True
+    except Exception:
+        return False
 
 
 def main():
@@ -41,6 +71,11 @@ def main():
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--no-pretrained", action="store_true",
                     help="ResNet-18 từ scratch (khi Kaggle tắt Internet, không tải được weights)")
+    ap.add_argument("--resume", action="store_true",
+                    help="tiếp tục từ {out}/last.pt (hoặc kéo từ --hf-repo nếu có)")
+    ap.add_argument("--hf-repo", default="",
+                    help="HF model repo (vd user/nom-embed) để push/pull checkpoint mỗi "
+                         "epoch -> KHÔNG mất khi Kaggle restart. Token: env HF_TOKEN.")
     args = ap.parse_args()
 
     dev = "cuda" if torch.cuda.is_available() else ("mps" if torch.backends.mps.is_available() else "cpu")
@@ -66,7 +101,26 @@ def main():
 
     Path(args.out).mkdir(parents=True, exist_ok=True)
     best = 0.0
-    for ep in range(args.epochs):
+    start_ep = 0
+    last = Path(args.out) / "last.pt"
+    hf_token = os.environ.get("HF_TOKEN", "")
+    # RESUME: continue from last.pt (local; or pull from HF if missing) ----------
+    if args.resume:
+        if not last.exists() and args.hf_repo and hf_token:
+            if _hf_pull(args.hf_repo, "last.pt", last, hf_token):
+                print(f"resume: pulled last.pt from HF {args.hf_repo}", flush=True)
+        if last.exists():
+            ck = torch.load(last, map_location=dev)
+            net.load_state_dict(ck["backbone"])
+            for obj, k in [(head, "head"), (opt, "opt"), (sched, "sched"), (scaler, "scaler")]:
+                if k in ck:
+                    obj.load_state_dict(ck[k])
+            start_ep = int(ck.get("epoch", 0)); best = float(ck.get("best", 0.0))
+            print(f"resume from epoch {start_ep} (best={best:.3f})", flush=True)
+        else:
+            print("resume: no last.pt found -> training from scratch", flush=True)
+
+    for ep in range(start_ep, args.epochs):
         net.train(); head.train(); t0 = time.time(); tot = 0.0
         for x, y in tl:
             x, y = x.to(dev, non_blocking=True), y.to(dev, non_blocking=True)
@@ -87,15 +141,20 @@ def main():
         acc = correct / max(n, 1)
         print(f"epoch {ep+1}/{args.epochs} loss={tot/len(tr):.3f} "
               f"val_top1={acc:.3f} ({time.time()-t0:.0f}s)", flush=True)
-        torch.save({"backbone": net.state_dict(), "embed_dim": args.embed,
-                    "img": args.img, "classes": classes},
-                   Path(args.out) / "last.pt")
+        _save_ck(last, net, head, opt, sched, scaler, ep + 1, best, args, classes)
         if acc > best:
             best = acc
-            torch.save({"backbone": net.state_dict(), "embed_dim": args.embed,
-                        "img": args.img, "classes": classes},
-                       Path(args.out) / "best.pt")
-    print(f"done. best val_top1={best:.3f} -> {args.out}/best.pt")
+            _save_ck(Path(args.out) / "best.pt", net, head, opt, sched, scaler,
+                     ep + 1, best, args, classes)
+        # Persist OFF Kaggle each epoch -> survives session restart, downloadable.
+        if args.hf_repo and hf_token:
+            try:
+                files = [last] + ([Path(args.out) / "best.pt"] if acc >= best else [])
+                _hf_push(args.hf_repo, files, hf_token)
+            except Exception as e:
+                print(f"  [hf-push warn] {type(e).__name__}: {e}", flush=True)
+    print(f"done. best val_top1={best:.3f} -> {args.out}/best.pt"
+          + (f" (+HF {args.hf_repo})" if args.hf_repo else ""))
 
 
 if __name__ == "__main__":

@@ -13,6 +13,13 @@ __pycache__/
 prepared/
 dataset/
 
+# Kaggle packaging artifacts — upload to Kaggle as a Dataset, NEVER commit to git
+# (code already lives in nom_classifier/; package images are *.png-ignored anyway)
+*.zip
+evaluation/ver_new/nom_classifier/kaggle_pkg/
+evaluation/ver_new/nom_classifier/checkpoints/
+evaluation/ver_new/**/emb_cache/
+
 # Universal FontDiffusion cache (pulled from HF Hub, ~1.5 GB)
 prepared/_universal_fd_cache/
 

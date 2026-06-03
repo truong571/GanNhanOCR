@@ -113,7 +113,7 @@ thị giác (đang tắt — mục D). `label_level` tách giám sát **char** v
 | Tầng | `label_level` | Điều kiện | Nhãn (`label`) |
 |---|---|---|---|
 | **GOLD** | char | (a) `ocr_char ∈ R` → trực tiếp (kể cả cột diverged, char tự xác nhận) [#2]; hoặc (b) bridge tương tự duy nhất ∈ R khi anchored | `ocr_char` / **chữ-bridge** (đã sửa: KHÔNG còn ghi chữ OCR đọc nhầm) [#1] |
-| **SILVER** | char | S1∩S2 lệch, S3 phá thế. **Đang TẮT** (mục D) | char S3 chọn |
+| **SILVER** | char | S1∩S2 lệch, **S3 (embedder Nôm đã train) phá thế**: vision chọn 1 âm Nôm hợp lệ của âm tiết (cos≥τ, margin≥δ) → sửa OCR đọc nhầm | char S3 chọn (+ cột `s3_cosine`) |
 | **SYLLABLE** | syllable | char chưa chắc nhưng **âm tiết đúng & nhất quán xuyên-trang** (≥3 trang, purity≥0.6, ≥5 lần) — mượn-nghĩa dict không chứa được [#6] | `''` (chỉ giữ `syllable`) |
 | **REVIEW** | — | còn lại (diverged-gapped / đơn lẻ / chất lượng kém). Giữ bbox trong manifest | — |
 
@@ -123,10 +123,10 @@ tầng SYLLABLE hợp lệ.
 
 ---
 
-## D. S3/DINOv2 — đã chứng minh KHÔNG dùng được → SILVER đang TẮT
+## D. S3 — đã THAY DINOv2 bằng embedder Nôm tự train → SILVER đang BẬT
 
-DINOv2 zero-shot **không phân biệt được chữ Nôm**. Bằng chứng (3 thí nghiệm,
-`REPORT_dinov2_unsuitable.md` + `figures/`):
+DINOv2 zero-shot **không phân biệt được chữ Nôm** (đã loại). Bằng chứng (3 thí
+nghiệm, `REPORT_dinov2_unsuitable.md` + `figures/`):
 
 | Test | Cùng chữ | Khác chữ | |
 |---|---|---|---|
@@ -134,8 +134,15 @@ DINOv2 zero-shot **không phân biệt được chữ Nôm**. Bằng chứng (3 
 | T2 crop thật | 0,889 | 0,877 | ≈ bằng nhau |
 | T3 retrieval top-1 | — | — | **0,0%** (chance 0,2%) |
 
-⇒ **SILVER tắt**, chỉ giữ **GOLD (từ điển, độc lập S3)**. Bật lại = train embedding
-Nôm riêng (xem `TRAIN_nom_embedding.md`, chạy Kaggle P100 ~1,5–3h).
+**Giải pháp đã làm:** train embedder Nôm riêng (ResNet-18 + ArcFace,
+`nom_classifier/`, Kaggle P100) → `nom-embed/best.pt`. Nghiệm thu trên test split:
+**T2 separation +0,29 · T3 retrieval 76,5%** (DINOv2: +0,01 · 0%). `visual_signal.py`
+nay dùng `NomEncoder` (`nom_classifier/infer.py`) thay `DINOv2Ranker`.
+
+⇒ **SILVER BẬT**: chạy `build_dataset.py --use-s3` (đã set mặc định trong
+`run_pipeline.sh`). Thiếu checkpoint → tự **degrade** (SILVER bỏ qua, GOLD/SYLLABLE
+vẫn chạy). Ngưỡng `τ=0.62, δ=0.06` trong `consensus.py` (hiệu chuẩn theo thang
+embedder mới: cùng-chữ ~0,80 / khác ~0,50).
 
 ---
 

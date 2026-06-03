@@ -80,12 +80,12 @@ huggingface-cli download mdnt571/gannhanocr-universal-fd-cache \
     --repo-type=dataset \
     --local-dir prepared/_universal_fd_cache/
 
-./run_pipeline.sh --step 3
-./run_pipeline.sh --step 4
+./run_pipeline.sh --step 2
 ```
 
-Step 3 will use `prepared/_universal_fd_cache/U+XXXX.png` for tier-3 visual
-ranking on any book.
+Step 2 (build_dataset, signal S3) uses the FD glyphs `U+XXXX.png` as the
+reference images its trained Nôm encoder matches each crop against. (The old
+`--step 3` DINOv2 path is retired.)
 
 ### Adding a new book later
 

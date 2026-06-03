@@ -20,26 +20,46 @@ MEAN = (0.5, 0.5, 0.5)
 STD = (0.5, 0.5, 0.5)
 
 
+def _elastic(gray, alpha=9.0, sigma=4.0):
+    h, w = gray.shape
+    dx = cv2.GaussianBlur((np.random.rand(h, w) * 2 - 1).astype(np.float32), (0, 0), sigma) * alpha
+    dy = cv2.GaussianBlur((np.random.rand(h, w) * 2 - 1).astype(np.float32), (0, 0), sigma) * alpha
+    x, y = np.meshgrid(np.arange(w), np.arange(h))
+    return cv2.remap(gray, (x + dx).astype(np.float32), (y + dy).astype(np.float32),
+                     cv2.INTER_LINEAR, borderValue=255)
+
+
+def _perspective(gray, mag=0.08):
+    h, w = gray.shape
+    d = mag * min(h, w)
+    src = np.float32([[0, 0], [w, 0], [w, h], [0, h]])
+    dst = src + np.random.uniform(-d, d, src.shape).astype(np.float32)
+    return cv2.warpPerspective(gray, cv2.getPerspectiveTransform(src, dst), (w, h), borderValue=255)
+
+
 def _augment(gray: np.ndarray) -> np.ndarray:
     h, w = gray.shape
-    # affine: rotate + scale + small translate
-    ang = random.uniform(-7, 7)
-    sc = random.uniform(0.88, 1.12)
-    M = cv2.getRotationMatrix2D((w / 2, h / 2), ang, sc)
-    M[0, 2] += random.uniform(-0.06, 0.06) * w
-    M[1, 2] += random.uniform(-0.06, 0.06) * h
+    # affine: rotate + scale + translate
+    M = cv2.getRotationMatrix2D((w / 2, h / 2), random.uniform(-9, 9), random.uniform(0.85, 1.15))
+    M[0, 2] += random.uniform(-0.07, 0.07) * w
+    M[1, 2] += random.uniform(-0.07, 0.07) * h
     gray = cv2.warpAffine(gray, M, (w, h), borderValue=255)
-    # stroke thickness: erode/dilate
-    if random.random() < 0.5:
+    if random.random() < 0.45:                       # warp cong (mộc bản)
+        gray = _elastic(gray)
+    if random.random() < 0.30:                       # nghiêng trang
+        gray = _perspective(gray)
+    if random.random() < 0.55:                       # nét đậm/mảnh
         k = np.ones((random.choice([2, 3]),) * 2, np.uint8)
         gray = (cv2.erode if random.random() < 0.5 else cv2.dilate)(gray, k)
-    # ink noise
-    if random.random() < 0.6:
+    if random.random() < 0.6:                        # nhiễu mực
         gray = np.clip(gray.astype(np.float32) +
-                       np.random.normal(0, random.uniform(4, 14), gray.shape), 0, 255).astype(np.uint8)
-    # random binarize (woodblock is high-contrast)
-    if random.random() < 0.3:
-        gray = ((gray > random.randint(110, 150)) * 255).astype(np.uint8)
+                       np.random.normal(0, random.uniform(5, 16), gray.shape), 0, 255).astype(np.uint8)
+    if random.random() < 0.3:                         # nhị phân ngẫu nhiên
+        gray = ((gray > random.randint(105, 155)) * 255).astype(np.uint8)
+    if random.random() < 0.25:                        # cutout (đứt nét/che)
+        s = int(min(h, w) * random.uniform(0.12, 0.30))
+        cy, cx = random.randint(0, h), random.randint(0, w)
+        gray[max(0, cy - s // 2):cy + s // 2, max(0, cx - s // 2):cx + s // 2] = 255
     return gray
 
 

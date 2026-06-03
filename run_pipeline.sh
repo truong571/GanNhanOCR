@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# GanNhanOCR Pipeline — 5 steps (0-4)
+# GanNhanOCR Pipeline — 3 active steps (0, 1, 2). Old steps 3 (DINOv2 label) /
+# 4 (export) are RETIRED — folded into Step 2 (evaluation/ver_new/build_dataset.py).
 #
 # Usage:
 #   ./run_pipeline.sh                    # Run all steps for all books
@@ -88,9 +89,10 @@ echo "  Steps:  $STEP"
 echo "  Books:  $(echo $BOOKS | tr '\n' ' ')"
 echo "================================================================"
 
-# Step -1: Kiểm FontDiffusion cache LOCAL (data đã sinh sẵn ở gannhanocr-fd/,
-# tra theo Unicode — KHÔNG sinh/sync gì). Chỉ cần cho step 3/4.
-if [[ "$STEP" == "all" || "$STEP" == "3" || "$STEP" == "4" ]]; then
+# Step -1: Kiểm FontDiffusion cache LOCAL (gannhanocr-fd/, tra theo Unicode —
+# KHÔNG sinh/sync gì). Cần cho Step 2: S3 (trained Nôm encoder) so khớp crop
+# với glyph FD của từng ứng viên — thiếu FD thì S3 mất ứng viên tham chiếu.
+if [[ "$STEP" == "all" || "$STEP" == "2" ]]; then
     echo ""
     echo ">>> Step -1: Kiểm FD cache local (gannhanocr-fd, tra theo Unicode)"
     FD_DIR=$("$PY" -c "import yaml;print(yaml.safe_load(open('$CONFIG'))['paths']['fd_cache_universal'])")
@@ -98,7 +100,7 @@ if [[ "$STEP" == "all" || "$STEP" == "3" || "$STEP" == "4" ]]; then
     if [[ "$FD_N" -gt 0 ]]; then
         echo "    OK: $FD_DIR có $FD_N glyph U+*.png"
     else
-        echo "    [LỖI] $FD_DIR trống/không có — step 3 sẽ thiếu tier-3." >&2
+        echo "    [LỖI] $FD_DIR trống/không có — Step 2 (S3) sẽ thiếu glyph tham chiếu." >&2
         echo "          Đặt data đã sinh vào $FD_DIR/ (dạng <hex>/U+XXXX.png)." >&2
     fi
 fi
@@ -148,7 +150,7 @@ fi
 if [[ "$STEP" == "all" || "$STEP" == "2" ]]; then
     echo ""
     echo ">>> Step 2: Build dataset (ver_new: align + consensus + crops + labels)"
-    "$PY" evaluation/ver_new/build_dataset.py --config "$CONFIG"
+    "$PY" evaluation/ver_new/build_dataset.py --config "$CONFIG" --use-s3
     echo ""
     echo ">>> Step 2b: Export standards (HF imagefolder + Frictionless + Croissant)"
     "$PY" evaluation/ver_new/to_standard.py

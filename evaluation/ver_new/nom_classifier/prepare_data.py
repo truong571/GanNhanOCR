@@ -28,6 +28,8 @@ import json
 from collections import Counter
 from pathlib import Path
 
+import numpy as np
+
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent.parent
 
@@ -42,6 +44,30 @@ def fd_index(fd_dir: Path) -> dict[str, str]:
     return idx
 
 
+# Nôm fonts with good Ext-B coverage (clean-print references -> style invariance
+# + extra samples for the long tail / singletons).
+DEFAULT_FONTS = ["HanaMinA.ttf", "HanaMinB.ttf", "NomNaTong-Regular.ttf",
+                 "Han-Nom-Khai-Regular-300623.ttf", "HAN NOM A.ttf", "HAN NOM B.ttf"]
+
+
+def render_glyph(char: str, font, size: int = 140):
+    """Render one char with a TTF font -> PIL 'L' image, or None if the font
+    lacks the glyph (blank) or it doesn't fit."""
+    from PIL import Image, ImageDraw
+    img = Image.new("L", (size, size), 255)
+    d = ImageDraw.Draw(img)
+    try:
+        bb = d.textbbox((0, 0), char, font=font)
+    except Exception:
+        return None
+    w, h = bb[2] - bb[0], bb[3] - bb[1]
+    if w <= 1 or h <= 1:
+        return None
+    d.text(((size - w) // 2 - bb[0], (size - h) // 2 - bb[1]), char, fill=0, font=font)
+    a = np.asarray(img)
+    return img if (a < 128).mean() > 0.01 else None   # blank -> font has no glyph
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--root", default=str(REPO), help="base dir paths are relative to")
@@ -49,6 +75,10 @@ def main():
     ap.add_argument("--fd", default=str(REPO / "gannhanocr-fd"))
     ap.add_argument("--min-per-class", type=int, default=0,
                     help="drop classes with fewer than this many TOTAL samples (0=keep all)")
+    ap.add_argument("--fonts-dir", default=str(REPO / "font_diffusion" / "fonts"))
+    ap.add_argument("--no-fonts", action="store_true",
+                    help="bỏ render multi-font (chỉ crop + 1 glyph FD/lớp)")
+    ap.add_argument("--font-size", type=int, default=140)
     args = ap.parse_args()
 
     root = Path(args.root)
@@ -80,6 +110,38 @@ def main():
                         "unicode": f"U+{ord(ch):04X}", "split": "train", "source": "fd"})
             n_fd += 1
 
+    # multi-font clean references (train only): more samples/class + style invariance
+    n_font = 0
+    if not args.no_fonts:
+        from PIL import ImageFont
+        refs_dir = HERE / "font_refs"
+        refs_dir.mkdir(exist_ok=True)
+        fonts = []
+        for fn in DEFAULT_FONTS:
+            fp = Path(args.fonts_dir) / fn
+            if fp.exists():
+                try:
+                    fonts.append((fp.stem.replace(" ", "_"),
+                                  ImageFont.truetype(str(fp), args.font_size)))
+                except Exception:
+                    pass
+        print(f"  rendering {len(fonts)} fonts x {len(classes)} chars ...", flush=True)
+        for ch in classes:
+            for fstem, font in fonts:
+                p = refs_dir / f"U+{ord(ch):04X}__{fstem}.png"
+                if not p.exists():
+                    img = render_glyph(ch, font, args.font_size)
+                    if img is None:           # font lacks this glyph -> skip
+                        continue
+                    img.save(p)
+                try:
+                    rel = p.resolve().relative_to(root)
+                except ValueError:
+                    rel = p
+                out.append({"path": str(rel), "label": ch,
+                            "unicode": f"U+{ord(ch):04X}", "split": "train", "source": "font"})
+                n_font += 1
+
     # optional min-per-class filter
     if args.min_per_class > 0:
         cnt = Counter(r["label"] for r in out)
@@ -99,7 +161,7 @@ def main():
              "root": str(root)}
     json.dump(stats, open(HERE / "stats.json", "w", encoding="utf-8"), ensure_ascii=False, indent=2)
     print(f"index.csv: {len(out)} rows | {len(classes)} classes | "
-          f"crops {src['crop']} + fd {src['fd']} | split {dict(sp)}")
+          f"crops {src['crop']} + fd {src['fd']} + font {src.get('font',0)} | split {dict(sp)}")
     print(f"-> {HERE}/index.csv, classes.json, stats.json")
 
 

@@ -52,8 +52,12 @@ step2:
   # radicals) even at the cost of a sliver of neighbour ink.
   crop_pad_frac: 0.18
 
+# Step 3 (legacy DINOv2 labeling path) — RETIRED: superseded by ver_new Step 2
+# (build_dataset.py --use-s3, S3 = trained Nôm encoder). DINOv2 is DISABLED here
+# (proven non-discriminative on Nôm — evaluation/ver_new/REPORT_dinov2_unsuitable.md).
+# Code kept (core/ranking/dinov2_ranker.py), NOT deleted, for the thesis comparison.
 step3:
-  use_dinov2: true
+  use_dinov2: false                 # DISABLED — replaced by trained Nôm embedder (S3)
   dinov2_model: dinov2_vitb14_reg   # Base + registers — best for fine-grained chu-Nom
   dinov2_threshold: 0.75            # cosine similarity threshold for matched=True
   classical_threshold: 0.55         # classical CV fallback (Hu+IoU+projection)

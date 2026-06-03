@@ -26,7 +26,8 @@ class NomEncoder:
                                    else ("mps" if torch.backends.mps.is_available() else "cpu")))
         ck = torch.load(ckpt, map_location=self.device)
         self.size = ck.get("img", 128)
-        self.net = NomEmbedder(ck.get("embed_dim", 256), pretrained=False).to(self.device)
+        self.net = NomEmbedder(ck.get("embed_dim", 256), pretrained=False,
+                               arch=ck.get("arch", "resnet18")).to(self.device)
         self.net.load_state_dict(ck["backbone"]); self.net.eval()
         self._cache: dict[str, np.ndarray] = {}
 

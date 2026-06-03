@@ -35,15 +35,15 @@ def main():
     ap.add_argument("--out", default=str(HERE / "kaggle_pkg"))
     args = ap.parse_args()
     out = Path(args.out)
-    (out / "images" / "crop").mkdir(parents=True, exist_ok=True)
-    (out / "images" / "fd").mkdir(parents=True, exist_ok=True)
+    for s in ("crop", "fd", "font"):
+        (out / "images" / s).mkdir(parents=True, exist_ok=True)
 
     rows = list(csv.DictReader(open(args.index, encoding="utf-8")))
     new = []
     copied = skipped = 0
     for r in rows:
         src = (REPO / r["path"]).resolve()
-        sub = "fd" if r["source"] == "fd" else "crop"
+        sub = r["source"] if r["source"] in ("fd", "font") else "crop"
         rel = f"images/{sub}/{Path(r['path']).name}"
         dst = out / rel
         if not dst.exists():

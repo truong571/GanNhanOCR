@@ -3,19 +3,23 @@
   "total_pairs": 82268,
   "tiers": {
     "GOLD": 51195,
-    "REVIEW": 23392,
-    "SYLLABLE": 7681
+    "REVIEW": 18840,
+    "SYLLABLE": 5486,
+    "SILVER": 6747
   },
-  "syllable_promoted": 7681,
-  "char_classes": 1591,
-  "usable_char": 51195,
-  "usable_total": 58876,
+  "syllable_promoted": 5486,
+  "char_classes": 1846,
+  "usable_char": 57942,
+  "usable_total": 63428,
   "split_counts": {
-    "GOLD/test": 4716,
-    "GOLD/train": 41743,
-    "GOLD/val": 4736,
-    "SYLLABLE/test": 735,
-    "SYLLABLE/train": 6219,
-    "SYLLABLE/val": 727
+    "GOLD/test": 4496,
+    "GOLD/train": 42191,
+    "GOLD/val": 4508,
+    "SILVER/test": 568,
+    "SILVER/train": 5601,
+    "SILVER/val": 578,
+    "SYLLABLE/test": 523,
+    "SYLLABLE/train": 4486,
+    "SYLLABLE/val": 477
   }
 }

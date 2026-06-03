@@ -133,27 +133,29 @@ Lam theo [`kaggle_diffusion/README.md`](kaggle_diffusion/README.md):
 ### Buoc B — Chay pipeline 3 cuon
 
 ```bash
-./run_pipeline.sh                    # tat ca 3 cuon, du 5 buoc 0→4
+./run_pipeline.sh                    # tat ca 3 cuon, 3 buoc: 0 (setup) -> 1 (extract) -> 2 (build dataset)
 ```
 
 Hoac chay tung phan:
 
 ```bash
-./run_pipeline.sh --step 1                          # chi buoc 1, tat ca sach
-./run_pipeline.sh --book SachThanhTruyen2            # 1 sach, du 5 buoc
-./run_pipeline.sh --step 3 --book SachThanhTruyen4   # buoc 3, 1 sach
+./run_pipeline.sh --step 1                          # chi buoc 1 (extract OCR), tat ca sach
+./run_pipeline.sh --step 2                          # chi buoc 2 (build dataset ver_new)
+./run_pipeline.sh --book SachThanhTruyen2            # 1 sach, du 3 buoc
 ./run_pipeline.sh --config config/pipeline.yaml     # chi dinh config
 ```
 
-Hoac goi tung step Python:
+Buoc 2 = goi truc tiep code ver_new (banded-DP align + consensus GOLD/SILVER/
+SYLLABLE/REVIEW, S3 = encoder Nom da train, + xuat 3 chuan quoc te):
 
 ```bash
-python -m pipeline.step0_setup config/pipeline.yaml
-python -m pipeline.step1_extract config/pipeline.yaml SachThanhTruyen2
-python -m pipeline.step2_align   config/pipeline.yaml SachThanhTruyen2
-python -m pipeline.step3_label   config/pipeline.yaml SachThanhTruyen2
-python -m pipeline.step4_export  config/pipeline.yaml
+.venv/bin/python evaluation/ver_new/build_dataset.py --config config/pipeline.yaml --use-s3
+.venv/bin/python evaluation/ver_new/to_standard.py     # HF imagefolder + Frictionless + Croissant
 ```
+
+> ⚠️ Cac lenh cu `python -m pipeline.step2_align / step3_label / step4_export`
+> da **NGHI (RETIRED)** — gop het vao Buoc 2 o tren. DINOv2 da bi **tat**
+> (thay bang encoder Nom da train). Chi tiet flow moi: `evaluation/ver_new/FLOW.md`.
 
 ---
 
@@ -171,12 +173,19 @@ GanNhanOCR/
 │   ├── ranking/                  # Ranker 3-tang + DINOv2 + FontDiffusion
 │   └── text/                     # Dictionary, syllable utils
 │
-├── pipeline/                     # 5 buoc thuc thi
-│   ├── step0_setup.py
-│   ├── step1_extract.py
-│   ├── step2_align.py
-│   ├── step3_label.py
-│   └── step4_export.py
+├── pipeline/                     # Buoc 0-1 active; step2/3/4 da NGHI
+│   ├── step0_setup.py            #   (active) setup & validate
+│   ├── step1_extract.py          #   (active) PDF -> crop khung -> OCR 9 cot
+│   ├── step2_align.py            #   [RETIRED] thay boi evaluation/ver_new/build_dataset.py
+│   ├── step3_label.py            #   [RETIRED] duong DINOv2, da tat
+│   └── step4_export.py           #   [RETIRED] thay boi ver_new/to_standard.py
+│
+├── evaluation/ver_new/           # *** Buoc 2 hien hanh (build dataset) ***
+│   ├── build_dataset.py          #   align banded-DP + consensus + crops + labels.csv
+│   ├── to_standard.py            #   xuat HF / Frictionless / Croissant
+│   ├── visual_signal.py          #   S3 = encoder Nom da train (NomEncoder)
+│   ├── nom_classifier/           #   train encoder Nom (Kaggle P100)
+│   └── FLOW.md                   #   mo ta flow chi tiet
 │
 ├── kaggle_diffusion/             # One-shot generator universal fd_cache
 │   ├── README.md
@@ -237,10 +246,10 @@ paths:
 
 step1: { dpi: 300, denoise: true, crop_size: 64, sauvola_k: 0.2, use_ocr_api: true }
 step2: { deletion_cost_small: 0.3, deletion_cost_medium: 0.6, deletion_cost_normal: 1.2 }
+# step3/step4 = duong DINOv2/export cu, da NGHI. use_dinov2: false (encoder Nom
+# da train thay the). Giu lai cho doi chieu trong luan van, khong xoa.
 step3:
-  use_dinov2: true
-  dinov2_model: dinov2_vitb14_reg
-  dinov2_threshold: 0.75
+  use_dinov2: false               # TAT — thay bang encoder Nom da train (S3)
   use_fontdiffusion: true
   require_fontdiffusion: true     # tier 3 chi dung anh trong fd_cache
 step4: { min_samples_per_class: 1 }
@@ -260,35 +269,24 @@ step4: { min_samples_per_class: 1 }
 6. **Trich xuat text QN**: Doc text tu PDF (hoac PaddleOCR + VietOCR khi `reocr=true`)
 7. **Normalize syllables**: Tach ten thanh ngay tu buoc nay
 
-### Buoc 2 — Can chinh Levenshtein
+### Buoc 2 — Build dataset (ver_new)  ·  THAY cho Buoc 2/3/4 cu
 
-| Chieu cao ky tu | Chi phi xoa | Ly do |
-|-----------------|-------------|-------|
-| < 30% median   | 0.3         | Nhieu/dau |
-| 30-50% median  | 0.6         | Ky tu nho |
-| >= 50% median  | 1.2         | Ky tu that |
+> Day la flow hien hanh. Mo ta day du: `evaluation/ver_new/FLOW.md`.
 
-### Buoc 3 — Gan nhan 3 tang
+`evaluation/ver_new/build_dataset.py --use-s3` lam tat ca trong 1 buoc:
 
-**Tang 1: Tu dien song huong (QN↔Nom)** — neu S2 co duy nhat 1 ung vien hoac
-OCR ∈ S2 va QN ∈ S1 → matched.
-
-**Tang 2: Chu tuong tu** — tra `SinoNom_Similar_Dic`, tim chu tuong tu nam
-trong S2 → matched.
-
-**Tang 3: So khop anh (DINOv2 + FontDiffusion)** — tap ung vien la S2; voi moi
-ung vien, lay anh tu `fd_cache` (universal hoac per-book), tinh cosine
-similarity DINOv2 voi crop. Score > 0.75 → matched, nguoc lai → unmatched.
-
-Voi `require_fontdiffusion: true`, tang 3 **CHI** dung anh trong fd_cache;
-khong fallback ve render tu font, dam bao do dong nhat ve style.
-
-### Buoc 4 — Xuat dataset
-
-- Gop labels.csv tu tat ca sach
-- Loc crop loi (trang, qua den, kich thuoc bat thuong)
-- Loai class hiem (`min_samples_per_class`)
-- Xuat rieng tung book + gop tat ca vao `all/`
+1. **Can chinh banded-DP neo tu dien** (thay ghep theo index cu): chi phi xoa
+   theo chieu cao ky tu (<30% median = 0.3 / 30-50% = 0.6 / >=50% = 1.2).
+2. **3 tin hieu** moi cap Nom↔QN: S1 = ky tu OCR SinoNom · S2 = tu dien
+   QN↔Nom + chu tuong tu (`SinoNom_Similar_Dic_v2`) · S3 = **so khop anh bang
+   encoder Nom da train** (ArcFace) voi glyph FontDiffusion cua ung vien.
+   *(DINOv2 da bi tat — khong phan biet duoc chu Nom; xem
+   `evaluation/ver_new/REPORT_dinov2_unsuitable.md`.)*
+3. **Tang dong thuan**: GOLD (tu dien xac nhan, char) · SILVER (S3 sua thi giac,
+   char) · SYLLABLE (vay muon nhat quan giua cac trang, am tiet) · REVIEW.
+4. **Re-segment cot + sua bbox khung**, crop tu anh goc -> `dataset_out/`.
+5. **Xuat 3 chuan quoc te** (`to_standard.py`): HuggingFace imagefolder,
+   Frictionless Data Package, MLCommons Croissant.
 
 ---
 
@@ -305,24 +303,29 @@ Khong dung confidence score. Chi co 2 trang thai.
 
 ## Format dataset
 
-### labels.csv
+### labels.csv (ver_new — 20 cot)
+
+Xuat tai `evaluation/ver_new/dataset_out/labels.csv`. Header thuc te:
 
 ```csv
-crop_file,nom_char,unicode,syllable,matched,tier,bbox,page,source
-crops/page_0012/col01_char000.png,經,U+7D93,kinh,True,1,"[100,200,150,260]",page_0012,SachThanhTruyen2
+image,book,page,column,ocr_char,syllable,label,unicode,label_level,tier,rule,s3_cosine,ink_pct,crop_w,crop_h,image_md5,seg_flag,split,split_group,bbox
 ```
 
 | Truong | Mo ta |
 |--------|-------|
-| `crop_file` | Duong dan anh crop **goc** (tu `crops/`, khong phai `crops_cleaned/`) |
-| `nom_char`  | Ky tu Nom (Unicode) |
-| `unicode`   | Ma Unicode `U+XXXX` |
-| `syllable`  | Am doc Quoc ngu |
-| `matched`   | `True` (den) / `False` (do) |
-| `tier`      | Tang da gan: 1 (dict), 2 (similar), 3 (visual), 0 (none) |
-| `bbox`      | Bounding box `[x1,y1,x2,y2]` |
-| `page`      | Ten trang |
-| `source`    | Ten bo sach |
+| `image` | Duong dan anh crop (goc) |
+| `ocr_char` | Ky tu OCR SinoNom doc duoc (S1) |
+| `label` / `unicode` | Nhan cuoi (chu Nom) + ma `U+XXXX` |
+| `syllable` | Am doc Quoc ngu |
+| `label_level` | `char` (tung chu) hoac `syllable` (am tiet) |
+| `tier` | **GOLD** (tu dien xac nhan) · **SILVER** (S3 sua thi giac) · **SYLLABLE** (vay muon nhat quan) · **REVIEW** (can soat) |
+| `rule` | Luat sinh nhan (vd dict_confirm, similar_bridge, below_visual_threshold...) |
+| `s3_cosine` | Cosine encoder Nom train (S3) — co khi dung SILVER |
+| `split` / `split_group` | train/val/test (chia theo nhom book·page·column, chong ro ri) |
+| `bbox` | Bounding box `[x1,y1,x2,y2]` |
+
+Phan bo hien tai: GOLD 51.195 · SILVER 6.747 · SYLLABLE 5.486 · REVIEW 18.840
+(tong 82.268). 3 ban chuan quoc te kem theo trong `dataset_out/` (xem `to_standard.py`).
 
 ---
 
@@ -349,8 +352,8 @@ crops/page_0012/col01_char000.png,經,U+7D93,kinh,True,1,"[100,200,150,260]",pag
 | Tra tu dien | Song huong QN↔Nom + Fuzzy matching |
 | Chu tuong tu | SinoNom_Similar_Dic |
 | Sinh anh tham chieu | FontDiffuser (NomNaTong style transfer) tren Kaggle T4 |
-| So khop anh | DINOv2 ViT-B/14 + registers, cosine similarity |
-| Xuat dataset | Merge + Quality filter + Class map |
+| So khop anh (S3) | **Encoder Nom da train (ResNet + ArcFace)** — cosine vs glyph FD. *(DINOv2 da tat: khong phan biet duoc Nom)* |
+| Xuat dataset | labels.csv + 3 chuan: HF imagefolder / Frictionless / Croissant |
 
 ---
 

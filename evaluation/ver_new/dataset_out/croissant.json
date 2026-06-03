@@ -237,7 +237,7 @@
           "@type": "cr:Field",
           "@id": "records/rule",
           "name": "rule",
-          "description": "Decision rule that produced the label (e.g. s1_inter_s2_direct, s1_inter_s2_similar, nghia_consensus).",
+          "description": "Decision rule that produced the label (e.g. s1_inter_s2_direct, s1_inter_s2_similar, s2_inter_s3_corrected, nghia_consensus).",
           "dataType": "sc:Text",
           "source": {
             "fileObject": {
@@ -245,6 +245,21 @@
             },
             "extract": {
               "column": "rule"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "records/s3_cosine",
+          "name": "s3_cosine",
+          "description": "Visual-match cosine (trained Nôm embedder) for SILVER rows; empty otherwise.",
+          "dataType": "sc:Float",
+          "source": {
+            "fileObject": {
+              "@id": "labels.csv"
+            },
+            "extract": {
+              "column": "s3_cosine"
             }
           }
         },

@@ -28,10 +28,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# Visual thresholds — PLACEHOLDERS, calibrate on a held-out set (FLOW.md §9).
-# DINOv2 cosine is mapped to [0,1] via (cos+1)/2; project default "match" = 0.75.
-TAU_SILVER = 0.60      # min visual score of the winning candidate
-DELTA_SILVER = 0.04    # min (winner − runner-up) margin
+# Visual thresholds for the TRAINED Nôm embedder (visual_signal.NomEncoder).
+# Measured on test split: same-char cosine ~0.80, different-char ~0.50 -> a
+# correct match clears ~0.65 with a ~0.2+ margin. Tune on a held-out set.
+TAU_SILVER = 0.62      # min visual score of the winning candidate
+DELTA_SILVER = 0.06    # min (winner − runner-up) margin
 
 
 @dataclass

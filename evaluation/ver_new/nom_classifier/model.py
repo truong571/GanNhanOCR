@@ -16,22 +16,30 @@ import torch.nn.functional as F
 import torchvision
 
 
-class NomEmbedder(nn.Module):
-    """Image -> L2-normalized embedding."""
+_BACKBONES = {
+    "resnet18": (torchvision.models.resnet18, "ResNet18_Weights"),
+    "resnet34": (torchvision.models.resnet34, "ResNet34_Weights"),
+    "resnet50": (torchvision.models.resnet50, "ResNet50_Weights"),
+}
 
-    def __init__(self, embed_dim: int = 256, pretrained: bool = True):
+
+class NomEmbedder(nn.Module):
+    """Image -> L2-normalized embedding. `arch` picks the backbone capacity."""
+
+    def __init__(self, embed_dim: int = 256, pretrained: bool = True,
+                 arch: str = "resnet18"):
         super().__init__()
-        weights = torchvision.models.ResNet18_Weights.IMAGENET1K_V1 if pretrained else None
-        bb = torchvision.models.resnet18(weights=weights)
+        ctor, wname = _BACKBONES[arch]
+        weights = getattr(torchvision.models, wname).IMAGENET1K_V1 if pretrained else None
+        bb = ctor(weights=weights)
         in_feats = bb.fc.in_features
         bb.fc = nn.Identity()
+        self.arch = arch
         self.backbone = bb
         self.proj = nn.Linear(in_feats, embed_dim)
 
     def forward(self, x):
-        f = self.backbone(x)
-        e = self.proj(f)
-        return F.normalize(e, dim=1)
+        return F.normalize(self.proj(self.backbone(x)), dim=1)
 
 
 class ArcMargin(nn.Module):

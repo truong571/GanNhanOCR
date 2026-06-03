@@ -72,7 +72,12 @@
           {
             "name": "rule",
             "type": "string",
-            "description": "Decision rule that produced the label (e.g. s1_inter_s2_direct, s1_inter_s2_similar, nghia_consensus)."
+            "description": "Decision rule that produced the label (e.g. s1_inter_s2_direct, s1_inter_s2_similar, s2_inter_s3_corrected, nghia_consensus)."
+          },
+          {
+            "name": "s3_cosine",
+            "type": "number",
+            "description": "Visual-match cosine (trained Nôm embedder) for SILVER rows; empty otherwise."
           },
           {
             "name": "ink_pct",
@@ -127,7 +132,8 @@
   "count_of_rows": 82268,
   "stats": {
     "GOLD": 51195,
-    "REVIEW": 23392,
-    "SYLLABLE": 7681
+    "REVIEW": 18840,
+    "SYLLABLE": 5486,
+    "SILVER": 6747
   }
 }

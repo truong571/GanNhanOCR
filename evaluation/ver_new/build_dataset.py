@@ -124,10 +124,14 @@ def main():
     vs3 = None
     if args.use_s3:
         from evaluation.ver_new.visual_signal import VisualS3
-        print("Loading S3 (DINOv2+FD) ...", flush=True)
-        vs3 = VisualS3(REPO, font_path=str(REPO / paths["font_path"]),
-                       fd_dir=str(REPO / paths["fd_cache_universal"]),
-                       cache_dir=str(out / "emb_cache"))
+        try:
+            print("Loading S3 (trained Nôm embedder + FD) ...", flush=True)
+            vs3 = VisualS3(REPO, fd_dir=str(REPO / paths["fd_cache_universal"]))
+        except Exception as e:
+            print(f"  [S3 OFF] {type(e).__name__}: {e}\n  -> SILVER bỏ qua; GOLD/SYLLABLE "
+                  "vẫn chạy. (Cần checkpoint nom-embed/best.pt — train ở nom_classifier/.)",
+                  flush=True)
+            vs3 = None
 
     # ---------- PASS 1: align all pages, collect records (no crop yet) ----------
     records = []
@@ -160,13 +164,19 @@ def main():
                     "page_png": page_png, "ocr_char": p.get("ocr_char") or "",
                     "syllable": p["syllable"], "bbox": p.get("bbox"),
                     "tier": dec.tier, "rule": dec.rule_id, "label": dec.label or "",
+                    "s3_cosine": round(s3.cosine, 3) if s3 else "",
                 })
 
     # ---------- PROMOTE: cross-page-consistent unconfirmed -> SYLLABLE [#6] ----------
+    # The unconfirmed pool = REVIEW rows with an ocr_char that S1∩S2 didn't confirm.
+    # Without S3 the rule is 'unconfirmed_no_s3'; with S3 ON the S3-failed ones are
+    # 'below_visual_threshold'. Both are eligible for the syllable tier (SILVER
+    # already took the S3-confirmed ones), so SYLLABLE coexists with SILVER.
+    UNCONF = {"unconfirmed_no_s3", "below_visual_threshold"}
     cnt = defaultdict(Counter)            # ocr_char -> Counter(syllable)
     pages_of = defaultdict(lambda: defaultdict(set))
     for r in records:
-        if r["tier"] == "REVIEW" and r["rule"] == "unconfirmed_no_s3" and r["ocr_char"]:
+        if r["tier"] == "REVIEW" and r["rule"] in UNCONF and r["ocr_char"]:
             cnt[r["ocr_char"]][r["syllable"]] += 1
             pages_of[r["ocr_char"]][r["syllable"]].add((r["book"], r["page"]))
     syl_ok = set()                        # (ocr_char, syllable) that pass the gate
@@ -177,7 +187,7 @@ def main():
             syl_ok.add((ch, syl))
     n_promoted = 0
     for r in records:
-        if (r["tier"] == "REVIEW" and r["rule"] == "unconfirmed_no_s3"
+        if (r["tier"] == "REVIEW" and r["rule"] in UNCONF
                 and (r["ocr_char"], r["syllable"]) in syl_ok):
             r["tier"], r["rule"] = "SYLLABLE", "nghia_consensus"
             n_promoted += 1
@@ -234,14 +244,15 @@ def main():
                 "ink_pct": q["ink"] if q else "", "crop_w": q["w"] if q else "",
                 "crop_h": q["h"] if q else "", "image_md5": q["md5"] if q else "",
                 "seg_flag": q["seg"] if q else "",
+                "s3_cosine": r.get("s3_cosine", ""),
                 "split": r["split"], "split_group": r["split_group"],
                 "bbox": json.dumps(r.get("bbox")),
             })
 
     # ---------- write manifest + summary ----------
     fields = ["image", "book", "page", "column", "ocr_char", "syllable", "label",
-              "unicode", "label_level", "tier", "rule", "ink_pct", "crop_w", "crop_h",
-              "image_md5", "seg_flag", "split", "split_group", "bbox"]
+              "unicode", "label_level", "tier", "rule", "s3_cosine", "ink_pct",
+              "crop_w", "crop_h", "image_md5", "seg_flag", "split", "split_group", "bbox"]
     with open(out / "labels.csv", "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader(); w.writerows(labels)

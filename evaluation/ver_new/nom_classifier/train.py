@@ -33,7 +33,8 @@ def _save_ck(path, net, head, opt, sched, scaler, ep, best, args, classes):
     torch.save({"backbone": net.state_dict(), "head": head.state_dict(),
                 "opt": opt.state_dict(), "sched": sched.state_dict(),
                 "scaler": scaler.state_dict(), "epoch": ep, "best": best,
-                "embed_dim": args.embed, "img": args.img, "classes": classes}, path)
+                "embed_dim": args.embed, "img": args.img, "arch": args.arch,
+                "classes": classes}, path)
 
 
 def _hf_push(repo, files, token):
@@ -63,11 +64,13 @@ def main():
     ap.add_argument("--index", default=str(HERE / "index.csv"))
     ap.add_argument("--classes", default=str(HERE / "classes.json"))
     ap.add_argument("--out", default=str(HERE / "checkpoints"))
-    ap.add_argument("--epochs", type=int, default=30)
+    ap.add_argument("--epochs", type=int, default=40)
     ap.add_argument("--batch", type=int, default=256)
-    ap.add_argument("--img", type=int, default=128)
+    ap.add_argument("--img", type=int, default=160)
+    ap.add_argument("--arch", default="resnet34", choices=["resnet18", "resnet34", "resnet50"])
     ap.add_argument("--embed", type=int, default=256)
     ap.add_argument("--lr", type=float, default=3e-4)
+    ap.add_argument("--warmup", type=int, default=2, help="số epoch warmup tuyến tính")
     ap.add_argument("--workers", type=int, default=4)
     ap.add_argument("--no-pretrained", action="store_true",
                     help="ResNet-18 từ scratch (khi Kaggle tắt Internet, không tải được weights)")
@@ -91,11 +94,13 @@ def main():
                     pin_memory=pin, drop_last=True)
     vl = DataLoader(va, batch_size=args.batch, shuffle=False, num_workers=args.workers, pin_memory=pin)
 
-    net = NomEmbedder(args.embed, pretrained=not args.no_pretrained).to(dev)
+    net = NomEmbedder(args.embed, pretrained=not args.no_pretrained, arch=args.arch).to(dev)
     head = ArcMargin(args.embed, n_cls).to(dev)
     opt = torch.optim.AdamW(list(net.parameters()) + list(head.parameters()),
                             lr=args.lr, weight_decay=1e-4)
-    sched = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=args.epochs)
+    warm = torch.optim.lr_scheduler.LinearLR(opt, start_factor=0.1, total_iters=max(1, args.warmup))
+    cos = torch.optim.lr_scheduler.CosineAnnealingLR(opt, T_max=max(1, args.epochs - args.warmup))
+    sched = torch.optim.lr_scheduler.SequentialLR(opt, [warm, cos], milestones=[args.warmup])
     scaler = torch.amp.GradScaler("cuda", enabled=(dev == "cuda"))
     crit = nn.CrossEntropyLoss(label_smoothing=0.05)
 
@@ -104,6 +109,14 @@ def main():
     start_ep = 0
     last = Path(args.out) / "last.pt"
     hf_token = os.environ.get("HF_TOKEN", "")
+    # Footgun guard: --hf-repo must be a repo_id (user/name), NOT a token.
+    if args.hf_repo and ("/" not in args.hf_repo or args.hf_repo.startswith("hf_")):
+        print(f"  [hf] BỎ QUA push: '--hf-repo {args.hf_repo}' trông như TOKEN, không "
+              f"phải repo_id. Đặt token vào Secret HF_TOKEN; HF_REPO='' (tự thành "
+              f"<user>/nom-embed) hoặc 'user/ten'. (Train vẫn chạy + lưu local.)", flush=True)
+        args.hf_repo = ""
+    if args.hf_repo and not hf_token:
+        print("  [hf] BỎ QUA push: có --hf-repo nhưng thiếu HF_TOKEN (Add-ons→Secrets).", flush=True)
     # RESUME: continue from last.pt (local; or pull from HF if missing) ----------
     if args.resume:
         if not last.exists() and args.hf_repo and hf_token:

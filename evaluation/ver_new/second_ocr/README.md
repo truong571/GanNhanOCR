@@ -1,3 +1,7 @@
+> ⏸️ **TẠM BỎ (2026-06):** đường S3 đang dùng là **model train**
+> (`../nom_classifier/`, đã thắng nghiệm thu). Folder này GIỮ làm **so sánh**
+> cho luận văn (DINOv2 vs Gemini vs classifier), KHÔNG nằm trong pipeline.
+
 # second_ocr — Đồng thuận OCR-thứ-2 (so với classifier / DINOv2)
 
 Ý tưởng: S1 = HCMUS SinoNom OCR. Một **OCR thứ 2 độc lập** đọc lại cùng crop →

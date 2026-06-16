@@ -216,6 +216,33 @@ def evaluate(net, items, img, dev, thr=0.3, iou_th=0.5):
             "median_count_err": float(np.median(cnt_err)) if cnt_err else 0.0, "pages": len(cnt_err)}
 
 
+# --------------------------------------------------------------------------- HF push
+def hf_push(repo, files, token):
+    """Upload files to a HuggingFace model repo (mirrors kaggle_train.hf_push)."""
+    from huggingface_hub import HfApi, create_repo
+    create_repo(repo, repo_type="model", exist_ok=True, token=token)
+    api = HfApi()
+    for f in files:
+        if Path(f).exists():
+            api.upload_file(path_or_fileobj=str(f), path_in_repo=Path(f).name,
+                            repo_id=repo, repo_type="model", token=token)
+    print(f"  [HF] pushed {[Path(f).name for f in files if Path(f).exists()]} -> {repo}", flush=True)
+
+
+def _hf_token(arg_token):
+    """Resolve HF token: --hf-token arg, env HF_TOKEN, or Kaggle Secret HF_TOKEN."""
+    import os
+    if arg_token:
+        return arg_token
+    if os.environ.get("HF_TOKEN"):
+        return os.environ["HF_TOKEN"]
+    try:
+        from kaggle_secrets import UserSecretsClient
+        return UserSecretsClient().get_secret("HF_TOKEN")
+    except Exception:
+        return None
+
+
 # --------------------------------------------------------------------------- smoke
 def smoke():
     assert torch is not None, "torch required"
@@ -283,6 +310,10 @@ def train(args):
 
     dl = torch.utils.data.DataLoader(DS(man, args.img), batch_size=args.batch,
                                      shuffle=True, num_workers=args.workers, drop_last=True)
+    hf_token = _hf_token(args.hf_token) if args.hf_repo else None
+    if args.hf_repo and not hf_token:
+        print("  [HF] --hf-repo set but no token (env HF_TOKEN / Kaggle Secret HF_TOKEN / --hf-token) "
+              "-> skipping HF push; saving locally only.", flush=True)
     net = _make_model()(pretrained=not args.no_pretrained)
     if args.init and Path(args.init).exists():     # e.g. TKH/MTHv2-pretrained weights
         sd = torch.load(args.init, map_location="cpu")
@@ -290,7 +321,12 @@ def train(args):
         print(f"  init from {args.init}")
     net = net.to(dev)
     opt = torch.optim.AdamW(net.parameters(), lr=args.lr)
-    scaler = torch.cuda.amp.GradScaler(enabled=(dev == "cuda"))
+    _HAS_AMP = hasattr(torch, "amp") and hasattr(torch.amp, "GradScaler")   # torch>=2.3 API
+    def autocast():
+        return (torch.amp.autocast("cuda", enabled=(dev == "cuda")) if _HAS_AMP
+                else torch.cuda.amp.autocast(enabled=(dev == "cuda")))
+    scaler = (torch.amp.GradScaler("cuda", enabled=(dev == "cuda")) if _HAS_AMP
+              else torch.cuda.amp.GradScaler(enabled=(dev == "cuda")))
     best_f1 = -1.0
     for ep in range(args.epochs):
         net.train(); tot = 0.0
@@ -298,7 +334,7 @@ def train(args):
             x, thm = x.to(dev), thm.to(dev)
             twh, toff, tind, tmask = twh.to(dev), toff.to(dev), tind.to(dev), tmask.to(dev)
             opt.zero_grad()
-            with torch.cuda.amp.autocast(enabled=(dev == "cuda")):
+            with autocast():
                 hm, wh, off = net(x)
                 loss = focal_loss(hm, thm) + 0.1 * reg_l1(wh, tind, twh, tmask) \
                     + reg_l1(off, tind, toff, tmask)
@@ -308,11 +344,22 @@ def train(args):
         print(f"epoch {ep+1}/{args.epochs}  loss {tot/len(dl):.4f}  | VAL "
               f"F1 {ev['F1']} P {ev['P']} R {ev['R']} count-err {ev['median_count_err']}", flush=True)
         torch.save({"model": net.state_dict(), "stride": STRIDE, "img": args.img, "val": ev}, args.out)
+        best_path = str(Path(args.out).with_suffix(".best.pt"))
         if ev["F1"] > best_f1:
             best_f1 = ev["F1"]
-            torch.save({"model": net.state_dict(), "stride": STRIDE, "img": args.img, "val": ev},
-                       str(Path(args.out).with_suffix(".best.pt")))
-    print(f"\nsaved {args.out} | best VAL F1 {best_f1:.4f}")
+            torch.save({"model": net.state_dict(), "stride": STRIDE, "img": args.img, "val": ev}, best_path)
+            if args.hf_repo and hf_token:        # push on each new best (survives Kaggle resets)
+                try:
+                    hf_push(args.hf_repo, [best_path], hf_token)
+                except Exception as e:
+                    print(f"  [HF] push failed ({type(e).__name__}: {e})", flush=True)
+    if args.hf_repo and hf_token:                # final push: best + last
+        try:
+            hf_push(args.hf_repo, [str(Path(args.out).with_suffix(".best.pt")), args.out], hf_token)
+        except Exception as e:
+            print(f"  [HF] final push failed ({type(e).__name__}: {e})", flush=True)
+    print(f"\nsaved {args.out} | best VAL F1 {best_f1:.4f}"
+          + (f" | HF: {args.hf_repo}" if (args.hf_repo and hf_token) else ""))
     print("  ĐẠT (worth wiring) if F1 >= ~0.85 AND median count-err ~0; else iterate: "
           "add TKH/MTHv2 pretrain via --init, more epochs, or larger --img.")
 
@@ -329,6 +376,8 @@ def main():
     ap.add_argument("--no-pretrained", action="store_true")
     ap.add_argument("--val-frac", type=float, default=0.1, help="held-out fraction for the đạt/chưa eval")
     ap.add_argument("--init", default="", help="warm-start weights (e.g. TKH/MTHv2-pretrained detector.pt)")
+    ap.add_argument("--hf-repo", default="", help="push detector to this HuggingFace model repo (e.g. user/nom-char-det)")
+    ap.add_argument("--hf-token", default="", help="HF token (else env HF_TOKEN / Kaggle Secret HF_TOKEN)")
     ap.add_argument("--out", default=str(HERE / "detector.pt"))
     args = ap.parse_args()
     if args.smoke:

@@ -15,13 +15,21 @@ Trainer tự **báo F1/đếm trên tập val** nên train xong biết ngay **đ
 ## 1. Upload `kaggle_det_pkg/` lên Kaggle dưới dạng **một Dataset** (vd `nom-char-det`).
 
 ## 2. Kaggle Notebook (GPU **P100/T4**, Internet ON)
+Cách dễ nhất: **import `train_detector_kaggle.ipynb`** (có sẵn trong gói) → Run All.
+Hoặc chạy tay:
 ```python
 !cp /kaggle/input/nom-char-det/* . -r
 !python train_centernet.py --manifest detect_manifest.json --img 768 \
-        --epochs 40 --batch 8 --val-frac 0.1 --out detector.pt
+        --epochs 40 --batch 8 --val-frac 0.1 --out detector.pt \
+        --hf-repo <username>/nom-char-det     # (tùy chọn) đẩy HuggingFace
 ```
 Mỗi epoch in: `VAL F1 .. P .. R .. count-err ..`. Lưu `detector.pt` (last) +
 `detector.best.pt` (val-F1 cao nhất).
+
+**Lưu HuggingFace (khuyến nghị — khỏi mất khi phiên reset):** Add-ons → Secrets →
+thêm secret **`HF_TOKEN`** (token quyền write); truyền `--hf-repo <user>/nom-char-det`.
+Trainer đẩy `detector.best.pt` lên HF **mỗi lần F1 cải thiện + lúc kết thúc** (giống
+encoder của bạn). Kéo về máy: `huggingface-cli download <user>/nom-char-det detector.best.pt`.
 
 ## 3. ĐÁNH GIÁ — đạt hay chưa?
 | Chỉ số (trên val) | ĐẠT (đáng wire) | Chưa đạt → lặp |

@@ -25,8 +25,9 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent.parent
-CODE = ["model.py", "dataset.py", "train.py", "eval_discrim.py", "infer.py",
-        "prepare_data.py", "classes.json", "README.md", "train_kaggle.ipynb", "KAGGLE.md"]
+CODE = ["model.py", "dataset.py", "train.py", "kaggle_train.py", "eval_discrim.py",
+        "infer.py", "prepare_data.py", "classes.json", "README.md", "KAGGLE_TRAIN.md",
+        "train_kaggle.ipynb", "KAGGLE.md"]
 
 
 def main():

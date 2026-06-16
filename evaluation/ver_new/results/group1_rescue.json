@@ -1,0 +1,41 @@
+{
+  "target_precision": 0.95,
+  "variant_links": 15423,
+  "calibration": {
+    "base": {
+      "tau": 0.1,
+      "prec": 0.9568,
+      "cov": 0.8889,
+      "n": 4210
+    },
+    "variant": {
+      "tau": 0.1,
+      "prec": 0.9567,
+      "cov": 0.8879,
+      "n": 4205
+    }
+  },
+  "gold_test": {
+    "head_bank_#1": {
+      "precision": 0.9592,
+      "coverage": 0.8986,
+      "accepted": 4263,
+      "n": 4744
+    },
+    "variant_aware_#1+#2": {
+      "precision": 0.9596,
+      "coverage": 0.8969,
+      "accepted": 4255,
+      "n": 4744
+    }
+  },
+  "chosen_config": "head∩bank (#1)",
+  "tau": 0.1,
+  "review_pile": 13846,
+  "embeddable": 13846,
+  "rescued": 4336,
+  "rescue_rate": 0.3132,
+  "expected_precision": 0.9592,
+  "usable_before": 60442,
+  "usable_after": 64778
+}

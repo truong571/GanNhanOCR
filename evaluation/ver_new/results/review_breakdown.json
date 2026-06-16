@@ -1,0 +1,30 @@
+{
+  "source_manifest": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/evaluation/ver_new/dataset_out/labels.csv",
+  "total_rows": 82268,
+  "tiers": {
+    "GOLD": 51195,
+    "REVIEW": 15638,
+    "SYLLABLE": 6188,
+    "SILVER": 9247
+  },
+  "review_total": 15638,
+  "review_by_reason": {
+    "below_visual_threshold": 13846,
+    "diverged_column": 1749,
+    "unconfirmed_no_s3": 43
+  },
+  "review_columns": 3870,
+  "diverged_columns_with_rows": 709,
+  "segmentation_addressable_rows": 1749,
+  "coverage_bound_rows": 13889,
+  "realign": {
+    "pages": 445,
+    "emitted_pairs": 82268,
+    "alignment_gap_ins": 1836,
+    "diverged_pairs_emitted": 22017,
+    "diverged_columns": 1099,
+    "total_columns": 3998,
+    "diverged_column_share": 0.2749
+  },
+  "segmentation_addressable_ceiling": 3585
+}

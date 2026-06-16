@@ -164,19 +164,131 @@ def _reseg_column(cluster) -> list | None:
     return boxes
 
 
+_DETECTOR = None
+_DETECTOR_TRIED = False
+
+
+def _get_detector():
+    """Lazy, cached CenterNet detector (char_detector/detector.pt). Returns a
+    DetectorInfer (with .trained flag) or None if the module/checkpoint is missing.
+    Only used by reseg_mode='detector'."""
+    global _DETECTOR, _DETECTOR_TRIED
+    if _DETECTOR_TRIED:
+        return _DETECTOR
+    _DETECTOR_TRIED = True
+    try:
+        from evaluation.ver_new.char_detector.detector_infer import DetectorInfer
+        ckpt = Path(__file__).resolve().parent / "char_detector" / "detector.pt"
+        _DETECTOR = DetectorInfer(ckpt=str(ckpt))
+        if not _DETECTOR.trained:
+            print("  [reseg detector] no trained char_detector/detector.pt -> midpoint fallback "
+                  "(train on Kaggle: char_detector/KAGGLE.md).", flush=True)
+    except Exception as e:
+        print(f"  [reseg detector] unavailable ({type(e).__name__}: {e}) -> midpoint fallback.", flush=True)
+        _DETECTOR = None
+    return _DETECTOR
+
+
+def _valley_boxes(cluster, binary, n):
+    """N valley boxes for the column (char_segmenter force-N), or None.
+    Column box = x_range × full y-extent of the detected chars."""
+    if binary is None or n < 1:
+        return None
+    chars = cluster.get("chars") or []
+    if not chars:
+        return None
+    if cluster.get("x_range"):
+        cx1, cx2 = int(cluster["x_range"][0]), int(cluster["x_range"][1])
+    else:
+        cx1 = min(int(c["bbox"][0]) for c in chars); cx2 = max(int(c["bbox"][2]) for c in chars)
+    cy1 = min(int(c["bbox"][1]) for c in chars); cy2 = max(int(c["bbox"][3]) for c in chars)
+    try:
+        bb = segment_characters_in_column(binary, (cx1, cy1, cx2, cy2), expected_count=n)
+    except Exception:
+        return None
+    return bb if len(bb) == n else None
+
+
+def _mean_mls(boxes, page_bgr, encoder):
+    if page_bgr is None or encoder is None or not boxes:
+        return None
+    from evaluation.ver_new.bbox_fix import tighten_box
+    H, W = page_bgr.shape[:2]
+    vals = []
+    for b in boxes:
+        x1, y1, x2, y2 = (int(v) for v in b)
+        x1, y1, x2, y2 = max(0, x1), max(0, y1), min(W, x2), min(H, y2)
+        if x2 - x1 < 6 or y2 - y1 < 6:
+            continue
+        crop = page_bgr[y1:y2, x1:x2]
+        if crop.size == 0:
+            continue
+        g = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
+        tb = tighten_box(g)
+        if tb is not None:
+            a, c, bb2, d = tb
+            if bb2 - a >= 8 and d - c >= 8:
+                g = g[c:d, a:bb2]
+        m = encoder.mls(encoder.embed_gray(g))
+        if m is not None:
+            vals.append(m)
+    return float(np.mean(vals)) if vals else None
+
+
+def _pick_reseg(cluster, syllables, binary, reseg_mode, encoder=None, page_bgr=None,
+                det=None, page_boxes=None):
+    """Per-OCR-char boxes for the emitted pairs, per reseg_mode:
+      midpoint        — OCR y-center midpoints (default, robust; _reseg_column)
+      valley_n        — force-N valley boxes, each OCR char -> nearest valley box
+      valley_guarded  — valley only on UNDER-counted cols AND only if it does NOT
+                        lower mean MLS (needs encoder+page_bgr); else midpoint.
+      detector        — count-constrained CenterNet boxes (needs a trained
+                        detector.pt; det+page_boxes from align_page). The real fix.
+    Returns a list indexed like cluster['chars'] (or None)."""
+    mid = _reseg_column(cluster)
+    chars = cluster["chars"]; n = len(syllables)
+    if reseg_mode == "detector" and det is not None and page_boxes is not None and cluster.get("x_range"):
+        cb = det.column_boxes(page_boxes, cluster["x_range"], n)
+        if len(cb) == n:
+            vcys = [(b[1] + b[3]) / 2.0 for b in cb]
+            cys = [(c["bbox"][1] + c["bbox"][3]) / 2.0 for c in chars]
+            return [cb[int(np.argmin([abs(cy - vc) for vc in vcys]))] for cy in cys]
+        return mid
+    if reseg_mode == "midpoint" or mid is None or reseg_mode not in ("valley_n", "valley_guarded"):
+        return mid
+    if reseg_mode == "valley_guarded" and len(chars) >= n:
+        return mid                                   # only act on OCR under-count
+    vb = _valley_boxes(cluster, binary, n)
+    if not vb:
+        return mid
+    vcys = [(b[1] + b[3]) / 2.0 for b in vb]
+    cys = [(c["bbox"][1] + c["bbox"][3]) / 2.0 for c in chars]
+    mapped = [vb[int(np.argmin([abs(cy - vc) for vc in vcys]))] for cy in cys]
+    if reseg_mode == "valley_n":
+        return mapped
+    # valley_guarded: accept valley for the whole column only if MLS not worse
+    mv, mm = _mean_mls(vb, page_bgr, encoder), _mean_mls(mid, page_bgr, encoder)
+    if mv is None or mm is None:
+        return mid
+    return mapped if mv >= mm else mid
+
+
 def _pair_new(cluster: dict, syllables: list[str], qn_to_nom, similar,
-              binary=None, reseg: bool = True) -> tuple[list[dict], int]:
+              binary=None, reseg: bool = True, reseg_mode: str = "midpoint",
+              encoder=None, page_bgr=None, det=None, page_boxes=None) -> tuple[list[dict], int]:
     """Banded anchored DP — emit only matches, gaps go unlabelled (REVIEW).
 
     With reseg=True the emitted bbox comes from a fresh column re-segmentation
-    (valley-based) instead of the loose OCR per-char box, so crops stop merging
-    or clipping neighbouring characters. Falls back to the OCR box if the
-    re-segmentation count doesn't match.
+    instead of the loose OCR per-char box. reseg_mode selects the method (see
+    _pick_reseg); default 'midpoint' is the measured-best general choice (valley
+    modes traded merging for fragments on diverged cols — seg_valley_n_ab.py).
+    Falls back to the OCR box if re-segmentation is unavailable.
     """
     ops = realign_column(cluster["chars"], syllables, qn_to_nom, similar)
     mp = matched_pairs(ops)
     nom_chars = cluster["chars"]
-    reseg_boxes = _reseg_column(cluster) if reseg else None
+    reseg_boxes = _pick_reseg(cluster, syllables, binary, reseg_mode, encoder, page_bgr,
+                              det, page_boxes) if reseg else None
     out = []
     for p in mp:
         i = p["nom_idx"]
@@ -189,12 +301,30 @@ def _pair_new(cluster: dict, syllables: list[str], qn_to_nom, similar,
 
 
 def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
-               qn_to_nom: dict, similar: dict, mode: str) -> dict | None:
-    """Align one page in the given mode. Returns per-page record with pairs."""
+               qn_to_nom: dict, similar: dict, mode: str,
+               reseg_mode: str = "midpoint", encoder=None) -> dict | None:
+    """Align one page in the given mode. Returns per-page record with pairs.
+
+    reseg_mode (only used when mode != 'old'): 'midpoint' (default) | 'valley_n' |
+    'valley_guarded'. valley_guarded needs `encoder` (NomEncoder) + loads the page
+    image to apply the MLS guard. See _pick_reseg.
+    """
     det = _detect(page_name, data_dir, qn_dict_set)
     if det is None:
         return None
     cols, qn_lines, iter_pairs, binary, page_ok = det
+    page_bgr = None
+    detector = None
+    page_boxes = None
+    if reseg_mode in ("valley_guarded", "detector"):
+        import cv2 as _cv2
+        page_bgr = _cv2.imread(str(data_dir / "pages" / f"{page_name}.png"), _cv2.IMREAD_COLOR)
+    if reseg_mode == "detector" and page_bgr is not None:
+        detector = _get_detector()
+        if detector is not None and detector.trained:
+            page_boxes = detector.boxes_for_page(page_bgr)   # all char boxes, once per page
+        else:
+            detector = None     # no trained detector.pt -> _pick_reseg falls back to midpoint
 
     pairs: list[dict] = []
     n_gap_total = 0
@@ -211,14 +341,23 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
             pairs.extend(col_pairs)
         else:
             col_pairs, n_gap = _pair_new(cluster, syllables, qn_to_nom, similar,
-                                         binary=binary)
+                                         binary=binary, reseg_mode=reseg_mode,
+                                         encoder=encoder, page_bgr=page_bgr,
+                                         det=detector, page_boxes=page_boxes)
             n_gap_total += n_gap
-            # anchored flag: confirmed match flanked by a confirmed neighbour
+            # anchored flag: a pair flanked by a confirmed neighbour. Its LOCAL
+            # register is certain even if the whole column's counts diverged, so
+            # it is GOLD/SILVER-eligible (gold_ok in consensus). NOTE: dropped the
+            # old `p["confirmed"] and` conjunct — that made `anchored` imply
+            # `confirmed`, but a confirmed pair already returns at the GOLD-direct
+            # branch BEFORE SILVER, so the flag could never unblock anything. Now
+            # an UN-confirmed pair next to a confirmed one can finally reach the
+            # similar-bridge GOLD / SILVER(S3) paths in a count-diverged column.
             conf = [p["confirmed"] for p in col_pairs]
             for k, p in enumerate(col_pairs):
                 nbr = (k > 0 and conf[k - 1]) or (k + 1 < len(col_pairs) and conf[k + 1])
                 p.update(column=line_id, matched=matched,
-                         anchored=bool(p["confirmed"] and nbr))
+                         anchored=bool(nbr))
             pairs.extend(col_pairs)
     return {"page": page_name, "page_ok": page_ok, "pairs": pairs,
             "n_review_gap": n_gap_total}

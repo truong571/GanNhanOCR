@@ -110,6 +110,12 @@ def main():
     ap.add_argument("--crop-review", action="store_true",
                     help="also materialize REVIEW crops (kept in labels.csv either way)")
     ap.add_argument("--pad", type=float, default=0.12)
+    ap.add_argument("--reseg", default="midpoint",
+                    choices=["midpoint", "valley_n", "valley_guarded", "detector"],
+                    help="column re-segmentation for crop boxes (default midpoint; valley_* are "
+                         "opt-in experiments — see seg_valley_n_ab.py / seg_smart_ab.py). "
+                         "valley_guarded needs the encoder (auto-loaded). detector uses a trained "
+                         "char_detector/detector.pt (Kaggle; falls back to midpoint if absent).")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -126,12 +132,31 @@ def main():
         from evaluation.ver_new.visual_signal import VisualS3
         try:
             print("Loading S3 (trained Nôm embedder + FD) ...", flush=True)
-            vs3 = VisualS3(REPO, fd_dir=str(REPO / paths["fd_cache_universal"]))
+            # fd_cache_similar (optional): a glyph cache in a font SIMILAR to the
+            # crops. When present it becomes the "simfont" reference tier (smaller
+            # domain gap than FD). Absent -> simfont tier off (current state).
+            simfont = str(REPO / paths["fd_cache_similar"]) if paths.get("fd_cache_similar") else ""
+            vs3 = VisualS3(REPO, fd_dir=str(REPO / paths["fd_cache_universal"]),
+                           simfont_dir=simfont)
         except Exception as e:
             print(f"  [S3 OFF] {type(e).__name__}: {e}\n  -> SILVER bỏ qua; GOLD/SYLLABLE "
                   "vẫn chạy. (Cần checkpoint nom-embed/best.pt — train ở nom_classifier/.)",
                   flush=True)
             vs3 = None
+
+    # encoder for reseg_mode=valley_guarded (the MLS guard) — reuse S3's if loaded,
+    # else load just the encoder; absent -> _pick_reseg falls back to midpoint.
+    reseg_encoder = vs3.enc if vs3 is not None else None
+    if args.reseg == "valley_guarded" and reseg_encoder is None:
+        try:
+            from evaluation.ver_new.nom_classifier.infer import NomEncoder
+            from evaluation.ver_new.visual_signal import _find_ckpt
+            reseg_encoder = NomEncoder(_find_ckpt(REPO))
+            print("  [reseg] valley_guarded: encoder loaded for the MLS guard.", flush=True)
+        except Exception as e:
+            print(f"  [reseg] valley_guarded needs the encoder ({e}) -> midpoint fallback.", flush=True)
+    if args.reseg != "midpoint":
+        print(f"  [reseg] mode = {args.reseg}", flush=True)
 
     # ---------- PASS 1: align all pages, collect records (no crop yet) ----------
     records = []
@@ -147,7 +172,8 @@ def main():
         for pi, tf in enumerate(trans):
             page = Path(tf).stem
             try:
-                rec = align_page(page, data_dir, qn_dict_set, qn_to_nom, similar, "new")
+                rec = align_page(page, data_dir, qn_dict_set, qn_to_nom, similar, "new",
+                                 reseg_mode=args.reseg, encoder=reseg_encoder)
             except Exception as e:
                 print(f"   [warn] {book}/{page}: {type(e).__name__}: {e}", flush=True)
                 continue

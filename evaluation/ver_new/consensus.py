@@ -39,9 +39,12 @@ DELTA_SILVER = 0.06    # min (winner − runner-up) margin
 class S3:
     """Optional visual signal: best candidate over {ocr_char} ∪ dict-readings."""
     top_char: str       # argmax candidate
-    cosine: float       # its score in [0,1]
-    margin: float       # winner − runner-up
+    cosine: float       # winner score (calibrated P(match) when calibrated, else raw/remapped cosine)
+    margin: float       # winner − runner-up (same scale as `cosine`)
     top_in_dict: bool   # is top_char a dict reading R of the syllable?
+    p_match: float = 0.0   # Bước 2: calibrated P(match) of the winner (0 if uncalibrated)
+    p_margin: float = 0.0  # calibrated winner − runner-up
+    reject: bool = False   # open-set reject: winner below the calibrated operating point
 
 
 @dataclass
@@ -87,7 +90,11 @@ def decide_label(ocr_char: str | None,
         # 0 bridges -> not similar; >=2 -> ambiguous -> fall through to REVIEW
 
     # --- SILVER : vision breaks the tie (needs S3) ------------------------
-    if gold_ok and s3 is not None and s3.cosine >= TAU_SILVER and s3.margin >= DELTA_SILVER:
+    # The accept/reject gate now lives in visual_signal (calibrated P(match) at a
+    # target precision, or the TAU/DELTA fallback when no calibration is present),
+    # surfaced as s3.reject. An open-set reject -> the true char is likely not in
+    # the candidate set -> REVIEW, never a forced-argmax label.
+    if gold_ok and s3 is not None and not s3.reject:
         if s3.top_in_dict:
             # vision picked a valid dict reading of the syllable -> OCR corrected
             return LabelDecision(s3.top_char, syllable, "SILVER",

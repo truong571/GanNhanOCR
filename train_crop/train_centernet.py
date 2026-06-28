@@ -235,7 +235,14 @@ def _build_items(args):
 
 def hf_push(repo, files, token):
     """Đẩy file lên HuggingFace model repo (giúp ckpt sống sót khi Kaggle reset)."""
+    import os
+    os.environ["HF_HUB_DISABLE_PROGRESS_BARS"] = "1"      # tắt thanh tiến trình upload
     from huggingface_hub import HfApi, create_repo
+    try:
+        from huggingface_hub.utils import disable_progress_bars
+        disable_progress_bars()
+    except Exception:
+        pass
     create_repo(repo, repo_type="model", exist_ok=True, token=token)
     api = HfApi()
     pushed = []

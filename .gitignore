@@ -25,3 +25,11 @@ prepared/_universal_fd_cache/
 
 # HF Hub clone of fd-cache-v2 dataset (~5 GB, flatten vào prepared/_universal_fd_cache_v2/)
 gannhanocr-fd-cache-v2/
+
+# Dữ liệu tải về + checkpoint + gói build (NEVER commit — nặng GB).
+# MTHv2/TKH raw (~4.7GB .jpg+.txt); Kuzushiji (~549MB); ckpt lấy từ HF/Kaggle;
+# gói Kaggle dựng lại được (.zip đã ignored ở trên).
+/MTH/
+data/kkanji2/
+*.pt
+train_crop/kaggle_pkg/

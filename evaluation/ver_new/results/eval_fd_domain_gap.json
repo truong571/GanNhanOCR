@@ -1,0 +1,53 @@
+{
+  "n_chars": 400,
+  "cos_in_domain": 0.555,
+  "cos_cross_same": 0.5748,
+  "cos_cross_neg": 0.016,
+  "separation": 0.5588,
+  "retr_fd_only": 0.89,
+  "retr_crop_proto": 0.8275,
+  "examples": [
+    {
+      "char": "釋",
+      "unicode": "U+91CB",
+      "crop": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/evaluation/ver_new/dataset_out/gold/yen11_page_0192_c08_157.png",
+      "fd": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/gannhanocr-fd/91/U+91CB.png",
+      "cos_crop_fd": 0.737
+    },
+    {
+      "char": "黙",
+      "unicode": "U+9ED9",
+      "crop": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/evaluation/ver_new/dataset_out/gold/yen2_page_0044_c03_041.png",
+      "fd": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/gannhanocr-fd/9E/U+9ED9.png",
+      "cos_crop_fd": 0.712
+    },
+    {
+      "char": "吟",
+      "unicode": "U+541F",
+      "crop": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/evaluation/ver_new/dataset_out/gold/yen2_page_0104_c02_023.png",
+      "fd": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/gannhanocr-fd/54/U+541F.png",
+      "cos_crop_fd": 0.692
+    },
+    {
+      "char": "席",
+      "unicode": "U+5E2D",
+      "crop": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/evaluation/ver_new/dataset_out/gold/yen11_page_0012_c09_178.png",
+      "fd": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/gannhanocr-fd/5E/U+5E2D.png",
+      "cos_crop_fd": 0.721
+    },
+    {
+      "char": "实",
+      "unicode": "U+5B9E",
+      "crop": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/evaluation/ver_new/dataset_out/gold/yen2_page_0052_c06_101.png",
+      "fd": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/gannhanocr-fd/5B/U+5B9E.png",
+      "cos_crop_fd": 0.688
+    },
+    {
+      "char": "告",
+      "unicode": "U+544A",
+      "crop": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/evaluation/ver_new/dataset_out/gold/yen2_page_0172_c04_068.png",
+      "fd": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/gannhanocr-fd/54/U+544A.png",
+      "cos_crop_fd": 0.435
+    }
+  ]
+}

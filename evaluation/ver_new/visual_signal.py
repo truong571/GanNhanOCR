@@ -66,6 +66,10 @@ class VisualS3:
         self.repo = repo
         self.enc_ckpt = ckpt or _find_ckpt(repo)
         self.enc = NomEncoder(self.enc_ckpt)
+        # head_rescue #4: the ArcFace HEAD is a 2nd, independent visual classifier
+        # (1591-way). label->index map lets decide() add a head vote per candidate.
+        self.lab2idx = ({lab: i for i, lab in self.enc.classes.items()}
+                        if getattr(self.enc, "classes", None) else {})
         self.fd_index = self._build_fd_index(Path(fd_dir))
         # optional: glyphs in a font SIMILAR to the crops (smaller domain gap than FD)
         self.simfont_index = self._build_fd_index(Path(simfont_dir)) if simfont_dir else {}
@@ -221,6 +225,23 @@ class VisualS3:
             bank["fd"] = e[None]
         return bank
 
+    def _head_scores(self, crop_emb, cands):
+        """(top_char, margin) of the ArcFace HEAD over candidates ∩ vocab.
+        margin = top1 − top2 head cosine-logit = head's CONFIDENCE in its pick (a
+        boolean head_agree was too loose: 80% GOLD-test; the margin gate recovers
+        precision). Returns (None, 0.0) if no head."""
+        if not getattr(self.enc, "has_head", False) or not self.lab2idx:
+            return None, 0.0
+        lg = self.enc.logits(crop_emb)
+        if lg is None:
+            return None, 0.0
+        sc = sorted(((c, float(lg[self.lab2idx[c]])) for c in cands if c in self.lab2idx),
+                    key=lambda t: -t[1])
+        if not sc:
+            return None, 0.0
+        margin = sc[0][1] - (sc[1][1] if len(sc) > 1 else -1.0)
+        return sc[0][0], margin
+
     def decide(self, crop_emb, cands: list[str], guard: bool = True) -> dict:
         """Core cross-candidate scoring, shared by compute() and the eval harnesses.
 
@@ -233,6 +254,7 @@ class VisualS3:
         Returns {top_char, p_match, p_margin, reject, glyph_winner, glyph_contra}.
         """
         banks = {c: self._ref_bank(c) for c in cands}
+        head_top, head_margin = self._head_scores(crop_emb, cands)   # #4: independent head vote + confidence
         TIERS = ("crop", "simfont", "fd")
         if self.calib:
             scored, glyph_cos = {}, {}
@@ -259,7 +281,9 @@ class VisualS3:
             reject = (p_top < self.calib["tau_p"]) or (margin < self.calib["delta_p"]) \
                 or (guard and glyph_contra)
             return {"top_char": top_char, "p_match": p_top, "p_margin": margin,
-                    "reject": bool(reject), "glyph_winner": gw, "glyph_contra": glyph_contra}
+                    "reject": bool(reject), "glyph_winner": gw, "glyph_contra": glyph_contra,
+                    "head_top": head_top, "head_margin": head_margin,
+                    "head_agree": bool(head_top is not None and head_top == top_char)}
 
         # FALLBACK (no calibration): shared-tier remapped cosine + TAU/DELTA gate.
         shared = next((t for t in TIERS if all(banks[c].get(t) is not None for c in cands)), None)
@@ -278,7 +302,9 @@ class VisualS3:
         runner = ranked[1][1] if len(ranked) > 1 else 0.0
         reject = not (top >= TAU_SILVER and (top - runner) >= DELTA_SILVER)
         return {"top_char": top_char, "p_match": top, "p_margin": top - runner,
-                "reject": bool(reject), "glyph_winner": None, "glyph_contra": False}
+                "reject": bool(reject), "glyph_winner": None, "glyph_contra": False,
+                "head_top": head_top, "head_margin": head_margin,
+                "head_agree": bool(head_top is not None and head_top == top_char)}
 
     def compute(self, page_png: str, bbox, ocr_char: str | None,
                 s2_candidates: list[str]) -> S3 | None:
@@ -315,4 +341,6 @@ class VisualS3:
                   margin=round(dec["p_margin"], 4),
                   top_in_dict=dec["top_char"] in set(s2_candidates),
                   p_match=round(dec["p_match"], 4), p_margin=round(dec["p_margin"], 4),
-                  reject=bool(dec["reject"]))
+                  reject=bool(dec["reject"]),
+                  head_top=dec.get("head_top") or "", head_agree=bool(dec.get("head_agree")),
+                  head_margin=round(float(dec.get("head_margin") or 0.0), 4))

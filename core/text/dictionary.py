@@ -3,13 +3,20 @@
 import ast
 import csv
 
-from core.text.text_utils import fold_text, simple_levenshtein
+from core.text.text_utils import fold_text, normalize_tone_marks, simple_levenshtein
 
 
 def load_qn_to_nom(dict_path: str, encoding: str = "utf-8-sig") -> dict[str, list[str]]:
     """Load QuocNgu -> SinoNom dictionary.
 
     Returns: {qn_word_lower: [nom_char1, nom_char2, ...]}
+
+    QN keys are canonicalised to the modern tone-mark convention
+    (normalize_tone_marks) — the dictionary stores these almost entirely in the
+    old style (hoà/uý/thuỷ) while VietOCR emits the modern style (hòa/úy/thủy),
+    so without canonicalising BOTH sides the exact lookup would silently miss.
+    Old/new spellings of the same word merge their candidate lists (a union, so
+    no candidate is lost).
     """
     trans_dict: dict[str, list[str]] = {}
     with open(dict_path, "r", encoding=encoding) as f:
@@ -17,10 +24,10 @@ def load_qn_to_nom(dict_path: str, encoding: str = "utf-8-sig") -> dict[str, lis
         next(reader, None)  # skip header
         for row in reader:
             if len(row) >= 2:
-                word = row[0].strip().lower()
+                word = normalize_tone_marks(row[0].strip().lower())
                 char = row[1].strip()
-                if word and char:
-                    trans_dict.setdefault(word, []).append(char)
+                if word and char and char not in trans_dict.setdefault(word, []):
+                    trans_dict[word].append(char)
     return trans_dict
 
 

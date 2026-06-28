@@ -20,7 +20,9 @@ Khi dict CÓ entry → giữ nguyên nhãn (bản chép Hán phiên âm là hợ
 import re
 import unicodedata
 
-LOAN_PHRASES = [
+from core.text.lexicon import load_list
+
+_DEFAULT_LOAN_PHRASES = [
     "ba ma ri a",      # Maria
     "ma ri a",
     "gie su",          # Jesus
@@ -39,6 +41,9 @@ LOAN_PHRASES = [
     "phe ro",          # Phêrô (Peter)
     "phao lo",         # Phaolô (Paul)
 ]
+
+# Loaded from config/lexicon/loan_phrases.json (fallback: the list above).
+LOAN_PHRASES = load_list("loan_phrases.json", _DEFAULT_LOAN_PHRASES)
 
 
 def _strip_accents(s: str) -> str:

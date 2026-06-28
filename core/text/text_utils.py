@@ -4,12 +4,109 @@ from __future__ import annotations
 import re
 import unicodedata
 
+from core.text.lexicon import load_mapping
+
+
+# ---------------------------------------------------------------------------
+# Vietnamese tone-mark placement normalization  ("hoà"/"khoẻ"/"uý"  vs
+# "hòa"/"khỏe"/"úy").  Old ("kiểu cũ") and new ("kiểu mới") conventions
+# differ ONLY for the open-syllable glide diphthongs  oa / oe / uy, where the
+# old style puts the tone on the 2nd vowel (h-o-à) and the modern style puts
+# it on the 1st vowel (h-ò-a).  Every other tone placement is identical in
+# both conventions, so we touch nothing else.
+#
+# The QN→Nôm dictionary stores these almost entirely in the OLD style
+# (hoà/uý/thuỷ) while modern VietOCR emits the NEW style (hòa/úy/thủy); without
+# canonicalising both sides to one convention the exact dict lookup silently
+# misses and the downstream Levenshtein alignment drifts.  We canonicalise to
+# the MODERN convention (the project standard) on BOTH the OCR side
+# (normalize_syllables) and the dictionary side (load_qn_to_nom).
+# ---------------------------------------------------------------------------
+
+# The five Vietnamese tone combining marks (NFD): grave/acute/tilde/hook/dot.
+_TONE_MARKS = "\u0300\u0301\u0303\u0309\u0323"  # grave acute tilde hook dot
+
+# Glide diphthongs whose tone position differs old↔new. (v1, v2) lowercased:
+# the tone sits on v2 in the old style, on v1 in the modern style.
+_GLIDE_PAIRS = {("o", "a"), ("o", "e"), ("u", "y")}
+
+# Run of letters (plus any combining marks). Applied to NFC text, where every
+# Vietnamese tone+vowel has a precomposed code point, so a run is a clean word.
+_LETTER_RUN_RE = re.compile(r"[^\W\d_]+", re.UNICODE)
+
+
+def _retone_token(token: str) -> str:
+    """Canonicalise tone placement of ONE word-run to the modern convention.
+
+    Moves the tone mark from the 2nd to the 1st vowel only for an *open*
+    syllable ending in oa/oe/uy (old style). Leaves closed syllables
+    ("hoàng", "khoét"), triphthongs ("khoái", "khuỷu") and the qu-glide
+    ("quý" → stays, the u is part of "qu") untouched. Idempotent.
+    """
+    chars = list(unicodedata.normalize("NFD", token))
+    # locate the single tone combining mark
+    tone_idx = next((i for i, c in enumerate(chars) if c in _TONE_MARKS), None)
+    if tone_idx is None:
+        return unicodedata.normalize("NFC", token)
+
+    # base letter currently carrying the tone (v2)
+    j = tone_idx - 1
+    while j >= 0 and unicodedata.category(chars[j]) == "Mn":
+        j -= 1
+    if j < 0:
+        return unicodedata.normalize("NFC", "".join(chars))
+
+    # previous base letter (v1)
+    k = j - 1
+    while k >= 0 and unicodedata.category(chars[k]) == "Mn":
+        k -= 1
+    if k < 0:
+        return unicodedata.normalize("NFC", "".join(chars))
+
+    pair = (chars[k].lower(), chars[j].lower())
+    if pair not in _GLIDE_PAIRS:
+        return unicodedata.normalize("NFC", "".join(chars))
+
+    # v1 must be a plain vowel (no circumflex/horn/breve of its own)
+    if any(unicodedata.category(chars[t]) == "Mn" for t in range(k + 1, j)):
+        return unicodedata.normalize("NFC", "".join(chars))
+
+    # open syllable: no letter (coda consonant) may follow v2
+    if any(c.isalpha() for c in chars[j + 1:]):
+        return unicodedata.normalize("NFC", "".join(chars))
+
+    # qu-guard: in "qu+y" the u is a glide, tone stays on y ("quý", not "qúy")
+    if pair == ("u", "y"):
+        p = k - 1
+        while p >= 0 and unicodedata.category(chars[p]) == "Mn":
+            p -= 1
+        if p >= 0 and chars[p].lower() == "q":
+            return unicodedata.normalize("NFC", "".join(chars))
+
+    # move the tone mark from after v2 to immediately after v1
+    mark = chars.pop(tone_idx)
+    chars.insert(k + 1, mark)
+    return unicodedata.normalize("NFC", "".join(chars))
+
+
+def normalize_tone_marks(text: str) -> str:
+    """Canonicalise Vietnamese tone-mark placement to the modern convention.
+
+    "hoà"→"hòa", "khoẻ"→"khỏe", "uý"→"úy", "thuý"→"thúy". Closed syllables,
+    triphthongs and the qu-glide are preserved. Safe on already-modern and
+    non-Vietnamese text (returns it NFC-normalised, otherwise unchanged).
+    """
+    if not text:
+        return text
+    text = unicodedata.normalize("NFC", text)
+    return _LETTER_RUN_RE.sub(lambda m: _retone_token(m.group(0)), text)
+
 
 # ---------------------------------------------------------------------------
 # Saint name mapping (religious names -> syllable-separated form)
 # ---------------------------------------------------------------------------
 
-SAINT_NAMES = {
+_DEFAULT_SAINT_NAMES = {
     # Core Christian figures (each entry maps "fused QN" -> "syllable-separated
     # form matching how the Nom book writes the name, 1 syllable per Han/Nom char)
     "marxiô": "ma rơ xi ô", "marơxiô": "ma rơ xi ô",
@@ -59,7 +156,7 @@ SAINT_NAMES = {
 
 # Place names / toponyms — written phonetically with 1 Han char per syllable
 # in 17th-19th century Vietnamese Catholic Nom books.
-TOPONYMS = {
+_DEFAULT_TOPONYMS = {
     "rôma": "rô ma", "roma": "rô ma",
     "italia": "i ta li a",
     "giêrusalem": "giê ru sa lem", "jêrusalem": "giê ru sa lem",
@@ -75,6 +172,13 @@ TOPONYMS = {
     "naxarét": "na xa rết",
     "ghêrêgia": "ghê rê gia",
 }
+
+
+# Public tables — loaded from config/lexicon/*.json (the single source of truth
+# for adding names/places without code edits); the _DEFAULT_* dicts above are
+# the built-in fallback used only when the JSON is missing or malformed.
+SAINT_NAMES = load_mapping("saint_names.json", _DEFAULT_SAINT_NAMES)
+TOPONYMS = load_mapping("toponyms.json", _DEFAULT_TOPONYMS)
 
 
 # ---------------------------------------------------------------------------
@@ -119,7 +223,7 @@ def clean_ocr_artifacts(text: str) -> str:
 # Common Vietnamese OCR confusions from VietOCR vgg_transformer on this corpus.
 # Maps mistake -> correct. Both sides must be valid Vietnamese, so this is only
 # applied LAST-RESORT when the OCR'd syllable is not in the QN dictionary.
-OCR_CONFUSION_FIXES = {
+_DEFAULT_OCR_CONFUSION_FIXES = {
     "răng": "rằng",
     "lien": "liền",
     "nguời": "người", "nguơi": "người",
@@ -136,6 +240,9 @@ OCR_CONFUSION_FIXES = {
     "hom": "hôm",
     "lam": "làm", "lăm": "lắm",
 }
+
+# Loaded from config/lexicon/ocr_confusions.json (fallback: the dict above).
+OCR_CONFUSION_FIXES = load_mapping("ocr_confusions.json", _DEFAULT_OCR_CONFUSION_FIXES)
 
 
 def fix_common_ocr_confusion(syllable: str) -> str | None:
@@ -196,6 +303,10 @@ def normalize_syllables(syllables: list[str], qn_dict: set[str] | None = None) -
         cleaned = re.sub(r'["""\'()[\]{}«»,.;:!?…–—\-]', '', syl).strip()
         if not cleaned:
             continue
+        # Canonicalise tone-mark placement to the modern convention BEFORE any
+        # dict / saint / toponym lookup, so OCR ("hòa"/"úy") and the dictionary
+        # (canonicalised the same way) always agree.
+        cleaned = normalize_tone_marks(cleaned)
         lower = cleaned.lower()
         if lower in SAINT_NAMES:
             result.extend(SAINT_NAMES[lower].split())

@@ -34,6 +34,12 @@ from dataclasses import dataclass
 TAU_SILVER = 0.62      # min visual score of the winning candidate
 DELTA_SILVER = 0.06    # min (winner − runner-up) margin
 
+# #4 head∩bank consensus gate: min ArcFace-head margin (top1−top2 logit) to accept a
+# head-rescued SILVER. The boolean head_agree alone was too loose (80% GOLD-test
+# precision); margin≥0.3 → 97.6% GOLD-test at ~29% coverage (validate_head_consensus.py).
+# Still an OPTIMISTIC proxy — confirm with the human audit (eval_sample_head) + conformal.
+HEAD_CONSENSUS_MARGIN = 0.3
+
 
 @dataclass
 class S3:
@@ -45,6 +51,9 @@ class S3:
     p_match: float = 0.0   # Bước 2: calibrated P(match) of the winner (0 if uncalibrated)
     p_margin: float = 0.0  # calibrated winner − runner-up
     reject: bool = False   # open-set reject: winner below the calibrated operating point
+    head_top: str = ""     # #4: argmax of the independent ArcFace head over the candidates
+    head_agree: bool = False  # head_top == bank's top_char (two visual signals concur)
+    head_margin: float = 0.0  # head top1−top2 logit gap = head confidence (gate, see HEAD_CONSENSUS_MARGIN)
 
 
 @dataclass
@@ -103,6 +112,17 @@ def decide_label(ocr_char: str | None,
             # syllable absent from dict (Ext-B variant); vision backs the OCR char
             return LabelDecision(ocr_char, syllable, "SILVER",
                                  "s1_inter_s3_out_of_dict", False)
+
+    # --- SILVER (head∩bank consensus) [#4] --------------------------------
+    # Even when the bank-only operating point REJECTED, the independent ArcFace
+    # head (a 1591-way classifier, not the prototype cosine) may AGREE with the
+    # bank's top on a valid dict reading. Two independent visual signals concurring
+    # on a dict reading is a strong, measured rescue (GOLD-test precision ~95.9%,
+    # group1_rescue.py) — accept it rather than discard to REVIEW.
+    if (gold_ok and s3 is not None and getattr(s3, "head_agree", False)
+            and getattr(s3, "head_margin", 0.0) >= HEAD_CONSENSUS_MARGIN
+            and s3.top_in_dict and s3.top_char in R):
+        return LabelDecision(s3.top_char, syllable, "SILVER", "s3_head_bank_consensus", False)
 
     # --- REVIEW -----------------------------------------------------------
     reason = "diverged_column" if not gold_ok else (

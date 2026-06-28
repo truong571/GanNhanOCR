@@ -41,6 +41,13 @@ step1:
   sauvola_window: 25
   min_stroke: 2
   use_ocr_api: true
+  # QN re-OCR line detector (replaces the old raw horizontal projection that
+  # broke on skewed scans). Options:
+  #   auto             - DBNet (PaddleOCR) if installed, else projection_deskew
+  #   dbnet            - PaddleOCR DB detector (handles skew, warps lines flat)
+  #   projection_deskew- estimate page skew, deskew, then projection (no extra dep)
+  #   projection       - original raw projection profile (legacy / A-B baseline)
+  qn_line_detector: auto
 
 step2:
   deletion_cost_small: 0.3

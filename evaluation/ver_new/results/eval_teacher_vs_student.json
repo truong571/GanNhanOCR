@@ -1,0 +1,24 @@
+{
+  "n": 4756,
+  "emittable_charset": 4397,
+  "teacher_acc": 0.9287,
+  "student_acc": 0.8013,
+  "teacher_oov": {
+    "n": 94,
+    "student_acc": 0.5213
+  },
+  "teacher_wrong": {
+    "n": 339,
+    "student_recovery": 0.5546
+  },
+  "rare": {
+    "n": 88,
+    "teacher": 0.6591,
+    "student": 0.2045
+  },
+  "common": {
+    "n": 4668,
+    "teacher": 0.9338,
+    "student": 0.8126
+  }
+}

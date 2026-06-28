@@ -1,4 +1,9 @@
-"""QN text recognition using VietOCR + horizontal-projection line detection.
+"""QN text recognition using VietOCR + deep / deskew-aware line detection.
+
+Line detection is delegated to core.ocr.line_detector (DBNet via PaddleOCR when
+installed, otherwise a skew-estimating projection fallback). The old raw
+horizontal-projection profile remains available there as the ``projection``
+backend for A/B comparison.
 
 Used by pipeline/step1_extract.py when book has `reocr: true`.
 
@@ -22,13 +27,20 @@ import sys
 from pathlib import Path
 
 import cv2
-import numpy as np
 from PIL import Image
+
+from core.ocr.line_detector import detect_line_crops, resolve_backend
 
 _PREDICTOR = None
 
-# Bump if changing decoder logic / model — invalidates all cached results.
-CACHE_VERSION = "vgg_transformer-2pass-v1"
+# Bump if changing decoder logic / model — invalidates all cached results. The
+# resolved line-detector backend is appended at runtime so switching detectors
+# (projection → deskew/DBNet) also invalidates stale caches.
+CACHE_VERSION = "vgg_transformer-2pass-v2"
+
+
+def _cache_version(backend: str) -> str:
+    return f"{CACHE_VERSION}-{resolve_backend(backend)}"
 
 # Below this greedy probability a line is flagged as low-confidence downstream.
 # Calibrated empirically: VietOCR on clean print typically gives 0.85-0.99;
@@ -94,50 +106,6 @@ def _predict_with_conf(predictor, crop) -> tuple[str, float]:
     return final_text, conf
 
 
-def _detect_text_lines(img_rgb: np.ndarray, min_height: int = 18,
-                       gap: int = 8) -> list[tuple[int, int, int, int]]:
-    """Horizontal projection -> rows of text. Returns list of (x1, y1, x2, y2)."""
-    gray = cv2.cvtColor(img_rgb, cv2.COLOR_RGB2GRAY)
-    _, bw = cv2.threshold(gray, 0, 1, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
-    proj = bw.sum(axis=1)
-    h, w = bw.shape
-    th = max(int(w * 0.01), 5)
-    is_ink = proj > th
-
-    runs: list[list[int]] = []
-    in_run = False
-    start = 0
-    for y in range(h):
-        if is_ink[y] and not in_run:
-            in_run = True
-            start = y
-        elif not is_ink[y] and in_run:
-            in_run = False
-            if y - start >= min_height:
-                runs.append([start, y])
-    if in_run and h - start >= min_height:
-        runs.append([start, h])
-
-    merged: list[list[int]] = []
-    for s, e in runs:
-        if merged and s - merged[-1][1] < gap:
-            merged[-1][1] = e
-        else:
-            merged.append([s, e])
-
-    out: list[tuple[int, int, int, int]] = []
-    for s, e in merged:
-        col = bw[s:e].sum(axis=0)
-        nz = np.where(col > 1)[0]
-        if not len(nz):
-            continue
-        x1, x2 = int(nz[0]), int(nz[-1]) + 1
-        pad = 5
-        out.append((max(0, x1 - pad), max(0, s - pad),
-                    min(w, x2 + pad), min(h, e + pad)))
-    return out
-
-
 def _md5_file(path: str) -> str:
     h = hashlib.md5()
     with open(path, "rb") as f:
@@ -146,7 +114,7 @@ def _md5_file(path: str) -> str:
     return h.hexdigest()
 
 
-def _try_load_cache(cache_path: str, image_path: str
+def _try_load_cache(cache_path: str, image_path: str, version: str
                     ) -> tuple[str, list[float]] | None:
     """Return cached (text, confs) if cache is valid for this image, else None."""
     cf = Path(cache_path)
@@ -156,7 +124,7 @@ def _try_load_cache(cache_path: str, image_path: str
         data = json.loads(cf.read_text(encoding="utf-8"))
     except Exception:
         return None
-    if data.get("version") != CACHE_VERSION:
+    if data.get("version") != version:
         return None
     if data.get("image_md5") != _md5_file(image_path):
         return None
@@ -168,11 +136,11 @@ def _try_load_cache(cache_path: str, image_path: str
 
 
 def _save_cache(cache_path: str, image_path: str,
-                text: str, confs: list[float]) -> None:
+                text: str, confs: list[float], version: str) -> None:
     cf = Path(cache_path)
     cf.parent.mkdir(parents=True, exist_ok=True)
     cf.write_text(json.dumps({
-        "version": CACHE_VERSION,
+        "version": version,
         "image_md5": _md5_file(image_path),
         "text": text,
         "confs": confs,
@@ -180,7 +148,8 @@ def _save_cache(cache_path: str, image_path: str,
 
 
 def ocr_qn_page(image_path: str, verbose: bool = False,
-                cache_path: str | None = None
+                cache_path: str | None = None,
+                backend: str = "auto"
                 ) -> tuple[str, list[float]]:
     """OCR a QN text page.
 
@@ -189,16 +158,21 @@ def ocr_qn_page(image_path: str, verbose: bool = False,
         in the SAME order as lines in `text` (one float per line).
 
     Pipeline:
-      [optional cache check] -> load image -> horizontal projection ->
-      for each line crop: 2-pass VietOCR (beam for text + greedy for confidence).
-      -> [optional cache save]
+      [optional cache check] -> load image -> DL / deskew-aware line detection
+      (core.ocr.line_detector) -> for each straightened line crop: 2-pass
+      VietOCR (beam for text + greedy for confidence) -> [optional cache save].
+
+    backend: line detector backend ("auto"|"dbnet"|"projection_deskew"|
+    "projection"). "auto" uses DBNet when PaddleOCR is installed, else the
+    deskew-aware projection. The resolved backend is folded into the cache key.
 
     cache_path: if given, results are cached to this JSON file keyed by
-    image-content md5 + decoder version. Re-runs on the same image are
+    image-content md5 + decoder/detector version. Re-runs on the same image are
     instantaneous and skip model loading entirely.
     """
+    version = _cache_version(backend)
     if cache_path:
-        cached = _try_load_cache(cache_path, image_path)
+        cached = _try_load_cache(cache_path, image_path, version)
         if cached is not None:
             if verbose:
                 print(f"  [QN_OCR] {image_path}: cache HIT "
@@ -210,27 +184,26 @@ def ocr_qn_page(image_path: str, verbose: bool = False,
         return "", []
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
 
-    boxes = _detect_text_lines(img_rgb)
-    if not boxes:
+    crops = detect_line_crops(img_rgb, backend=backend, verbose=verbose)
+    if not crops:
         if verbose:
             print(f"  [QN_OCR] {image_path}: no text lines detected", file=sys.stderr)
         return "", []
 
     predictor = _get_predictor()
-    pil = Image.fromarray(img_rgb)
     lines: list[str] = []
     confs: list[float] = []
     n_low = 0
 
-    for (x1, y1, x2, y2) in boxes:
-        if x2 - x1 < 10 or y2 - y1 < 10:
+    for i, crop_np in enumerate(crops):
+        if crop_np.shape[0] < 10 or crop_np.shape[1] < 10:
             continue
-        crop = pil.crop((x1, y1, x2, y2))
+        crop = Image.fromarray(crop_np)
         try:
             text, conf = _predict_with_conf(predictor, crop)
         except Exception as e:
             if verbose:
-                print(f"  [QN_OCR] predict failed on box {(x1,y1,x2,y2)}: {e}",
+                print(f"  [QN_OCR] predict failed on line {i}: {e}",
                       file=sys.stderr)
             continue
         if text:
@@ -246,5 +219,5 @@ def ocr_qn_page(image_path: str, verbose: bool = False,
 
     full_text = "\n".join(lines)
     if cache_path:
-        _save_cache(cache_path, image_path, full_text, confs)
+        _save_cache(cache_path, image_path, full_text, confs, version)
     return full_text, confs

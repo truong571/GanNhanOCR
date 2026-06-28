@@ -19,7 +19,7 @@ from core.pdf.pdf_parser import (
 from core.image.image_processing import denoise_image
 from core.ocr.ocr_api import ocr_page
 from core.ocr.qn_ocr import ocr_qn_page
-from core.text.text_utils import normalize_syllables
+from core.text.text_utils import normalize_syllables, normalize_tone_marks
 
 from pipeline.step0_setup import load_config
 
@@ -53,13 +53,19 @@ def process_book(config: dict, book_name: str, verbose: bool = True):
         df = pd.read_csv(qn_dict_path)
         col = next((c for c in df.columns if "quoc" in c.lower() or c.lower() == "qn"),
                    df.columns[0])
-        qn_dict_set = {str(s).strip().lower() for s in df[col].dropna() if str(s).strip()}
+        # Canonicalise to the modern tone convention to match normalize_syllables
+        # and the dictionary (load_qn_to_nom), so the OCR-confusion gate agrees.
+        qn_dict_set = {normalize_tone_marks(str(s).strip().lower())
+                       for s in df[col].dropna() if str(s).strip()}
 
     import fitz
     doc = fitz.open(str(pdf_path))
     dpi = step1_cfg.get("dpi", 300)
     reocr = book_cfg.get("reocr", False)
     use_ocr_api = step1_cfg.get("use_ocr_api", False)
+    # Line detector for the QN re-OCR path: auto (DBNet if PaddleOCR installed,
+    # else deskew-aware projection) | dbnet | projection_deskew | projection.
+    qn_line_detector = step1_cfg.get("qn_line_detector", "auto")
 
     pages_dir = data_dir / "pages"
     denoised_dir = data_dir / "pages_denoised"
@@ -145,6 +151,7 @@ def process_book(config: dict, book_name: str, verbose: bool = True):
                                 / f"{page_name}_qn_ocr_cache.json")
             ocr_text, qn_line_confs = ocr_qn_page(
                 str(tmp_path), verbose=verbose, cache_path=qn_cache_path,
+                backend=qn_line_detector,
             )
             from core.pdf.pdf_parser import parse_numbered_lines
             import re

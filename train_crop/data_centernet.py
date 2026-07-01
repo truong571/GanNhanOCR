@@ -292,8 +292,8 @@ def _augment(img: np.ndarray, boxes: np.ndarray, size: int, rng: np.random.Gener
     """
     H, W = img.shape[:2]
     s0 = size / max(H, W)                       # scale letterbox cơ sở
-    scale = s0 * float(rng.uniform(0.75, 1.15))  # phóng/thu ngẫu nhiên
-    angle = float(rng.uniform(-4.0, 4.0))        # xoay nhẹ ±4° (ván khắc gần thẳng)
+    scale = s0 * float(rng.uniform(0.70, 1.25))  # phóng/thu ngẫu nhiên (RỘNG hơn -> đa tỉ lệ)
+    angle = float(rng.uniform(-5.0, 5.0))        # xoay nhẹ ±5°
 
     cx, cy = W / 2.0, H / 2.0
     M = cv2.getRotationMatrix2D((cx, cy), angle, scale)
@@ -323,6 +323,14 @@ def _augment(img: np.ndarray, boxes: np.ndarray, size: int, rng: np.random.Gener
     alpha = float(rng.uniform(0.8, 1.2))
     beta = float(rng.uniform(-20, 20))
     canvas = np.clip(canvas.astype(np.float32) * alpha + beta, 0, 255).astype(np.uint8)
+    # mô phỏng chất lượng scan (chống overfit -> tăng precision): blur nhẹ + Gaussian noise
+    if rng.random() < 0.3:
+        k = int(rng.choice([3, 5]))
+        canvas = cv2.GaussianBlur(canvas, (k, k), 0)
+    if rng.random() < 0.3:
+        canvas = np.clip(canvas.astype(np.float32)
+                         + rng.normal(0, float(rng.uniform(3, 10)), canvas.shape),
+                         0, 255).astype(np.uint8)
     return canvas, np.array(out, np.float32).reshape(-1, 4)
 
 

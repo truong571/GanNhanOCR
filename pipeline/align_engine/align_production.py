@@ -30,9 +30,9 @@ from core.align.export_dataset_v4 import resegment_col
 from core.image.char_segmenter import segment_characters_in_column
 from core.image.image_processing import load_and_binarize
 
-from evaluation.ver_new.anchor_align import realign_column, matched_pairs
-from evaluation.ver_new.consensus import decide_label
-from evaluation.ver_new.bbox_fix import frame_offset, correct_columns
+from pipeline.align_engine.anchor_align import realign_column, matched_pairs
+from pipeline.align_engine.consensus import decide_label
+from pipeline.align_engine.bbox_fix import frame_offset, correct_columns
 
 
 def _detect(page_name: str, data_dir: Path, qn_dict_set: set):
@@ -177,7 +177,7 @@ def _get_detector():
         return _DETECTOR
     _DETECTOR_TRIED = True
     try:
-        from evaluation.ver_new.char_detector.detector_infer import DetectorInfer
+        from pipeline.align_engine.char_detector.detector_infer import DetectorInfer
         _DETECTOR = DetectorInfer()        # tự tìm ckpt v1 ở train_crop/detector_r34.best.pt
         if not _DETECTOR.trained:
             print("  [reseg detector] không thấy train_crop/detector_r34.best.pt -> midpoint fallback "
@@ -214,7 +214,7 @@ def _valley_boxes(cluster, binary, n):
 def _mean_mls(boxes, page_bgr, encoder):
     if page_bgr is None or encoder is None or not boxes:
         return None
-    from evaluation.ver_new.bbox_fix import tighten_box
+    from pipeline.align_engine.bbox_fix import tighten_box
     H, W = page_bgr.shape[:2]
     vals = []
     for b in boxes:

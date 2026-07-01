@@ -42,6 +42,7 @@ from core.align.parser_v5 import parse_v5  # noqa: E402
 from core.align.parser_v2 import load_v1_transcription  # noqa: E402
 from core.align.nom_detect_v3 import detect_nom_columns_v3  # noqa: E402
 from core.align.export_dataset_v4 import resegment_col  # noqa: E402
+from core.image.detector_seg import get_detector, detector_column_bboxes  # noqa: E402
 
 from pipeline.step0_setup import load_config  # noqa: E402
 
@@ -156,6 +157,10 @@ def process_page_structural(
         n_align = min(len(cols), len(qn_keys))
         iter_pairs = [(i, qn_keys[i]) for i in range(n_align)]
 
+    # Detector CenterNet v1 (tách chữ dính bằng seam) — chạy 1 LẦN/trang; None -> valley.
+    _det = get_detector()
+    _page_boxes = _det.boxes_for_page(color_img) if _det is not None else None
+
     # Build per-col char lists (apply marker strip / reseg).
     col_chars: list[list[dict]] = []
     col_ok_flags: list[bool] = []
@@ -177,7 +182,13 @@ def process_page_structural(
             ]
         elif actual < expected:
             chars_used = None  # type: ignore
-            if binary is not None and cluster["chars"]:
+            # ƯU TIÊN detector CenterNet (seam, N = #âm tiết) cho cột dính chữ
+            if _page_boxes is not None and cluster.get("bbox"):
+                db = detector_column_bboxes(_det, _page_boxes, gray_img,
+                                            cluster["bbox"], expected)
+                if db:
+                    chars_used = [{"bbox": b, "ocr_char": None} for b in db]
+            if chars_used is None and binary is not None and cluster["chars"]:
                 res = resegment_col(binary, cluster, expected)
                 if res:
                     chars_used = [

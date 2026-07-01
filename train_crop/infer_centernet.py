@@ -115,6 +115,26 @@ def make_valley_split(gray_image: np.ndarray, method: str = "seam"):
 # ===========================================================================
 #  RÀNG BUỘC SỐ LƯỢNG N
 # ===========================================================================
+def _nms_vertical(bx, iou_thr=0.45):
+    """Khử trùng lặp theo trục y: bỏ box chồng MẠNH (y-IoU>thr) với box điểm cao hơn.
+
+    Chữ Nôm xếp DỌC nên 2 chữ kề nhau gần như không chồng y (chỉ chạm biên); chồng
+    y mạnh = 1 chữ bị detector bắt 2 lần -> giữ box điểm cao hơn, bỏ box kia."""
+    keep = []
+    for b in sorted(bx, key=lambda b: b[4], reverse=True):
+        y1, y2 = b[1], b[3]
+        dup = False
+        for k in keep:
+            inter = max(0.0, min(y2, k[3]) - max(y1, k[1]))
+            union = (y2 - y1) + (k[3] - k[1]) - inter
+            if union > 0 and inter / union > iou_thr:
+                dup = True
+                break
+        if not dup:
+            keep.append(b)
+    return keep
+
+
 def enforce_count(boxes, n, gray_image=None, split_method: str = "seam"):
     """Hoà giải list box (x1,y1,x2,y2[,score]) về ĐÚNG n hộp, trên→dưới.
 
@@ -132,6 +152,9 @@ def enforce_count(boxes, n, gray_image=None, split_method: str = "seam"):
             bx = [[0, 0, int(gw), int(gh), 0.0]]
         else:
             return []
+
+    if len(bx) > 1:                              # khử 1-chữ-bắt-2-lần trước khi hoà giải
+        bx = _nms_vertical(bx, iou_thr=0.45)
 
     if len(bx) > n:                              # M > N
         bx = sorted(bx, key=lambda b: b[4], reverse=True)[:n]
@@ -160,7 +183,7 @@ def enforce_count(boxes, n, gray_image=None, split_method: str = "seam"):
 #  DETECTOR
 # ===========================================================================
 class CenterNetDetector:
-    def __init__(self, ckpt: str | None = None, img: int = 512, thr: float = 0.3,
+    def __init__(self, ckpt: str | None = None, img: int = 512, thr: float = 0.2,
                  split_method: str = "seam", device=None):
         import torch
         self.torch = torch

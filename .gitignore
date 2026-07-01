@@ -33,3 +33,8 @@ gannhanocr-fd-cache-v2/
 data/kkanji2/
 *.pt
 train_crop/kaggle_pkg/
+# pipeline output crops (generated, large)
+/dataset_out/gold/
+/dataset_out/silver/
+/dataset_out/syllable/
+/dataset_out/review/

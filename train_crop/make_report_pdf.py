@@ -150,9 +150,8 @@ def page_columns(pdf, det, page, gt, pred, max_cols=3):
         col_img = page[y1:y2, x1:x2]
         if col_img.size == 0:
             continue
-        # box dự đoán rơi vào cột này
-        m = (cx2 - cx1) * 0.6 + 1
-        raw = [b for b in pred if cx1 - m <= (b[0] + b[2]) / 2 <= cx2 + m]
+        # box dự đoán rơi vào cột này (theo BỀ RỘNG CỘT thật x1..x2, không phải spread tâm)
+        raw = [b for b in pred if x1 <= (b[0] + b[2]) / 2 <= x2]
         raw_local = [(b[0] - x1, b[1] - y1, b[2] - x1, b[3] - y1, b[4]) for b in raw]
         col_gray = gray[y1:y2, x1:x2]
         fixed = enforce_count(raw_local, N, gray_image=col_gray, split_method="seam")
@@ -252,8 +251,12 @@ def main():
     # Ưu tiên danh sách trang val LƯU TRONG CKPT (đảm bảo "held-out" đúng với lúc train,
     # bất kể --max-items/--val-frac); chỉ suy lại khi ckpt cũ không có.
     if det.val_images:
+        # khớp theo full-path; nếu trượt (ckpt train trên Kaggle path khác) -> khớp stem book_page
         vset = set(det.val_images)
         val_items = [it for it in man if it["image"] in vset]
+        if not val_items:
+            vkeys = set(Path(v).stem for v in det.val_images)
+            val_items = [it for it in man if f"{it.get('book')}_{it.get('page')}" in vkeys]
         split_src = "ckpt.val_images"
     else:
         nval = max(1, int(len(man) * a.val_frac))

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # GanNhanOCR Pipeline — 3 active steps (0, 1, 2). Old steps 3 (DINOv2 label) /
-# 4 (export) are RETIRED — folded into Step 2 (evaluation/ver_new/build_dataset.py).
+# 4 (export) are RETIRED — folded into Step 2 (pipeline.align_engine.build_dataset).
+# Toàn bộ code chạy nằm trong package chính (pipeline/ + core/ + train_crop/);
+# KHÔNG phụ thuộc evaluation/ (thư mục đó chỉ để nghiên cứu, sửa/xoá tuỳ ý).
 #
 # Usage:
 #   ./run_pipeline.sh                    # Run all steps for all books
@@ -136,24 +138,23 @@ if [[ "$STEP" == "all" || "$STEP" == "1" ]]; then
     echo ""
     echo ">>> Kiểm số cột OCR sau extract (9 cột/trang)"
     for book in $BOOKS; do
-        "$PY" evaluation/check_ocr_columns.py --book "$book" 2>/dev/null \
+        "$PY" pipeline/check_ocr_columns.py --book "$book" 2>/dev/null \
             | grep -E "OK\(=9\)|THIẾU|DƯ|≠9" || true
     done
 fi
 
-# Step 2: Build dataset (ver_new). Banded dict-anchored alignment + 3-signal
-# consensus tiers (GOLD/SYLLABLE/REVIEW) + column re-segment + frame-bbox fix
-# -> crops + labels.csv + 3 international standards. SUPERSEDES the old
-# step2-align(index) / step3-label(DINOv2, proven non-discriminative) /
-# step4-export path; those module files are kept for reference but no longer run.
-# See evaluation/ver_new/FLOW.md.
+# Step 2: Build dataset (pipeline.align_engine — bản production đóng băng, độc lập
+# với evaluation/). Banded dict-anchored alignment + 3-signal consensus tiers
+# (GOLD/SYLLABLE/REVIEW) + column re-segment + frame-bbox fix -> crops +
+# labels.csv + 3 international standards, xuất ra dataset_out/ ở repo root.
+# SUPERSEDES step2-align(index)/step3-label(DINOv2)/step4-export (retired).
 if [[ "$STEP" == "all" || "$STEP" == "2" ]]; then
     echo ""
-    echo ">>> Step 2: Build dataset (ver_new: align + consensus + crops + labels)"
-    "$PY" evaluation/ver_new/build_dataset.py --config "$CONFIG" --use-s3
+    echo ">>> Step 2: Build dataset (pipeline.align_engine: align + consensus + crops + labels) | reseg=${RESEG:-detector}"
+    "$PY" -m pipeline.align_engine.build_dataset --config "$CONFIG" --use-s3 --reseg "${RESEG:-detector}"
     echo ""
     echo ">>> Step 2b: Export standards (HF imagefolder + Frictionless + Croissant)"
-    "$PY" evaluation/ver_new/to_standard.py
+    "$PY" -m pipeline.align_engine.to_standard
 fi
 
 echo ""

@@ -50,7 +50,7 @@ try:
 except Exception as e:
     print(f"[detector off] {e}")
 
-# ---- comparison: chia đều (cũ) vs detector+seam (mới) trên cột dính ----
+# ---- comparison: chia đều (cũ) vs detector — Ô VUÔNG XANH quanh từng chữ (mới) ----
 COMP = [("SachThanhTruyen4", "page_0044", (359, 453), (270, 1625), 25),
         ("SachThanhTruyen4", "page_0068", (569, 653), (274, 1660), 25)]
 comp_panels = []   # (title, rgb_image)
@@ -70,15 +70,24 @@ if det:
         bx1, by1, bx2, by2 = max(x1 - m, 0), max(y1 - m, 0), min(x2 + m, bgr.shape[1]), min(y2 + m, bgr.shape[0])
         band = bgr[by1:by2, bx1:bx2].copy()
         H = band.shape[0]
-        old = band.copy()                                  # chia đều N phần
+        old = band.copy()                                  # CŨ: chia đều N phần (vạch đỏ)
         for i in range(1, N):
             yy = int(H * i / N)
-            cv2.line(old, (0, yy), (old.shape[1], yy), (0, 0, 220), 2)
-        new = band.copy()                                  # detector + seam
+            cv2.line(old, (0, yy), (band.shape[1], yy), (0, 0, 220), 2)
+        new = band.copy()                                  # MỚI: ô vuông xanh quanh từng chữ
         for b in boxes:
-            cv2.rectangle(new, (int(b[0]) - bx1, int(b[1]) - by1), (int(b[2]) - bx1, int(b[3]) - by1), (0, 170, 0), 2)
+            cv2.rectangle(new, (int(b[0]) - bx1, int(b[1]) - by1),
+                          (int(b[2]) - bx1, int(b[3]) - by1), (0, 170, 0), 2)
         comp_panels.append((f"{page[-4:]} · chia đều {N}", cv2.cvtColor(old, cv2.COLOR_BGR2RGB)))
         comp_panels.append((f"{page[-4:]} · detector {len(boxes)}", cv2.cvtColor(new, cv2.COLOR_BGR2RGB)))
+
+# căn 4 panel về cùng kích thước (pad trắng) để thẳng hàng, khỏi lệch cao thấp
+if comp_panels:
+    mh = max(im.shape[0] for _, im in comp_panels)
+    mw = max(im.shape[1] for _, im in comp_panels)
+    comp_panels = [(tt, cv2.copyMakeBorder(im, 0, mh - im.shape[0],
+                    (mw - im.shape[1]) // 2, mw - im.shape[1] - (mw - im.shape[1]) // 2,
+                    cv2.BORDER_CONSTANT, value=(255, 255, 255))) for tt, im in comp_panels]
 
 # ---- full-page overlays ----
 overlays = []
@@ -173,7 +182,7 @@ with PdfPages(OUT) as pdf:
         ax.set_title(title, fontsize=9, color=col)
     fig.subplots_adjust(top=0.90, bottom=0.30, wspace=0.05)
     note = ("• CÁCH CŨ (chia đều N phần, vạch đỏ): cắt máy móc → PHẠM vào chữ, dễ dính/cụt.\n"
-            "• MÔ HÌNH MỚI (detector + seam, khung xanh): men theo BIÊN từng chữ → cắt gọn, đúng số chữ.\n\n"
+            "• MÔ HÌNH MỚI (detector + seam, ô vuông xanh): khoanh đúng BIÊN từng chữ → cắt gọn, đúng số chữ.\n\n"
             "Đo trên các cột khó: tỉ lệ crop dính 2 chữ (two_blob)  60% → 54%.\n"
             "Trên toàn bộ dataset: dính 2 chữ THẬT < 2% (đo bằng tỉ lệ khung).")
     fig.text(0.5, 0.055, note, ha="center", va="bottom", fontsize=9.5, color="#222")

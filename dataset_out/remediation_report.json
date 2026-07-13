@@ -1,0 +1,42 @@
+{
+  "n_rows": 82268,
+  "census": {
+    "dup_bbox_rows": 701,
+    "dup_bbox_groups": 328,
+    "cross_col_rows": 1686,
+    "cross_col_groups": 820,
+    "union_rows": 2321,
+    "union_groups": 1116,
+    "conflicting_groups": 1094,
+    "provably_wrong_rows": 1177,
+    "by_tier": {
+      "GOLD": 1864,
+      "SYLLABLE": 235,
+      "SILVER": 222
+    }
+  },
+  "quarantined_rows": 2299,
+  "quarantined_conflict": 2277,
+  "quarantined_duplicate": 22,
+  "kept_representatives": 22,
+  "demoted_similar_lowcos": 748,
+  "split_reassigned_rows": 0,
+  "md5_spanning_splits_original": 288,
+  "md5_spanning_splits_residual": 0,
+  "md5_spanning_splits_after": 0,
+  "tier_before": {
+    "GOLD": 51200,
+    "REVIEW": 14192,
+    "SILVER": 11275,
+    "SYLLABLE": 5601
+  },
+  "tier_after": {
+    "GOLD": 48600,
+    "REVIEW": 14940,
+    "SILVER": 11055,
+    "SYLLABLE": 5374,
+    "QUARANTINE": 2299
+  },
+  "usable_before": 68076,
+  "usable_after": 65029
+}

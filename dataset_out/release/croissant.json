@@ -1,0 +1,330 @@
+{
+  "@context": {
+    "@vocab": "https://schema.org/",
+    "sc": "https://schema.org/",
+    "cr": "http://mlcommons.org/croissant/",
+    "dct": "http://purl.org/dc/terms/",
+    "data": {
+      "@id": "cr:data",
+      "@type": "@json"
+    },
+    "dataType": {
+      "@id": "cr:dataType",
+      "@type": "@vocab"
+    }
+  },
+  "@type": "sc:Dataset",
+  "conformsTo": "http://mlcommons.org/croissant/1.0",
+  "name": "han-nom-auto-labeled-crops",
+  "description": "Auto-labeled handwritten chữ-Nôm character crops from three woodblock books, aligned to their Quốc-ngữ translation.",
+  "version": "1.0.0",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "citation": "MSc thesis, Han-Nom auto-labeling pipeline (2026).",
+  "distribution": [
+    {
+      "@type": "cr:FileObject",
+      "@id": "crops-csv",
+      "name": "crops-csv",
+      "description": "Per-crop label table.",
+      "contentUrl": "crops.csv",
+      "encodingFormat": "text/csv",
+      "sha256": "becbac03a3e5e4cc8ad8d962446fec64d6965c3265876a3e3b35cd1a10838111"
+    }
+  ],
+  "recordSet": [
+    {
+      "@type": "cr:RecordSet",
+      "@id": "crops",
+      "name": "crops",
+      "description": "68076 labeled character crops.",
+      "field": [
+        {
+          "@type": "cr:Field",
+          "@id": "crops/image",
+          "name": "image",
+          "description": "Relative path to the crop PNG (primary key).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "image"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/book",
+          "name": "book",
+          "description": "Source book code (yen2/yen4/yen11).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "book"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/page",
+          "name": "page",
+          "description": "Page id within the book.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "page"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/column",
+          "name": "column",
+          "description": "1-based column index (RTL).",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "column"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/ocr_char",
+          "name": "ocr_char",
+          "description": "SinoNom (S1) OCR character.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "ocr_char"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/syllable",
+          "name": "syllable",
+          "description": "Aligned Quốc-ngữ syllable.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "syllable"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/label",
+          "name": "label",
+          "description": "Assigned Nôm character (target).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "label"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/unicode",
+          "name": "unicode",
+          "description": "Unicode codepoint of the label (U+XXXX).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "unicode"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/tier",
+          "name": "tier",
+          "description": "Confidence tier.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "tier"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/rule",
+          "name": "rule",
+          "description": "Consensus rule that produced the label.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "rule"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/split",
+          "name": "split",
+          "description": "Page-disjoint split.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "split"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/s3_cosine",
+          "name": "s3_cosine",
+          "description": "S3 glyph-verifier cosine (may be empty).",
+          "dataType": "sc:Float",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "s3_cosine"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/ink_pct",
+          "name": "ink_pct",
+          "description": "Ink fraction of the crop.",
+          "dataType": "sc:Float",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "ink_pct"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/crop_w",
+          "name": "crop_w",
+          "description": "Crop width in px.",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "crop_w"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/crop_h",
+          "name": "crop_h",
+          "description": "Crop height in px.",
+          "dataType": "sc:Integer",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "crop_h"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/image_md5",
+          "name": "image_md5",
+          "description": "12-hex prefix of the crop md5.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "image_md5"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/seg_flag",
+          "name": "seg_flag",
+          "description": "Segmentation flag (ok/tall).",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "seg_flag"
+            }
+          }
+        },
+        {
+          "@type": "cr:Field",
+          "@id": "crops/bbox",
+          "name": "bbox",
+          "description": "Fullpage [x1,y1,x2,y2] JSON.",
+          "dataType": "sc:Text",
+          "source": {
+            "fileObject": {
+              "@id": "crops-csv"
+            },
+            "extract": {
+              "column": "bbox"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "_stats": {
+    "n_total": 82268,
+    "n_usable": 65029,
+    "n_classes": 1592,
+    "n_books": 3,
+    "n_pages": 445,
+    "tier_counts": {
+      "GOLD": 48600,
+      "REVIEW": 14940,
+      "SILVER": 11055,
+      "SYLLABLE": 5374,
+      "QUARANTINE": 2299
+    },
+    "quarantined": 2299,
+    "resource_bytes": 11054712
+  }
+}

@@ -59,7 +59,7 @@ while [[ $# -gt 0 ]]; do
             echo "Steps:"
             echo "  0     Setup & validation"
             echo "  1     Extract data from PDF (crop khung -> kinhhannom -> 9 cột)"
-            echo "  2     Build dataset (ver_new: banded-DP align + consensus tiers"
+            echo "  2     Build dataset (align_engine: banded-DP align + consensus tiers"
             echo "        + re-segment + bbox-fix -> crops + labels.csv + 3 standards)"
             echo "  all   Run all steps (default)"
             echo ""

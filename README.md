@@ -140,22 +140,32 @@ Hoac chay tung phan:
 
 ```bash
 ./run_pipeline.sh --step 1                          # chi buoc 1 (extract OCR), tat ca sach
-./run_pipeline.sh --step 2                          # chi buoc 2 (build dataset ver_new)
+./run_pipeline.sh --step 2                          # chi buoc 2 (build dataset)
 ./run_pipeline.sh --book SachThanhTruyen2            # 1 sach, du 3 buoc
 ./run_pipeline.sh --config config/pipeline.yaml     # chi dinh config
 ```
 
-Buoc 2 = goi truc tiep code ver_new (banded-DP align + consensus GOLD/SILVER/
+Buoc 2 = goi truc tiep pipeline/align_engine (banded-DP align + consensus GOLD/SILVER/
 SYLLABLE/REVIEW, S3 = encoder Nom da train, + xuat 3 chuan quoc te):
 
 ```bash
-.venv/bin/python evaluation/ver_new/build_dataset.py --config config/pipeline.yaml --use-s3
-.venv/bin/python evaluation/ver_new/to_standard.py     # HF imagefolder + Frictionless + Croissant
+# Step 2 lives in the main package pipeline/align_engine/ (moved out of evaluation/).
+.venv/bin/python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --use-s3 --strict
+.venv/bin/python -m pipeline.align_engine.to_standard    # HF imagefolder + Frictionless + Croissant
+
+# Phase 0 (ground truth) and Phase 1 (remediation) run on the built dataset:
+.venv/bin/python -m pipeline.remediation apply           # fix proven errors -> labels_remediated.csv
+.venv/bin/python -m pipeline.ground_truth rank           # rank crops by error suspicion for audit
 ```
 
 > ⚠️ Cac lenh cu `python -m pipeline.step2_align / step3_label / step4_export`
 > da **NGHI (RETIRED)** — gop het vao Buoc 2 o tren. DINOv2 da bi **tat**
-> (thay bang encoder Nom da train). Chi tiet flow moi: `evaluation/ver_new/FLOW.md`.
+> (thay bang encoder Nom da train).
+>
+> **S3 checkpoints (bat buoc cho SILVER):** `gannhanocr-fd/` (89,898-glyph font bank)
+> va `nom-embed/` (ArcFace encoder) la gitlink **chua dang ky trong `.gitmodules`** —
+> clone sach se rong. Lay ban sao 2 thu muc nay truoc khi build; neu thieu, dung
+> `--strict` de **fail loud** thay vi SILVER am tham tut het thanh REVIEW.
 
 ---
 
@@ -176,11 +186,11 @@ GanNhanOCR/
 ├── pipeline/                     # Buoc 0-1 active; step2/3/4 da NGHI
 │   ├── step0_setup.py            #   (active) setup & validate
 │   ├── step1_extract.py          #   (active) PDF -> crop khung -> OCR 9 cot
-│   ├── step2_align.py            #   [RETIRED] thay boi evaluation/ver_new/build_dataset.py
+│   ├── step2_align.py            #   [RETIRED] thay boi pipeline/align_engine/build_dataset.py
 │   ├── step3_label.py            #   [RETIRED] duong DINOv2, da tat
-│   └── step4_export.py           #   [RETIRED] thay boi ver_new/to_standard.py
+│   └── step4_export.py           #   [RETIRED] thay boi pipeline/align_engine/to_standard.py
 │
-├── evaluation/ver_new/           # *** Buoc 2 hien hanh (build dataset) ***
+├── pipeline/align_engine/           # *** Buoc 2 hien hanh (build dataset) ***
 │   ├── build_dataset.py          #   align banded-DP + consensus + crops + labels.csv
 │   ├── to_standard.py            #   xuat HF / Frictionless / Croissant
 │   ├── visual_signal.py          #   S3 = encoder Nom da train (NomEncoder)
@@ -269,11 +279,11 @@ step4: { min_samples_per_class: 1 }
 6. **Trich xuat text QN**: Doc text tu PDF (hoac PaddleOCR + VietOCR khi `reocr=true`)
 7. **Normalize syllables**: Tach ten thanh ngay tu buoc nay
 
-### Buoc 2 — Build dataset (ver_new)  ·  THAY cho Buoc 2/3/4 cu
+### Buoc 2 — Build dataset (align_engine)  ·  THAY cho Buoc 2/3/4 cu
 
-> Day la flow hien hanh. Mo ta day du: `evaluation/ver_new/FLOW.md`.
+> Day la flow hien hanh. Mo ta day du: `pipeline/align_engine/README.md`.
 
-`evaluation/ver_new/build_dataset.py --use-s3` lam tat ca trong 1 buoc:
+`pipeline/align_engine/build_dataset.py --use-s3` lam tat ca trong 1 buoc:
 
 1. **Can chinh banded-DP neo tu dien** (thay ghep theo index cu): chi phi xoa
    theo chieu cao ky tu (<30% median = 0.3 / 30-50% = 0.6 / >=50% = 1.2).
@@ -281,7 +291,7 @@ step4: { min_samples_per_class: 1 }
    QN↔Nom + chu tuong tu (`SinoNom_Similar_Dic_v2`) · S3 = **so khop anh bang
    encoder Nom da train** (ArcFace) voi glyph FontDiffusion cua ung vien.
    *(DINOv2 da bi tat — khong phan biet duoc chu Nom; xem
-   `evaluation/ver_new/REPORT_dinov2_unsuitable.md`.)*
+   `pipeline/align_engine/README.md`.)*
 3. **Tang dong thuan**: GOLD (tu dien xac nhan, char) · SILVER (S3 sua thi giac,
    char) · SYLLABLE (vay muon nhat quan giua cac trang, am tiet) · REVIEW.
 4. **Re-segment cot + sua bbox khung**, crop tu anh goc -> `dataset_out/`.
@@ -303,9 +313,9 @@ Khong dung confidence score. Chi co 2 trang thai.
 
 ## Format dataset
 
-### labels.csv (ver_new — 20 cot)
+### labels.csv (align_engine — 20 cot)
 
-Xuat tai `evaluation/ver_new/dataset_out/labels.csv`. Header thuc te:
+Xuat tai `dataset_out/labels.csv`. Header thuc te:
 
 ```csv
 image,book,page,column,ocr_char,syllable,label,unicode,label_level,tier,rule,s3_cosine,ink_pct,crop_w,crop_h,image_md5,seg_flag,split,split_group,bbox

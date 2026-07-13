@@ -1,4 +1,4 @@
-"""Live column helpers used by pipeline/step2_align.py and evaluation/ver_new.
+"""Live column helpers used by pipeline/step2_align.py and pipeline/align_engine.
 
 Trimmed to the two functions still on the live path (`nom_cols_hybrid`,
 `load_similar`). The old v3-tier batch driver and its parse_v3 /

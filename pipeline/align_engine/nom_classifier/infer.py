@@ -1,6 +1,6 @@
 """Load a trained Nôm embedder and embed images — the drop-in for S3.
 
-Replaces DINOv2 in evaluation/ver_new/visual_signal.py: build a NomEncoder once,
+Replaces DINOv2 in pipeline/align_engine/visual_signal.py: build a NomEncoder once,
 embed the crop and each candidate FD glyph, rank by cosine. The trained embedder
 IS discriminative on Nôm (see eval_discrim.py), unlike DINOv2.
 """

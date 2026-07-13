@@ -50,6 +50,30 @@ SYL_MIN_PAGES = 3    # on >= this many distinct pages
 SYL_MIN_PURITY = 0.6  # and be the dominant syllable for that char by this share
 
 
+def syllable_gate(records, unconf, min_occ=SYL_MIN_OCC, min_pages=SYL_MIN_PAGES,
+                  min_purity=SYL_MIN_PURITY):
+    """(ocr_char, LOWERCASED syllable) pairs passing the cross-page consistency gate.
+
+    Case-insensitive on the syllable so 'Nhị' and 'nhị' merge into one class — the
+    cased keying used to split them, diluting the occurrence/purity thresholds and
+    dropping ~1,131 labels. Pure + deterministic; unit-tested in phase1_engine_selftest.
+    """
+    cnt = defaultdict(Counter)
+    pages_of = defaultdict(lambda: defaultdict(set))
+    for r in records:
+        if r["tier"] == "REVIEW" and r["rule"] in unconf and r["ocr_char"]:
+            syl = str(r["syllable"]).lower()
+            cnt[r["ocr_char"]][syl] += 1
+            pages_of[r["ocr_char"]][syl].add((r["book"], r["page"]))
+    syl_ok = set()
+    for ch, c in cnt.items():
+        syl, n = c.most_common(1)[0]
+        if (n >= min_occ and len(pages_of[ch][syl]) >= min_pages
+                and n / sum(c.values()) >= min_purity):
+            syl_ok.add((ch, syl))
+    return syl_ok
+
+
 def maybe_s3(p, page_png, qn_to_nom, vs3):
     if vs3 is None or not p.get("ocr_char"):
         return None
@@ -104,6 +128,8 @@ def main():
     ap.add_argument("--config", default=str(REPO / "config" / "pipeline.yaml"))
     ap.add_argument("--out", default=str(REPO / "dataset_out"))
     ap.add_argument("--use-s3", action="store_true")
+    ap.add_argument("--strict", action="store_true",
+                    help="fail loud if S3 can't load (else SILVER silently -> REVIEW)")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--no-crops", action="store_true")
     ap.add_argument("--no-tighten", action="store_true")
@@ -139,8 +165,15 @@ def main():
             vs3 = VisualS3(REPO, fd_dir=str(REPO / paths["fd_cache_universal"]),
                            simfont_dir=simfont)
         except Exception as e:
+            if getattr(args, "strict", False):
+                raise RuntimeError(
+                    f"[S3 STRICT] S3 failed to load ({type(e).__name__}: {e}). "
+                    "SILVER would silently collapse to REVIEW. Fix the nom-embed/best.pt "
+                    "+ gannhanocr-fd checkpoints, or drop --strict to build GOLD-only."
+                ) from e
             print(f"  [S3 OFF] {type(e).__name__}: {e}\n  -> SILVER bỏ qua; GOLD/SYLLABLE "
-                  "vẫn chạy. (Cần checkpoint nom-embed/best.pt — train ở nom_classifier/.)",
+                  "vẫn chạy. (Cần checkpoint nom-embed/best.pt — train ở nom_classifier/.) "
+                  "Dùng --strict để fail loud thay vì degrade âm thầm.",
                   flush=True)
             vs3 = None
 
@@ -199,23 +232,17 @@ def main():
     # 'below_visual_threshold'. Both are eligible for the syllable tier (SILVER
     # already took the S3-confirmed ones), so SYLLABLE coexists with SILVER.
     UNCONF = {"unconfirmed_no_s3", "below_visual_threshold"}
-    cnt = defaultdict(Counter)            # ocr_char -> Counter(syllable)
-    pages_of = defaultdict(lambda: defaultdict(set))
-    for r in records:
-        if r["tier"] == "REVIEW" and r["rule"] in UNCONF and r["ocr_char"]:
-            cnt[r["ocr_char"]][r["syllable"]] += 1
-            pages_of[r["ocr_char"]][r["syllable"]].add((r["book"], r["page"]))
-    syl_ok = set()                        # (ocr_char, syllable) that pass the gate
-    for ch, c in cnt.items():
-        syl, n = c.most_common(1)[0]
-        if (n >= SYL_MIN_OCC and len(pages_of[ch][syl]) >= SYL_MIN_PAGES
-                and n / sum(c.values()) >= SYL_MIN_PURITY):
-            syl_ok.add((ch, syl))
+    # Case-insensitive gate (fixes the case-split; +~1,131 labels). The promoted row
+    # also stores the canonical lowercase syllable so its target class is not fragmented
+    # into cased variants downstream.
+    syl_ok = syllable_gate(records, UNCONF)
     n_promoted = 0
     for r in records:
+        syl_l = str(r["syllable"]).lower()
         if (r["tier"] == "REVIEW" and r["rule"] in UNCONF
-                and (r["ocr_char"], r["syllable"]) in syl_ok):
+                and (r["ocr_char"], syl_l) in syl_ok):
             r["tier"], r["rule"] = "SYLLABLE", "nghia_consensus"
+            r["syllable"] = syl_l
             n_promoted += 1
 
     # label_level + unicode

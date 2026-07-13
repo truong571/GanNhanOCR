@@ -8,7 +8,7 @@ tiết QN. Tách chữ dính bằng SEAM CARVING. Audit production: N đúng -> 
 Tự FALLBACK None (pipeline dùng valley như cũ) nếu thiếu ckpt / lỗi import.
 
 Ckpt tìm theo thứ tự: env NOM_DETECTOR_CKPT > train_crop/detector_r34.best.pt >
-evaluation/ver_new/char_detector/detector_r34.best.pt.
+train_crop/detector_r34.best.pt.
 """
 from __future__ import annotations
 
@@ -24,7 +24,7 @@ _TRIED = False
 def _find_ckpt() -> Path | None:
     cands = [os.environ.get("NOM_DETECTOR_CKPT", ""),
              REPO / "train_crop" / "detector_r34.best.pt",
-             REPO / "evaluation" / "ver_new" / "char_detector" / "detector_r34.best.pt"]
+             REPO / "train_crop" / "detector_r34.best.pt"]
     for c in cands:
         if c and Path(c).exists():
             return Path(c)

@@ -8,7 +8,7 @@ Gói gồm:
 `detect_manifest.json` gốc trỏ đường dẫn TUYỆT ĐỐI full-res. Để lên Kaggle ta
 downscale ảnh + scale box + ghi lại manifest đường-dẫn-tương-đối. Để nhanh và
 KHÔNG đụng CPU với phiên train local, mặc định ta TÁI SỬ DỤNG ảnh đã downscale
-trong `evaluation/ver_new/char_detector/kaggle_det_pkg/` nếu có.
+trong `train_crop/kaggle_det_pkg/` nếu có.
 
 Chạy:
   .venv/bin/python test/pack_for_kaggle.py          # -> test/kaggle_pkg/
@@ -23,8 +23,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-DEFAULT_FULL_MANIFEST = REPO / "evaluation/ver_new/char_detector/detect_manifest.json"
-DEFAULT_REUSE = REPO / "evaluation/ver_new/char_detector/kaggle_det_pkg"
+DEFAULT_FULL_MANIFEST = REPO / "train_crop/detect_manifest.json"
+DEFAULT_REUSE = REPO / "train_crop/kaggle_det_pkg"
 
 MODULES = ["data_centernet.py", "model_centernet.py", "train_centernet.py",
            "infer_centernet.py", "make_report_pdf.py", "build_manifest.py",

@@ -3,7 +3,7 @@
 THE BUG (pre-existing, affects production too): core/ocr/ocr_api.py runs the
 HCMUS OCR on a FRAME-CROPPED image (framed=True, crop_to_frame with frame_pad),
 so the cached character bboxes are in CROPPED-image coordinates. Everything
-downstream (step2_align.py, ver_new align_production) crops the FULL page at
+downstream (step2_align.py, align_engine align_production) crops the FULL page at
 those bboxes -> the whole column grid is shifted left by the frame's left margin
 (~252px median, ~1.7 columns). Result: leftmost columns fall into the margin
 (blank crops, ~30%), interior crops capture the neighbouring glyph.
@@ -15,7 +15,7 @@ to full-page coords is just `bbox + (x0, y0)`. We recompute (x0, y0) per page
 with the SAME detector + the frame_pad stored in the cache.
 
 Verified end-to-end: blank-crop rate 31% -> 0%, median crop ink 9.8% -> 18.1%
-(pure translation, no scale). Written entirely in evaluation/ver_new — production
+(pure translation, no scale). Written entirely in pipeline/align_engine — production
 core/ is untouched.
 """
 from __future__ import annotations

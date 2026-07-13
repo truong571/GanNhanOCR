@@ -1,7 +1,7 @@
 """Projection re-segmentation of an under-counted Nôm column.
 
 Trimmed to `resegment_col` — the only function still on the live path (used by
-pipeline/step2_align.py and evaluation/ver_new/align_production.py). The old
+pipeline/step2_align.py and pipeline/align_engine/align_production.py). The old
 parser_v4 batch export (export_book/main + parse_v4/probe imports) was removed
 as dead code (2026-06).
 """

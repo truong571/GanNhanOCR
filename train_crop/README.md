@@ -60,15 +60,15 @@ Heatmap(1, sigmoid, bias −2.19) · Size(2:[w,h]) · Offset(2:[dx,dy]).
 **Local (chỉ để thử, chậm):**
 ```bash
 .venv/bin/python train_crop/train_centernet.py \
-    --manifest evaluation/ver_new/char_detector/detect_manifest.json \
+    --manifest train_crop/detect_manifest.json \
     --img 768 --epochs 12 --batch 4 --out detector.pt
 ```
 
 ## 5. Dữ liệu (ở ngoài folder này)
 | Nguồn | Vị trí | Dùng cho |
 |-------|--------|----------|
-| Nôm (445 trang, bbox+tier) | `evaluation/ver_new/dataset_out/labels.csv` + `prepared/*/pages/*.png` | fine-tune |
-| Manifest Nôm dựng sẵn | `evaluation/ver_new/char_detector/detect_manifest.json` | fine-tune |
+| Nôm (445 trang, bbox+tier) | `dataset_out/labels.csv` + `prepared/*/pages/*.png` | fine-tune |
+| Manifest Nôm dựng sẵn | `train_crop/detect_manifest.json` | fine-tune |
 | MTH/TKH (3199 trang) | `MTH/TKHMTH2200/{MTH1000,MTH1200,TKH}` (repo root) | pretrain |
 
 ## 6. Suy luận + tích hợp pipeline

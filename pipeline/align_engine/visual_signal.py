@@ -1,7 +1,7 @@
 """S3 — visual glyph-match signal (TRAINED Nôm embedder + FontDiffusion glyphs).
 
 The third independent signal. For a Nôm crop it ranks candidate characters by
-cosine of a NÔM-TRAINED embedding (evaluation/ver_new/nom_classifier, ResNet
+cosine of a NÔM-TRAINED embedding (pipeline/align_engine/nom_classifier, ResNet
 + ArcFace) against the FontDiffusion reference glyph of each candidate. NB the FD
 glyph is a FontDiffusion *handwritten-style* render conditioned on the woodblock
 style (gannhanocr-fd, see kaggle_diffusion/README.md) — NOT a clean print font. This
@@ -49,13 +49,13 @@ def _is_cjk(ch: str) -> bool:
 
 def _find_ckpt(repo: Path) -> str:
     for c in [repo / "nom-embed" / "best.pt",
-              repo / "evaluation" / "ver_new" / "nom_classifier" / "checkpoints" / "best.pt",
+              repo / "pipeline" / "align_engine" / "nom_classifier" / "checkpoints" / "best.pt",
               repo / "nom-embed" / "last.pt"]:
         if c.exists():
             return str(c)
     raise FileNotFoundError(
         "Nôm embedder checkpoint not found (nom-embed/best.pt). Train it first via "
-        "evaluation/ver_new/nom_classifier (Kaggle) and place best.pt at nom-embed/.")
+        "pipeline/align_engine/nom_classifier (Kaggle) and place best.pt at nom-embed/.")
 
 
 class VisualS3:

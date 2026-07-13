@@ -59,9 +59,9 @@ step2:
   # radicals) even at the cost of a sliver of neighbour ink.
   crop_pad_frac: 0.18
 
-# Step 3 (legacy DINOv2 labeling path) — RETIRED: superseded by ver_new Step 2
+# Step 3 (legacy DINOv2 labeling path) — RETIRED: superseded by pipeline/align_engine Step 2
 # (build_dataset.py --use-s3, S3 = trained Nôm encoder). DINOv2 is DISABLED here
-# (proven non-discriminative on Nôm — evaluation/ver_new/REPORT_dinov2_unsuitable.md).
+# (proven non-discriminative on Nôm — pipeline/align_engine/README.md).
 # Code kept (core/ranking/dinov2_ranker.py), NOT deleted, for the thesis comparison.
 step3:
   use_dinov2: false                 # DISABLED — replaced by trained Nôm embedder (S3)

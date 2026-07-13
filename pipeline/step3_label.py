@@ -1,10 +1,10 @@
 """[RETIRED — NOT run by run_pipeline.sh] Step 3: 3-tier label assignment
 (dictionary -> similar -> FontDiffusion + DINOv2).
 
-SUPERSEDED by evaluation/ver_new/build_dataset.py (pipeline Step 2): banded
+SUPERSEDED by pipeline/align_engine/build_dataset.py (pipeline Step 2): banded
 dict-anchored DP alignment + 3-signal consensus, where S3 is a TRAINED Nôm
 encoder. The DINOv2 path here is DISABLED (config step3.use_dinov2: false) —
-DINOv2 is non-discriminative on Nôm (evaluation/ver_new/REPORT_dinov2_unsuitable.md).
+DINOv2 is non-discriminative on Nôm (pipeline/align_engine/README.md).
 This module + core/ranking/dinov2_ranker.py are KEPT (not deleted) for the
 DINOv2-vs-trained comparison in the thesis.
 

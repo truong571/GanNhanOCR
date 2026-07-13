@@ -6,8 +6,8 @@ chữ + gán nhãn + xuất chuẩn). Là code **chạy thật** của `run_pipe
 ## Nguyên tắc
 - **Chỉ phụ thuộc package chính**: `pipeline/`, `core/`, `train_crop/`. **KHÔNG import gì
   từ `evaluation/`.** Sửa/xoá `evaluation/` (thư mục nghiên cứu) không ảnh hưởng ở đây.
-- Đây là **bản copy đóng băng** tách ra từ `evaluation/ver_new/` (nơi vẫn để thử nghiệm).
-  Khi cải tiến engine đã kiểm chứng ở `evaluation/ver_new`, **đồng bộ tay** sang đây.
+- Đây là **bản copy đóng băng** tách ra từ `pipeline/align_engine/` (nơi vẫn để thử nghiệm).
+  Khi cải tiến engine đã kiểm chứng ở `pipeline/align_engine`, **đồng bộ tay** sang đây.
 
 ## File
 | File | Vai trò |
@@ -25,7 +25,7 @@ chữ + gán nhãn + xuất chuẩn). Là code **chạy thật** của `run_pipe
 ## Data (vị trí trung lập, ngoài evaluation/)
 - Encoder ckpt: `nom-embed/best.pt` (repo root)
 - FD glyph cache: theo `config/pipeline.yaml` → `paths.fd_cache_universal`
-- **Output**: `dataset_out/` ở **repo root** (crop + labels + chuẩn). `evaluation/ver_new/dataset_out`
+- **Output**: `dataset_out/` ở **repo root** (crop + labels + chuẩn). `dataset_out`
   là symlink trỏ về đây (để script nghiên cứu cũ vẫn chạy).
 
 ## Chạy

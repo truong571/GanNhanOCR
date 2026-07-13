@@ -144,37 +144,96 @@ def _get_ocr_token() -> str:
     return ""
 
 
+# --- retry / backoff for transient OCR-API failures -------------------------
+# Previously a single 429 / 5xx / timeout dropped a whole page silently (0 chars,
+# no retry). Now transient failures are retried with exponential backoff and an
+# expired token triggers one re-login; only permanent 4xx fail loud.
+RETRY_STATUS = frozenset({429, 500, 502, 503, 504})   # transient -> retry
+REAUTH_STATUS = frozenset({401, 403})                 # token expired -> refresh, retry
+
+
+def classify_http_status(status: int) -> str:
+    """'retry' (transient), 'reauth' (token expired), or 'fail' (permanent)."""
+    if status in RETRY_STATUS:
+        return "retry"
+    if status in REAUTH_STATUS:
+        return "reauth"
+    return "fail"
+
+
+def backoff_delay(attempt: int, base: float = 1.0, cap: float = 30.0) -> float:
+    """Exponential backoff (seconds) for the given 0-based attempt index."""
+    return min(cap, base * (2.0 ** attempt))
+
+
+def _invalidate_token() -> None:
+    """Force the next _get_ocr_token() to re-login (used on 401/403)."""
+    _token_cache["token"] = ""
+    _token_cache["exp"] = 0.0
+
+
+def _request_with_retry(do_request, what, max_attempts=4, base_delay=1.0,
+                        sleep=time.sleep, on_reauth=_invalidate_token):
+    """Run do_request() -> requests.Response with retry/backoff.
+
+    Retries 429/5xx and Timeout/ConnectionError with exponential backoff; on 401/403
+    refreshes the token and retries once; permanent 4xx fail loud. Returns the Response
+    on success or None once attempts are exhausted. `sleep` is injectable for tests.
+    """
+    last = None
+    reauthed = False
+    for attempt in range(max_attempts):
+        try:
+            resp = do_request()
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            last = e
+            if attempt < max_attempts - 1:
+                sleep(backoff_delay(attempt, base_delay))
+                continue
+            break
+        if resp.status_code < 400:
+            return resp
+        kind = classify_http_status(resp.status_code)
+        last = f"HTTP {resp.status_code}"
+        if kind == "reauth" and on_reauth is not None and not reauthed:
+            on_reauth()
+            reauthed = True
+            continue                        # immediate retry with a fresh token
+        if kind == "retry" and attempt < max_attempts - 1:
+            sleep(backoff_delay(attempt, base_delay))
+            continue
+        break                               # permanent 4xx, or attempts exhausted
+    print(f"[OCR] {what} failed after {max_attempts} attempts: {last}", file=sys.stderr)
+    return None
+
+
 def upload_image(image_path: str) -> str | None:
     """Upload image to HCMUS OCR server. Returns server file_name."""
     url = f"https://{_SN_DOMAIN}/api/web/clc-sinonom/image-upload"
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Authorization": f"Bearer {_get_ocr_token()}",
-    }
-    try:
+
+    def do():
+        headers = {"User-Agent": "Mozilla/5.0",
+                   "Authorization": f"Bearer {_get_ocr_token()}"}
         with open(image_path, "rb") as f:
-            resp = requests.post(
-                url, files={"image_file": f}, headers=headers,
-                verify=False, timeout=30,
-            )
-        resp.raise_for_status()
+            return requests.post(url, files={"image_file": f}, headers=headers,
+                                 verify=False, timeout=30)
+
+    resp = _request_with_retry(do, "Upload")
+    if resp is None:
+        return None
+    try:
         result = resp.json()
         if result.get("is_success"):
             return result["data"]["file_name"]
         print(f"[OCR] Upload failed: {result.get('message')}", file=sys.stderr)
     except Exception as e:
-        print(f"[OCR] Upload error: {e}", file=sys.stderr)
+        print(f"[OCR] Upload parse error: {e}", file=sys.stderr)
     return None
 
 
 def recognize(file_name: str) -> list[dict] | None:
     """Call OCR API, returns list of boxes [{points, transcription}, ...]."""
     url = f"https://{_SN_DOMAIN}/api/web/clc-sinonom/image-ocr"
-    headers = {
-        "User-Agent": "Mozilla/5.0",
-        "Authorization": f"Bearer {_get_ocr_token()}",
-        "Content-Type": "application/json; charset=utf-8",
-    }
     body = {
         "file_name": file_name,
         "ocr_id": 1,
@@ -182,17 +241,23 @@ def recognize(file_name: str) -> list[dict] | None:
         "reading_direction": 1,
         "font_type": 1,
     }
+
+    def do():
+        headers = {"User-Agent": "Mozilla/5.0",
+                   "Authorization": f"Bearer {_get_ocr_token()}",
+                   "Content-Type": "application/json; charset=utf-8"}
+        return requests.post(url, json=body, headers=headers, verify=False, timeout=60)
+
+    resp = _request_with_retry(do, "OCR")
+    if resp is None:
+        return None
     try:
-        resp = requests.post(
-            url, json=body, headers=headers, verify=False, timeout=60,
-        )
-        resp.raise_for_status()
         result = resp.json()
         if result.get("is_success"):
             return result["data"]["details"]["details"]
         print(f"[OCR] OCR failed: {result.get('message')}", file=sys.stderr)
     except Exception as e:
-        print(f"[OCR] OCR error: {e}", file=sys.stderr)
+        print(f"[OCR] OCR parse error: {e}", file=sys.stderr)
     return None
 
 

@@ -1,7 +1,7 @@
 """[RETIRED — NOT run by run_pipeline.sh] Step 4: Export dataset — per-book + all-in-one.
 
-SUPERSEDED by Step 2 (evaluation/ver_new/build_dataset.py -> labels.csv) +
-Step 2b (evaluation/ver_new/to_standard.py -> HF imagefolder / Frictionless /
+SUPERSEDED by Step 2 (pipeline/align_engine/build_dataset.py -> labels.csv) +
+Step 2b (pipeline/align_engine/to_standard.py -> HF imagefolder / Frictionless /
 Croissant). Kept for reference; no longer in the active flow.
 
 Output structure:

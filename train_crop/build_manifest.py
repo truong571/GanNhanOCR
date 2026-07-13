@@ -32,8 +32,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-DEF_LABELS = REPO / "evaluation/ver_new/dataset_out/labels.csv"
-DEF_PAGEMAP = REPO / "evaluation/ver_new/char_detector/detect_manifest.json"
+DEF_LABELS = REPO / "dataset_out/labels.csv"
+DEF_PAGEMAP = REPO / "train_crop/detect_manifest.json"
 
 
 def _page_path_map(pagemap_json):

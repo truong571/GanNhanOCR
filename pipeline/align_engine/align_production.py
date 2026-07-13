@@ -237,6 +237,68 @@ def _mean_mls(boxes, page_bgr, encoder):
     return float(np.mean(vals)) if vals else None
 
 
+def _monotone_assign(cys, boxes, mid, guard=0.5, pitch=None):
+    """Assign each char y-center in `cys` to a DISTINCT box, monotone (non-crossing),
+    minimising total |cy - box_center_y| via DP. Returns boxes in the ORIGINAL char
+    order, or None if there are fewer boxes than chars (caller falls back to midpoint).
+
+    A char whose assigned box sits farther than guard*pitch from it is replaced by its
+    midpoint box mid[i]. This is the fix for the independent-argmin defect (AE-1): two
+    chars can no longer grab the same box, and a badly-placed box degrades to the robust
+    midpoint instead of a neighbour glyph.
+    """
+    n = len(cys)
+    m = len(boxes)
+    if n == 0:
+        return []
+    if m < n:
+        return None
+    bcy = [(b[1] + b[3]) / 2.0 for b in boxes]
+    border = sorted(range(m), key=lambda j: bcy[j])
+    sb = [boxes[j] for j in border]
+    sbcy = [bcy[j] for j in border]
+    corder = sorted(range(n), key=lambda i: cys[i])
+    scy = [cys[i] for i in corder]
+
+    INF = float("inf")
+    dp = [[INF] * (m + 1) for _ in range(n + 1)]
+    back = [[-1] * (m + 1) for _ in range(n + 1)]
+    for j in range(m + 1):
+        dp[0][j] = 0.0
+    for i in range(1, n + 1):
+        for j in range(i, m + 1):
+            best, choice = dp[i][j - 1], -2                 # -2 = skip box j-1
+            cost = dp[i - 1][j - 1] + abs(scy[i - 1] - sbcy[j - 1])
+            if cost < best:
+                best, choice = cost, j - 1                  # assign char i-1 -> box j-1
+            dp[i][j], back[i][j] = best, choice
+
+    assign_sorted = [None] * n
+    i, j = n, m
+    while i > 0:
+        bj = back[i][j]
+        if bj == -2:
+            j -= 1
+        else:
+            assign_sorted[i - 1] = sb[bj]
+            i -= 1
+            j = bj
+
+    if pitch is None:
+        gaps = [scy[k + 1] - scy[k] for k in range(n - 1)]
+        pitch = float(np.median(gaps)) if gaps else None
+    out = [None] * n
+    for k, i_orig in enumerate(corder):
+        box = assign_sorted[k]
+        if box is None:
+            out[i_orig] = mid[i_orig] if mid else None
+        elif pitch and abs(cys[i_orig] - (box[1] + box[3]) / 2.0) > guard * pitch:
+            out[i_orig] = mid[i_orig] if mid else box
+        else:
+            out[i_orig] = box
+    return out
+
+
 def _pick_reseg(cluster, syllables, binary, reseg_mode, encoder=None, page_bgr=None,
                 det=None, page_boxes=None):
     """Per-OCR-char boxes for the emitted pairs, per reseg_mode:
@@ -252,9 +314,23 @@ def _pick_reseg(cluster, syllables, binary, reseg_mode, encoder=None, page_bgr=N
     if reseg_mode == "detector" and det is not None and page_boxes is not None and cluster.get("x_range"):
         cb = det.column_boxes(page_boxes, cluster["x_range"], n)
         if len(cb) == n:
-            vcys = [(b[1] + b[3]) / 2.0 for b in cb]
             cys = [(c["bbox"][1] + c["bbox"][3]) / 2.0 for c in chars]
-            return [cb[int(np.argmin([abs(cy - vc) for vc in vcys]))] for cy in cys]
+            assigned = _monotone_assign(cys, cb, mid)        # monotone 1-1 (fixes AE-1)
+            if assigned is None:
+                return mid
+            # x-range guard (fixes F1): reject a box whose center-x falls outside this
+            # column, replacing it with the midpoint box rather than a neighbour glyph.
+            x1, x2 = cluster["x_range"]
+            xtol = 0.15 * (x2 - x1)
+            out = []
+            for i, box in enumerate(assigned):
+                if box is None:
+                    out.append(mid[i] if mid else None)
+                    continue
+                bcx = (box[0] + box[2]) / 2.0
+                out.append((mid[i] if mid else box)
+                           if (bcx < x1 - xtol or bcx > x2 + xtol) else box)
+            return out
         return mid
     if reseg_mode == "midpoint" or mid is None or reseg_mode not in ("valley_n", "valley_guarded"):
         return mid
@@ -263,9 +339,10 @@ def _pick_reseg(cluster, syllables, binary, reseg_mode, encoder=None, page_bgr=N
     vb = _valley_boxes(cluster, binary, n)
     if not vb:
         return mid
-    vcys = [(b[1] + b[3]) / 2.0 for b in vb]
     cys = [(c["bbox"][1] + c["bbox"][3]) / 2.0 for c in chars]
-    mapped = [vb[int(np.argmin([abs(cy - vc) for vc in vcys]))] for cy in cys]
+    mapped = _monotone_assign(cys, vb, mid)                  # monotone 1-1 (fixes AE-1)
+    if mapped is None:
+        return mid
     if reseg_mode == "valley_n":
         return mapped
     # valley_guarded: accept valley for the whole column only if MLS not worse

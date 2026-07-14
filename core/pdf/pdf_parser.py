@@ -90,45 +90,79 @@ def extract_nom_image(page: fitz.Page, output_path: Path, dpi: int = 300) -> dic
         }
 
 
-def parse_numbered_lines(text: str) -> dict[int, str]:
-    """Parse QN text into {line_number: content}.
+_LEAD_NUM = re.compile(r"^[\s\-–—.,:;)]*(\d+)([.,]?)")          # leading number (+opt dot)
+_LEAD_STRIP = re.compile(r"^[\s\-–—.,:;)]*\d[\d.,:;)\s\-–—]*")   # number + trailing junk
+_MID_RE = re.compile(r"^(\S{1,5})\s+(\d+)[.,]\s+(.+)$")          # 'word N. body' (mid-line)
 
-    Robust with Tesseract noise: accepts 'N.' and 'N,' patterns.
+
+def _detect_marker(line: str, expected: int, total: int):
+    """Return (column_number, body) if `line` starts a column, else (None, None).
+
+    Detects the tiny 1-9 markers through every corruption VietOCR produces (measured):
+      - clean       'N.' / 'N,'                     (1<=N<=9)
+      - period lost 'N '                            (N == expected)
+      - stuck junk  'N.1 -' / '5.1 -' (no space)    (leading number, junk stripped)
+      - extra digit 'NN' e.g. 28->8, 2017->7        (N>9 and N%10 == expected)
+      - mid-line    'word N.'                        (N == expected)
+    A bare dash '- ' (number fully gone) is resolved later inside the merged block,
+    where the exact number of splits is known from the sequence.
     """
-    lines: dict[int, str] = {}
-    current_num = None
-    current_content: list[str] = []
-    pattern = re.compile(r"^[^a-zA-ZÀ-ỹ]*?(\d+)[.,]\s+(.*)")
+    m = _LEAD_NUM.match(line)
+    if m:
+        n, dot = int(m.group(1)), m.group(2) in (".", ",")
+        col = None
+        if 1 <= n <= total and (dot or n == expected):
+            col = n
+        elif n > total and expected <= total and n % 10 == expected:
+            col = expected                     # extra-digit variant: last digit == column
+        if col is not None:
+            body = _LEAD_STRIP.sub("", line).strip()     # drop the number + stuck junk
+            if body:                           # only a marker if real content follows
+                return col, body
+    m2 = _MID_RE.match(line)
+    if m2 and expected <= total and int(m2.group(2)) == expected:
+        return expected, m2.group(3)
+    return None, None
+
+
+def parse_numbered_lines(text: str, total: int = 9) -> dict[int, list[str]]:
+    """Parse QN text into {column_number: [physical lines]} (marker stripped from the
+    first line of each column). Content before the first marker is kept (not dropped)
+    and assigned to column 1 if column 1's marker was lost.
+
+    The QN translation is a fixed sequence of `total` numbered columns mirroring the
+    woodblock columns. Marker corruption (see _detect_marker) otherwise merges columns;
+    lines are kept so the merged block can be re-split at its true boundaries later.
+    """
+    cols: dict[int, list[str]] = {}
+    leading: list[str] = []
+    cur = None
+    expected = 1
 
     for raw_line in text.split("\n"):
-        stripped = raw_line.strip()
-        if not stripped:
+        s = raw_line.strip()
+        if not s:
             continue
+        num, body = _detect_marker(s, expected, total)
+        if num is not None and (cur is None or num >= cur):      # markers only go forward
+            cur = num
+            cols[cur] = [body]
+            expected = num + 1
+            continue
+        if cur is None:
+            leading.append(s)                                    # keep — do not drop col 1
+        elif sum(1 for c in s if c.isalpha()) >= 2:
+            cols[cur].append(s)
 
-        match = pattern.match(stripped)
-        if match:
-            num = int(match.group(1))
-            if 1 <= num <= 50:
-                if current_num is not None:
-                    lines[current_num] = " ".join(current_content)
-                current_num = num
-                current_content = [match.group(2)]
-                continue
-
-        if current_num is not None:
-            if sum(1 for c in stripped if c.isalpha()) >= 2:
-                current_content.append(stripped)
-
-    if current_num is not None:
-        lines[current_num] = " ".join(current_content)
-
-    return lines
+    if leading and 1 not in cols:                                # dropped-leading -> col 1
+        cols[1] = leading
+    return cols
 
 
-def extract_quocngu_text(page: fitz.Page) -> tuple[int | None, dict[int, str]]:
+def extract_quocngu_text(page: fitz.Page) -> tuple[int | None, dict[int, list[str]]]:
     """Extract QN text from a PDF text page.
 
-    Returns: (book_page_number, {line_num: raw_text})
+    Returns: (book_page_number, {column_number: [physical lines]})
     """
     text = page.get_text()
     book_page = extract_book_page_number(page)
@@ -137,18 +171,89 @@ def extract_quocngu_text(page: fitz.Page) -> tuple[int | None, dict[int, str]]:
     return book_page, lines
 
 
-def build_transcription_columns(raw_lines: dict[int, str]) -> list[dict]:
-    """Clean text lines and split into syllable columns."""
+_DASH_RE = re.compile(r"^[-–—]\s*\S")
+_DASH_MARK = re.compile(r"^[-–—]\s*(\w{1,2}\s+)?")     # dash + optional 1-2 char garbled digit
+
+
+def build_transcription_columns(cols_lines: dict[int, list[str]],
+                                total_columns: int = 9) -> list[dict]:
+    """Turn {column_number: [lines]} into exactly `total_columns` syllable columns.
+
+    Merged columns (a lost marker) are split at their TRUE internal boundaries — the
+    dash-prefixed lines that are the corrupted markers — so no content is invented or
+    lost. Only if a block lacks enough dash boundaries is the remainder split by word
+    count (near-uniform columns); such approximate boundaries just send a few edge
+    syllables to REVIEW, never a wrong GOLD label.
+    """
+    # accept both {n: [lines]} (current) and {n: "text"} (legacy) inputs
+    cols_lines = {n: (v if isinstance(v, list) else [v]) for n, v in cols_lines.items()}
+    filled = enforce_column_sequence(cols_lines, total_columns)   # {n: [lines]}, all n present
     columns = []
-    for line_num in sorted(raw_lines.keys()):
-        raw_text = raw_lines[line_num]
+    for n in range(1, total_columns + 1):
+        lines = filled.get(n, [])
+        raw_text = " ".join(lines)
         cleaned = clean_line_text(raw_text)
         syllables = split_to_syllables(cleaned)
         columns.append({
-            "column": line_num,
+            "column": n,
             "raw_text": raw_text,
             "cleaned_text": cleaned,
             "syllables": syllables,
             "num_syllables": len(syllables),
         })
     return columns
+
+
+def _split_lines(lines: list[str], k: int) -> list[list[str]]:
+    """Split `lines` into k contiguous groups. Prefer dash-prefixed lines (corrupted
+    markers) as boundaries; if too few, add cut points by cumulative word count."""
+    if k <= 1:
+        return [lines]
+    n = len(lines)
+    words = [len(x.split()) for x in lines]
+    dash = [i for i in range(1, n) if _DASH_RE.match(lines[i])]
+    if len(dash) >= k - 1:
+        cuts = sorted(dash)[:k - 1]
+    else:
+        cuts = set(dash)
+        total_w = sum(words) or 1
+        cum, j = 0, 1
+        for i in range(1, n):
+            cum += words[i - 1]
+            while j < k and cum >= total_w * j / k:
+                cuts.add(i)
+                j += 1
+        cuts = sorted(cuts)[:k - 1]
+    cutset = sorted(cuts)
+    groups, prev = [], 0
+    for c in cutset:
+        groups.append(lines[prev:c])
+        prev = c
+    groups.append(lines[prev:])
+    while len(groups) < k:
+        groups.append([])
+    groups = groups[:k]
+    # strip the corrupted dash-marker ("- n ..." -> "...") from each split boundary
+    for g in groups[1:]:
+        if g and _DASH_RE.match(g[0]):
+            g[0] = _DASH_MARK.sub("", g[0], count=1).strip()
+    return groups
+
+
+def enforce_column_sequence(cols_lines: dict[int, list[str]], total: int = 9
+                            ) -> dict[int, list[str]]:
+    """Return {1..total: [lines]} — split merged blocks to fill forward gaps."""
+    by = {n: ls for n, ls in cols_lines.items() if 1 <= n <= total and ls}
+    if not by:
+        return {n: [] for n in range(1, total + 1)}
+    present = sorted(by)
+    out: dict[int, list[str]] = {}
+    for idx, cur in enumerate(present):
+        nxt = present[idx + 1] if idx + 1 < len(present) else total + 1
+        span = min(nxt, total + 1) - cur
+        if span <= 1:
+            out[cur] = by[cur]
+            continue
+        for j, part in enumerate(_split_lines(by[cur], span)):     # split merged block
+            out[cur + j] = part
+    return {n: out.get(n, []) for n in range(1, total + 1)}

@@ -28,6 +28,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from core.text.text_utils import is_plausible_qn_syllable
+
 # Visual thresholds for the TRAINED Nôm embedder (visual_signal.NomEncoder).
 # Measured on test split: same-char cosine ~0.80, different-char ~0.50 -> a
 # correct match clears ~0.65 with a ~0.2+ margin. Tune on a held-out set.
@@ -108,8 +110,12 @@ def decide_label(ocr_char: str | None,
             # vision picked a valid dict reading of the syllable -> OCR corrected
             return LabelDecision(s3.top_char, syllable, "SILVER",
                                  "s2_inter_s3_corrected", False)
-        if ocr_char and s3.top_char == ocr_char and not R:
-            # syllable absent from dict (Ext-B variant); vision backs the OCR char
+        if ocr_char and s3.top_char == ocr_char and not R and is_plausible_qn_syllable(syl):
+            # syllable absent from dict (Ext-B variant); vision backs the OCR char.
+            # GUARD: only a PLAUSIBLE syllable may confirm here. A garbage token
+            # ('0'/'2017'/'ch'/'giêgiung') also has empty R, but it is not a real
+            # QN reading, so it must not earn SILVER off S1∩S3 alone — it falls
+            # through to REVIEW. (Legit out-of-dict readings stay: 'atina', 'giu'…)
             return LabelDecision(ocr_char, syllable, "SILVER",
                                  "s1_inter_s3_out_of_dict", False)
 

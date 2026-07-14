@@ -40,6 +40,7 @@ sys.path.insert(0, str(REPO))
 
 from pipeline.step0_setup import load_config                       # noqa: E402
 from core.text.dictionary import load_qn_to_nom, load_similarity_dict  # noqa: E402
+from core.text.text_utils import is_plausible_qn_syllable  # noqa: E402
 from pipeline.align_engine.align_production import align_page          # noqa: E402
 from pipeline.align_engine.consensus import decide_label              # noqa: E402
 from pipeline.align_engine.bbox_fix import tighten_box                # noqa: E402
@@ -63,6 +64,8 @@ def syllable_gate(records, unconf, min_occ=SYL_MIN_OCC, min_pages=SYL_MIN_PAGES,
     for r in records:
         if r["tier"] == "REVIEW" and r["rule"] in unconf and r["ocr_char"]:
             syl = str(r["syllable"]).lower()
+            if not is_plausible_qn_syllable(syl):
+                continue      # garbage ('0'/'2017') must never become a SYLLABLE target
             cnt[r["ocr_char"]][syl] += 1
             pages_of[r["ocr_char"]][syl].add((r["book"], r["page"]))
     syl_ok = set()
@@ -221,7 +224,12 @@ def main():
                 records.append({
                     "book": book[12:], "page": page, "column": p["column"], "idx": idx,
                     "page_png": page_png, "ocr_char": p.get("ocr_char") or "",
-                    "syllable": p["syllable"], "bbox": p.get("bbox"),
+                    # Canonical lowercase syllable for ALL tiers (not just SYLLABLE
+                    # below): the QN→Nôm dict and decide_label are already case-folded,
+                    # so keeping raw OCR case here only fragmented the reading vocabulary
+                    # (Nhị/nhị/NHỊ → 3 classes) and inflated the distinct-syllable count.
+                    # NFC + modern tone-mark placement are already applied upstream (parse_v5).
+                    "syllable": str(p["syllable"]).lower(), "bbox": p.get("bbox"),
                     "tier": dec.tier, "rule": dec.rule_id, "label": dec.label or "",
                     "s3_cosine": round(s3.cosine, 3) if s3 else "",
                 })

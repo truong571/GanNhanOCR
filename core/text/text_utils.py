@@ -346,6 +346,33 @@ def fold_text(text: str) -> str:
     return "".join(c for c in nfd if unicodedata.category(c) != "Mn")
 
 
+# The longest phonotactically-valid Vietnamese syllable ("nghiêng", "nghuyễn") is
+# 7 letters: onset ≤3 (ngh) + nucleus ≤3 (uyê/ươ) + coda ≤2 (ng/nh). Longer runs are
+# OCR merges of ≥2 syllables ("giêgiung", "thoànghoàng").
+_MAX_QN_SYLLABLE_LEN = 7
+_QN_VOWELS = frozenset("aeiouy")
+
+
+def is_plausible_qn_syllable(s: str) -> bool:
+    """True if `s` could be a real Vietnamese Quốc-Ngữ syllable.
+
+    The QN syllable is the ANCHOR tying a crop to its Hán-Nôm reading, so a token
+    that is not a plausible syllable must never confirm a label. Rejects the OCR
+    garbage measured in this corpus:
+      - digit / symbol tokens      '0', '2017', 'r1', 'tinh%'  (leaked markers/refs)
+      - vowel-less consonant stubs 'đ', 'ch', 'g'              (truncated glyphs)
+      - merged multi-syllable runs 'giêgiung', 'thoànghoàng'   (len > 7)
+    Plausible = 1..7 characters, all alphabetic, ≥1 vowel. Folds first, so it is
+    case/diacritic-insensitive and orthogonal to tone/NFC canonicalisation.
+    """
+    s = (s or "").strip()
+    if not (1 <= len(s) <= _MAX_QN_SYLLABLE_LEN):
+        return False
+    if not all(c.isalpha() for c in s):
+        return False
+    return any(c in _QN_VOWELS for c in fold_text(s))
+
+
 def simple_levenshtein(s1: str, s2: str) -> int:
     """Simple Levenshtein distance between two strings."""
     if len(s1) < len(s2):

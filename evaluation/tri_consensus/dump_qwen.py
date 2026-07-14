@@ -19,7 +19,9 @@ from PIL import Image
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent.parent
 sys.path.insert(0, str(REPO))
+sys.path.insert(0, str(HERE))
 from core.image.frame_detector import crop_to_frame            # noqa: E402
+from qwen_client import load_keys, KeyRotator, post             # noqa: E402
 
 QWEN_URL = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
 QWEN_MODEL = "qwen3-vl-flash"
@@ -48,7 +50,7 @@ def frame_pil(page_png, pad=12):
     return Image.fromarray(cv2.cvtColor(crop, cv2.COLOR_BGR2RGB))
 
 
-def call_qwen(pil_img, cache_path, key, model=QWEN_MODEL):
+def call_qwen(pil_img, cache_path, rotator, model=QWEN_MODEL):
     if cache_path.exists():
         return json.loads(cache_path.read_text(encoding="utf-8"))["text"]
     im = pil_img
@@ -56,19 +58,17 @@ def call_qwen(pil_img, cache_path, key, model=QWEN_MODEL):
         r = 2048 / max(im.size); im = im.resize((int(im.width * r), int(im.height * r)))
     buf = io.BytesIO(); im.save(buf, format="PNG")
     b64 = base64.b64encode(buf.getvalue()).decode()
-    body = json.dumps({
+    body = {
         "model": model, "temperature": 0, "max_tokens": 2048,
         "messages": [{"role": "user", "content": [
             {"type": "text", "text": PROMPT},
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{b64}"}}]}],
-    }).encode()
-    req = urllib.request.Request(QWEN_URL, data=body, headers={
-        "Authorization": f"Bearer {key}", "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=120) as r:
-        data = json.loads(r.read())
+    }
+    data = post(body, rotator, url=QWEN_URL, log=lambda m: print(f"  [qwen] {m}"))
     text = data.get("choices", [{}])[0].get("message", {}).get("content", "")
-    cache_path.write_text(json.dumps({"text": text, "usage": data.get("usage", {})},
-                                     ensure_ascii=False, indent=1), encoding="utf-8")
+    cache_path.write_text(json.dumps({"text": text, "usage": data.get("usage", {}),
+                                      "model": model}, ensure_ascii=False, indent=1),
+                          encoding="utf-8")
     return text
 
 
@@ -80,8 +80,8 @@ def main():
     ap.add_argument("--model", default="qwen3-vl-flash")
     ap.add_argument("--out", default="qwen_cache", help="cache subdir under this folder")
     args = ap.parse_args()
-    key = _env("Qwen3-VL-Flash")
-    assert key, "no Qwen3-VL-Flash key in .env"
+    rotator = KeyRotator(load_keys(REPO / ".env"))
+    print(f"[qwen] {len(rotator)} key(s) loaded, round-robin + failover on")
     pg = REPO / "prepared" / args.book / "pages_denoised"
     det = REPO / "prepared" / args.book / "detected"
     out = HERE / args.out; out.mkdir(exist_ok=True)
@@ -92,7 +92,7 @@ def main():
         pil = frame_pil(pg / f"{stem}.png", args.pad)
         if pil is None:
             print(stem, "SKIP (read fail)"); continue
-        text = call_qwen(pil, out / f"{args.book}_{stem}.json", key, args.model)
+        text = call_qwen(pil, out / f"{args.book}_{stem}.json", rotator, args.model)
         cjk = sum(1 for c in text if 0x3400 <= ord(c) <= 0x9FFF or 0x20000 <= ord(c) <= 0x2A6DF)
         print(f"{stem}: frame-crop {pil.size} -> qwen {cjk} CJK chars")
     print(f"-> {out}")

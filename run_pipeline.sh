@@ -22,10 +22,12 @@ if [[ ! -x "$PY" ]]; then
     exit 1
 fi
 
-# Load .env (SN_OCR_TOKEN, GEMINI_API_KEY, ...) so child processes see them
+# Load .env (SN_OCR_TOKEN, GEMINI_API_KEY, ...) so child processes see them.
+# Chỉ source biến có TÊN HỢP LỆ bash — bỏ Qwen3-VL1/2 (có dấu '-', Python đọc .env
+# trực tiếp cho các key đó). Nếu source cả file, dòng có '-' sẽ vỡ + lộ key.
 if [[ -f .env ]]; then
     set -a
-    source .env
+    source <(grep -E '^[A-Za-z_][A-Za-z0-9_]*=' .env) 2>/dev/null || true
     set +a
 fi
 

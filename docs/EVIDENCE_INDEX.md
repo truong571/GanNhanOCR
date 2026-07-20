@@ -129,6 +129,29 @@ tar xzf ~/ThS_archive/backup_2026-07-20/repro_assets_2026-07-20.tgz -C <đích> 
 
 ---
 
+## 4.2. DỮ LIỆU NGOÀI ĐÃ CHUYỂN KHỎI REPO (Giai đoạn 2, 2026-07-20)
+
+Vị trí: `~/ThS_archive/external_data/` — có `MANIFEST.md` ghi nguồn gốc và cách khôi phục cho từng mục.
+
+| Mục | Cỡ | Nguồn | Vì sao chuyển đi |
+|---|---|---|---|
+| `MTH_TKHMTH2200` | 4,7 GB | HCIILAB (SCUT), `github.com/HCIILAB/TKH_MTH_Datasets_Release` | Dữ liệu pretrain detector (~1,08M box). Đã kết tinh vào checkpoint đang dùng → chỉ cần khi **pretrain lại**. Còn tham chiếu ở `train_crop/build_mth_pretrain.py` nhưng script có cờ `--mth-root` để trỏ lại. |
+| `kkanji2` | 549 MB | Kuzushiji-Kanji (CODH), 3.832 lớp | **0 tham chiếu** trong toàn repo (đã grep `*.py *.sh *.ipynb *.yaml`). Tải về cân nhắc pretrain nhưng cuối cùng dùng MTH/TKH vì cùng miền hơn. |
+| `font_diffusion_ckpt_failed` | 1,3 GB | Các lần train FontDiffuser **không thành công** (FST mất step cuối 9k/15k) | Checkpoint đang dùng là `font_diffusion/ckpt/PROD/` — **vẫn giữ trong repo**. |
+
+**Giữ lại trong repo có chủ ý**: `MTH/MTHv2_Datasets_Release/` (2 MB — readme + train/test split, cần trích dẫn trong luận văn) và `font_diffusion/ckpt/PROD/` (383 MB — sinh ra kho glyph `gannhanocr-fd`).
+
+**Không ảnh hưởng tín hiệu S3**: kho glyph đã sinh (`gannhanocr-fd`, 89.898 file) là submodule HuggingFace, không nằm trong số đã chuyển đi.
+
+Khôi phục khi cần pretrain lại detector:
+```bash
+python train_crop/build_mth_pretrain.py --mth-root ~/ThS_archive/external_data/MTH_TKHMTH2200
+```
+
+**Kết quả**: repo 15 GB → **8,9 GB** (−6,1 GB). Cổng nghiệm thu đã qua: selftest vẫn **212/11 khớp mốc**, toàn bộ import production sạch, `build_mth_pretrain.py` vẫn import được.
+
+---
+
 ## 5. TRẠNG THÁI KIỂM ĐỊNH (selftest)
 
 **Mốc 2026-07-20: 212 passed, 11 failed** — chạy bằng `bash scripts/run_all_selftests.sh`.

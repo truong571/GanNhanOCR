@@ -38,24 +38,65 @@ REPO = Path(__file__).resolve().parents[2]
 # verdict (human-audit) -> nhãn nhị phân y cho fuser
 _VERDICT_Y = {"correct": 1.0, "wrong_label": 0.0, "wrong_image": 0.0, "unsure": np.nan}
 
+# Nguồn verdict do MÁY chấm. MẶC ĐỊNH bị loại: nếu nạp verdict AI làm nhãn y để hiệu chỉnh
+# fuser, ta biến nhãn máy thành "ground truth" (đúng blocker khoa học "SILVER = AI-audit").
+AI_VERDICT_SOURCES = {"ai_vision"}
 
-def _load_verdicts(gt_dir: Path) -> dict[str, str]:
-    """Gộp mọi verdicts_*.jsonl theo item_id (batch sau ghi đè batch trước)."""
+
+def verdict_source(rec: dict) -> str:
+    """Nguồn của một bản ghi verdict; vắng trường `source` => coi là người chấm."""
+    return str(rec.get("source") or "human").strip().lower()
+
+
+def load_verdicts(gt_dir: Path, include_ai: bool = False,
+                  tag: str = "fuse_stage") -> dict[str, str]:
+    """Gộp mọi verdicts_*.jsonl theo item_id (batch sau ghi đè batch trước).
+
+    Quét ĐỆ QUY vì file verdict thật nằm trong thư mục con (audit_SILVER/verdicts_ai.jsonl).
+    MẶC ĐỊNH chỉ nhận verdict của NGƯỜI; verdict source ∈ AI_VERDICT_SOURCES bị bỏ qua trừ
+    khi khai báo tường minh include_ai=True (--include-ai-verdicts).
+    """
     verd: dict[str, str] = {}
-    for f in sorted(glob.glob(str(gt_dir / "verdicts_*.jsonl"))):
+    kept: dict[str, int] = {}
+    skipped: dict[str, int] = {}
+    files = sorted(glob.glob(str(gt_dir / "**" / "verdicts_*.jsonl"), recursive=True))
+    for f in files:
         with open(f, encoding="utf-8") as fh:
             for line in fh:
                 if line.strip():
                     r = json.loads(line)
+                    src = verdict_source(r)
+                    if src in AI_VERDICT_SOURCES and not include_ai:
+                        skipped[src] = skipped.get(src, 0) + 1
+                        continue
+                    kept[src] = kept.get(src, 0) + 1
                     verd[str(r["item_id"])] = str(r["verdict"])
+    report_verdict_sources(tag, files, kept, skipped, include_ai)
     return verd
 
 
+def report_verdict_sources(tag: str, files: list[str], kept: dict[str, int],
+                           skipped: dict[str, int], include_ai: bool) -> None:
+    """In minh bạch: nạp bao nhiêu / bỏ bao nhiêu verdict, theo từng nguồn."""
+    def _fmt(d: dict[str, int]) -> str:
+        return ", ".join(f"{k}={v}" for k, v in sorted(d.items())) or "0"
+    print(f"[{tag}] verdicts: {len(files)} file, nạp {sum(kept.values())} ({_fmt(kept)}), "
+          f"bỏ qua {sum(skipped.values())} ({_fmt(skipped)})")
+    if skipped:
+        n_ai = sum(skipped.values())
+        print(f"[cảnh báo] bỏ qua {n_ai} verdict source=ai_vision "
+              f"(dùng --include-ai-verdicts nếu thực sự muốn)")
+    if include_ai and kept:
+        ai_kept = sum(v for k, v in kept.items() if k in AI_VERDICT_SOURCES)
+        if ai_kept:
+            print(f"[cảnh báo] ĐANG dùng {ai_kept} verdict do MÁY chấm làm nhãn — "
+                  f"kết quả KHÔNG phải ground truth người chấm, chỉ dùng để thăm dò")
+
+
 def _load_item_to_image(gt_dir: Path) -> dict[str, str]:
-    """audit_gold/manifest.jsonl: item_id -> image path (khớp cột `image` của labels)."""
+    """manifest.jsonl (quét đệ quy): item_id -> image path (khớp cột `image` của labels)."""
     id2img: dict[str, str] = {}
-    man = gt_dir / "audit_gold" / "manifest.jsonl"
-    if man.exists():
+    for man in sorted(glob.glob(str(gt_dir / "**" / "manifest.jsonl"), recursive=True)):
         with open(man, encoding="utf-8") as fh:
             for line in fh:
                 if line.strip():
@@ -104,7 +145,7 @@ def build_channels(rem: pd.DataFrame, verd: dict[str, str],
     return ch
 
 
-def run(config: str, tau: float, l2: float) -> dict:
+def run(config: str, tau: float, l2: float, include_ai: bool = False) -> dict:
     cfg = yaml.safe_load((REPO / config).read_text())
     paths = cfg["paths"]
     out_root = REPO / cfg.get("output", {}).get("dir", "dataset_out")
@@ -116,10 +157,11 @@ def run(config: str, tau: float, l2: float) -> dict:
     if not rem_path.exists():
         print(f"[fuse_stage] SKIP: thiếu {rem_path} (chạy Giai đoạn 1 remediation trước)")
         return {"skipped": "no_remediated"}
-    verd = _load_verdicts(gt_dir)
+    verd = load_verdicts(gt_dir, include_ai=include_ai)
     id2img = _load_item_to_image(gt_dir)
     if not verd or not id2img:
-        print(f"[fuse_stage] SKIP: thiếu verdicts/manifest trong {gt_dir} (chạy Giai đoạn 0)")
+        print(f"[fuse_stage] SKIP: thiếu verdicts NGƯỜI chấm/manifest trong {gt_dir} "
+              f"(chạy Giai đoạn 0; --include-ai-verdicts nếu muốn dùng verdict máy)")
         return {"skipped": "no_verdicts"}
 
     rem = pd.read_csv(rem_path, dtype={"image_md5": str})
@@ -183,6 +225,8 @@ def run(config: str, tau: float, l2: float) -> dict:
         "tier_demote_suggested": int(demote.sum()),
         "crops_scored": int(len(out)),
         "tau_promote": tau,
+        "include_ai_verdicts": bool(include_ai),
+        "verdict_label_source": "ai+human" if include_ai else "human_only",
         "channels_present": ["s3", "dict"],
         "channels_absent": ["qwen", "nna_lobo"],
         "note": "Path A overlay: non-destructive; heavy channels absent; n_eff needs >=2 votes (Path B).",
@@ -205,12 +249,15 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--config", default="config/pipeline.yaml")
     p.add_argument("--tau", type=float, default=0.90, help="ngưỡng P hiệu chỉnh để promote GOLD")
     p.add_argument("--l2", type=float, default=1.0)
+    p.add_argument("--include-ai-verdicts", action="store_true",
+                   help="CHO PHÉP dùng verdict do MÁY chấm (source=ai_vision) làm nhãn y; "
+                        "mặc định TẮT — chỉ verdict người chấm mới được coi là ground truth")
     return p
 
 
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    run(args.config, args.tau, args.l2)
+    run(args.config, args.tau, args.l2, include_ai=args.include_ai_verdicts)
     return 0
 
 

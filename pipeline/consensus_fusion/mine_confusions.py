@@ -31,32 +31,45 @@ import pandas as pd
 import yaml
 
 from core.text.dictionary import load_qn_to_nom
+from .fuse_stage import AI_VERDICT_SOURCES, report_verdict_sources, verdict_source
 
 REPO = Path(__file__).resolve().parents[2]
 _WRONG = {"wrong_label", "wrong_image"}
 
 
-def _audit_verdict_by_image() -> dict[str, str]:
+def _audit_verdict_by_image(include_ai: bool = False) -> dict[str, str]:
+    """image -> verdict. Quét ĐỆ QUY (verdict nằm trong audit_*/), và MẶC ĐỊNH chỉ lấy
+    verdict NGƯỜI chấm: đo tỉ lệ sai bằng nhãn máy là tự xác nhận vòng tròn."""
     gt = REPO / "dataset_out" / "ground_truth"
     id2img = {}
-    with open(gt / "audit_gold" / "manifest.jsonl", encoding="utf-8") as fh:
-        for line in fh:
-            if line.strip():
-                m = json.loads(line)
-                id2img[str(m["item_id"])] = str(m["image"])
+    for man in sorted(glob.glob(str(gt / "**" / "manifest.jsonl"), recursive=True)):
+        with open(man, encoding="utf-8") as fh:
+            for line in fh:
+                if line.strip():
+                    m = json.loads(line)
+                    id2img[str(m["item_id"])] = str(m["image"])
     out = {}
-    for f in sorted(glob.glob(str(gt / "verdicts_*.jsonl"))):
+    kept: dict[str, int] = {}
+    skipped: dict[str, int] = {}
+    files = sorted(glob.glob(str(gt / "**" / "verdicts_*.jsonl"), recursive=True))
+    for f in files:
         with open(f, encoding="utf-8") as fh:
             for line in fh:
                 if line.strip():
                     r = json.loads(line)
+                    src = verdict_source(r)
+                    if src in AI_VERDICT_SOURCES and not include_ai:
+                        skipped[src] = skipped.get(src, 0) + 1
+                        continue
+                    kept[src] = kept.get(src, 0) + 1
                     img = id2img.get(str(r["item_id"]))
                     if img is not None:
                         out[img] = str(r["verdict"])   # image -> verdict
+    report_verdict_sources("mine_confusions", files, kept, skipped, include_ai)
     return out
 
 
-def run(top: int) -> pd.DataFrame:
+def run(top: int, include_ai: bool = False) -> pd.DataFrame:
     root = REPO / "dataset_out"
     # Base = labels_remediated (chứa đủ 846 crop audited, gồm yen4/yen11 mà labels.csv
     # thiếu). Dedup theo image (bug duplicate-export). Chỉ nhãn char còn tin (GOLD/SILVER).
@@ -68,7 +81,7 @@ def run(top: int) -> pd.DataFrame:
     cfg = yaml.safe_load((REPO / "config" / "pipeline.yaml").read_text())
     qn = load_qn_to_nom(str(REPO / cfg["paths"]["qn_to_nom_dict"]))
 
-    verd = _audit_verdict_by_image()          # image -> verdict (846)
+    verd = _audit_verdict_by_image(include_ai)   # image -> verdict (chỉ người chấm)
     df = df.copy()
     df["verdict"] = df["image"].map(verd)      # NaN nếu crop này chưa được audit
     df["audited"] = df["verdict"].notna()
@@ -136,8 +149,10 @@ def run(top: int) -> pd.DataFrame:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="pipeline.consensus_fusion.mine_confusions")
     ap.add_argument("--top", type=int, default=40)
+    ap.add_argument("--include-ai-verdicts", action="store_true",
+                    help="CHO PHÉP đếm verdict do MÁY chấm (source=ai_vision); mặc định TẮT")
     args = ap.parse_args(argv)
-    run(args.top)
+    run(args.top, include_ai=args.include_ai_verdicts)
     return 0
 
 

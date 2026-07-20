@@ -195,10 +195,20 @@ def test_grid(sample: pd.DataFrame) -> None:
         leaked = [w for w in ("s1_inter_s2", "dup_defect", "GOLD", "SILVER", "stratum")
                   if w in html_text]
         check("html is blinded (no tier/rule/stratum)", not leaked, f"leaked={leaked}")
-        # manifest DOES carry the hidden fields
-        check("manifest carries hidden fields",
-              all(k in manifest[0] for k in ("tier", "rule", "stratum", "label")))
-        check("manifest has design_weight", "design_weight" in manifest[0])
+        # manifest DOES carry the hidden fields.
+        # GUARD: khi thiếu ảnh crop (vd chạy trên clone sạch — crop bị gitignore),
+        # grid trả items=0 -> manifest rỗng -> manifest[0] ném IndexError, làm CẢ suite
+        # crash và KHÔNG in dòng RESULT. Hậu quả: 56 assertion còn lại biến mất khỏi
+        # báo cáo và run_all_selftests.sh chuyển từ "FAIL có số" sang "không chạy được".
+        # Biến kiểm định thành MÙ còn nguy hiểm hơn một assertion đỏ -> phải fail có số.
+        if not manifest:
+            check("manifest carries hidden fields", False,
+                  "manifest RỖNG (grid ra 0 item — thiếu ảnh crop?), bỏ qua 2 assertion sau")
+            check("manifest has design_weight", False, "manifest RỖNG")
+        else:
+            check("manifest carries hidden fields",
+                  all(k in manifest[0] for k in ("tier", "rule", "stratum", "label")))
+            check("manifest has design_weight", "design_weight" in manifest[0])
 
 
 # --------------------------------------------------------------------------- #

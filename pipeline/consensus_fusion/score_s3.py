@@ -31,6 +31,7 @@ import pandas as pd
 import yaml
 
 from . import fusion
+from .fuse_stage import AI_VERDICT_SOURCES, report_verdict_sources, verdict_source
 
 REPO = Path(__file__).resolve().parents[2]
 _VERDICT_Y = {"correct": 1.0, "wrong_label": 0.0, "wrong_image": 0.0, "unsure": np.nan}
@@ -75,21 +76,33 @@ def score_crop(vs3, crop_path: str, label: str) -> dict:
     return out
 
 
-def _load_audited() -> list[dict]:
+def _load_audited(include_ai: bool = False) -> list[dict]:
+    """Crop đã được audit + verdict. Quét ĐỆ QUY (verdict nằm trong audit_*/); MẶC ĐỊNH chỉ
+    lấy verdict NGƯỜI chấm — đo AUC của S3 trên nhãn máy là đo lại chính máy."""
     gt = REPO / "dataset_out" / "ground_truth"
     man = {}
-    with open(gt / "audit_gold" / "manifest.jsonl", encoding="utf-8") as fh:
-        for line in fh:
-            if line.strip():
-                m = json.loads(line)
-                man[str(m["item_id"])] = m
+    for mf in sorted(glob.glob(str(gt / "**" / "manifest.jsonl"), recursive=True)):
+        with open(mf, encoding="utf-8") as fh:
+            for line in fh:
+                if line.strip():
+                    m = json.loads(line)
+                    man[str(m["item_id"])] = m
     verd = {}
-    for f in sorted(glob.glob(str(gt / "verdicts_*.jsonl"))):
+    kept: dict[str, int] = {}
+    skipped: dict[str, int] = {}
+    files = sorted(glob.glob(str(gt / "**" / "verdicts_*.jsonl"), recursive=True))
+    for f in files:
         with open(f, encoding="utf-8") as fh:
             for line in fh:
                 if line.strip():
                     r = json.loads(line)
+                    src = verdict_source(r)
+                    if src in AI_VERDICT_SOURCES and not include_ai:
+                        skipped[src] = skipped.get(src, 0) + 1
+                        continue
+                    kept[src] = kept.get(src, 0) + 1
                     verd[str(r["item_id"])] = str(r["verdict"])
+    report_verdict_sources("score_s3", files, kept, skipped, include_ai)
     rows = []
     for item_id, v in verd.items():
         m = man.get(item_id)
@@ -101,8 +114,12 @@ def _load_audited() -> list[dict]:
 
 
 def cmd_validate(args) -> None:
+    rows = _load_audited(include_ai=args.include_ai_verdicts)
+    if not rows:
+        print("[validate] SKIP: không có verdict NGƯỜI chấm nào "
+              "(dùng --include-ai-verdicts nếu muốn đo trên verdict máy)")
+        return
     vs3 = _load_vs3()
-    rows = _load_audited()
     root = REPO / "dataset_out"
     print(f"[validate] chấm {len(rows)} crop audited theo NHÃN đã gán ...", flush=True)
     recs = []
@@ -166,6 +183,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--validate", action="store_true", help="đo AUC tín hiệu S3 trên 846 verdict")
     ap.add_argument("--all", action="store_true", help="chấm mọi crop char -> s3_corpus.csv")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--include-ai-verdicts", action="store_true",
+                    help="CHO PHÉP đo trên verdict do MÁY chấm (source=ai_vision); mặc định TẮT")
     args = ap.parse_args(argv)
     if args.validate:
         cmd_validate(args)

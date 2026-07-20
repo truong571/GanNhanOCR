@@ -1,6 +1,6 @@
 """CLI for Giai đoạn 3 — Công bố đạt chuẩn quốc tế.
 
-    .venv/bin/python -m pipeline.publish all           # split -> metadata -> datasheet -> validate
+    .venv/bin/python -m pipeline.publish all           # split -> metadata -> datasheet -> export -> validate
     .venv/bin/python -m pipeline.publish split
     .venv/bin/python -m pipeline.publish metadata
     .venv/bin/python -m pipeline.publish datasheet
@@ -27,12 +27,18 @@ RELEASE = DATASET_OUT / "release"
 def _labels_path(explicit: str | None) -> Path:
     if explicit:
         return Path(explicit)
-    rem = DATASET_OUT / "labels_remediated.csv"          # prefer the Phase-1 output
-    return rem if rem.exists() else DATASET_OUT / "labels.csv"
+    # official order: confusion-fixed (Phase-2) -> remediated (Phase-1) -> raw
+    for name in ("labels_final.csv", "labels_remediated.csv"):
+        cand = DATASET_OUT / name
+        if cand.exists():
+            return cand
+    return DATASET_OUT / "labels.csv"
 
 
 def _load(args) -> pd.DataFrame:
-    return pd.read_csv(_labels_path(args.labels), dtype={"image_md5": str})
+    path = _labels_path(args.labels)
+    print(f"[labels] using {path}")
+    return pd.read_csv(path, dtype={"image_md5": str})
 
 
 def _stats(df: pd.DataFrame) -> dict:
@@ -113,13 +119,14 @@ def cmd_datasheet(args) -> None:
 def cmd_export(args) -> None:
     df = _load(args)
     df, _ = _published_frame(df)
-    if args.sample:
+    sample = getattr(args, "sample", 0) or 0           # 0/None = full export
+    if sample:
         cl = export_mod.char_labeled(df)
-        keep = cl.sample(min(args.sample, len(cl)), random_state=42).index
+        keep = cl.sample(min(sample, len(cl)), random_state=42).index
         df = df.loc[keep].copy()                       # only the sampled crops (consistent)
     names = export_mod.class_names(df)
     dd = DATASET_OUT
-    parquet_dir = RELEASE / ("parquet_sample" if args.sample else "parquet")
+    parquet_dir = RELEASE / ("parquet_sample" if sample else "parquet")
     dsd = export_mod.build_hf_dataset(df, dd, names, split_col="split")
     parquet_dir.mkdir(parents=True, exist_ok=True)
     for sp, ds in dsd.items():
@@ -150,14 +157,16 @@ def cmd_all(args) -> None:
     cmd_split(args)
     cmd_metadata(args)
     cmd_datasheet(args)
-    cmd_validate(args)
+    cmd_export(args)                                   # parquet/ + imagefolder/ + crops on disk
+    cmd_validate(args)                                 # needs the exported files to exist
     print("[all] release artifacts ready in", RELEASE)
 
 
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="pipeline.publish",
                                 description="Giai đoạn 3 — Công bố đạt chuẩn quốc tế")
-    p.add_argument("--labels", default=None, help="labels csv (default: labels_remediated)")
+    p.add_argument("--labels", default=None,
+                   help="labels csv (default: labels_final -> labels_remediated -> labels)")
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("split").set_defaults(func=cmd_split)
     sub.add_parser("metadata").set_defaults(func=cmd_metadata)
@@ -168,7 +177,9 @@ def build_parser() -> argparse.ArgumentParser:
     v = sub.add_parser("validate")
     v.add_argument("--no-files", action="store_true", help="skip on-disk crop check")
     v.set_defaults(func=cmd_validate)
-    sub.add_parser("all").set_defaults(func=cmd_all)
+    a = sub.add_parser("all")
+    a.add_argument("--sample", type=int, default=0, help="export only N crops (smoke)")
+    a.set_defaults(func=cmd_all)
     return p
 
 

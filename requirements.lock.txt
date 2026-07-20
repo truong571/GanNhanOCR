@@ -96,7 +96,11 @@ transformers==5.9.0
 typer==0.25.1
 typing_extensions==4.15.0
 urllib3==2.7.0
-vietocr==0.3.13
+# vietocr==0.3.13   <-- CỐ Ý COMMENT: KHÔNG cài qua -r được.
+#   Metadata của vietocr pin pillow==10.2.0 / einops==0.2.0, xung đột trực tiếp
+#   với pillow 12.2.0 + einops 0.8.2 ở chính file này, và pillow 10.2.0 không có
+#   wheel cho py3.14 (build từ source là lỗi). Cài RIÊNG sau cùng:
+#       pip install --no-deps vietocr==0.3.13
 xxhash==3.7.0
 yarl==1.24.2
 zipp==4.1.0

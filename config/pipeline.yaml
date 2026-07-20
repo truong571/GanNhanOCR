@@ -4,15 +4,19 @@
   # of the corresponding Sach* "Sách Các Thánh Truyện" full books (same scans,
   # same text), so processing both would double-count training data.
   # All books re-OCR'd with VietOCR (2-pass beam + greedy for text + confidence).
+  # 2026-07-20: các file PDF trên đĩa đã được đổi tên SachThanhTruyen{2,4,11}.pdf
+  # -> STT{2,4,11}.pdf. `name:` CỐ Ý GIỮ NGUYÊN SachThanhTruyen* vì tên sách đi vào
+  # tên crop (vd yen2_page_0012_c01_000.png) và cột `book` trong dataset_out/labels.csv;
+  # đổi `name` sẽ phá toàn bộ liên kết bằng chứng đã sinh.
 books:
   - name: SachThanhTruyen2
-    pdf: Data/SachThanhTruyen2.pdf
+    pdf: Data/STT2.pdf
     reocr: true
   - name: SachThanhTruyen4
-    pdf: Data/SachThanhTruyen4.pdf
+    pdf: Data/STT4.pdf
     reocr: true
   - name: SachThanhTruyen11
-    pdf: Data/SachThanhTruyen11.pdf
+    pdf: Data/STT11.pdf
     reocr: true
 
 paths:
@@ -47,7 +51,13 @@ step1:
   #   dbnet            - PaddleOCR DB detector (handles skew, warps lines flat)
   #   projection_deskew- estimate page skew, deskew, then projection (no extra dep)
   #   projection       - original raw projection profile (legacy / A-B baseline)
-  qn_line_detector: auto
+  # 2026-07-21: GHIM CỨNG, KHÔNG để `auto`.
+  # `auto` = dbnet nếu máy có paddleocr, ngược lại projection_deskew
+  # (core/ocr/line_detector.py:54). Môi trường sinh ra số liệu luận văn là
+  # py3.14 KHÔNG có paddleocr -> đã chạy projection_deskew. Nếu để `auto`,
+  # một máy khác có paddleocr sẽ tách dòng bằng backend KHÁC mà không báo gì,
+  # cho ra số liệu lệch âm thầm.
+  qn_line_detector: projection_deskew
 
 step2:
   deletion_cost_small: 0.3

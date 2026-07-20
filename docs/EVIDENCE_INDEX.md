@@ -28,7 +28,7 @@ Ba điều phải khai báo, không được giấu:
 | `f47f431abd` | chore(cleanup): xoá mã chết + vá bug ghi đè `fused.csv` + chốt mốc selftest | Nhóm A kiểm kê 2026-07-20 |
 | tag `freeze-pre-thesis-2026-07-20` | Điểm đóng băng Giai đoạn 0 | Mọi bằng chứng tính đến ngày này |
 
-**Cảnh báo**: nhánh `feat/phases-0-3-audit-pipeline` **chưa được push**. `origin/main` mới ở `cdf68821e4`. Toàn bộ bằng chứng hiện chỉ tồn tại trên máy này + 2 gói sao lưu ở §4.
+**Trạng thái remote** (cập nhật 2026-07-20 23:3x): nhánh `feat/phases-0-3-audit-pipeline` **đã push** lên `github.com:truong571/GanNhanOCR.git` tại `9da646c5c4`, kèm tag `freeze-pre-thesis-2026-07-20`. Xác minh: local HEAD = remote HEAD; remote có đủ **54 file** `dataset_out/ground_truth/` + `labels_final.csv`. `main` vẫn ở `cdf68821e4` (chưa merge — thuộc Giai đoạn 1).
 
 ---
 

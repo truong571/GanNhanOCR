@@ -20,12 +20,12 @@
 
 > Đây là việc duy nhất có rủi ro mất trắng thật sự, và đã xảy ra một lần.
 
-- [ ] Sao lưu **lạnh** ra ngoài repo TRƯỚC mọi lệnh git:
+- [x] Sao lưu **lạnh** ra ngoài repo TRƯỚC mọi lệnh git (`5 gói`, đã verify + bung/clone thử):
   `tar czf ~/ThS_archive/evidence_2026-07-20.tgz dataset_out/ground_truth dataset_out/fusion dataset_out/labels_final.csv config/confusion_fixes.yaml` + ghi sha256 + bung thử vào `/tmp`
-- [ ] Commit theo 4 nhóm tách bạch (để log kể được câu chuyện, dễ trích commit-hash vào luận văn):
+- [x] Commit *(bằng chứng đã nằm sẵn ở `f78dbc4da5`; 4 nhóm được liệt kê trong `EVIDENCE_INDEX` §2-bis vì không rebase được)* (để log kể được câu chuyện, dễ trích commit-hash vào luận văn):
   (a) 7 file .py Giai đoạn 0–2 · (b) `config/confusion_fixes.yaml` · (c) toàn bộ `dataset_out/ground_truth/**` + `labels_final.csv` + `confusion_fix_report.json` + `dataset_out/fusion/**` · (d) tài liệu `.md` + `.html`
-- [ ] `git tag freeze-pre-thesis-2026-07-20` + push branch kèm tag
-- [ ] Viết `docs/EVIDENCE_INDEX.md`: mỗi artifact → commit-hash + sha256 + lệnh sinh ra nó. **Ghi thẳng dòng**: *"verdicts_001–006.jsonl gốc ĐÃ MẤT, chỉ còn dẫn xuất verdicts_reanchored.csv"* và *"FLOW_TONG_THE_CHOT là bản phục dựng từ transcript"*.
+- [x] `git tag freeze-pre-thesis-2026-07-20` + push branch kèm tag *(thêm 2 tag: `freeze-features-2026-07-20`, `state-post-phase2-2026-07-21`)*
+- [x] Viết `docs/EVIDENCE_INDEX.md`: mỗi artifact → commit-hash + sha256 + lệnh sinh ra nó. **Ghi thẳng dòng**: *"verdicts_001–006.jsonl gốc ĐÃ MẤT, chỉ còn dẫn xuất verdicts_reanchored.csv"* và *"FLOW_TONG_THE_CHOT là bản phục dựng từ transcript"*.
 
 **Xong khi**: `git status --porcelain | grep -c '^??'` = 0 · tag có trên remote · file backup bung thử được, khớp sha256.
 
@@ -35,11 +35,11 @@
 
 > Đóng 2 lỗ hổng tái lập thật, không chạm cấu trúc thư mục. Đây là câu Q&A số 7 của hội đồng.
 
-- [ ] Xử lý `gannhanocr-fd` đang dirty trước (kho 89.898 glyph, phụ thuộc BẮT BUỘC của SILVER)
-- [ ] Khai đủ 4 gitlink vào `.gitmodules` (hiện chỉ có `font_diffusion`; `git submodule status` đang FATAL)
-- [ ] Bổ sung `pandas` vào `requirements.txt` + sinh `requirements.lock.txt`
-- [ ] Kiểm chứng bằng **clone sạch** vào `/tmp` rồi chạy 1 selftest trong đó
-- [ ] Merge branch vào `main` → **TUYÊN BỐ CODE-FREEZE TÍNH NĂNG**
+- [x] Xử lý `gannhanocr-fd` đang dirty → `ignore = dirty` (ảo giác bộ lọc LFS, dữ liệu nguyên vẹn) trước (kho 89.898 glyph, phụ thuộc BẮT BUỘC của SILVER)
+- [x] Khai đủ 4 gitlink vào `.gitmodules` (hiện chỉ có `font_diffusion`; `git submodule status` đang FATAL)
+- [x] Bổ sung `pandas`+`pyarrow` + sinh `requirements.lock.txt` *(và vá dòng `vietocr` khiến lock không cài được)*
+- [x] Kiểm chứng bằng **clone sạch** vào `/tmp` rồi chạy 1 selftest trong đó
+- [x] Merge branch vào `main` → **TUYÊN BỐ CODE-FREEZE TÍNH NĂNG**
 
 **Xong khi**: `git submodule status` exit 0, in 4 dòng, không dòng nào có tiền tố `-` hay `+` · clone sạch chạy được selftest.
 
@@ -51,8 +51,8 @@
 
 - [x] ~~Xoá `__pycache__` (17 thư mục), `.DS_Store` (8), `.vscode/`~~ — **ĐÃ LÀM 2026-07-20**
 - [x] ~~5 việc Nhóm A: vá bug `--out` đè `fused.csv`; xoá 3 hàm chết `core/image/`; xoá `ranker.generate_fontdiffusion_image`; xoá `run_full.load_similar`; thêm `scripts/run_all_selftests.sh`~~ — **ĐÃ LÀM, −160 LOC, selftest giữ nguyên 212/11**
-- [ ] Chuyển ra kho ngoài (đều đã gitignore): `kkanji2/` (549 MB, 0 tham chiếu), `MTH/TKHMTH2200/` (4,7 GB) → `~/ThS_archive/`, ghi sha256 + URL nguồn vào `EVIDENCE_INDEX.md`. **Giữ** `MTH/MTHv2_Datasets_Release/` (cần trích dẫn).
-- [ ] Gom file mồ côi bằng `git mv`: `ccrclip.pdf` → `docs/refs/`; `scripts/*ppocrv5*` → `scripts/_retired/` (**vẫn tracked** — là bằng chứng duy nhất cho câu "đã thử và loại Paddle" ở Chương 4.4)
+- [x] Chuyển ra kho ngoài (−6,1 GB; sha256 ở `docs/data_manifest/`): `kkanji2/` (549 MB, 0 tham chiếu), `MTH/TKHMTH2200/` (4,7 GB) → `~/ThS_archive/`, ghi sha256 + URL nguồn vào `EVIDENCE_INDEX.md`. **Giữ** `MTH/MTHv2_Datasets_Release/` (cần trích dẫn).
+- [x] Gom file mồ côi bằng `git mv`: `ccrclip.pdf` → `docs/refs/`; `scripts/*ppocrv5*` → `scripts/_retired/` (**vẫn tracked** — là bằng chứng duy nhất cho câu "đã thử và loại Paddle" ở Chương 4.4)
 
 **VÙNG CẤM**: `pipeline/`, `core/`, `config/`, `dict/`, `Data/`, `prepared/`, `dataset_out/`, `train_crop/`, 4 gitlink. Không tạo `src/`, không viết `paths.py`, không dời `s3_proto_cache.pkl` / `s3_calibration.json` / `align_engine/data/index.csv`.
 

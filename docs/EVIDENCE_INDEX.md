@@ -28,7 +28,28 @@ Ba điều phải khai báo, không được giấu:
 | `f47f431abd` | chore(cleanup): xoá mã chết + vá bug ghi đè `fused.csv` + chốt mốc selftest | Nhóm A kiểm kê 2026-07-20 |
 | tag `freeze-pre-thesis-2026-07-20` | Điểm đóng băng Giai đoạn 0 | Mọi bằng chứng tính đến ngày này |
 
-**Trạng thái remote** (cập nhật 2026-07-20 23:3x): nhánh `feat/phases-0-3-audit-pipeline` **đã push** lên `github.com:truong571/GanNhanOCR.git` tại `9da646c5c4`, kèm tag `freeze-pre-thesis-2026-07-20`. Xác minh: local HEAD = remote HEAD; remote có đủ **54 file** `dataset_out/ground_truth/` + `labels_final.csv`. `main` vẫn ở `cdf68821e4` (chưa merge — thuộc Giai đoạn 1).
+**Trạng thái remote** (cập nhật 2026-07-21): `main` = `feat/phases-0-3-audit-pipeline` = remote, đều đã push lên `github.com:truong571/GanNhanOCR.git`. Remote có đủ **54 file** `dataset_out/ground_truth/` + `labels_final.csv` và **3 tag**.
+
+### 2-bis. Nội dung commit `f78dbc4da5` theo 4 nhóm
+
+Commit này gộp **76 file** vào một lần với message `"update code"`. Không tách lại được (đã push, hash đã trích dẫn, `CODE_FREEZE.md` cấm viết lại SHA), nên liệt kê ở đây để **log vẫn kể được câu chuyện**:
+
+| Nhóm | Nội dung |
+|---|---|
+| (a) 7 file `.py` | `consensus_fusion/{fuse_stage,mine_confusions,score_s3}.py` · `ground_truth/{batch_json,make_audit_batch,reanchor_verdicts}.py` · `remediation/confusion_fix.py` |
+| (b) Cấu hình quyết định nhãn | `config/confusion_fixes.yaml` |
+| (c) Bằng chứng | `dataset_out/ground_truth/**` (54 file) · `labels_final.csv` · `confusion_fix_report.json` · `dataset_out/fusion/**` |
+| (d) Tài liệu | `DE_XUAT_HOAN_THIEN_LUAN_VAN_2026-07-20.md` · `KIEM_KE_FILE_VA_LO_TRINH_2026-07-20.html` |
+
+⚠️ Commit này **đồng thời gỡ `Data/SachThanhTruyen{2,4,11}.pdf` khỏi tracking** (Bin → 0 bytes) — một hành vi khác loại bị trộn chung vào commit "bằng chứng". Ba file PDF vẫn còn trên đĩa dưới tên mới `Data/STT{2,4,11}.pdf` và nằm trong gói `repro_assets_2026-07-20.tgz`.
+
+### 2-ter. Tag
+
+| Tag | Trỏ tới | Ý nghĩa |
+|---|---|---|
+| `freeze-pre-thesis-2026-07-20` | `9da646c5c4` | Mốc **GĐ0** — cứu bằng chứng |
+| `freeze-features-2026-07-20` | `77bb46d31d` | Mốc **code-freeze tính năng** thật sự (`CODE_FREEZE.md` tuyên bố tại đây) |
+| `state-post-phase2-2026-07-21` | sau GĐ2 + vá kiểm toán | Trạng thái đã kiểm toán độc lập |
 
 ---
 
@@ -172,7 +193,27 @@ Nghĩa là **các số 701 / 1.686 / 2.321 / 1.177 đang in trong README và lu�
 
 ---
 
-## 6. VIỆC CÒN THIẾU CỦA GIAI ĐOẠN 0
+## 6. VIỆC CÒN THIẾU
 
-- [ ] **Push nhánh + tag lên remote** — hiện bằng chứng chỉ có trên 1 máy + 2 gói sao lưu cùng ổ đĩa. Cần bản sao ở nơi khác về mặt vật lý.
-- [ ] Cân nhắc lưu trữ `evidence_2026-07-20.tgz` lên Zenodo/Google Drive để có DOI/bản sao ngoài máy.
+- [x] **Push nhánh + tag lên remote** — xong 2026-07-20, `main` = nhánh = remote, 3 tag đã lên GitHub.
+- [ ] 🔴 **BẢN SAO NGOÀI Ổ ĐĨA — CHƯA LÀM, ĐANG CHẶN.** `df -h . ~/ThS_archive` cho **cùng một filesystem `/dev/disk3s5`**. Repo (8,9 GB), `backup_*` và `external_data` nằm chung một ổ vật lý. Hỏng ổ = mất 3 bản scan gốc, cache OCR `prepared/` (232 MB — *primary data* vì API Kimhannom không tất định), 72.873 crop, 2 checkpoint, và 4,7 GB `TKHMTH2200` mà GĐ2 vừa dời ra (**nay chỉ còn đúng một bản**). Thứ duy nhất còn sống là phần đã tracked trên GitHub.
+  - Ưu tiên rẻ→đắt: (1) copy `docs/data_manifest/` + `SHA256SUMS.txt` (~2 MB) lên Drive — gần như miễn phí; (2) copy `backup_2026-07-21/` (~2,5 GB) sang ổ ngoài; (3) cân nhắc Zenodo cho `evidence_*.tgz` (92 MB) để có **DOI trích được vào luận văn**.
+  - Sau khi copy phải `shasum -a 256 -c SHA256SUMS.txt` **tại đích** và ghi vị trí + ngày kiểm vào §4.
+
+---
+
+## 7. KIỂM TOÁN ĐỘC LẬP GĐ0–GĐ2 (2026-07-21)
+
+3 kiểm toán viên độc lập soi lại toàn bộ tuyên bố "đã hoàn tất", kết luận `ready_for_phase3: false` với 4 việc chặn. Đã xử lý:
+
+| Phát hiện | Xử lý |
+|---|---|
+| `requirements.lock.txt:99` để `vietocr==0.3.13` chưa comment → `pip install -r` **chắc chắn hỏng** (metadata pin pillow 10.2.0, xung đột pillow 12.2.0 trong chính lock, không có wheel py3.14) | Đã comment + ghi cách cài `--no-deps`. **Kiểm chứng thật**: venv py3.14 trống + `pip install --dry-run -r requirements.lock.txt` → resolve sạch 90 gói, 0 xung đột |
+| `config/pipeline.yaml:54` để `qn_line_detector: auto` → máy có paddleocr dùng backend **khác** máy sinh số liệu, âm thầm | Ghim `projection_deskew` (đúng backend đã chạy; giữ nguyên hành vi hiện tại) |
+| `ground_truth/selftest.py:199` — `manifest[0]` khi manifest rỗng → **cả suite crash**, không in RESULT, 56 assertion biến mất khỏi báo cáo | Thêm guard fail-có-số. Đo trong clone sạch: trước = crash, sau = `52 passed, 8 failed` |
+| Bundle sao lưu thiếu 7 commit và **không có tag nào** (dù §4 khai "mọi nhánh + tag") | Bundle mới tại HEAD, `git bundle list-heads` xác nhận có `refs/tags/*`; clone thử khôi phục 110 commit + tag |
+| 4 tài sản **ngoài git VÀ ngoài mọi backup**: `detector_r34.best.pt` (82 MB — sinh ra reseg → sinh ra toàn bộ crop), `font_diffusion/ckpt/PROD` (383 MB — sinh ra kho glyph của SILVER), `dict/*.xlsx`, `docs/refs/` | Gói thứ 5 `models_2026-07-21.tgz` (449 MB), đã verify + bung thử |
+| `kkanji2` — mục kế hoạch nêu đích danh — có **0 dòng** sha256 | Đã băm đủ **153.236 file**. Bảng hash phần có ý nghĩa (MTH + ckpt, 12.812 hash) đưa vào `docs/data_manifest/`; phần `kkanji2` (140k file, dữ liệu **không dùng**) giữ ở kho lưu |
+| `build_mth_pretrain.py` trỏ `MTH/TKHMTH2200` đã bị dời → chạy hỏng runtime với lỗi khó hiểu | Thêm nấc dự phòng trỏ kho lưu; đã đo: mặc định giờ resolve đúng và **tồn tại** |
+| Submodule `gannhanocr-fd` dirty vĩnh viễn làm mọi cổng "cây sạch" mất tác dụng cảnh báo | `submodule.gannhanocr-fd.ignore = dirty` (thay đổi gitlink SHA vẫn được báo) |
+| Tag `freeze-pre-thesis-2026-07-20` đứng **trước** mốc code-freeze 3 commit | Thêm `freeze-features-2026-07-20` và `state-post-phase2-2026-07-21`; **không di dời** tag cũ vì đã trích dẫn |

@@ -22,10 +22,15 @@ REPO = HERE.parent
 sys.path.insert(0, str(HERE))
 from data_centernet import read_mth_items                # noqa: E402
 
-# MTH raw mặc định: train_crop/MTH/... nếu có, không thì <repo>/MTH/... (kho dữ liệu)
+# MTH raw mặc định: train_crop/MTH/... -> <repo>/MTH/... -> kho lưu ngoài repo.
+# 2026-07-21 (Giai đoạn 2): <repo>/MTH/TKHMTH2200 (4,7 GB) đã được chuyển ra
+# ~/ThS_archive/external_data/MTH_TKHMTH2200 vì chỉ cần khi PRETRAIN LẠI detector.
+# Xem MANIFEST.md ở kho đó để biết nguồn gốc + sha256.
 _MTH_DEFAULT = HERE / "MTH" / "TKHMTH2200"
 if not _MTH_DEFAULT.exists():
     _MTH_DEFAULT = REPO / "MTH" / "TKHMTH2200"
+if not _MTH_DEFAULT.exists():
+    _MTH_DEFAULT = Path.home() / "ThS_archive" / "external_data" / "MTH_TKHMTH2200"
 
 
 def main():

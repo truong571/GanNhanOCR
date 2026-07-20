@@ -14,6 +14,12 @@
 | **1. Sửa lỗi chặn** | Vá tiền điều kiện làm pipeline không chạy được; sửa assertion đang đỏ cho khớp số liệu đã chốt |
 | **2. Nối dây (wiring)** | Nối 8 bước FLOW §5 vào `run_pipeline.sh`; thêm preflight; truyền `--strict` |
 | **3. Tài liệu và số liệu** | `BANG_SO_LIEU_CHINH_THUC.md`; sửa README/docstring ghi số đã bị bác; kết quả audit, ablation, downstream |
+| **4. Dọn rác không đổi hành vi** | Dời/xoá file **đã gitignore** và **0 tham chiếu** (phải grep xác nhận tại thời điểm hành động); `git mv` không đổi nội dung file |
+| **5. Vá lỗi làm kiểm định mù** | Sửa chỗ khiến suite selftest **crash** thay vì fail có số — mất khả năng đo còn nguy hiểm hơn một assertion đỏ |
+
+> **Điều kiện bắt buộc cho loại 4 và 5**: phải chứng minh bằng `bash scripts/run_all_selftests.sh` ra **đúng 212 passed / 11 failed**, không test nào chuyển từ pass sang skip.
+>
+> *Ghi chú lịch sử*: GĐ2 (`27ba0558d1`) được thực hiện SAU mốc đóng băng `77bb46d31d`. Về hình thức là vi phạm, về thực chất hợp lệ vì chỉ dời dữ liệu đã gitignore + `git mv`, selftest không đổi. Mục 4–5 được bổ sung để lần sau phân biệt được ngay.
 
 Lý do: quỹ thời gian còn ~2–3 tháng, và **cả 4 blocker của luận văn đều nằm ở tầng chất lượng/kiểm định, không phải tầng tính năng**. Mỗi giờ đổ vào tính năng mới là một giờ rút thẳng khỏi Chương 3–4.
 

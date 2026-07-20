@@ -1,42 +1,41 @@
 {
-  "n_rows": 82268,
+  "n_rows": 82274,
   "census": {
-    "dup_bbox_rows": 701,
-    "dup_bbox_groups": 328,
-    "cross_col_rows": 1686,
-    "cross_col_groups": 820,
-    "union_rows": 2321,
-    "union_groups": 1116,
-    "conflicting_groups": 1094,
-    "provably_wrong_rows": 1177,
+    "dup_bbox_rows": 0,
+    "dup_bbox_groups": 0,
+    "cross_col_rows": 8,
+    "cross_col_groups": 4,
+    "union_rows": 8,
+    "union_groups": 4,
+    "conflicting_groups": 4,
+    "provably_wrong_rows": 4,
     "by_tier": {
-      "GOLD": 1864,
-      "SYLLABLE": 235,
-      "SILVER": 222
+      "GOLD": 7,
+      "SILVER": 1
     }
   },
-  "quarantined_rows": 2299,
-  "quarantined_conflict": 2277,
-  "quarantined_duplicate": 22,
-  "kept_representatives": 22,
-  "demoted_similar_lowcos": 748,
+  "quarantined_rows": 8,
+  "quarantined_conflict": 8,
+  "quarantined_duplicate": 0,
+  "kept_representatives": 0,
+  "demoted_similar_lowcos": 839,
   "split_reassigned_rows": 0,
-  "md5_spanning_splits_original": 288,
+  "md5_spanning_splits_original": 0,
   "md5_spanning_splits_residual": 0,
   "md5_spanning_splits_after": 0,
   "tier_before": {
-    "GOLD": 51200,
-    "REVIEW": 14192,
-    "SILVER": 11275,
-    "SYLLABLE": 5601
+    "GOLD": 51211,
+    "REVIEW": 12928,
+    "SILVER": 11384,
+    "SYLLABLE": 6751
   },
   "tier_after": {
-    "GOLD": 48600,
-    "REVIEW": 14940,
-    "SILVER": 11055,
-    "SYLLABLE": 5374,
-    "QUARANTINE": 2299
+    "GOLD": 50365,
+    "REVIEW": 13767,
+    "SILVER": 11383,
+    "SYLLABLE": 6751,
+    "QUARANTINE": 8
   },
-  "usable_before": 68076,
-  "usable_after": 65029
+  "usable_before": 69346,
+  "usable_after": 68499
 }

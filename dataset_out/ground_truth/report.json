@@ -1,0 +1,64 @@
+{
+  "n_audited": 750,
+  "n_scored": 692,
+  "n_correct": 505,
+  "n_wrong_label": 81,
+  "n_wrong_image": 106,
+  "n_unsure": 58,
+  "precision": 0.7297687861271677,
+  "wilson_ci": [
+    0.6954805571654448,
+    0.7615200943032727
+  ],
+  "cp_ci": [
+    0.695025487464459,
+    0.7625391872549696
+  ],
+  "cp_lower_one_sided": 0.7005810984320471,
+  "weighted_precision": 0.7210929412213452,
+  "weighted_ci": [
+    0.6884117961257695,
+    0.7537740863169208
+  ],
+  "ppi_precision": null,
+  "ppi_ci": null,
+  "ppi_note": "PPI skipped: surrogate 's3_cosine' coverage too low (labelled 100%, population 30%; need >=90%). Provide a population-wide calibrated surrogate (e.g. S3 head-logit over all crops) to enable PPI.",
+  "acceptance": {
+    "p0": 0.9,
+    "defects": 187,
+    "n": 692,
+    "one_sided_lower_bound": 0.7005810984320471,
+    "accept": false,
+    "design": "stratified",
+    "note": "stratified sample — use weighted_precision, not this SRS bound"
+  },
+  "per_stratum": [
+    {
+      "stratum": "s1_inter_s3_out_of_dict",
+      "n": 37,
+      "correct": 36,
+      "precision": 0.972972972972973,
+      "wrong_label": 0,
+      "wrong_image": 1,
+      "unsure": 3
+    },
+    {
+      "stratum": "s2_inter_s3_corrected",
+      "n": 558,
+      "correct": 409,
+      "precision": 0.7329749103942652,
+      "wrong_label": 65,
+      "wrong_image": 84,
+      "unsure": 47
+    },
+    {
+      "stratum": "s3_head_bank_consensus",
+      "n": 97,
+      "correct": 60,
+      "precision": 0.6185567010309279,
+      "wrong_label": 16,
+      "wrong_image": 21,
+      "unsure": 8
+    }
+  ]
+}

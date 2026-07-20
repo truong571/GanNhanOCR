@@ -1,0 +1,26 @@
+{
+  "labeled_rows": 844,
+  "positives": 819,
+  "negatives": 25,
+  "s3_coverage_all": 0.3044934412503489,
+  "s3_coverage_labeled": 0.05568720379146919,
+  "train_auc": 0.5386,
+  "gate": {
+    "keep": 56485,
+    "promote_gold": 8008,
+    "demote_review": 3584
+  },
+  "tier_promote_suggested": 5591,
+  "tier_demote_suggested": 3584,
+  "crops_scored": 68077,
+  "tau_promote": 0.9,
+  "channels_present": [
+    "s3",
+    "dict"
+  ],
+  "channels_absent": [
+    "qwen",
+    "nna_lobo"
+  ],
+  "note": "Path A overlay: non-destructive; heavy channels absent; n_eff needs >=2 votes (Path B)."
+}

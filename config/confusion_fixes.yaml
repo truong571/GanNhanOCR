@@ -1,0 +1,20 @@
+# Confusion fixes — sửa có mục tiêu các confusion HỆ THỐNG đã chứng minh bằng human-audit.
+# Neo trên dataset_out/ground_truth/verdicts_reanchored.csv (825 verdict, fresh 3-book).
+# Mỗi fix áp cho các dòng (syllable, label) khớp; action=demote đẩy GOLD/SILVER char -> REVIEW.
+# KHÔNG remap codepoint (xem FLOW_TONG_THE_CHOT §P1.1: remap làm hỏng nhãn đang đúng).
+#
+# Áp bởi: pipeline.remediation.confusion_fix  (Stage 6, chạy SAU remediation apply)
+# Nguồn: workflow research-fresh-3book (2026-07-15), 3/3 kiểm chéo đối kháng CONFIRMED.
+
+fixes:
+  - syllable: "người"
+    label: "㝵"                 # U+3775
+    action: demote
+    to_tier: REVIEW
+    reason: "systematic_confusion_nguoi_3775"
+    evidence: >
+      Từ điển liệt kê 㝵 là reading của 'người' (dict_ok=True) nên consensus/gate KHÔNG tự bắt được.
+      Audit: 8/23 sai = 34.8% (Wilson lower 18.8%), Fisher p=5.4e-8 vs baseline GOLD 2.0%; yen4 sai 62.5%.
+      Nôm chuẩn của 'người' là 𠊚/𠊛 (pipeline dùng 㝵:𠊚 = 46:1, 𠊛=0). DEMOTE (không remap:
+      65% audit vẫn đúng nên 㝵 là biến thể rút gọn hợp lệ ở một phần crop → cần human glyph-anchor).
+      Ảnh hưởng: ~1440 GOLD 㝵-người (yen2 713 / yen4 290 / yen11 437).

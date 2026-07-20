@@ -1,0 +1,246 @@
+item_id,ai_decision,confidence,label,syllable,rule,image,reason
+4219223592d2d1a7,unsure,0.35,咍,hay,s2_inter_s3_corrected,silver/yen4_page_0060_c01_001.png,"Crop quá mờ/nhạt, gần như nhiễu, chỉ thấy vệt 台 rất mờ, không đủ để xác nhận 咍."
+62604c9027de912c,unsure,0.4,㐌,đã,s2_inter_s3_corrected,silver/yen2_page_0092_c04_081.png,"Ảnh viết thảo/mờ rậm nét, không xác nhận chắc chắn khớp glyph 㐌 đơn giản của ref."
+ec2e26a02e3b52e8,unsure,0.4,召,chịu,s2_inter_s3_corrected,silver/yen2_page_0132_c02_024.png,"Glyph thảo cong, không rõ 刀+口 của 召; có thể là 受 (cùng âm chịu), khó quyết."
+8556585036c3c044,unsure,0.4,殳,một,s2_inter_s3_corrected,silver/yen4_page_0290_c04_081.png,"Glyph nhỏ/mờ, nét thảo, không đủ rõ để xác nhận 殳 (几+又)."
+b9d0886a186f493d,unsure,0.4,娄,sau,s2_inter_s3_corrected,silver/yen11_page_0212_c05_090.png,"Dau 2 moc (卯/羽) + giua 未/木 + day mo; co the la 婁 (dang phon the cua 娄) nhung khong chac, khac ref."
+7549962971414c2a,wrong_label,0.4,寺,thì,s2_inter_s3_corrected,silver/yen2_page_0044_c02_028.png,Đầu là 土 nhưng đáy là hộp kín 日 (giống 旹/峕) chứ không phải 寸 của 寺; cùng âm 'thì' nhưng glyph khác ref.
+84a8fa514453feeb,wrong_label,0.4,如,nhà,s2_inter_s3_corrected,silver/yen2_page_0280_c04_067.png,"Crop là chữ hộp đối xứng giống 西/亞/亙, không thấy bộ 女 bên trái của 如 như ref."
+a1e3dae24ba28a8d,wrong_label,0.4,寺,thì,s2_inter_s3_corrected,silver/yen2_page_0234_c09_159.png,"Thân dạng 甫/南 có sọc dọc trong khung hộp, không khớp cấu trúc 土+寸 của 寺 trong ref."
+aa7fc8b33917dadd,unsure,0.4,共,cùng,s2_inter_s3_corrected,silver/yen4_page_0018_c06_090.png,"Phần trên giống 廿一 của 共 nhưng đáy trông như hộp/lưới, không rõ 八 chân, không chắc."
+39151c3677328337,wrong_label,0.4,喡,và,s2_inter_s3_corrected,silver/yen4_page_0054_c05_097.png,"Crop là chữ xếp dọc kiểu 爲/章, không phải cấu trúc 口+為 của ref 喡; có thể là 爲 (cùng âm và)."
+12d6df18dfd1c5bc,unsure,0.4,罪,tội,s2_inter_s3_corrected,silver/yen4_page_0230_c08_147.png,"Crop cao, phần trên rất mờ/faint, khó xác nhận có phải 罪 (罒 trên 非) hay dính chữ."
+eed7b0e8151f4c69,unsure,0.4,垩,thánh,s2_inter_s3_corrected,silver/yen11_page_0206_c05_101.png,"Crop cao, trông gần 聖 (thánh) hơn là ref 垩 (圣+土); khó chắc là dính chữ hay chữ khác."
+1c6b83abfc563f34,unsure,0.4,樞,giu,s1_inter_s3_out_of_dict,silver/yen4_page_0112_c07_118.png,"Glyph mờ, vế phải giống 亘 chứ không phải 區 (品 trong 匚) → không xác nhận được 樞."
+8fb04268957de5d2,unsure,0.4,伂,phải,s3_head_bank_consensus,silver/yen4_page_0070_c06_127.png,"Mờ, tách thành 2 phần chồng nhau; cấu trúc 亻+巿 chỉ khớp một phần, không chắc."
+4ea3aff386c7fb44,wrong_label,0.4,丕,vậy,s2_inter_s3_corrected,silver/yen2_page_0278_c08_154.png,"Có bộ vuông (口/网) đè trên 不, không giống 丕 (不+一)."
+9af8c23c87e94ae4,wrong_label,0.4,沛,phải,s2_inter_s3_corrected,silver/yen11_page_0106_c02_039.png,Không thấy bộ 氵 của 沛; trái giống 尸/厂. Không khớp 沛.
+e36bd5966c4bea16,unsure,0.4,秋,su,s3_head_bank_consensus,silver/yen4_page_0162_c06_136.png,"Mờ, có nét giống 火 nhưng bố cục không rõ là 秋 (禾+火)."
+92e48a54df4dc159,unsure,0.4,為,vì,s2_inter_s3_corrected,silver/yen2_page_0102_c05_101.png,"Thân chữ giống 广/庸, không rõ là 為/爲; mờ."
+e42fc9f509b91869,wrong_image,0.4,衣,ấy,s2_inter_s3_corrected,silver/yen2_page_0098_c09_167.png,"Crop nhiều mảnh (ô vuông trên + phần dưới lộn xộn), không nhận ra 衣."
+46b80a0832ffe0c8,unsure,0.4,邏,lạ,s2_inter_s3_corrected,silver/yen11_page_0296_c01_008.png,"Có bộ 辶, phần trong hợp 羅 nhưng quá mờ, không chắc là 邏."
+c77bc01e73db707e,unsure,0.4,跪,quì,s3_head_bank_consensus,silver/yen4_page_0034_c06_111.png,"Chữ thảo rất rối, giống nét 糸/経; không chắc đúng 跪 hay chữ khác."
+1d2b54faff8d48c3,unsure,0.4,召,chịu,s2_inter_s3_corrected,silver/yen4_page_0212_c02_030.png,"Crop có ô vuông (田/甲) phía trên + nét móc phía dưới, cấu trúc ngược với 召 (刀 trên/口 dưới); glyph mờ/nhỏ, không xác định chắc."
+f99c44cbf963c5f1,unsure,0.4,茁,đốt,s2_inter_s3_corrected,silver/yen4_page_0196_c09_165.png,"Crop mờ/nhiễu, phần dưới không rõ 出; không quyết được có phải 茁."
+78175ccd4ad48427,unsure,0.4,离,le,s2_inter_s3_corrected,silver/yen4_page_0034_c03_048.png,"Crop mờ, dính nét trên, phần đầu 亠 của 离 không rõ; khó xác nhận."
+c3ad38cf165ef706,wrong_image,0.4,衣,ấy,s2_inter_s3_corrected,silver/yen2_page_0282_c02_021.png,"Crop khong phai 衣; trong nhu 2 manh chong (才/寸 tren + 内 duoi), khac han ref 衣, loi cat."
+c5f8462f5196fd2c,unsure,0.4,𡗶,trời,s2_inter_s3_corrected,silver/yen2_page_0134_c06_114.png,"Nét mộc bản rối, có thành phần thừa (土/王 phía trên, 口 phía dưới), không chắc là 𡗶 biến thể hay dính/cắt lệch."
+94afb46ba8347a53,unsure,0.4,𤯝,thắng,s3_head_bank_consensus,silver/yen4_page_0238_c09_184.png,"Chữ hiếm 𤯝; đỉnh crop có cấu trúc 生/青 gần ref nhưng đáy khác (không rõ 月), khó quyết."
+288623c4a65110b8,unsure,0.4,孛,but,s1_inter_s3_out_of_dict,silver/yen2_page_0188_c07_115.png,"Glyph mờ, giống 孛 dạng thảo nhưng cũng giống chữ có bộ 广; không quyết được."
+fb4c243818ccec72,wrong_label,0.4,更,một,s2_inter_s3_corrected,silver/yen11_page_0298_c01_004.png,"Crop giống 萬 (đỉnh nét chéo/艹 + 田 + chân xòe), không giống 更 (đỉnh nét ngang phẳng); nhãn 更 cho âm 'một' cũng bất thường."
+0dade07a0f7e8932,unsure,0.4,𡗶,trời,s2_inter_s3_corrected,silver/yen4_page_0156_c04_056.png,"Trên giống 天/王, dưới là khối ô vuông nhiều nét chứ không rõ 上; ink-spread nên không quyết được có phải 𡗶."
+dccfa865c2c3c85c,unsure,0.4,君,vua,s3_head_bank_consensus,silver/yen2_page_0092_c03_054.png,"Crop là khối ô vuông phức tạp (giống 冑/甫), không rõ 尹+口 của 君; không quyết được."
+f432d40ad1d6fc1f,unsure,0.4,晜,con,s2_inter_s3_corrected,silver/yen4_page_0172_c06_146.png,"Crop quá mờ, không rõ cấu trúc 日+弟 của 晜; không quyết được."
+508a4c89e8ba476b,unsure,0.4,屯,đòn,s3_head_bank_consensus,silver/yen2_page_0092_c06_135.png,"Crop nhiễu, glyph chính có vẻ thêm bộ bên trái; không xác nhận được là 屯 đơn."
+f799d7aa3c0d9189,unsure,0.4,瘥,si,s2_inter_s3_corrected,silver/yen4_page_0046_c05_090.png,"Phần 多 phía trên là vệt; glyph đích mờ, không thấy rõ bộ 疒 bọc 差 của 瘥 nên không quyết được."
+57390a82789a6008,unsure,0.4,釪,vồ,s2_inter_s3_corrected,silver/yen2_page_0222_c01_010.png,"Rất mờ, không thấy rõ cấu trúc 金+于 của 釪; giống 至/金, không quyết được"
+6edf78a8ea83561b,unsure,0.4,殳,một,s2_inter_s3_corrected,silver/yen4_page_0120_c05_089.png,"Chữ nhỏ/mờ, trông giống 反/及 hơn 殳; có nhiễu trên và dưới"
+c5b6d27f35d8ab78,unsure,0.4,綿,min,s3_head_bank_consensus,silver/yen2_page_0038_c07_133.png,"Crop hư/nhiễu nặng; bộ 糸 mờ, không xác nhận được 綿"
+7e5200f5e01b6c67,unsure,0.4,些,ta,s2_inter_s3_corrected,silver/yen4_page_0168_c02_033.png,"Mờ; phần dưới giống 比/北, không thấy rõ 此+二 của 些"
+39bf4310da8261c5,wrong_image,0.4,固,có,s2_inter_s3_corrected,silver/yen11_page_0028_c06_122.png,"古 nằm hẳn TRÊN ô vuông (đáng lẽ nằm trong ô); trông như dính/cắt lệch, không phải 固 sạch."
+7344bf1da647c693,unsure,0.4,為,vì,s2_inter_s3_corrected,silver/yen2_page_0222_c04_066.png,"Chữ dạng ô vuông giống 唐/庿, không thấy nét uốn đặc trưng của 為; khó quyết."
+e2be32f036681343,unsure,0.4,柴,thầy,s2_inter_s3_corrected,silver/yen4_page_0046_c04_087.png,"Glyph rất mờ/sờn, chỉ thấy dạng cây (木), không rõ bộ 此 trên của 柴."
+8abeebe739480274,unsure,0.4,添,thêm,s2_inter_s3_corrected,silver/yen4_page_0302_c08_158.png,"Cấu trúc dọc 天/士 trên, chân nước dưới; không thấy bộ thủy trái của 添, có thể là 忝; khó quyết."
+1844089fb31e10a6,unsure,0.4,嬈,nhiêu,s2_inter_s3_corrected,silver/yen11_page_0058_c07_131.png,Bên phải rõ 堯 nhưng bộ trái mờ (giống 火 hơn 女) và có vệt lạ trên đầu; khó phân biệt 嬈/燒.
+e505224a52f36640,unsure,0.42,尼,này,s2_inter_s3_corrected,silver/yen4_page_0082_c05_090.png,"Glyph giống chữ có 己/心 (như 忌) hơn là 尼 (尸+匕) rõ ràng, nhưng có thể là 尼 dạng thảo; không quyết được."
+b0b3cf2e04cdfd3e,wrong_image,0.45,買,mới,s2_inter_s3_corrected,silver/yen4_page_0194_c03_064.png,"Crop nhỏ nhiều nền trắng, chỉ rõ ô 罒 và nét lạ, thiếu 貝 của 買 — nghi cắt cụt."
+7af7af2b37f69db1,unsure,0.45,噲,gọi,s2_inter_s3_corrected,silver/yen2_page_0246_c01_014.png,"Crop tối/nén, không xác nhận được bộ 口+會 của 噲 (gọi)."
+de7b1cd050fa43dc,wrong_image,0.45,召,chịu,s2_inter_s3_corrected,silver/yen2_page_0102_c02_030.png,"Crop vỡ mảnh: giữa là ô 己/巳 thiếu nét 刀 của 召, trên/dưới mờ."
+5af339305e733c57,unsure,0.45,𧵆,gần,s2_inter_s3_corrected,silver/yen11_page_0078_c02_023.png,"Chữ hiếm; crop trông như khối bao 門/開, khác ref 貝+斤 nhưng không dám chắc."
+024e448c18615446,unsure,0.45,改,cãi,s2_inter_s3_corrected,silver/yen2_page_0118_c08_159.png,"Crop có nhiều nét lạ ở đỉnh, thân chữ mờ/bệt, không xác nhận được là 改"
+c52dfddba2b8ba17,wrong_image,0.45,丕,vậy,s2_inter_s3_corrected,silver/yen4_page_0260_c05_103.png,"Crop bệt, có khung/門 lộn xộn, không phải 丕 gọn (不+一); nghi lỗi cắt/nhầm ô"
+907a3f675fecb864,wrong_image,0.45,没,một,s2_inter_s3_corrected,silver/yen2_page_0154_c04_073.png,"Crop bệt/khung, có mảnh lạ ở đỉnh, không có bộ 氵 của 没; nghi lỗi cắt"
+64b7e674a1bf077a,unsure,0.45,買,mới,s2_inter_s3_corrected,silver/yen2_page_0154_c02_023.png,"Crop mờ/bệt, có mảnh rời ở đỉnh; không xác nhận chắc là 買"
+ff6342d2fb617030,wrong_image,0.45,道,đạo,s3_head_bank_consensus,silver/yen4_page_0212_c09_162.png,"Crop hep (42px), vo net, chi con manh 首 (丷+目), mat bo 辶 -> cat cut, khong du 道."
+18a994ab5101713c,wrong_image,0.45,秋,su,s2_inter_s3_corrected,silver/yen11_page_0272_c03_042.png,秋 (禾+火) phía trên khớp ref nhưng dính thêm 1 ô vuông (chữ khác) ở đáy → cắt dính.
+4fbac61ec0b4fe70,wrong_image,0.45,喡,và,s2_inter_s3_corrected,silver/yen2_page_0290_c02_019.png,"Crop cao, có phần 早/干 thêm ở đáy, không khớp 喡 gọn (口+咼) → nghi cắt dính."
+0beb21d967fc4fa1,wrong_image,0.45,塊,khỏi,s2_inter_s3_corrected,silver/yen4_page_0272_c09_183.png,"Crop cao gồm bộ 广/庄 trên và 木 dưới, không khớp 塊 (土+鬼) → nghi cắt sai/dính."
+1324b77419bee4e1,unsure,0.45,尼,nơi,s2_inter_s3_corrected,silver/yen2_page_0162_c04_072.png,Chữ 尸 bọc 口 (尼 hay 居?) kèm ô vuông nhiễu phía trên; không quyết được.
+0cff3bc01533ac56,wrong_label,0.45,庄,chăng,s3_head_bank_consensus,silver/yen2_page_0066_c01_003.png,"Trên có bộ 弓 (giống 弡), phần dưới lộn xộn; không phải 庄 (广+土)."
+5aa1b8085669ad2f,wrong_image,0.45,東,ông,s2_inter_s3_corrected,silver/yen2_page_0062_c05_086.png,"Crop mờ/mất nét, gần như trống; không nhận ra 東."
+59cdbd5ae9e5bda6,wrong_label,0.45,尼,nay,s3_head_bank_consensus,silver/yen2_page_0192_c01_006.png,"Crop có cấu trúc ghép/nét chéo phức tạp phía dưới, không khớp glyph 尼 đơn giản của ref; nhiều khả năng là 𠉞 (亻+尼)."
+c83dfa70feab4602,unsure,0.45,踈,thưa,s2_inter_s3_corrected,silver/yen4_page_0128_c05_098.png,Bộ trái cong như 糸 hơn là 足 của 踈; lại có nét dính trên nên khó quyết.
+933f10ab8a246d8f,wrong_image,0.45,召,chịu,s2_inter_s3_corrected,silver/yen2_page_0234_c01_006.png,"Crop rat cao, chong nhieu manh (bleed + net + khung 田/口), khong doc sach duoc 召, loi cat/dinh."
+1e48b8004762f0d8,wrong_image,0.45,呐,nói,s2_inter_s3_corrected,silver/yen11_page_0120_c04_077.png,Crop dinh 2 chu doc: chu 辶 lon o tren + 呐 o duoi; tuy 呐 co mat nhung day la loi cat/dinh.
+017ec3ac2a0225e7,unsure,0.45,命,mình,s2_inter_s3_corrected,silver/yen11_page_0282_c02_037.png,"Crop rối: mảnh glyph rời phía trên + chữ dưới dạng blob tạm giống 命 nhưng không đọc chắc, khó quyết."
+ea8def8e3bac8f85,unsure,0.45,𤯝,thắng,s2_inter_s3_corrected,silver/yen4_page_0064_c05_105.png,"Glyph mờ, trông giống 有 hơn là 生+月; không chắc đúng là 𤯝."
+d6585140afbcd67b,wrong_image,0.45,蚤,tao,s2_inter_s3_corrected,silver/yen11_page_0134_c09_202.png,"Có một chữ dạng 阝/田 phía trên chồng lên 蚤 (叉+虫) bên dưới, nghi dính 2 chữ."
+759a7be86c5ecec9,wrong_label,0.45,欺,khi,s2_inter_s3_corrected,silver/yen4_page_0176_c08_174.png,"Ref 欺 = 其+欠 (trái-phải); crop xếp dọc, phần trên tròn không phải 其, không khớp 欺."
+f732a98a75d166b6,wrong_image,0.45,傷,thương,s2_inter_s3_corrected,silver/yen4_page_0188_c04_068.png,Đáy crop rõ 傷 (亻+昜) khớp ref nhưng phía trên dính thêm một chữ (bộ 心) → crop chứa 2 chữ.
+c37fbf2041ff5ee3,wrong_image,0.45,特,sệt,s3_head_bank_consensus,silver/yen11_page_0160_c05_084.png,"Ref 特 = 牛+寺; crop là ô 口 phía trên + chữ bộ 忄 phía dưới, không phải 特, nghi cắt/ghép."
+458f907e44b18b65,unsure,0.45,連,lên,s2_inter_s3_corrected,silver/yen11_page_0186_c04_079.png,"Crop mờ, hai khối chồng dọc, không thấy rõ nét sổ 辶 của 連; khác rõ so với ref nhưng chất lượng kém khó quyết."
+d5bba1c616cbcaa1,wrong_label,0.45,衣,ấy,s2_inter_s3_corrected,silver/yen2_page_0156_c03_038.png,"Crop đầu ⺌, thân khối 立/亚, không có đáy loe 𧘇 đặc trưng của 衣 trong ref; là chữ khác."
+ce8c3b8067b06256,wrong_image,0.45,些,ta,s2_inter_s3_corrected,silver/yen2_page_0236_c07_126.png,Crop dính 2 chữ xếp dọc: 些 (此+二) ở trên và 1 chữ khác (giống bộ 石) ở dưới; lấy dư ô.
+b7e370c5298db4f5,wrong_label,0.45,袩,xem,s2_inter_s3_corrected,silver/yen4_page_0300_c05_089.png,"Crop là glyph đối xứng kiểu 本/夲 một thân đứng, không có bộ 衤 trái của 袩; không khớp ref."
+ff87ba89c00424c3,wrong_label,0.45,罢,bởi,s2_inter_s3_corrected,silver/yen4_page_0078_c05_114.png,"罢 là 罒 trên 去; crop có ô lưới ở dưới + nét trên khác, không khớp."
+b1fac882b0705eee,wrong_label,0.45,麻,mà,s3_head_bank_consensus,silver/yen11_page_0284_c09_147.png,"Crop là chữ khác: trên là nét móc/vuốt, dưới là ô vuông; không giống 麻 (广 mái + 林 hai 木) trong ref."
+f0eab04076b19d5d,wrong_label,0.45,吝,lần,s2_inter_s3_corrected,silver/yen2_page_0056_c05_086.png,"Crop trông là 1 chữ phức tạp (mái 宀+hộp trên, cụm 禾/春 dưới, giống 稟/寅), không phải 文+口 của 吝 → sai nhãn; độ tin thấp do nét mòn."
+4678b57d0fe2a653,wrong_image,0.5,欺,khi,s2_inter_s3_corrected,silver/yen4_page_0078_c01_015.png,Crop có 2 glyph xếp dọc: phần 欺 phía trên + chữ 舌/香 riêng bên dưới (lỗi cắt gộp cột).
+ce6d8ff3e3a6940d,wrong_image,0.5,朱,cho,s2_inter_s3_corrected,silver/yen11_page_0240_c08_161.png,"朱 chỉ mờ ở đỉnh, glyph chiếm phần lớn là chữ khác khung 尸 bên dưới → cắt nhầm/dính chữ."
+8d1e2de0276f9cc6,wrong_label,0.5,𡗶,trời,s2_inter_s3_corrected,silver/yen11_page_0098_c02_025.png,Không thấy cấu trúc đặc trưng 天+上 của 𡗶; crop là glyph khác (mái 尸/尺 trên + ô vuông dưới).
+089d9fc05e564eff,unsure,0.5,壳,xác,s2_inter_s3_corrected,silver/yen2_page_0026_c03_044.png,Phần trên mơ hồ 士 (壳) hay 虍 (虎); đáy 几 giống nhưng không chắc.
+cb8991337ae19d12,unsure,0.5,像,tượng,s2_inter_s3_corrected,silver/yen2_page_0182_c01_017.png,Không phân biệt được bộ trái là 亻 (像) hay 糸/豸; phải có nét 象.
+1d43de29e814ef98,wrong_image,0.5,包,vào,s2_inter_s3_corrected,silver/yen2_page_0238_c04_072.png,"Crop vỡ mảnh: ô 曰/巨 ở giữa + mảnh mờ trên/dưới, không thấy nét 勹 của 包."
+b87ec3fe18c5172f,unsure,0.5,瘥,si,s2_inter_s3_corrected,silver/yen4_page_0150_c05_097.png,Có bộ 疒 giống ref nhưng phần trong không rõ có phải 差 (瘥) không.
+a4895136ca3149d2,wrong_label,0.5,乄,làm,s2_inter_s3_corrected,silver/yen4_page_0288_c06_120.png,"Crop là glyph nhiều bộ (爫/厶), không phải nét メ đơn giản của 乄."
+da47a2ebab5a3650,wrong_image,0.5,支,giê,s2_inter_s3_corrected,silver/yen2_page_0068_c04_068.png,"Crop xếp mảnh 圭 + 氺, không phải cấu trúc 十+又 của 支."
+88e63b5320c60a8d,wrong_label,0.5,翁,ông,s3_head_bank_consensus,silver/yen2_page_0080_c02_027.png,"Đáy là 古/口, không phải bộ 羽 kép của 翁."
+5493be00ca38c833,unsure,0.5,歇,hết,s2_inter_s3_corrected,silver/yen4_page_0232_c03_047.png,"Crop bố cục xếp trên-dưới, mờ; 歇 vốn là chữ rộng trái-phải (曷+欠) nên không chắc là 歇 nén hay chữ khác."
+d845c02fae21ff51,wrong_label,0.5,浪,răng,s2_inter_s3_corrected,silver/yen2_page_0034_c02_039.png,"Crop xếp dọc nhiều tầng, KHÔNG có cấu trúc trái-phải 氵+良 của 浪; âm 'răng' nên nhiều khả năng là chữ Nôm khác (vd 𦝄)."
+d3134d2177cce796,wrong_image,0.5,朱,cho,s2_inter_s3_corrected,silver/yen4_page_0204_c06_128.png,"Crop cao bất thường: phần dưới giống 朱/木 nhưng phần trên là ô vuông lạ tách riêng, nghi cắt dính phần chữ phía trên."
+8233b19023d222f2,unsure,0.5,穹,cùng,s2_inter_s3_corrected,silver/yen2_page_0086_c04_079.png,Crop có 宀/穴 phía trên nhưng thân dưới mờ; khó tách 穹 với 宮 (đều đọc 'cùng').
+1b8c9e9b24e996d9,wrong_image,0.5,魂,hồn,s3_head_bank_consensus,silver/yen11_page_0222_c09_183.png,"Phần trên giống 魂/鬼 nhưng phía dưới có ô vuông rời tách bằng khoảng trắng, nghi cắt dính phần chữ bên dưới."
+d321eaf1bdf04293,wrong_label,0.5,黙,mắc,s2_inter_s3_corrected,silver/yen11_page_0156_c02_035.png,Crop trông như 鼓 (壴+殳); không thấy bộ 黑 (lưới+4 chấm) của 黙
+dc678e97456209bf,wrong_image,0.5,𠊚,người,s2_inter_s3_corrected,silver/yen4_page_0044_c05_097.png,"Crop thiếu bộ 亻/彳 của 𠊚 (dạng 得), gồm 2 thành phần xếp dọc (旦/雪 trên + 立/正 dưới), nghi cắt dính/nhầm ô; đúng kiểu nhầm 㝵/người."
+4778a3b36f1e7572,wrong_image,0.5,尼,ni,s2_inter_s3_corrected,silver/yen11_page_0118_c08_149.png,Glyph chinh 尼 phia tren nhung dinh them 1 o vuong (西/罒) ro o duoi = cat lem sang chu ke -> loi cat.
+097665986ab1936c,wrong_label,0.5,倘,thẳng,s3_head_bank_consensus,silver/yen2_page_0112_c07_125.png,"Crop là chữ dạng hộp giống 高/尚, không có bộ 亻 bên trái như ref 倘; có dải nhiễu ruling phía trên nhưng thân chữ hoàn chỉnh và khác 倘."
+d964b9eaa3462917,unsure,0.5,垩,thánh,s2_inter_s3_corrected,silver/yen2_page_0166_c07_119.png,"Chữ sạch thuộc họ 圣/垩/堊 (thánh), đáy 土/王 rõ nhưng nét phía trên mờ (giống 千/干), không xác nhận đúng 垩."
+77b93afac59105c4,unsure,0.5,天,thiên,s2_inter_s3_corrected,silver/yen11_page_0048_c01_012.png,天 rõ ở trên nhưng có thành phần 上 khá rõ phía dưới → giống 𡗶 (trời) hơn là 天 (thiên); nghi gán nhầm.
+0663c76b2239b538,unsure,0.5,葩,pha,s2_inter_s3_corrected,silver/yen11_page_0218_c05_096.png,Đáy 巴 hợp phần 皅 của 葩 nhưng bộ 艹 trên mờ/đọc thành 王; không chắc chắn là 葩.
+e39482db36a8fb5d,wrong_image,0.5,宜,nghe,s2_inter_s3_corrected,silver/yen2_page_0326_c01_014.png,"Trên có khối chữ 尸/尺 riêng, dưới mới là 宜 (宀+且); nghi dính chữ trước."
+e9aebd97d9c28ef5,wrong_image,0.5,囉,ra,s2_inter_s3_corrected,silver/yen4_page_0220_c07_127.png,"Crop xếp dọc, không thấy 口 của 囉 (口+羅); nghi cắt cụt/nhầm ô."
+82d128ef8a34206e,unsure,0.5,黎,rê,s3_head_bank_consensus,silver/yen11_page_0166_c05_096.png,"Glyph mộc bản rối, thành phần bên phải trông như 殳; không xác nhận rõ là 黎 mà cũng không đủ chắc gán chữ khác, cần soát tay."
+3a9a26b2b0081565,wrong_label,0.5,𥒥,đứa,s2_inter_s3_corrected,silver/yen2_page_0296_c01_002.png,"Crop trông như 启/啟 (户+口), khác hẳn ref �5 (禾+多 dạng 移)."
+c68cf91a7926de90,wrong_image,0.5,寺,thì,s3_head_bank_consensus,silver/yen2_page_0024_c05_099.png,寺 ở dưới nhưng có 1 ô vuông (chữ khác) chồng phía trên → dính 2 chữ.
+ade24f5e9d9f4d04,wrong_label,0.5,除,thờ,s2_inter_s3_corrected,silver/yen4_page_0274_c08_156.png,"Crop bố cục trên-dưới, không có bộ 阝 bên trái của 除; là chữ khác."
+dd319ae156d7721b,wrong_label,0.5,乄,làm,s2_inter_s3_corrected,silver/yen2_page_0170_c05_076.png,"Crop là chữ ghép có bộ 爫 (móng) + phần dưới, khác hẳn nét đơn メ của ref 乄; khớp candidate 爫 (làm)."
+ac328cab0b2bf37d,wrong_label,0.5,垩,thánh,s2_inter_s3_corrected,silver/yen11_page_0156_c06_122.png,"Crop giống 聖 (耳+口 trên, 王 dưới) hơn là 垩 (亚+土) của ref; khớp candidate 聖, cùng âm thánh."
+e800f36bc94d5651,wrong_image,0.5,群,còn,s2_inter_s3_corrected,silver/yen11_page_0202_c09_182.png,Crop xếp 2 mảnh dọc không tạo thành 群 (君+羊); nghi cắt nhầm 2 ô cột.
+8e1658e79e9b72f9,wrong_image,0.5,袄,áo,s2_inter_s3_corrected,silver/yen11_page_0178_c05_103.png,Crop có một chữ đầy đủ ở trên + 袄 ở dưới; dính 2 chữ.
+df1371071d6c458e,wrong_image,0.5,拗,ao,s2_inter_s3_corrected,silver/yen2_page_0044_c01_018.png,"Crop chong 2-3 manh, khong thay bo 扌+幼 cua 拗, loi cat/dinh."
+0796a784d2992ac4,unsure,0.5,𡗶,trời,s2_inter_s3_corrected,silver/yen11_page_0036_c01_010.png,"Đỉnh rõ là 王/玉 (có nét dọc xuyên tâm, KHÔNG phải 天), đáy giống 尒/示; không khớp 𡗶 nhưng chưa chắc là biến thể mộc bản hay cắt dính, cần soát tay."
+f4199cfd4cdc5276,wrong_label,0.5,乄,làm,s2_inter_s3_corrected,silver/yen4_page_0136_c08_167.png,"Không phải nét メ đơn giản của 乄 (ref); crop có vòng cuộn phía trên + phần 王/五 phía dưới, là chữ khác."
+cb3985df55f689d1,wrong_label,0.5,嬈,nhau,s2_inter_s3_corrected,silver/yen4_page_0244_c05_102.png,"Crop là chữ đối xứng kiểu 秦/奉 (ba nét ngang + 禾/木), thiếu hẳn bộ 女 bên trái nên không phải 嬈."
+3c2f3ff890452d83,wrong_label,0.5,㐌,đã,s2_inter_s3_corrected,silver/yen2_page_0108_c03_049.png,"Crop là chữ dạng hộp 亜/西 (nhiều nét ngang trong khung), không phải 㐌 (dạng cong 也); có mảnh dính ở trên."
+ae95e2e510546a5e,wrong_image,0.5,撰,chọn,s3_head_bank_consensus,silver/yen4_page_0156_c04_057.png,"Phía trên có chữ 勿/匆 riêng, dưới là chữ bộ 扌; xếp trên-dưới không hợp cấu trúc trái-phải của 撰. Dính chữ."
+040b39a8b6b5cd0f,wrong_image,0.5,断,đoạn,s2_inter_s3_corrected,silver/yen4_page_0082_c04_072.png,"Có một ô chữ riêng phía trên chồng lên chữ 断 bên dưới; 断 là chữ trái-phải nên tách trên-dưới là bất thường, nghi dính 2 chữ."
+476b1f60c75a052e,wrong_image,0.5,麻,mà,s2_inter_s3_corrected,silver/yen11_page_0080_c02_039.png,"Chữ 麻 phía trên, phía dưới là một chữ dạng 户 riêng biệt, nghi dính 2 chữ."
+1c0719a8dc5a433d,wrong_label,0.5,德,đức,s2_inter_s3_corrected,silver/yen11_page_0162_c09_168.png,"德 là chữ trái-phải phức tạp (彳+悳); crop là glyph mảnh, mờ, đơn giản, không có 彳/心."
+fa45d90d39bb6fef,wrong_image,0.5,斫,chước,s2_inter_s3_corrected,silver/yen2_page_0330_c07_121.png,"Ref 斫 = 石+斤 (trái-phải); crop là hai thành phần bộ đao xếp dọc, nghi dính/cắt 2 chữ."
+3779b9920554fceb,wrong_image,0.5,把,bà,s2_inter_s3_corrected,silver/yen4_page_0048_c03_053.png,"Ref 把 = 扌+巴 (trái-phải); crop xếp dọc: 有 trên + phần khác dưới, nghi dính 2 chữ."
+96ab3e45b82d9156,wrong_label,0.5,君,vua,s3_head_bank_consensus,silver/yen2_page_0136_c03_036.png,"Glyph có bộ 辶 (đi bộ), giống 連/蓮, không phải 君 (君 không có 辶)."
+aa2e2e4497145f06,wrong_image,0.5,爫,làm,s2_inter_s3_corrected,silver/yen2_page_0116_c08_146.png,Crop cao nhiều tầng: 爫 (bộ vuốt) ở trên + chữ khác phía dưới → nghi dính/thừa chữ.
+a81d952e623017a5,wrong_image,0.5,宜,nghe,s3_head_bank_consensus,silver/yen11_page_0228_c01_014.png,"Dính 2 chữ: 宜 (宀+且) ở dưới, phía trên là một chữ khác (giống 庄/圧)."
+ac985ca2cfbc66ef,unsure,0.5,塊,khỏi,s2_inter_s3_corrected,silver/yen4_page_0070_c01_010.png,Giống 鬼 (田+儿+厶) nhưng không rõ bộ 土 bên trái của 塊.
+cba909396269818c,unsure,0.5,佇,giư,s1_inter_s3_out_of_dict,silver/yen2_page_0116_c05_093.png,Có mái + thân nhưng không rõ bộ 亻 + 宁 của 佇; glyph mờ.
+f1cb22b94f37e9a7,unsure,0.5,浪,răng,s2_inter_s3_corrected,silver/yen4_page_0084_c01_003.png,"Thân giống 良/衣 hợp với 浪, nhưng bộ 氵 mờ và có nhiễu phía trên."
+f69fd97c3a048417,wrong_image,0.5,各,các,s2_inter_s3_corrected,silver/yen4_page_0182_c03_071.png,"Crop mờ/cắt cụt, không thấy rõ 夂 + 口 của 各; không nhận ra."
+09365e8626e31cb3,wrong_image,0.5,撰,chọn,s2_inter_s3_corrected,silver/yen4_page_0076_c02_031.png,"Crop rối/cắt lệch, không thấy rõ cấu trúc 扌+巽 của 撰 trong ref; nét dọc chồng lộn xộn."
+3a0890532aa39521,wrong_label,0.5,鬼,quỷ,s2_inter_s3_corrected,silver/yen11_page_0142_c04_077.png,"Crop đáy là bộ 心 (dạng 思/恖), không có chân 儿+厶 của 鬼 trong ref; là chữ bộ tâm khác."
+4a42afb7740ace35,unsure,0.5,壳,xác,s2_inter_s3_corrected,silver/yen2_page_0128_c03_057.png,"Đáy crop giống bộ 虍/虎 hơn là 冖+几 của 壳; ảnh mờ, có nét lạ trên đầu nên khó chắc."
+43f28d489de6d89f,wrong_label,0.5,德,đức,s2_inter_s3_corrected,silver/yen11_page_0130_c01_001.png,"Crop đầu 尸/戶, đáy nét sổ/辶, không có bộ 彳 và đáy 心 của 德 trong ref; chữ khác."
+c5731801a0f83f35,wrong_label,0.5,撩,lêu,s3_head_bank_consensus,silver/yen2_page_0122_c05_096.png,"Chữ chính là chữ bộ 罒 (罒 net) chiếm phần trên, không có bộ 扌; không phải 撩."
+b16eaae833c81f60,wrong_label,0.5,衣,ấy,s2_inter_s3_corrected,silver/yen2_page_0026_c01_015.png,"Crop là glyph rậm nét kiểu 幺/纟 (giống 幾/綏), không hề giống 衣 sạch của ref."
+07d05e76829fa159,wrong_image,0.5,獄,ngục,s3_head_bank_consensus,silver/yen11_page_0250_c04_087.png,Crop dính 2 chữ: 地 (full: 土+也) phía trên + 獄 phía dưới (địa ngục); 獄 đúng nhưng ảnh gồm cả 地.
+224c4475f6581001,wrong_label,0.5,寺,thì,s2_inter_s3_corrected,silver/yen2_page_0048_c04_069.png,Đỉnh crop là ô vuông kín (日/田) chứ không phải 土; không khớp 寺.
+fa1f3c04c25e83b6,wrong_label,0.5,塊,hồn,s2_inter_s3_corrected,silver/yen4_page_0202_c03_060.png,"Crop có bộ 心 (忍/恩), khác 塊 (土+鬼); không khớp."
+f0814469dc9fda7c,wrong_label,0.5,渚,chưa,s2_inter_s3_corrected,silver/yen2_page_0022_c06_112.png,"Không thấy 氵+者; crop có bộ 辶 và chữ khác, không phải 渚."
+f1313070244b5708,wrong_label,0.5,渚,chớ,s2_inter_s3_corrected,silver/yen2_page_0022_c02_039.png,"Crop giống 爾/兩 ở trên, không có 氵+者 của 渚."
+99b475607ce2776f,wrong_label,0.5,魂,hồn,s2_inter_s3_corrected,silver/yen4_page_0156_c05_069.png,"Crop là chữ ghép trên-dưới có bộ 心 (人+恩), khác 魂 (云+鬼 trái-phải)."
+c278244e92fc2d24,wrong_label,0.5,衣,ấy,s2_inter_s3_corrected,silver/yen11_page_0118_c02_029.png,Crop có ô vuông (臣/巨) phía trên + 父 phía dưới; không phải 衣 (亠 + thân xòe) như ref.
+1a9f481a4289c245,wrong_label,0.5,寺,thì,s2_inter_s3_corrected,silver/yen2_page_0138_c07_139.png,"Glyph trong crop đậm, có đáy dạng ô 月/日 (giống 青), không phải 寺 đơn giản (土+寸) trong ref."
+015eec0d871eecfc,wrong_label,0.5,寺,thì,s2_inter_s3_corrected,silver/yen2_page_0316_c03_052.png,"Crop là glyph phức tạp dạng 老/毘, không phải 寺 đơn giản (土+寸) trong ref."
+1769aa5542528e82,wrong_image,0.5,安,an,s2_inter_s3_corrected,silver/yen4_page_0160_c07_152.png,Dính 2 chữ: hộp 冈 trên + 女 dưới; không phải 安 (宀+女)
+bb13becabfb835ff,wrong_label,0.5,味,mùi,s2_inter_s3_corrected,silver/yen4_page_0302_c04_062.png,"Crop giong 未/朱 tron, khong thay ro bo 口 cua 味; co the la 未 (mui)."
+bdf568c847aade21,wrong_image,0.5,強,càng,s2_inter_s3_corrected,silver/yen4_page_0238_c05_095.png,"Phan tren toi/dinh, phan duoi giong 石; khong thanh 強 (弓+虽) sach -> cat loi."
+212634d36f4a532c,wrong_image,0.5,囉,ra,s3_head_bank_consensus,silver/yen4_page_0260_c05_092.png,"Crop thua/nho (囗+兀), khong phai 囉 phuc tap; giong cat cut hoac nhieu."
+d19aeb2ceed21210,unsure,0.5,魂,hồn,s2_inter_s3_corrected,silver/yen2_page_0062_c08_164.png,"Phần dưới giống bộ 鬼, phần trên như 云 (đọc hồn hợp lý) nhưng xếp dọc và tách rời, không chắc là 魂 sạch hay lỗi cắt."
+276c03a9dded5c3d,wrong_image,0.5,吒,cha,s2_inter_s3_corrected,silver/yen4_page_0088_c02_016.png,"Crop lộn xộn: có glyph 才/于 tách rời phía trên phần 口+乇 → nghi cắt dính 2 chữ, không phải 吒 sạch."
+abaf495e7f53a984,wrong_image,0.5,㐌,đã,s2_inter_s3_corrected,silver/yen2_page_0122_c07_146.png,"Crop lộn xộn nhiều mảnh (chấm trên + ô giữa giống 电 + nét dưới), không phải 㐌; lỗi cắt/dính."
+806709bfa38b90fa,wrong_image,0.5,扒,bắt,s2_inter_s3_corrected,silver/yen2_page_0096_c04_070.png,"Crop dính 2 chữ xếp dọc (trên bộ thủy, dưới nét tay); 扒 là chữ trái-phải nên không khớp; lỗi cắt."
+0e938dc084c7cf00,wrong_label,0.5,餅,bánh,s2_inter_s3_corrected,silver/yen2_page_0134_c08_165.png,"Crop có bộ 尸/户 trên đầu, không thấy bộ 食 của 餅; trông giống 屏 hơn."
+af37128f5393b220,wrong_image,0.5,徳,đức,s2_inter_s3_corrected,silver/yen2_page_0066_c07_143.png,"Crop xếp dọc (trên 虍/声, dưới 石), không có bộ 彳 và 心 của 徳; lỗi cắt hoặc khác chữ."
+0758560be20def67,wrong_image,0.5,苔,đầy,s2_inter_s3_corrected,silver/yen2_page_0224_c02_036.png,Crop dính chữ ô 回 bên trên + phần 艹+口 dưới; bộ 艹 không nằm đỉnh như 苔; lỗi cắt.
+16089f6e1d26adf3,wrong_image,0.5,閉,bấy,s2_inter_s3_corrected,silver/yen4_page_0244_c09_184.png,Phần dưới khớp 閉 (門+才) nhưng có chữ ô (用/冊) dính bên trên; lỗi cắt.
+f27388f48eaa8f71,wrong_label,0.5,双,song,s2_inter_s3_corrected,silver/yen11_page_0138_c09_184.png,"Crop là ⿱ 又 trên 西/四, cấu trúc trên-dưới; 双 là 又又 cạnh nhau. Không khớp nhãn."
+a911d94511ef4e3c,wrong_label,0.55,寺,thì,s2_inter_s3_corrected,silver/yen2_page_0194_c07_124.png,"Crop là chữ phức tạp (bộ thảo/nhiều nét); 寺 chỉ 土+寸 đơn giản, không khớp"
+b3cf5308b4f2d5fe,wrong_label,0.55,衣,ấy,s2_inter_s3_corrected,silver/yen2_page_0326_c05_096.png,"Crop là chữ ghép (bộ 礻/木 + 艮); 衣 là chữ đơn, là chữ khác"
+bb9b998b22f36a0a,wrong_label,0.55,下,xuống,s3_head_bank_consensus,silver/yen4_page_0170_c07_140.png,"Crop là chữ phức tạp có bộ 宀 (mái nhà) + nội phần, KHÔNG phải 下 (3 nét). Có thể khớp candidate 𡬈 (xuống)."
+c9a312f8edd1fe63,wrong_image,0.55,講,giảng,s3_head_bank_consensus,silver/yen11_page_0288_c04_072.png,"Crop nhiễu/vỡ nét, chỉ toàn mẩu rời rạc, không nhận ra 講 (言+冓); nghi cắt hỏng/nhầm ô."
+9a38640f3e5a6aff,wrong_image,0.55,倘,thẳng,s3_head_bank_consensus,silver/yen11_page_0298_c06_122.png,"Crop xếp trên-dưới 2 khối, không phải 倘 (亻+尚 trái-phải); nghi ghép/nhầm ô."
+7b2cfd8aa35cb0d3,wrong_image,0.55,茹,nhà,s2_inter_s3_corrected,silver/yen11_page_0116_c07_141.png,"Trên là hộp 回, dưới như 成/戍; không có 艹+如 của 茹, nghi ghép 2 phần."
+4d2b62907c297326,wrong_label,0.55,几,kẻ,s2_inter_s3_corrected,silver/yen2_page_0178_c04_073.png,"Crop là chữ phức tạp (đỉnh 艹/竹 + thân dưới), không phải 几 hai nét đơn; có thể 幾 hoặc chữ khác."
+af88c40ad1f4c59a,wrong_image,0.55,丕,vậy,s2_inter_s3_corrected,silver/yen2_page_0188_c07_121.png,Dính 2 chữ: 丕 ở trên + một chữ khác đầy đủ ngay dưới (cắt gộp cả chữ kế).
+4e985087725b4312,wrong_image,0.55,末,mất,s2_inter_s3_corrected,silver/yen4_page_0038_c02_032.png,末 phía trên khớp ref nhưng dính thêm bộ 廾/卄 ở đáy → cắt dính 2 phần.
+24c1fec82d112faa,wrong_image,0.55,折,chết,s2_inter_s3_corrected,silver/yen11_page_0232_c02_035.png,Crop chứa 2 chữ: 折 phía trên + một chữ khác (阝...) phía dưới; lỗi cắt gộp.
+95facd49adf2634a,wrong_image,0.55,尼,nơi,s3_head_bank_consensus,silver/yen11_page_0156_c02_024.png,Crop gộp 尼 ở trên + 1 ô 曰/日 (chữ dưới) ở dưới; cắt dính 2 chữ.
+467aab19659e9974,wrong_label,0.55,謳,âu,s2_inter_s3_corrected,silver/yen2_page_0294_c02_036.png,"Crop là 區 (匚+品), không thấy bộ 言 của 謳; chữ đúng có lẽ 區."
+4acc8e6482e1933b,wrong_image,0.55,中,trong,s2_inter_s3_corrected,silver/yen11_page_0248_c09_197.png,"Crop có 2 glyph 巾/中 xếp trên-dưới (dính 2 chữ), không phải 1 ô 中 sạch."
+5024e6e7efb88716,wrong_image,0.55,代,dạy,s3_head_bank_consensus,silver/yen2_page_0052_c03_064.png,Crop chứa 2 glyph rời: mảnh 秋/林 trên + chữ 口+曳 (kiểu 𠰺 'dạy') dưới; không phải 代 (亻+弋) -> cắt dính 2 chữ.
+0c91dea033b74a54,wrong_label,0.55,行,hăng,s3_head_bank_consensus,silver/yen2_page_0012_c08_130.png,"Crop là 1 glyph liền có sống dọc + các nét ngang (giống 寿/事), KHÔNG có kết cấu song trụ 彳亍 của 行; OCR恒 và s3_cosine=0.041 xác nhận không phải 行."
+87f9e297d5ecf4fc,wrong_label,0.55,寺,thì,s2_inter_s3_corrected,silver/yen2_page_0134_c09_176.png,"Chu chinh trong crop la chu co khung 口 phuc tap (giong 壽/嘗), khong phai 寺 (士+寸)."
+4e9cfd294fe7da83,wrong_label,0.55,例,lời,s2_inter_s3_corrected,silver/yen2_page_0320_c03_046.png,"Crop la chu khung kieu 兩/面, khong co bo 亻+列 cua 例."
+64f9047d62e73d2b,wrong_image,0.55,求,cầu,s3_head_bank_consensus,silver/yen2_page_0054_c01_004.png,Crop rối/nhiễu nhiều thành phần: giữa lờ mờ như 求 nhưng có chữ 亚/业 riêng phía dưới; dính/nhiễu.
+28c355beb58f2cfd,wrong_image,0.55,嬈,nhiêu,s2_inter_s3_corrected,silver/yen11_page_0196_c08_161.png,Chữ dạng 月 phía trên + 娆/嬈 (女+尧) phía dưới; 嬈 vốn trái-phải nên đây là dính 2 chữ.
+ad6b03c193aa4887,wrong_label,0.55,圣,thánh,s2_inter_s3_corrected,silver/yen2_page_0248_c07_103.png,"Ref 圣 = 又/土 (2 vạch); crop = đỉnh nhọn đối xứng trên 王 (3 vạch), giống 全, không phải 圣."
+e11c0392a54727eb,wrong_label,0.55,𡗶,trời,s3_head_bank_consensus,silver/yen4_page_0198_c08_128.png,"𡗶 (trời) = 天 trên 上 rất đặc trưng; crop là glyph có ⿸厂 + phần loang dưới, hoàn toàn không phải 天/上."
+d07c6f419e9a6672,wrong_image,0.55,寺,thì,s2_inter_s3_corrected,silver/yen2_page_0184_c03_044.png,"Dính 2 chữ: 寺 (士+寸) nằm dưới, phía trên là một chữ khác đầy đủ nét."
+234d1dbff34e7ece,wrong_image,0.55,㐌,đã,s2_inter_s3_corrected,silver/yen11_page_0130_c02_038.png,"Dính 2 chữ: 㐌 (dạng 也) ở dưới, phía trên là một chữ khác (giống 政/攺)."
+29797c3e40c9d97f,wrong_image,0.55,支,giê,s2_inter_s3_corrected,silver/yen2_page_0114_c04_074.png,Dính 2 chữ: 支 rõ ở trên (đúng nhãn) nhưng crop lấy thêm nguyên một chữ khác (có 斗/米) phía dưới.
+79dd6ef415142180,wrong_image,0.55,衣,ấy,s2_inter_s3_corrected,silver/yen2_page_0036_c07_123.png,"Hai khối glyph tách rời xếp chồng (trên 衣, dưới 从/彼); vượt quá chữ 衣 đơn, lỗi cắt."
+7aee38d6624bff4f,wrong_image,0.55,劄,chép,s3_head_bank_consensus,silver/yen4_page_0262_c07_120.png,Hai glyph xếp chồng (ô vuông trên + chữ có bộ 刂 dưới); không phải 劄 đơn.
+ad377ea851738665,wrong_label,0.55,唐,đường,s2_inter_s3_corrected,silver/yen4_page_0222_c06_121.png,"Crop là glyph cao khác hẳn: đầu 父, thân giống 鹿/麻; ref 唐 (广+肀+口) không khớp."
+d9c0a6be3463af63,wrong_label,0.55,渚,chớ,s2_inter_s3_corrected,silver/yen2_page_0064_c07_126.png,"Chữ chính trong crop là 1 chữ cấu trúc trên-dưới (giống 商/啇), không có bộ 氵 bên trái; không khớp ref 渚 (氵+者)."
+7e0f6b8a922baa09,wrong_label,0.55,吝,lần,s2_inter_s3_corrected,silver/yen2_page_0146_c09_143.png,"Đỉnh crop giống 比, không phải 文 của 吝; là chữ khác."
+d2cec07441e60f3f,wrong_label,0.55,焠,sốt,s2_inter_s3_corrected,silver/yen2_page_0232_c04_076.png,"Không thấy bộ 火 bên trái; thân giống 卒/牛, khác 焠."
+8cb177038afe169f,wrong_label,0.55,蜍,thờ,s2_inter_s3_corrected,silver/yen4_page_0216_c03_044.png,Không có bộ 虫 bên trái; crop là chữ ghép trên-dưới khác 蜍.
+0fcdb8a97f8da2c8,wrong_image,0.55,离,le,s2_inter_s3_corrected,silver/yen11_page_0024_c03_064.png,"Dính 2 chữ: 犮 ở trên + 离 (卤) ở dưới, cách nhau rõ"
+cbac1371b15cce8e,wrong_image,0.55,秋,su,s2_inter_s3_corrected,silver/yen11_page_0130_c04_070.png,Dính 2 chữ: 秋 ở trên + chữ bộ 罒 ở dưới
+3947dd0a26b2c0b7,wrong_image,0.55,寺,thì,s2_inter_s3_corrected,silver/yen2_page_0158_c07_131.png,"Crop dính 2 chữ dọc (trên giống 攵/仪, dưới giống 音); không phải 寺 (土+寸); lỗi cắt."
+0a2a72e6641c4eca,wrong_image,0.55,折,chết,s2_inter_s3_corrected,silver/yen4_page_0246_c08_156.png,"Crop dính 2 chữ dọc (trên 台/合, dưới bộ tay 扌); 折 là chữ trái-phải; lỗi cắt."
+08f001a5194518ee,wrong_image,0.55,㐌,đã,s2_inter_s3_corrected,silver/yen4_page_0230_c04_066.png,Phần dưới cong hợp 㐌 nhưng dính chữ 守 (宀+寸) bên trên; lỗi cắt.
+491bb33b891b5403,wrong_image,0.55,麻,mà,s2_inter_s3_corrected,silver/yen2_page_0176_c07_130.png,Phần dưới là 麻 nhưng dính chữ 白/自 bên trên; lỗi cắt gộp chữ hàng trên.
+cc877212363caca2,wrong_label,0.55,君,vua,s2_inter_s3_corrected,silver/yen2_page_0166_c07_127.png,"Crop là chữ ⿱ (小 ở trên, 周/用 bao ở dưới), KHÔNG phải 君 (尹+口). Nhãn sai; là chữ khác."
+d9830091162db982,wrong_label,0.6,尼,này,s2_inter_s3_corrected,silver/yen2_page_0140_c04_046.png,"Crop là chữ sạch cấu trúc trên-dưới (giống 若/君, có 口 dưới), khác hẳn 尼 (尸 bao 匕)."
+889836d4fcd81ff4,wrong_label,0.6,瑰,khỏi,s2_inter_s3_corrected,silver/yen4_page_0072_c01_007.png,"Crop là chữ trên-dưới với 心 ở đáy, không phải 瑰 (王+鬼, trái-phải)."
+45dbf63bf5e9dd2f,wrong_image,0.6,尼,này,s3_head_bank_consensus,silver/yen11_page_0094_c06_122.png,Crop dính 2 chữ: 尼/忌 phía trên + chữ 待/特 đầy đủ bên dưới (lỗi cắt gộp).
+a1dcedf1fdf86800,wrong_label,0.6,代,dạy,s2_inter_s3_corrected,silver/yen2_page_0308_c09_150.png,"Crop là chữ cấu trúc trên-dưới (⿱); 代 là trái-phải (亻+弋), không khớp ref, là chữ khác"
+22dc1bb2b12de4a7,wrong_label,0.6,時,ngày,s2_inter_s3_corrected,silver/yen11_page_0256_c03_050.png,"Crop trông như 㝵/得 (âm ngày), không thấy bộ 日 rõ của 時; nghi nhầm 時/㝵"
+d065f73272a36eaa,wrong_label,0.6,例,lời,s2_inter_s3_corrected,silver/yen4_page_0042_c02_023.png,"Crop la 1 glyph don cau truc tren-duoi, dang bao/dong (giong 吝 文+口 hoac 甸), khong phai 例 (亻+列 trai-phai) nhu ref."
+1c04fba7cbdd49ba,wrong_label,0.6,寺,thì,s2_inter_s3_corrected,silver/yen2_page_0088_c02_035.png,"Crop có nhiều nét ngang xếp chồng ở giữa + thân phức tạp = 壽 (thọ), khác hẳn 寺 (chỉ 土 trên 寸)."
+e1a185a37053ff2c,wrong_image,0.6,丕,vậy,s2_inter_s3_corrected,silver/yen2_page_0276_c07_123.png,Crop dính 2 chữ: 1 chữ đóng khung (kiểu 用/角) ở trên + 丕 ở dưới; gộp chữ trên.
+235cafa197c3bdd5,wrong_image,0.6,㐌,đã,s2_inter_s3_corrected,silver/yen4_page_0182_c06_136.png,Crop dính 2 chữ xếp dọc: 㐌 (đã) ở trên + chữ 處/xứ ở dưới.
+3fc3fee1c310f168,wrong_image,0.6,双,song,s2_inter_s3_corrected,silver/yen4_page_0278_c02_032.png,双 phía trên dính thêm một chữ hộp (用/面) đầy đủ phía dưới = lỗi cắt dính 2 chữ.
+df6c668bf6dbb7f2,wrong_image,0.6,扲,cầm,s2_inter_s3_corrected,silver/yen2_page_0234_c07_135.png,"Crop dính 2 chữ xếp dọc: trên là 代, dưới mới là 扲 (lỗi gộp 2 ô)."
+44d9d0dee3e93017,wrong_image,0.6,判,phán,s2_inter_s3_corrected,silver/yen2_page_0172_c08_137.png,"Crop dính 2 chữ: trên là chữ có bộ 辶, dưới mới là 判."
+5611a2df5f949172,wrong_image,0.6,孛,but,s1_inter_s3_out_of_dict,silver/yen2_page_0172_c07_128.png,"Crop có chữ phức tạp (giống 歸) ở trên + mảnh dưới; không phải 孛 (十+子), lỗi cắt."
+b32465586314efaa,wrong_image,0.6,庄,chăng,s2_inter_s3_corrected,silver/yen2_page_0242_c02_029.png,"Crop chứa 2 glyph rời (một chữ dạng 卿 phía trên + một ô 西/面 phía dưới), không phần nào là 庄 (广+土) -> cắt dính/nhầm vị trí."
+31624bbea66c69b6,wrong_label,0.6,奴,nó,s3_head_bank_consensus,silver/yen4_page_0140_c04_085.png,"Crop la chu doi xung co mai 亠 (giong 齊/帝), khong co bo 女+又 cua 奴."
+ea71a79ed88b5570,wrong_label,0.6,時,ngày,s2_inter_s3_corrected,silver/yen11_page_0290_c02_041.png,"Crop la chu doi xung mot than (giong 齊/舜), khong phai 時 (cau truc trai-phai 日+寺)."
+b1b8ab7dc2a7a59b,wrong_image,0.6,拱,cũng,s2_inter_s3_corrected,silver/yen2_page_0262_c05_088.png,Cắt dính 2 chữ: một chữ 冊/毋 hoàn chỉnh phía trên + 拱 (扌+共) phía dưới.
+1480d047f970091c,wrong_image,0.6,瘥,si,s3_head_bank_consensus,silver/yen11_page_0272_c05_077.png,"Crop dính 2 chữ: phía trên là chữ 今/令 riêng, phía dưới mới là chữ bộ 疒 (瘥). Lỗi cắt dính."
+4fd7b1cc4c4fea51,wrong_image,0.6,対,dối,s2_inter_s3_corrected,silver/yen4_page_0216_c05_100.png,"Crop dính 2 chữ: trên là chữ bộ 亻 (何) riêng, dưới mới là 対 (文+寸). Lỗi cắt dính chữ trên."
+f9960f3b421d27db,wrong_image,0.6,下,xuống,s3_head_bank_consensus,silver/yen4_page_0040_c02_034.png,"Crop không phải 下 (rất đơn giản); hiện 2 thành phần phức tạp (trên 1 chữ, dưới chữ bộ 尸). Lấy nhầm ô/dính chữ."
+bca87143aadca05e,wrong_image,0.6,𧗱,về,s3_head_bank_consensus,silver/yen4_page_0038_c04_084.png,"Chữ 𧗱 (行) chiếm nửa trên, nửa dưới là một chữ 艹/芸 riêng biệt đầy đủ — dính 2 chữ theo chiều dọc."
+35299ddb78aee30d,wrong_image,0.6,内,nói,s2_inter_s3_corrected,silver/yen11_page_0290_c05_093.png,"Nửa trên là chữ 恨 (忄+艮) đầy đủ, nửa dưới mới là 内 — dính 2 chữ."
+02d9f15ff14e3cd7,wrong_label,0.6,乙,ấy,s3_head_bank_consensus,silver/yen11_page_0258_c09_199.png,"Ref 乙 là một nét móc đơn; crop là chữ ghép ⿱ (đỉnh nhọn trên + 八 dưới), khác hẳn 乙."
+3e2762f5a33eae72,wrong_image,0.6,拱,cũng,s2_inter_s3_corrected,silver/yen11_page_0280_c06_115.png,"Hai glyph xếp chồng (trên 弓/邘, dưới có 扌+戈); không phải 拱 (扌+共) đơn."
+5a90228d8238a837,wrong_label,0.6,時,ngày,s2_inter_s3_corrected,silver/yen2_page_0274_c06_109.png,"Crop cấu trúc trên-dưới, thiếu bộ 日 trái của 時; giống chữ khác (candidate 㝵)."
+65c38bda5a55bec4,wrong_label,0.6,林,trăm,s3_head_bank_consensus,silver/yen11_page_0272_c03_053.png,"Crop là chữ cấu trúc trên-dưới (木/不 trên, 口/日 dưới, giống 百/否/杏), không phải 林 (2 bộ 木 trái-phải); âm 'trăm' gợi ý 百/𤾓."
+f32e24c6b40e980d,wrong_label,0.6,㐌,đã,s2_inter_s3_corrected,silver/yen2_page_0132_c06_118.png,㐌 là dạng 也 đơn giản; crop là chữ ghép phức tạp (giống 者/耂) khác hẳn.
+42fbf972b3485aaa,wrong_image,0.6,固,có,s2_inter_s3_corrected,silver/yen2_page_0258_c01_008.png,"Crop dính 2 chữ: một chữ trên (冇) và 固 ở dưới, cắt gộp 2 ô dọc"
+661e4c16a1a69bc4,wrong_image,0.6,黙,mặc,s3_head_bank_consensus,silver/yen11_page_0212_c04_070.png,Dính 2 chữ: 黙 ở trên + chữ 伍 (亻+五) ở dưới
+e0ebdc605c3fcd52,wrong_image,0.6,闭,bấy,s2_inter_s3_corrected,silver/yen2_page_0272_c08_146.png,Dính 2 chữ: 共/其 trên + chữ hộp 团/囚 dưới; không phải 闭
+07b0c39dd67a9db0,wrong_label,0.6,嬈,nhiều,s2_inter_s3_corrected,silver/yen2_page_0256_c09_163.png,"Crop là 1 chữ sạch nhưng thuộc họ 虍/處 (hộp 四 trên + 处 dưới), KHÔNG có bộ 女 như ref 嬈 → sai nhãn."
+82dd33c19d43dbe2,wrong_label,0.6,黙,mặc,s2_inter_s3_corrected,silver/yen2_page_0154_c04_063.png,"Crop xếp trên-dưới: 黑 trên, 土 dưới = 墨 (mực), không phải 黙 (黑+犬 trái-phải). Nên là 墨 (có trong ứng viên)."
+6d675d0bfb2adc0e,wrong_label,0.62,講,giảng,s3_head_bank_consensus,silver/yen11_page_0100_c01_015.png,"Crop là chữ cấu trúc trên-dưới có bộ 子 (giống 季/孛), KHÔNG có bộ 言 trái-phải của 講; label sai."
+fcaff6f8363b1a83,wrong_label,0.65,沙,sa,s2_inter_s3_corrected,silver/yen11_page_0144_c01_015.png,Crop có khung 囗 bao ngoài; 沙 (氵+少) không có khung; là chữ khác
+966619c4630c9029,wrong_image,0.65,廛,n,s3_head_bank_consensus,silver/yen4_page_0250_c04_063.png,"Crop độ phân giải thấp, gồm 2 mảnh chữ nhỏ chồng nhau, không thấy bộ 广 của 廛; s3_cosine=0.007 xác nhận không khớp bank 廛 -> cắt lỗi/nhầm ô."
+96548bda42eb98fb,wrong_label,0.65,林,trăm,s3_head_bank_consensus,silver/yen2_page_0108_c04_069.png,"Crop là 1 chữ sạch dạng 具/真 (khung 目 + 八 chân), KHÔNG phải 林 (hai 木 cạnh nhau); âm 'trăm' vốn nên là 百/𤾓, nhãn 林 sai."
+2d0a0c7d210767ae,wrong_image,0.65,業,nghiệp,s3_head_bank_consensus,silver/yen11_page_0126_c02_033.png,Dính 2 chữ 功業: 功 (工+力) ở trên tách hẳn khỏi 業 ở dưới.
+7ec1cba5c65166f0,wrong_label,0.65,踈,thưa,s2_inter_s3_corrected,silver/yen11_page_0112_c06_115.png,"Crop la 糸+東 (練/綀), bo trai la 糸 (to) khong phai 足; ref 踈 dung bo 足 -> lech han."
+ca046fe3acb0127c,wrong_image,0.65,奴,nó,s2_inter_s3_corrected,silver/yen4_page_0054_c04_066.png,"Crop 2 chữ chồng dọc (允/元 trên, 奴/却 dưới) tách bằng khoảng trắng → cắt dính, không phải 1 chữ 奴 sạch."
+0eae3a2bdd08ffe3,wrong_image,0.68,但,đến,s2_inter_s3_corrected,silver/yen4_page_0186_c08_134.png,"Crop nhiễu hạt tiêu dày đặc, chỉ còn hình 己 mờ, không đọc được 但; ảnh hỏng/nhiễu."
+f303ffe37c57f144,wrong_image,0.68,每,môi,s2_inter_s3_corrected,silver/yen2_page_0272_c06_107.png,Cắt dính 2 chữ: một chữ 守 hoàn chỉnh phía trên + 每/母 phía dưới; ảnh crop lỗi.
+f9c29f5679ba304b,wrong_image,0.7,無,vô,s2_inter_s3_corrected,silver/yen11_page_0196_c06_113.png,Crop dính 2 chữ: 土 nằm trên 無; lỗi cắt gộp ô.
+158d3907c08daa27,wrong_image,0.7,寺,thì,s2_inter_s3_corrected,silver/yen2_page_0252_c03_050.png,Crop dính 2 chữ: có 1 chữ đầy đủ phía trên chồng lên 寺 bên dưới → cắt sai.
+5ceddaf84dab3508,wrong_image,0.7,㓜,ao,s2_inter_s3_corrected,silver/yen4_page_0018_c01_010.png,"Crop dính 2 glyph xếp trên-dưới (幼/勾 trên, chữ khác dưới), trong khi 㓜 là 1 chữ đơn."
+6c79bfabab722c8b,wrong_image,0.7,旦,đến,s2_inter_s3_corrected,silver/yen4_page_0184_c02_045.png,"Crop chỉ là mảnh nét cong (dạng 乙/2), không phải 日+一 của 旦; lỗi cắt cụt."
+1d0c4b3cef7b6f46,wrong_label,0.7,天,thiên,s3_head_bank_consensus,silver/yen11_page_0196_c06_117.png,"Crop là chữ có bộ 辶 (逹/連), hoàn toàn khác 天"
+c363ac3c5693ddb8,wrong_label,0.7,咍,hai,s2_inter_s3_corrected,silver/yen4_page_0112_c05_099.png,"Crop la chu phuc 口+羅 (囉/羅), khong phai 咍 (口+台) -> lech han ref."
+35d062ecfea5ced2,wrong_image,0.72,敬,kính,s2_inter_s3_corrected,silver/yen11_page_0204_c08_175.png,"Crop chứa 2 glyph xếp chồng (trên kiểu 坿/玒, dưới kiểu 焱/汲), không phải chữ 敬 (苟+攵); lỗi cắt/ghép ô."
+f3fa081fe29360f1,wrong_image,0.72,路,lọ,s2_inter_s3_corrected,silver/yen2_page_0154_c03_049.png,Cắt dính 2 chữ: một chữ 内 hoàn chỉnh phía trên + 路 (足+各) phía dưới; ảnh crop lỗi dù label 路 có mặt.
+f6384470643344e7,wrong_image,0.8,填,xin,s2_inter_s3_corrected,silver/yen4_page_0286_c03_049.png,"Crop gần như trống, chỉ còn mảnh nét nhỏ ở góc; không có chữ 填 (土+真). Lỗi cắt hỏng."
+19f2b81b24bfd9a1,wrong_image,0.8,安,ăn,s2_inter_s3_corrected,silver/yen2_page_0090_c02_023.png,"Toàn ô vuông (罒/四) xếp chồng, không có mái 宀 + 女 của 安; lỗi cắt."
+363ab0cf6b498743,wrong_image,0.8,代,dạy,s2_inter_s3_corrected,silver/yen2_page_0244_c05_077.png,"Crop chứa 2 chữ chồng dọc (找/我 ở trên, 卫/口 ở dưới), cách nhau khoảng trắng rõ; không phải 代 → cắt dính/sai ô."
+52e093d510d3e660,wrong_image,0.85,乄,làm,s2_inter_s3_corrected,silver/yen4_page_0070_c03_046.png,"Nhiều mảnh glyph xếp chồng (ら + ô vuông), không phải nét đơn メ của 乄; lỗi cắt ô."

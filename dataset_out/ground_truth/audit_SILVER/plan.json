@@ -1,0 +1,38 @@
+{
+  "tier": "SILVER",
+  "n": 750,
+  "pool": 10856,
+  "coverage": 0.0691,
+  "design": "stratified_random_by_rule",
+  "seed": 42,
+  "source": "labels_final.csv",
+  "conf": 0.95,
+  "strata": [
+    {
+      "stratum": "s1_inter_s3_out_of_dict",
+      "n_h": 40,
+      "design_weight": 4.7,
+      "N_h": 188
+    },
+    {
+      "stratum": "s2_inter_s3_corrected",
+      "n_h": 605,
+      "design_weight": 15.119,
+      "N_h": 9147
+    },
+    {
+      "stratum": "s3_head_bank_consensus",
+      "n_h": 105,
+      "design_weight": 14.486,
+      "N_h": 1521
+    }
+  ],
+  "estimation": "stratified design-weighted (Horvitz–Thompson) overall + Wilson/Clopper–Pearson per-rule; pipeline.ground_truth estimate --design stratified",
+  "acceptance_srs_reference": {
+    "p0": 0.9,
+    "n_srs_ref": 748,
+    "accept_if_defects_le": 61,
+    "lcb_at_c": 0.9001
+  },
+  "note": "Mẫu KHÔNG rank theo nghi ngờ (unbiased để ĐO precision). design_weight = N_h/n_h quy per-rule về dân số tier."
+}

@@ -63,6 +63,8 @@ while [[ $# -gt 0 ]]; do
             echo "  1     Extract data from PDF (crop khung -> kinhhannom -> 9 cột)"
             echo "  2     Build dataset (align_engine: banded-DP align + consensus tiers"
             echo "        + re-segment + bbox-fix -> crops + labels.csv + 3 standards)"
+            echo "  3     Consensus-fusion overlay (Giai đoạn 2 Path A: s3+dict, hiệu"
+            echo "        chỉnh trên audit) -> dataset_out/fusion/ (lớp phủ, không phá gốc)"
             echo "  all   Run all steps (default)"
             echo ""
             echo "Options:"
@@ -157,6 +159,19 @@ if [[ "$STEP" == "all" || "$STEP" == "2" ]]; then
     echo ""
     echo ">>> Step 2b: Export standards (HF imagefolder + Frictionless + Croissant)"
     "$PY" -m pipeline.align_engine.to_standard
+fi
+
+# Step 3: Consensus-fusion overlay (Giai đoạn 2, Path A — 0 chi phí). Hợp nhất 2 kênh
+# ĐỘC LẬP-ĐẦU-VÀO đã có (s3 + dict) theo cách SOTA, hiệu chỉnh trên nhãn human-audit
+# (dataset_out/ground_truth/verdicts_*.jsonl), rồi áp gate bất đối xứng. LỚP PHỦ —
+# KHÔNG đụng crops/gold/silver/labels_remediated.csv; chỉ ghi dataset_out/fusion/
+# (channels.csv, fused.csv, labels_fused.csv, summary.json). Tự SKIP nếu thiếu verdicts.
+# Kênh nặng (qwen/nna_lobo) + S3 toàn corpus = Path B, chạy offline sau (xem README).
+if [[ "$STEP" == "all" || "$STEP" == "3" ]]; then
+    echo ""
+    echo ">>> Step 3: Consensus-fusion overlay (Giai đoạn 2 · Path A: s3+dict, hiệu chỉnh trên audit)"
+    "$PY" -m pipeline.consensus_fusion.fuse_stage --config "$CONFIG" \
+        || echo "    [cảnh báo] Step 3 lỗi/skip — bỏ qua (overlay, không chặn pipeline)." >&2
 fi
 
 echo ""

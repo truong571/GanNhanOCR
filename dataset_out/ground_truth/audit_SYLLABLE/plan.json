@@ -1,0 +1,26 @@
+{
+  "tier": "SYLLABLE",
+  "n": 300,
+  "pool": 6751,
+  "coverage": 0.0444,
+  "design": "stratified_random_by_rule",
+  "seed": 42,
+  "source": "labels_final.csv",
+  "conf": 0.95,
+  "strata": [
+    {
+      "stratum": "nghia_consensus",
+      "n_h": 300,
+      "design_weight": 22.503,
+      "N_h": 6751
+    }
+  ],
+  "estimation": "stratified design-weighted (Horvitz–Thompson) overall + Wilson/Clopper–Pearson per-rule; pipeline.ground_truth estimate --design stratified",
+  "acceptance_srs_reference": {
+    "p0": 0.9,
+    "n_srs_ref": 748,
+    "accept_if_defects_le": 61,
+    "lcb_at_c": 0.9001
+  },
+  "note": "Mẫu KHÔNG rank theo nghi ngờ (unbiased để ĐO precision). design_weight = N_h/n_h quy per-rule về dân số tier."
+}

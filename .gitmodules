@@ -2,3 +2,12 @@
 	path = font_diffusion
 	url = https://github.com/dzungphieuluuky/FontDiffusion.git
 	branch = main
+[submodule "gannhanocr-fd"]
+	path = gannhanocr-fd
+	url = https://huggingface.co/datasets/mdnt571/gannhanocr-fd-cache-v2
+[submodule "nom-embed"]
+	path = nom-embed
+	url = https://huggingface.co/mdnt571/nom-embed
+[submodule "NomNaOCR/ds4v_repo"]
+	path = NomNaOCR/ds4v_repo
+	url = https://github.com/ds4v/NomNaOCR

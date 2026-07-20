@@ -20,6 +20,7 @@
 
 # Core pipeline (required)
 numpy==2.4.6
+pandas==3.0.3             # 27 module trong pipeline/ + core/ import; TRƯỚC ĐÂY BỊ THIẾU
 opencv-python==4.13.0.92
 scipy==1.17.1
 PyYAML==6.0.3
@@ -44,7 +45,11 @@ info-nce-pytorch==0.1.4
 fonttools==4.63.0
 pygame-ce==2.5.7          # thay cho pygame (py3.14 không có wheel pygame); import vẫn là "pygame"
 scikit-image==0.26.0
+
+# Giai đoạn 3 — publish (pipeline/publish/export.py import `datasets`; export Parquet
+# cần pyarrow). Thiếu 2 gói này thì pipeline chết ở BƯỚC CUỐI chứ không phải bước đầu.
 datasets==4.8.5
+pyarrow==24.0.0
 
 # Quoc Ngu re-OCR cho sách Sach* (Step 1, khi reocr=true). Lazy-import.
 # Các deps runtime của vietocr (đã pin để cài kèm phần trên):

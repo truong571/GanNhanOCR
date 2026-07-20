@@ -174,29 +174,5 @@ def detect_columns(
     return columns
 
 
-def auto_detect_n_columns(
-    binary: np.ndarray,
-    text_box: tuple[int, int, int, int],
-) -> int:
-    """Auto-detect column count from vertical projection peaks."""
-    left, top, right, bottom = text_box
-    text_region = binary[top:bottom, left:right]
-    region_w = right - left
-
-    if region_w == 0:
-        return 1
-
-    v_proj = text_region.sum(axis=0).astype(float)
-    kernel = max(5, region_w // 50)
-    v_smooth = np.convolve(v_proj, np.ones(kernel) / kernel, mode="same")
-
-    if v_smooth.max() == 0:
-        return 1
-
-    min_dist = max(10, int(region_w * 0.03))
-    threshold = v_smooth.max() * 0.15
-    valleys, _ = find_peaks(-v_smooth, distance=min_dist, height=-threshold)
-
-    significant = [v for v in valleys if v_smooth[v] < v_smooth.max() * 0.2]
-    n_cols = max(1, min(len(significant) + 1, 50))
-    return n_cols
+# auto_detect_n_columns() đã xoá: 0 caller. Số cột luôn biết trước (9 cột/trang,
+# xem pipeline/step1_extract.py + core/align/nom_detect_v3.py) nên không cần dò tự động.

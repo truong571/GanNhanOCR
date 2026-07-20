@@ -1,29 +1,13 @@
-"""Live column helpers used by pipeline/step2_align.py and pipeline/align_engine.
+"""Live column helper used by pipeline/step2_align.py and pipeline/align_engine.
 
-Trimmed to the two functions still on the live path (`nom_cols_hybrid`,
-`load_similar`). The old v3-tier batch driver and its parse_v3 /
-cluster_columns / probe imports were removed as dead code (2026-06).
+Trimmed to the one function still on the live path (`nom_cols_hybrid`).
+The old v3-tier batch driver and its parse_v3 / cluster_columns / probe
+imports were removed as dead code (2026-06).
+
+`load_similar` cũng đã xoá (2026-07, 0 caller): bản chính thức để nạp
+SinoNom_Similar_Dic_v2.csv là core.text.dictionary.load_similarity_dict.
 """
 from __future__ import annotations
-
-import ast
-import csv
-
-
-def load_similar(path: str) -> dict[str, set]:
-    d: dict[str, set] = {}
-    with open(path, "r", encoding="utf-8-sig") as f:
-        reader = csv.reader(f)
-        next(reader, None)
-        for row in reader:
-            if len(row) >= 2:
-                try:
-                    sims = ast.literal_eval(row[1])
-                    if isinstance(sims, list):
-                        d[row[0].strip()] = set(sims)
-                except (ValueError, SyntaxError):
-                    pass
-    return d
 
 
 def nom_cols_hybrid(ocr_columns, min_len=4):

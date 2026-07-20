@@ -92,7 +92,10 @@ def build_parser() -> argparse.ArgumentParser:
     f.add_argument("--score-cols", required=True)
     f.add_argument("--l2", type=float, default=1.0)
     f.add_argument("--tau", type=float, default=0.90)
-    f.add_argument("--out", default=str(REPO / "dataset_out" / "fusion" / "fused.csv"))
+    # KHÔNG mặc định ra fused.csv: đó là artifact production do fuse_stage.py sinh
+    # (có thêm tier_fused/fusion_decision/fusion_reason). Lệnh này chỉ để thử tay.
+    f.add_argument("--out", default=str(REPO / "dataset_out" / "fusion" / "fused_adhoc.csv"),
+                   help="mặc định fused_adhoc.csv; bản production là fused.csv do fuse_stage sinh")
     f.set_defaults(func=cmd_fuse)
 
     d = sub.add_parser("demo", help="synthetic end-to-end demonstration")

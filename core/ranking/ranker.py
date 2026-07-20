@@ -1,9 +1,7 @@
 """3-tier label ranking: dictionary -> similar chars -> FontDiffusion+DINOv2."""
 
 import os
-import shutil
 import sys
-from pathlib import Path
 
 import cv2
 import numpy as np
@@ -228,46 +226,10 @@ def get_dinov2_ranker(font_path: str | None = None,
 
 
 # ---------------------------------------------------------------------------
-# FontDiffusion image generation
+# FontDiffusion image generation: xem pipeline/step3_label.py (nhánh batch).
+# Bản sinh-một-ký-tự trước đây ở đây đã bị xoá (0 caller, thiếu tham số
+# phase1_ckpt_dir so với nhánh batch nên dễ gây hiểu nhầm có 2 đường sinh ảnh).
 # ---------------------------------------------------------------------------
-
-def generate_fontdiffusion_image(
-    char: str,
-    font_path: str,
-    ckpt_dir: str,
-    output_dir: str,
-    style_image: str | None = None,
-) -> str | None:
-    """Generate ancient-style character image using the in-process batch wrapper.
-
-    Returns path to generated image, or None on failure.
-    """
-    if not style_image:
-        return None
-
-    output_path = Path(output_dir) / f"{ord(char):04X}_fd.png"
-    if output_path.exists():
-        return str(output_path)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
-    try:
-        from core.ranking.fontdiffusion_gen import FontDiffusionGenerator
-
-        generator = FontDiffusionGenerator(
-            ckpt_dir=ckpt_dir,
-            font_path=font_path,
-            cache_dir=output_dir,
-            batch_size=1,
-        )
-        generated = generator.generate([char], style_image, style_name="single")
-        generated_path = generated.get(char)
-        if generated_path:
-            shutil.copy2(generated_path, output_path)
-            return str(output_path)
-    except Exception:
-        pass
-
-    return None
 
 
 # ---------------------------------------------------------------------------

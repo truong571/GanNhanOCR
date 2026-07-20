@@ -24,17 +24,6 @@ def denoise_image(gray: np.ndarray) -> np.ndarray:
     return normalized
 
 
-def preprocess_for_ocr(gray: np.ndarray) -> np.ndarray:
-    """Preprocess for Tesseract OCR: denoise -> Otsu -> morph cleanup."""
-    denoised = denoise_image(gray)
-    _, binary = cv2.threshold(denoised, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    close_k = cv2.getStructuringElement(cv2.MORPH_RECT, (2, 2))
-    binary = cv2.morphologyEx(binary, cv2.MORPH_CLOSE, close_k)
-    open_k = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
-    binary = cv2.morphologyEx(binary, cv2.MORPH_OPEN, open_k)
-    return binary
-
-
 def load_and_binarize(image_path: str) -> tuple[np.ndarray, np.ndarray]:
     """Load image and create binary mask (ink=1, background=0).
 

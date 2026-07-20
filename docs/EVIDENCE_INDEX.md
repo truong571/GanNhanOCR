@@ -91,7 +91,10 @@ Vị trí: `~/ThS_archive/backup_2026-07-20/`
 |---|---|---|---|
 | `evidence_2026-07-20.tgz` | 96 MB | `ff29cf3d370d83c2…27de4674` | 83 file: toàn bộ `ground_truth/`, `fusion/`, 3 bản labels, các report, `release/`, config, 4 tài liệu chiến lược |
 | `repo_2026-07-20.bundle` | 1,7 GB | `842a4ed681d32a69…41d38df2` | **Toàn bộ lịch sử git** (101 commit, mọi nhánh + tag) |
-| `SHA256SUMS.txt` | — | — | Bảng hash để verify |
+| `repro_assets_2026-07-20.tgz` | 321 MB | xem `SHA256SUMS.txt` | **Tài sản KHÔNG có trong git**: `Data/*.pdf` (3 bản scan gốc), `prepared/` (cache OCR), `dataset_out/{gold,silver,syllable}` (72.873 crop) |
+| `SHA256SUMS.txt` | — | — | Bảng hash để verify cả 3 gói |
+
+> **Vì sao gói thứ 3 tồn tại** — phát hiện khi chạy kiểm chứng clone sạch ở §4.1: ba tài sản này **không có trong git** (gitignored vì dung lượng) và ban đầu **cũng không có trong sao lưu**. Nếu mất ổ đĩa thì: bản scan gốc `Data/*.pdf` **không tái tạo được**; `prepared/` là cache OCR — theo FLOW đây chính là *primary data* vì OCR Nôm phụ thuộc API Kimhannom bên ngoài (tái tạo tốn tiền và **không tất định**); 72.873 crop là chính bản thân dataset.
 
 **Đã kiểm chứng thật, không tin tưởng mù quáng:**
 - `shasum -c SHA256SUMS.txt` → OK cả 2 gói
@@ -101,9 +104,28 @@ Vị trí: `~/ThS_archive/backup_2026-07-20/`
 
 **Khôi phục khi cần:**
 ```bash
-tar xzf ~/ThS_archive/backup_2026-07-20/evidence_2026-07-20.tgz -C <đích>
 git clone ~/ThS_archive/backup_2026-07-20/repo_2026-07-20.bundle <đích>
+tar xzf ~/ThS_archive/backup_2026-07-20/evidence_2026-07-20.tgz     -C <đích>
+tar xzf ~/ThS_archive/backup_2026-07-20/repro_assets_2026-07-20.tgz -C <đích>   # bắt buộc
 ```
+
+### 4.1. KIỂM CHỨNG CLONE SẠCH — clone làm được gì, KHÔNG làm được gì
+
+Đã chạy thật ngày 2026-07-20 (clone sạch nhánh `feat/phases-0-3-audit-pipeline` ra thư mục tạm).
+
+**Clone sạch LÀM ĐƯỢC:**
+- `git submodule init` đăng ký **đủ 4/4** submodule, exit 0 (trước khi vá `.gitmodules` thì FATAL)
+- Có đủ bằng chứng: 54 file `dataset_out/ground_truth/`, `labels_final.csv` (82.275 dòng), `confusion_fixes.yaml`, 3 tài liệu chiến lược, `requirements.lock.txt`
+- Chạy được 3/5 bộ selftest với **kết quả y hệt** repo gốc: `consensus_fusion` 44/0 · `remediation` 27/6 · `phase1_engine` 29/1
+
+**Clone sạch KHÔNG làm được** (khác biệt đo được so với repo gốc):
+
+| Selftest | Repo gốc | Clone sạch | Nguyên nhân |
+|---|---|---|---|
+| `publish` | 56/0 | **55/1** | `FAIL real: HF export/round-trip — FileNotFoundError: dataset_out/gold/yen4_page_0174_c09_198.png` |
+| `ground_truth` | 56/4 | **không hoàn tất** | `FAIL grid produced items {'items': 0, 'skipped_no_crop': 6}` và `FAIL html embeds crops (data-uri)` |
+
+**Kết luận cho chương Tái lập của luận văn**: mã và bằng chứng **tái lập được từ git**, nhưng **ảnh crop và cache OCR thì không** — chúng bị gitignore vì dung lượng (285 MB + 232 MB). Muốn tái lập trọn vẹn phải: (a) bung `repro_assets_2026-07-20.tgz`, hoặc (b) chạy lại pipeline từ `Data/*.pdf` — mà (b) cần gọi lại API Kimhannom nên **không tất định**. Đây là lý do cache OCR được coi là *primary data*, không phải sản phẩm trung gian.
 
 ---
 

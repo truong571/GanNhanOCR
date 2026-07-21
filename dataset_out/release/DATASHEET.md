@@ -12,13 +12,13 @@ Cultural Heritage* extension (JOHD 2023). Generated from dataset statistics.
 
 ## Composition
 
-- **Instances.** 82,274 character-crop rows; 66,576 usable
+- **Instances.** 82,274 character-crop rows; 66,574 usable
   (GOLD/SILVER/SYLLABLE), the rest REVIEW/QUARANTINE (flagged, not deleted).
 - **Classes.** 1,593 distinct Nôm characters (Unicode, incl. CJK Ext-B+).
 - **Tiers** (confidence, not a train/test split):
   - GOLD: 48,969
-  - REVIEW: 15,690
-  - SILVER: 10,856
+  - REVIEW: 15,692
+  - SILVER: 10,854
   - SYLLABLE: 6,751
   - QUARANTINE: 8
 - **Source books.** 3 woodblock books, 445 pages.

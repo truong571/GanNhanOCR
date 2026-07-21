@@ -95,8 +95,14 @@ def run(in_csv: Path, out_csv: Path, fixes_yaml: Path, measure: bool) -> dict:
     print(f" tier after : {after}")
     if measure and report.get("precision_gold_after"):
         b, a = report["precision_gold_before"], report["precision_gold_after"]
-        print(f" precision GOLD: {b['precision']:.4f} (n={b['gold_audited']}, sai {b['wrong']}) "
-              f"→ {a['precision']:.4f} (n={a['gold_audited']}, sai {a['wrong']})")
+        if b.get("precision") is not None and a.get("precision") is not None:
+            print(f" precision GOLD: {b['precision']:.4f} (n={b['gold_audited']}, sai {b['wrong']}) "
+                  f"→ {a['precision']:.4f} (n={a['gold_audited']}, sai {a['wrong']})")
+        else:
+            # precision = None khi CHƯA có verdict NGƯỜI cho GOLD (không có audit để đo).
+            # Trước đây format None -> TypeError làm CHẾT bước confusion sau khi đã ghi
+            # labels_final.csv, kéo pipeline dừng trước publish.
+            print(" precision GOLD: chưa đo được (chưa có verdict NGƯỜI cho GOLD).")
     print(f" -> {out_csv}")
     return report
 

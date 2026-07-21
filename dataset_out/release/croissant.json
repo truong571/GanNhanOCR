@@ -28,7 +28,7 @@
       "description": "Per-crop label table.",
       "contentUrl": "crops.csv",
       "encodingFormat": "text/csv",
-      "sha256": "7c02c6348c441772d7f06bd887c3f7d6fad4136ab80d2523dfecd520d0b593b2"
+      "sha256": "0bf40da4b8708a16c0dfe5955452a7bd0c135b5654f147c0e474bda56f2027cf"
     }
   ],
   "recordSet": [
@@ -36,7 +36,7 @@
       "@type": "cr:RecordSet",
       "@id": "crops",
       "name": "crops",
-      "description": "69346 labeled character crops.",
+      "description": "69344 labeled character crops.",
       "field": [
         {
           "@type": "cr:Field",
@@ -57,7 +57,7 @@
           "@type": "cr:Field",
           "@id": "crops/book",
           "name": "book",
-          "description": "Source book code (yen2/yen4/yen11).",
+          "description": "Source book code (stt2/stt4/stt11).",
           "dataType": "sc:Text",
           "source": {
             "fileObject": {
@@ -313,18 +313,18 @@
   ],
   "_stats": {
     "n_total": 82274,
-    "n_usable": 66576,
+    "n_usable": 66574,
     "n_classes": 1593,
     "n_books": 3,
     "n_pages": 445,
     "tier_counts": {
       "GOLD": 48969,
-      "REVIEW": 15690,
-      "SILVER": 10856,
+      "REVIEW": 15692,
+      "SILVER": 10854,
       "SYLLABLE": 6751,
       "QUARANTINE": 8
     },
     "quarantined": 8,
-    "resource_bytes": 11267329
+    "resource_bytes": 11263877
   }
 }

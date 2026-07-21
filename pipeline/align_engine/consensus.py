@@ -131,7 +131,10 @@ def decide_label(ocr_char: str | None,
     #  bank_cos AUC bắt-lỗi = 0.566. Xem docs/BANG_SO_LIEU_CHINH_THUC.md]
     if (gold_ok and s3 is not None and getattr(s3, "head_agree", False)
             and getattr(s3, "head_margin", 0.0) >= HEAD_CONSENSUS_MARGIN
-            and s3.top_in_dict and s3.top_char in R):
+            and s3.top_in_dict and s3.top_char in R and is_plausible_qn_syllable(syl)):
+        # GUARD (3rd anchor path): an implausible syllable ('n'/'c' — vowel-less
+        # stubs) must not confirm a label even when head∩bank agree on a dict
+        # reading. Completes anchor-purity across ALL SILVER routes.
         return LabelDecision(s3.top_char, syllable, "SILVER", "s3_head_bank_consensus", False)
 
     # --- REVIEW -----------------------------------------------------------

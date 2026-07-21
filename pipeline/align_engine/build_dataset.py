@@ -28,6 +28,7 @@ import csv
 import glob
 import hashlib
 import json
+import re
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -44,6 +45,19 @@ from core.text.text_utils import is_plausible_qn_syllable  # noqa: E402
 from pipeline.align_engine.align_production import align_page          # noqa: E402
 from pipeline.align_engine.consensus import decide_label              # noqa: E402
 from pipeline.align_engine.bbox_fix import tighten_box                # noqa: E402
+
+
+def _book_code(name: str) -> str:
+    """Short, meaningful book code for the labels.csv `book` field.
+
+    'SachThanhTruyen2' -> 'stt2', 'SachThanhTruyen11' -> 'stt11' (STT = Sách
+    Thánh Truyện). Replaces the old `book[12:]` substring hack, which sliced
+    'SachThanhTruyen2' into the accidental, meaningless 'yen2'. The audit reverse
+    map (audit_grid.book_to_scan_dir) keys off the trailing digits, so it keeps
+    working for either code. Falls back to the lowercased name for other books.
+    """
+    m = re.match(r"SachThanhTruyen(\d+)$", name)
+    return f"stt{m.group(1)}" if m else name.lower()
 
 # SYLLABLE-tier gate (cross-page consistency of an unconfirmed char's reading).
 SYL_MIN_OCC = 5      # the (char,syllable) must occur >= this many times corpus-wide
@@ -222,7 +236,7 @@ def main():
                 dec = decide_label(p.get("ocr_char"), p["syllable"], p.get("matched", False),
                                    qn_to_nom, similar, s3=s3, anchored=p.get("anchored", False))
                 records.append({
-                    "book": book[12:], "page": page, "column": p["column"], "idx": idx,
+                    "book": _book_code(book), "page": page, "column": p["column"], "idx": idx,
                     "page_png": page_png, "ocr_char": p.get("ocr_char") or "",
                     # Canonical lowercase syllable for ALL tiers (not just SYLLABLE
                     # below): the QN→Nôm dict and decide_label are already case-folded,

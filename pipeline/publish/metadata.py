@@ -28,7 +28,7 @@ class Field:
 
 CROP_FIELDS = (
     Field("image", "string", "sc:Text", "Relative path to the crop PNG (primary key)."),
-    Field("book", "string", "sc:Text", "Source book code (yen2/yen4/yen11)."),
+    Field("book", "string", "sc:Text", "Source book code (stt2/stt4/stt11)."),
     Field("page", "string", "sc:Text", "Page id within the book."),
     Field("column", "integer", "sc:Integer", "1-based column index (RTL)."),
     Field("ocr_char", "string", "sc:Text", "SinoNom (S1) OCR character."),

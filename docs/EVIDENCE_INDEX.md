@@ -219,3 +219,29 @@ Nghĩa là **các số 701 / 1.686 / 2.321 / 1.177 đang in trong README và lu�
 | `build_mth_pretrain.py` trỏ `MTH/TKHMTH2200` đã bị dời → chạy hỏng runtime với lỗi khó hiểu | Thêm nấc dự phòng trỏ kho lưu; đã đo: mặc định giờ resolve đúng và **tồn tại** |
 | Submodule `gannhanocr-fd` dirty vĩnh viễn làm mọi cổng "cây sạch" mất tác dụng cảnh báo | `submodule.gannhanocr-fd.ignore = dirty` (thay đổi gitlink SHA vẫn được báo) |
 | Tag `freeze-pre-thesis-2026-07-20` đứng **trước** mốc code-freeze 3 commit | Thêm `freeze-features-2026-07-20` và `state-post-phase2-2026-07-21`; **không di dời** tag cũ vì đã trích dẫn |
+
+## Lần chạy 2026-07-21T14:21:02Z
+
+phạm vi: publish | strict=0 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `66eba9a81b4f902e8ebe1e6f0eeb30273fb4f9a52a248722ccc4228bb2ab0eab` |
+| `dataset_out/labels_remediated.csv` | `02c93faa4cc66b9869e4d19f30719145f9c6e4c65869982722416d3e36ebbe05` |
+| `dataset_out/labels_final.csv` | `bace79adb7bc82173aa4e38922546b4d40aa100bba1a65ae358830518330af94` |
+| `dataset_out/release/crops.csv` | `232056ab582d589e88d47c4f8b2024c9198f5730a50be8622c0655e1272cf449` |
+| `dataset_out/release/datapackage.json` | `e586daed8fb62118a5d6d1e15d510b5918c715bc06fc1f13b69665b7ca87e1e1` |
+| `dataset_out/release/croissant.json` | `ba33665225b7c4baffb361f97a1c6643abc5178d39d0ba1d4cec5eb57610b715` |
+
+## Lần chạy 2026-07-21T14:33:36Z
+
+phạm vi: build remediate fuse confusion publish | strict=0 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `16a2375ca54d1d2d8265b033ae416e04cae2f73804fb54b7478cb5aa0c5250dd` |
+| `dataset_out/labels_remediated.csv` | `64b9fafd92a092b0f17c9ef1da4c9255c47415bee28aaa8355a2a7dfb5895a95` |
+| `dataset_out/labels_final.csv` | `b32599a857e8e1ac39e2fa355b1d9d70e43a7c92ab22ba964e3b0f9988a3fda5` |
+| `dataset_out/release/crops.csv` | `0bf40da4b8708a16c0dfe5955452a7bd0c135b5654f147c0e474bda56f2027cf` |
+| `dataset_out/release/datapackage.json` | `fc9c165ce644fe7a8925e1636bb1bb643356b912a07467d8f8664a91c4fb90f5` |
+| `dataset_out/release/croissant.json` | `3093e4821414ad1bb6a788dfa0038d1ee2ed88ea6238683ab1d6e7518f67c424` |

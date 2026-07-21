@@ -20,11 +20,11 @@ dataset_info:
   features_class_count: 1593
   splits:
   - name: train
-    num_examples: 61909
+    num_examples: 59920
   - name: test
-    num_examples: 2687
+    num_examples: 3544
   - name: val
-    num_examples: 1980
+    num_examples: 3110
 version: 1.0.0
 ---
 

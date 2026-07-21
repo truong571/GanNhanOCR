@@ -37,7 +37,10 @@ _HIDDEN_FIELDS = (
 
 
 def book_to_scan_dir(book: str) -> str:
-    """yen2 -> SachThanhTruyen2 (labels.csv book code -> prepared/ directory)."""
+    """stt2 -> SachThanhTruyen2 (labels.csv book code -> prepared/ directory).
+
+    Keys off the trailing digits, so it works for either the new 'stt2' code or
+    the legacy 'yen2'."""
     m = re.search(r"(\d+)", str(book))
     if not m:
         raise ValueError(f"cannot map book code {book!r} to a scan directory")

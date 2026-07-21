@@ -125,7 +125,12 @@ def cmd_grid(args) -> None:
 
 
 def cmd_estimate(args) -> None:
-    verdicts = est_mod.load_verdicts(args.verdicts)
+    include_ai = getattr(args, "include_ai", False)
+    if include_ai:
+        print("[cảnh báo] ĐANG dùng verdict do MÁY chấm (source=ai_vision) làm ground truth "
+              "để tính precision/CI/acceptance — kết quả KHÔNG phải precision trên nhãn "
+              "người chấm, chỉ dùng để thăm dò")
+    verdicts = est_mod.load_verdicts(args.verdicts, include_ai=include_ai)
     manifest = est_mod.load_manifest(args.manifest)
     joined = est_mod.join_manifest(verdicts, manifest)
 
@@ -208,6 +213,9 @@ def build_parser() -> argparse.ArgumentParser:
                    help="ranked csv for PPI unlabeled surrogate scores")
     e.add_argument("--p0", type=float, default=None)
     e.add_argument("--design", choices=["stratified", "srs"], default="stratified")
+    e.add_argument("--include-ai-verdicts", action="store_true", dest="include_ai",
+                   help="CHO PHÉP dùng verdict do MÁY chấm (source=ai_vision) làm ground "
+                        "truth để tính precision; mặc định TẮT — chỉ verdict người chấm")
     e.set_defaults(func=cmd_estimate)
     return p
 

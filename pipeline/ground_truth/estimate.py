@@ -10,6 +10,12 @@ Joins verdicts.jsonl (from the audit tool) to the manifest, then reports:
 `correct` for precision = verdict == "correct"; `unsure` rows are excluded from the
 precision denominator by default (reported separately) so ambiguity never silently
 counts as either right or wrong.
+
+NGUỒN VERDICT: mặc định module này CHỈ nhận verdict do NGƯỜI chấm. Bản ghi có
+`source` ∈ AI_VERDICT_SOURCES (vd 'ai_vision') bị LOẠI, trừ khi khai báo tường minh
+include_ai=True (cli: --include-ai-verdicts). Verdict thiếu trường `source` được coi là
+người chấm. Điều này ngăn nhãn do MÁY chấm âm thầm trở thành ground truth cho precision
++ CI + acceptance (khớp semantics ở pipeline.consensus_fusion.fuse_stage).
 """
 from __future__ import annotations
 
@@ -27,9 +33,26 @@ __all__ = ["load_verdicts", "join_manifest", "PrecisionReport", "estimate"]
 VALID_VERDICTS = ("correct", "wrong_label", "wrong_image", "unsure")
 _PPI_MIN_COVERAGE = 0.90   # surrogate must cover >=90% of both labelled + population
 
+# Nguồn verdict do MÁY chấm. MẶC ĐỊNH bị loại khỏi phép tính precision/CI/acceptance vì
+# nhãn máy KHÔNG phải ground truth (khớp AI_VERDICT_SOURCES ở consensus_fusion.fuse_stage).
+AI_VERDICT_SOURCES = {"ai_vision"}
 
-def load_verdicts(path: str | Path) -> pd.DataFrame:
+
+def _verdict_source(rec: dict) -> str:
+    """Nguồn của một bản ghi verdict; vắng trường `source` => coi là người chấm."""
+    return str(rec.get("source") or "human").strip().lower()
+
+
+def load_verdicts(path: str | Path, include_ai: bool = False) -> pd.DataFrame:
+    """Đọc verdicts.jsonl thành frame (item_id, verdict, source).
+
+    MẶC ĐỊNH chỉ nhận verdict của NGƯỜI chấm: bản ghi có source ∈ AI_VERDICT_SOURCES
+    (vd 'ai_vision') bị LOẠI, trừ khi include_ai=True. Verdict thiếu trường `source`
+    được coi là người chấm. In số nạp/bỏ theo từng nguồn để minh bạch.
+    """
     rows = []
+    kept: dict[str, int] = {}
+    skipped: dict[str, int] = {}
     for ln in Path(path).read_text(encoding="utf-8").splitlines():
         ln = ln.strip()
         if not ln:
@@ -39,9 +62,27 @@ def load_verdicts(path: str | Path) -> pd.DataFrame:
             raise ValueError(f"verdict line missing keys: {ln}")
         if d["verdict"] not in VALID_VERDICTS:
             raise ValueError(f"unknown verdict {d['verdict']!r}")
-        rows.append({"item_id": str(d["item_id"]), "verdict": d["verdict"]})
+        src = _verdict_source(d)
+        if src in AI_VERDICT_SOURCES and not include_ai:
+            skipped[src] = skipped.get(src, 0) + 1
+            continue
+        kept[src] = kept.get(src, 0) + 1
+        rows.append({"item_id": str(d["item_id"]), "verdict": d["verdict"], "source": src})
+
+    def _fmt(dd: dict[str, int]) -> str:
+        return ", ".join(f"{k}={v}" for k, v in sorted(dd.items())) or "0"
+    print(f"[estimate] verdicts: nạp {sum(kept.values())} ({_fmt(kept)}), "
+          f"bỏ qua {sum(skipped.values())} ({_fmt(skipped)})")
+    if skipped and not include_ai:
+        print(f"[cảnh báo] đã LOẠI {sum(skipped.values())} verdict source=ai_vision "
+              f"(dùng --include-ai-verdicts nếu thực sự muốn dùng nhãn máy)")
+
     df = pd.DataFrame(rows)
     if df.empty:
+        if skipped and not include_ai:
+            raise ValueError(
+                f"toàn bộ verdict là AI (source=ai_vision; {sum(skipped.values())} dòng bị loại); "
+                f"dùng --include-ai-verdicts nếu THỰC SỰ muốn dùng nhãn máy làm ground truth")
         raise ValueError("no verdicts loaded")
     if df["item_id"].duplicated().any():
         # keep the last verdict per item (auditor may revise)

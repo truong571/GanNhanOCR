@@ -133,21 +133,42 @@ def test_real() -> None:
     print("[real labels.csv]")
     df = pd.read_csv(LABELS, dtype={"image_md5": str})
     res = census_mod.run_census(df)
-    check("real dup_bbox == 701", res.dup_bbox_rows == 701, str(res.dup_bbox_rows))
-    check("real cross_col == 1686", res.cross_col_rows == 1686, str(res.cross_col_rows))
-    check("real union == 2321", res.union_rows == 2321, str(res.union_rows))
-    check("real provably-wrong ~ 1177", 1100 <= res.provably_wrong_rows <= 1250,
-          str(res.provably_wrong_rows))
+    # Census ĐO trên labels.csv HIỆN TẠI (sau engine-fix + dedup upstream). Số lịch sử
+    # (thế hệ labels.csv cũ, không còn trên đĩa) ở docs/census_history.md — bằng chứng
+    # engine-fix hoạt động: dup_bbox 701->0, cross_col 1686->8, union 2321->8, PW 1177->4.
+    # dup_bbox: đo 0 (lịch sử 701) — dedup upstream đã xoá mọi trùng-bbox cùng cột.
+    check("real dup_bbox == 0 (dedup closed; hist 701)", res.dup_bbox_rows == 0,
+          str(res.dup_bbox_rows))
+    # cross_col: đo 8 (lịch sử 1686) = 4 nhóm xung đột nhãn cross-column còn sót.
+    check("real cross_col == 8 (dedup closed; hist 1686)", res.cross_col_rows == 8,
+          str(res.cross_col_rows))
+    # union: đo 8 (lịch sử 2321) = union(dup_bbox=0, cross_col=8). Lớp trùng đã đóng.
+    check("real union == 8 (dedup closed; hist 2321)", res.union_rows == 8,
+          str(res.union_rows))
+    # provably-wrong: đo 4 (lịch sử ~1177) = 1 nhãn sai / mỗi nhóm xung đột (4 nhóm).
+    check("real provably-wrong == 4 (dedup closed; hist ~1177)",
+          res.provably_wrong_rows == 4, str(res.provably_wrong_rows))
     out, rep = remediate_mod.remediate(df)
     check("real: outputs same #rows", len(out) == len(df))
+    # BẤT BIẾN cốt lõi (giữ nguyên): không md5 nào span >1 split sau remediation.
     check("real: invariant md5 splits == 0", rep.md5_spanning_splits_after == 0)
-    check("real: original split leak detected", rep.md5_spanning_splits_original >= 100,
-          str(rep.md5_spanning_splits_original))
+    # Split-leak GỐC: đo 0 (lịch sử 288). Dedup upstream đã đóng lớp trùng md5 nên
+    # labels.csv HIỆN TẠI vào remediation ĐÃ không còn md5 nào span >1 split — bất biến
+    # giữ đúng từ đầu vào tới đầu ra (0 -> 0), không còn leak để vá tại bước này.
+    check("real: original split leak == 0 (dedup closed; hist 288)",
+          rep.md5_spanning_splits_original == 0, str(rep.md5_spanning_splits_original))
     # 820 similar-bridge GOLD have cosine<0.62 in raw data; ~72 are also dup-defects
     # (quarantined first, correctly), so post-quarantine demotions == 748.
     check("real: demoted similar-bridge (post-quarantine)",
           700 <= rep.demoted_similar_lowcos <= 850, str(rep.demoted_similar_lowcos))
-    check("real: quarantined > 1000", rep.quarantined_rows > 1000, str(rep.quarantined_rows))
+    # quarantined: đo 8 (lịch sử >1000, ~2321 hàng trùng). Dedup upstream đã loại các bản
+    # trùng md5/bbox; còn đúng 8 hàng cross-column XUNG ĐỘT nhãn -> tất cả bị cách ly.
+    # Giữ Ý NGHĨA kiểm định "dedup đóng lớp trùng": 8 = toàn conflict, 0 duplicate thuần.
+    check("real: quarantined == 8, all-conflict, 0 pure-dup (dedup closed; hist >1000)",
+          rep.quarantined_rows == 8 and rep.quarantined_conflict == 8
+          and rep.quarantined_duplicate == 0,
+          f"rows={rep.quarantined_rows} conflict={rep.quarantined_conflict} "
+          f"dup={rep.quarantined_duplicate}")
     check("real: usable decreased", rep.usable_after < rep.usable_before,
           f"{rep.usable_before}->{rep.usable_after}")
     # idempotence: re-running remediation changes nothing further

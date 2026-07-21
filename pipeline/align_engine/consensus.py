@@ -39,6 +39,8 @@ DELTA_SILVER = 0.06    # min (winner − runner-up) margin
 # #4 head∩bank consensus gate: min ArcFace-head margin (top1−top2 logit) to accept a
 # head-rescued SILVER. The boolean head_agree alone was too loose (80% GOLD-test
 # precision); margin≥0.3 → 97.6% GOLD-test at ~29% coverage (validate_head_consensus.py).
+# [ĐÃ BỊ BÁC — 97.6% là proxy circular tự sinh (GOLD-test tự sinh, huấn luyện vòng tròn);
+#  đối chiếu audit NGƯỜI: bank_cos AUC bắt-lỗi = 0.566. Xem docs/BANG_SO_LIEU_CHINH_THUC.md]
 # Still an OPTIMISTIC proxy — confirm with the human audit (eval_sample_head) + conformal.
 HEAD_CONSENSUS_MARGIN = 0.3
 
@@ -125,6 +127,8 @@ def decide_label(ocr_char: str | None,
     # bank's top on a valid dict reading. Two independent visual signals concurring
     # on a dict reading is a strong, measured rescue (GOLD-test precision ~95.9%,
     # group1_rescue.py) — accept it rather than discard to REVIEW.
+    # [ĐÃ BỊ BÁC — ~95.9% là proxy circular tự sinh; đối chiếu audit NGƯỜI:
+    #  bank_cos AUC bắt-lỗi = 0.566. Xem docs/BANG_SO_LIEU_CHINH_THUC.md]
     if (gold_ok and s3 is not None and getattr(s3, "head_agree", False)
             and getattr(s3, "head_margin", 0.0) >= HEAD_CONSENSUS_MARGIN
             and s3.top_in_dict and s3.top_char in R):

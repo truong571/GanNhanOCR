@@ -28,6 +28,10 @@ Trọng số theo **loại bằng chứng khác gốc**, không theo số phiế
 | **s3** | **must_pass** | ✓ | kênh độc lập duy nhất; **bắt buộc pass để thăng GOLD** |
 | dict | prior | ✓ | tone-canon; không bao giờ thăng một mình |
 
+> **[LƯU Ý — vai `s3 must_pass` đo vòng-3 ĐÃ BỊ BÁC]** S3 AUC ≤ 0.6 khi bắt-lỗi thật
+> (bank_cos = 0.566), nên S3 hiện dùng như **ranker/filter**, KHÔNG phải cổng must-pass
+> "bắt buộc pass để thăng GOLD". Xem FLOW §7 và `docs/BANG_SO_LIEU_CHINH_THUC.md`.
+
 ## Lệnh
 
 ```bash
@@ -83,6 +87,10 @@ demote_review iff  qwen đọc-mù ra chữ khác ổn định
                    OR nna_lobo cãi
                    OR dict-implausible không có glyph support
 ```
+
+> **[Ngưỡng s3 `0.29` / sàn `0.15` = đo vòng-3 ĐÃ BỊ BÁC]** S3 AUC ≤ 0.6 khi bắt-lỗi
+> thật. Giá trị **giữ nguyên theo code-freeze**; S3 dùng như ranker/filter, không phải
+> must-pass. Xem FLOW §7 / `docs/BANG_SO_LIEU_CHINH_THUC.md`.
 
 ## Test
 

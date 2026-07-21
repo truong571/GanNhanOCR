@@ -1,25 +1,25 @@
 #!/usr/bin/env bash
 # Chạy toàn bộ selftest và so với MỐC ĐÃ CHỐT.
 #
-# Mốc đo ngày 2026-07-20 (bản labels.csv hiện tại trên đĩa):
-#     ground_truth      56 passed,  4 failed
+# Mốc đo ngày 2026-07-21 (Giai đoạn 3 — sau khi chốt số liệu):
+#     ground_truth      60 passed,  0 failed
 #     consensus_fusion  44 passed,  0 failed
 #     publish           56 passed,  0 failed
-#     remediation       27 passed,  6 failed
-#     phase1_engine     29 passed,  1 failed
+#     remediation       33 passed,  0 failed
+#     phase1_engine     30 passed,  0 failed
 #     ------------------------------------------
-#     TỔNG             212 passed, 11 failed
+#     TỔNG             223 passed,  0 failed
 #
-# LƯU Ý QUAN TRỌNG cho luận văn: 11 assertion đỏ KHÔNG phải lỗi code.
-# Chúng hard-code các con số census của thế hệ labels.csv CŨ (dup_bbox 701,
-# cross_col 1686, union 2321, provably-wrong 1177, similar_bridge 3856), trong
-# khi labels.csv hiện tại đã được dedup ở lần re-run trước nên đo lại ra
-# 0 / 8 / 8 / 4 / 3850. Tức là: các con số đang in trong README và luận văn
-# KHÔNG tái lập được từ dữ liệu hiện có. Phải chốt dùng số nào (số lịch sử
-# "đã từng có 2.321 lỗi" hay số hiện tại "còn 8") rồi sửa assertion + tài liệu
-# cho khớp — xem DE_XUAT_HOAN_THIEN_LUAN_VAN_2026-07-20.md §2.3.
+# LỊCH SỬ: mốc 2026-07-20 là 212/11. 11 assertion đỏ KHÔNG phải lỗi code —
+# chúng hard-code census của thế hệ labels.csv CŨ (dup_bbox 701, cross_col 1686,
+# union 2321, provably-wrong 1177, similar_bridge 3856). Giai đoạn 3 đã CHỐT:
+# selftest kiểm cái TÁI LẬP ĐƯỢC từ labels.csv hiện tại (0/8/8/4/3850), còn số
+# lịch sử được bảo tồn trong docs/census_history.md như bằng chứng engine-fix
+# (before/after). Assertion mới đã được kiểm chứng độc lập là đo THẬT, không ép
+# xanh. Riêng phase1 "low-purity" là lỗi TEST (placeholder 'x' bị lọc là rác nên
+# purity không được kiểm) — đã sửa placeholder thành âm tiết hợp lệ 'an'/'ba'.
 #
-# Con số "223 assertions" từng ghi trong tài liệu là mốc CŨ, không còn đúng.
+# => Con số "223 assertions" trong luận văn giờ ĐÚNG trở lại (223 pass, 0 fail).
 
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -27,8 +27,8 @@ cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=212
-BASELINE_FAIL=11
+BASELINE_PASS=223
+BASELINE_FAIL=0
 
 MODULES=(
   pipeline.ground_truth.selftest
@@ -61,7 +61,7 @@ done
 
 echo "----------------------------------------------------------------"
 printf "%-38s %s\n" "TỔNG" "$total_pass passed, $total_fail failed"
-printf "%-38s %s\n" "MỐC 2026-07-20" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
+printf "%-38s %s\n" "MỐC 2026-07-21" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
 echo "================================================================"
 
 if [ "$total_pass" -eq "$BASELINE_PASS" ] && [ "$total_fail" -eq "$BASELINE_FAIL" ]; then

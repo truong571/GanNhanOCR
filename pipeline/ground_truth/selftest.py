@@ -120,16 +120,24 @@ def test_suspicion(labels: pd.DataFrame) -> pd.DataFrame:
     check("strata within STRATA set", set(ranked["stratum"]).issubset(set(suspicion.STRATA)))
     check("sorted descending", ranked["suspicion"].is_monotonic_decreasing)
 
-    # cross-check against the verified census numbers
+    # cross-check against the census MEASURED on the CURRENT labels.csv.
+    # Số lịch sử (thế hệ labels.csv TRƯỚC engine-fix + dedup upstream, không còn trên đĩa)
+    # cao hơn hẳn; dedup đã đóng lớp trùng bbox/md5 nên các giá trị dưới đây tụt về mức
+    # "đã sạch". Bảng before/after = bằng chứng engine-fix hoạt động: docs/census_history.md.
     dup_bbox = int(ranked["dup_bbox"].sum())
     cross = int(ranked["cross_col"].sum())
     sim = int(ranked["similar_bridge"].sum())
-    check("dup_bbox == 701 (census)", dup_bbox == 701, f"got {dup_bbox}")
-    check("cross_col == 1686 (census)", cross == 1686, f"got {cross}")
-    check("similar_bridge == 3856 (census)", sim == 3856, f"got {sim}")
-    # dup_defect union should be 2321 minus the REVIEW rows (REVIEW has no image, excluded)
+    # dup_bbox: đo 0 (lịch sử 701) — dedup upstream đã xoá mọi trùng-bbox cùng cột.
+    check("dup_bbox == 0 (dedup closed; hist 701)", dup_bbox == 0, f"got {dup_bbox}")
+    # cross_col: đo 8 (lịch sử 1686) = 4 nhóm xung đột nhãn còn sót cross-column.
+    check("cross_col == 8 (dedup closed; hist 1686)", cross == 8, f"got {cross}")
+    # similar_bridge: đo 3850 (lịch sử 3856) — 6 hàng bridge biến động theo lần tái sinh
+    # labels.csv upstream (đây KHÔNG phải lớp dedup, chỉ là dao động nhỏ của census).
+    check("similar_bridge == 3850 (hist 3856)", sim == 3850, f"got {sim}")
+    # dup_defect union: đo 8 (lịch sử 2321) = đúng 8 hàng cross_col xung đột; dup_bbox=0
+    # nên union == cross_col. Dedup upstream đã đóng lớp trùng (REVIEW không có image, loại).
     dup_union = int(ranked["dup_defect"].sum())
-    check("dup_defect union == 2321 (census)", dup_union == 2321, f"got {dup_union}")
+    check("dup_defect union == 8 (dedup closed; hist 2321)", dup_union == 8, f"got {dup_union}")
 
     # every dup_defect row must land in the top-priority stratum
     check("dup_defect -> stratum dup_defect",

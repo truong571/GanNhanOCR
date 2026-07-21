@@ -103,9 +103,11 @@ def test_syllable_gate():
     recs2 = [_rec("三", "tam", "b", f"p{i}") for i in range(4)]
     check("below-occ fails", ("三", "tam") not in syllable_gate(recs2, UNCONF))
 
-    # purity: dominant syllable must be >=0.6. 5 'x' + 5 'y' -> purity 0.5 fails
-    recs3 = ([_rec("四", "x", "b", f"p{i}") for i in range(5)]
-             + [_rec("四", "y", "b", f"p{i+5}") for i in range(5)])
+    # purity: dominant syllable must be >=0.6. 5 'an' + 5 'ba' -> purity 0.5 fails.
+    # (Phải dùng HAI âm tiết QN HỢP LỆ: 'x' bị is_plausible_qn_syllable coi là rác nên
+    #  bị lọc TRƯỚC khi tính purity, làm test cũ 'x'/'y' không thực sự kiểm ngưỡng purity.)
+    recs3 = ([_rec("四", "an", "b", f"p{i}") for i in range(5)]
+             + [_rec("四", "ba", "b", f"p{i+5}") for i in range(5)])
     check("low-purity fails", not any(k[0] == "四" for k in syllable_gate(recs3, UNCONF)))
 
     # non-UNCONF rules ignored

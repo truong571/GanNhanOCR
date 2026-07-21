@@ -10,6 +10,10 @@ numeric `score` columns; the gate (gating.py) consumes the roles + flags.
                            agreement adds nothing (student of kim's labels)
   s3         must_pass  — ArcFace head-logit; the ONLY input-independent channel; a GOLD
                            promotion REQUIRES it to pass
+                           [LƯU Ý — vai must_pass đo vòng-3 ĐÃ BỊ BÁC (S3 AUC<=0.6 khi
+                           bắt-lỗi thật; bank_cos=0.566); S3 hiện dùng như ranker/filter,
+                           KHÔNG phải cổng must-pass — xem FLOW §7 /
+                           docs/BANG_SO_LIEU_CHINH_THUC.md]
   dict       prior      — QN-dictionary plausibility; never promotes alone
 """
 from __future__ import annotations
@@ -54,6 +58,8 @@ class ChannelTable:
       votes   discrete char prediction per voting channel (for n_eff)
       scores  numeric evidence per channel (for the fuser)   [NaN allowed]
       flags   per-crop booleans for gating (qwen_abstain, s3_pass, quality_flag, ...)
+              [s3_pass ở đây là tên cờ theo thiết kế must-pass CŨ; must-pass đã bị bác,
+               S3 dùng như ranker/filter — xem FLOW §7]
     """
 
     def __init__(self, specs=DEFAULT_CHANNELS):

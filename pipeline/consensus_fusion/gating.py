@@ -13,6 +13,11 @@ MULTIPLE channels while a demotion needs only ONE strong negative signal (report
                      OR nna_lobo disagrees                       (informative dissent)
                      OR dict-implausible with no glyph support
 
+[LƯU Ý — vai must_pass của S3 là thiết kế đo vòng-3 ĐÃ BỊ BÁC (S3 AUC<=0.6 khi bắt-lỗi
+thật; bank_cos=0.566). S3 hiện dùng như RANKER/FILTER, KHÔNG phải cổng must-pass. Ngưỡng
+s3_pass/s3_floor giữ nguyên giá trị theo code-freeze — xem FLOW §7 (FLOW_TONG_THE_CHOT)
+và docs/BANG_SO_LIEU_CHINH_THUC.md.]
+
 Everything else is 'keep'. A demoted GOLD crop is never lost — it drops to REVIEW for
 human/adjudicator follow-up, so the recall cost of a strict S3 gate is just review work.
 """
@@ -29,6 +34,9 @@ __all__ = ["GateConfig", "GateResult", "apply_gate"]
 @dataclass
 class GateConfig:
     tau_promote: float = 0.90      # calibrated P threshold for GOLD (set for >=99% prec)
+    # [s3_pass/s3_floor: ngưỡng đo vòng-3 ĐÃ BỊ BÁC (S3 AUC<=0.6 khi bắt-lỗi thật);
+    #  GIỮ NGUYÊN giá trị theo code-freeze; S3 dùng như ranker/filter, KHÔNG phải cổng
+    #  must-pass — xem FLOW §7 / docs/BANG_SO_LIEU_CHINH_THUC.md]
     s3_pass: float = 0.29          # S3 head-logit operating point (85% recall / 3.5% FAR)
     s3_floor: float = 0.15         # below this S3 actively contradicts the label
     dict_floor: float = 0.05       # dict prior below this = implausible

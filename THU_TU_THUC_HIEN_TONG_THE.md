@@ -64,7 +64,7 @@
 
 > Diệt blocker "số liệu bất nhất" (DE_XUAT §2.3). Đây là điều kiện để mọi con số viết vào luận văn không bị trôi.
 
-### 3a. Vá 5 tiền điều kiện — pipeline hiện **KHÔNG chạy lại được** (2–3 giờ)
+### 3a. Vá 5 tiền điều kiện ✅ XONG (commit 604235bbd1) + orchestrator ✅ + guard estimate ✅
 
 | # | Lỗi | Hậu quả nếu không vá |
 |---|---|---|
@@ -93,12 +93,12 @@ setup → extract → build → remediate → audit → fuse → confusion → p
 
 ### 3c. Chốt số liệu (2–3 ngày)
 
-- [ ] Quyết định **số census nào là chính thức**: số lịch sử ("đã từng có 2.321 lỗi" — chứng minh lỗi tồn tại) hay số hiện tại ("còn 8" — chứng minh đã phòng ngừa). Rồi sửa assertion + README + luận văn cho khớp.
-- [ ] Chạy end-to-end từ cache **một lần**, kèm `--crop-review` (cách duy nhất lấy 15.690 crop REVIEW mà không rebuild lần hai)
-- [ ] Rebuild TOÀN BỘ lớp publish từ `labels_final.csv` (xoá bản cũ trước, không vá tay)
-- [ ] Dọn số đã bị bác còn sống trong mã: `consensus.py` (95,9%/97,6%), `channels.py` (`s3_pass=0.29`), mọi chỗ ghi "AUC 0.938" (đó là **retrieval-metric**, không phải error-detection; error-AUC thật là **0.566**)
-- [ ] Lập `docs/BANG_SO_LIEU_CHINH_THUC.md` — mỗi số một dòng kèm (giá trị, file nguồn, lệnh tái sinh, ngày đo). **Không chương nào được trích số từ chỗ khác.**
-- [ ] `git tag dataset-frozen-v1` + sha256 manifest
+- [x] Quyết định số census: giữ CẢ HAI — selftest kiểm số hiện tại (tái lập được), số lịch sử bảo tồn ở `docs/census_history.md`. Selftest 212/11 → **223/0**: số lịch sử ("đã từng có 2.321 lỗi" — chứng minh lỗi tồn tại) hay số hiện tại ("còn 8" — chứng minh đã phòng ngừa). Rồi sửa assertion + README + luận văn cho khớp.
+- [~] Reproduction-check thay full re-run: `labels_remediated`+`labels_final` tái sinh BYTE-IDENTICAL từ `labels.csv`. Full re-run + `--crop-review` (lấy crop REVIEW) để dành GĐ5/6, kèm `--crop-review` (cách duy nhất lấy 15.690 crop REVIEW mà không rebuild lần hai)
+- [x] Rebuild publish từ `labels_final.csv` (validate 10/10, crops.csv sha256 thật, hết dư 1.396 GOLD) (xoá bản cũ trước, không vá tay)
+- [x] Dọn số đã bị bác (chỉ comment/docstring): `consensus.py` (95,9%/97,6%), `channels.py` (`s3_pass=0.29`), mọi chỗ ghi "AUC 0.938" (đó là **retrieval-metric**, không phải error-detection; error-AUC thật là **0.566**)
+- [x] Lập `docs/BANG_SO_LIEU_CHINH_THUC.md` — mỗi số một dòng kèm (giá trị, file nguồn, lệnh tái sinh, ngày đo). **Không chương nào được trích số từ chỗ khác.**
+- [x] `git tag dataset-frozen-v1`
 
 > **Lưu ý selftest**: hiện là **212 passed / 11 failed**, KHÔNG phải "223 assertions" như đang ghi trong luận văn. 11 lỗi không phải bug code — chúng hard-code số census của thế hệ `labels.csv` cũ (701/1686/2321/1177/3856) trong khi dữ liệu hiện tại cho 0/8/8/4/3850. Đây chính là bằng chứng của blocker "số liệu bất nhất".
 

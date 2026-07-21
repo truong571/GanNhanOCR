@@ -4,6 +4,8 @@
 **Mục đích**: mỗi artifact được dùng làm bằng chứng trong luận văn phải truy nguyên được về (a) commit chứa nó, (b) sha256 tại thời điểm đóng băng, (c) lệnh tái sinh nó.
 
 > **Quy tắc**: không chương nào của luận văn được trích số từ artifact không có trong bảng này.
+>
+> **Số liệu chốt → `docs/BANG_SO_LIEU_CHINH_THUC.md`** (Giai đoạn 3, tag `dataset-frozen-v1`). Mọi con số của luận văn trích từ đó. Sổ này (EVIDENCE_INDEX) quản lý *provenance + sao lưu*, BANG_SO_LIEU quản lý *giá trị + nguồn kiểm định*.
 
 ---
 

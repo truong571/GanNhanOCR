@@ -23,8 +23,8 @@
       "format": "csv",
       "mediatype": "text/csv",
       "encoding": "utf-8",
-      "hash": "sha256:becbac03a3e5e4cc8ad8d962446fec64d6965c3265876a3e3b35cd1a10838111",
-      "bytes": 11054712,
+      "hash": "sha256:7c02c6348c441772d7f06bd887c3f7d6fad4136ab80d2523dfecd520d0b593b2",
+      "bytes": 11267329,
       "schema": {
         "fields": [
           {
@@ -148,21 +148,21 @@
       }
     }
   ],
-  "count_of_rows": 68076,
+  "count_of_rows": 69346,
   "_stats": {
-    "n_total": 82268,
-    "n_usable": 65029,
-    "n_classes": 1592,
+    "n_total": 82274,
+    "n_usable": 66576,
+    "n_classes": 1593,
     "n_books": 3,
     "n_pages": 445,
     "tier_counts": {
-      "GOLD": 48600,
-      "REVIEW": 14940,
-      "SILVER": 11055,
-      "SYLLABLE": 5374,
-      "QUARANTINE": 2299
+      "GOLD": 48969,
+      "REVIEW": 15690,
+      "SILVER": 10856,
+      "SYLLABLE": 6751,
+      "QUARANTINE": 8
     },
-    "quarantined": 2299,
-    "resource_bytes": 11054712
+    "quarantined": 8,
+    "resource_bytes": 11267329
   }
 }

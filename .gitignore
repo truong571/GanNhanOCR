@@ -46,3 +46,10 @@ tf_env/
 # Trang web lưu về từ chunom.net khi khảo sát nguồn dữ liệu (2026-07-20).
 # Nội dung bên thứ ba, không phải bằng chứng luận văn -> không đưa vào git.
 chunom.html
+
+# GĐ3: parquet/imagefolder trong release/ là artifact BINARY nặng cho HF upload,
+# sinh bằng `python -m pipeline.publish export`. Manifest text (crops.csv,
+# labels_published.csv) VẪN track làm neo toàn vẹn.
+dataset_out/release/parquet/
+dataset_out/release/parquet_sample/
+dataset_out/release/imagefolder/

@@ -17,14 +17,14 @@ size_categories:
 - 10K<n<100K
 config_name: default
 dataset_info:
-  features_class_count: 1592
+  features_class_count: 1593
   splits:
   - name: train
-    num_examples: 60675
+    num_examples: 61909
   - name: test
-    num_examples: 2577
+    num_examples: 2687
   - name: val
-    num_examples: 1777
+    num_examples: 1980
 version: 1.0.0
 ---
 

@@ -12,15 +12,15 @@ Cultural Heritage* extension (JOHD 2023). Generated from dataset statistics.
 
 ## Composition
 
-- **Instances.** 82,268 character-crop rows; 65,029 usable
+- **Instances.** 82,274 character-crop rows; 66,576 usable
   (GOLD/SILVER/SYLLABLE), the rest REVIEW/QUARANTINE (flagged, not deleted).
-- **Classes.** 1,592 distinct Nôm characters (Unicode, incl. CJK Ext-B+).
+- **Classes.** 1,593 distinct Nôm characters (Unicode, incl. CJK Ext-B+).
 - **Tiers** (confidence, not a train/test split):
-  - GOLD: 48,600
-  - REVIEW: 14,940
-  - SILVER: 11,055
-  - SYLLABLE: 5,374
-  - QUARANTINE: 2,299
+  - GOLD: 48,969
+  - REVIEW: 15,690
+  - SILVER: 10,856
+  - SYLLABLE: 6,751
+  - QUARANTINE: 8
 - **Source books.** 3 woodblock books, 445 pages.
 - **Each instance** = a cropped glyph image + its label, tier, source coordinates
   (fullpage bbox), aligned Quốc-ngữ syllable, and the S3 glyph-verifier cosine.
@@ -78,7 +78,7 @@ Cultural Heritage* extension (JOHD 2023). Generated from dataset statistics.
 ## Known Limitations
 
 - GOLD precision is a measured estimate on a stratified human audit sample with a confidence interval — not a per-row guarantee.
-- ~2,299 duplicate-crop rows were quarantined; residual wrong-image crops may remain below the detection floor.
+- ~8 duplicate-crop rows were quarantined; residual wrong-image crops may remain below the detection floor.
 - Dictionary coverage figures are partly self-referential (measured against OCR output); true coverage vs. an external gold lexicon may be lower.
 - REVIEW tier (~14k rows) is a genuine reject tier, mostly S3/coverage failures.
 - Three books only; a leave-one-book-out split is provided to expose domain shift.

@@ -196,9 +196,9 @@ Nghĩa là **các số 701 / 1.686 / 2.321 / 1.177 đang in trong README và lu�
 ## 6. VIỆC CÒN THIẾU
 
 - [x] **Push nhánh + tag lên remote** — xong 2026-07-20, `main` = nhánh = remote, 3 tag đã lên GitHub.
-- [ ] 🔴 **BẢN SAO NGOÀI Ổ ĐĨA — CHƯA LÀM, ĐANG CHẶN.** `df -h . ~/ThS_archive` cho **cùng một filesystem `/dev/disk3s5`**. Repo (8,9 GB), `backup_*` và `external_data` nằm chung một ổ vật lý. Hỏng ổ = mất 3 bản scan gốc, cache OCR `prepared/` (232 MB — *primary data* vì API Kimhannom không tất định), 72.873 crop, 2 checkpoint, và 4,7 GB `TKHMTH2200` mà GĐ2 vừa dời ra (**nay chỉ còn đúng một bản**). Thứ duy nhất còn sống là phần đã tracked trên GitHub.
-  - Ưu tiên rẻ→đắt: (1) copy `docs/data_manifest/` + `SHA256SUMS.txt` (~2 MB) lên Drive — gần như miễn phí; (2) copy `backup_2026-07-21/` (~2,5 GB) sang ổ ngoài; (3) cân nhắc Zenodo cho `evidence_*.tgz` (92 MB) để có **DOI trích được vào luận văn**.
-  - Sau khi copy phải `shasum -a 256 -c SHA256SUMS.txt` **tại đích** và ghi vị trí + ngày kiểm vào §4.
+- [x] **BẢN SAO NGOÀI Ổ ĐĨA — ĐÃ LÀM 2026-07-21.** `backup_2026-07-21/` (`repo_2026-07-21.bundle` 1,73 GB + `models_2026-07-21.tgz` 445 MB + `SHA256SUMS.txt`) đã upload lên **Google Drive** của tác giả. Đây là bản sao đầu tiên **khác ổ vật lý** — trước đó repo, `backup_*` và `external_data` đều chung `/dev/disk3s5`. Kích thước cần khớp khi kiểm trên Drive: bundle `1.860.817.760` bytes, models `466.327.314` bytes, SHA256SUMS `177` bytes.
+  - ⏳ Còn nên làm khi rảnh (không chặn): (1) upload thêm `backup_2026-07-20/evidence_2026-07-20.tgz` (92 MB) + `repro_assets_2026-07-20.tgz` (321 MB) để có cả 3 bản scan gốc + 72.873 crop ngoài ổ; (2) cân nhắc Zenodo cho `evidence_*.tgz` để có **DOI trích được vào luận văn**.
+  - Khi tải bundle về máy khác để dùng: `shasum -a 256 -c SHA256SUMS.txt` tại đích trước khi tin.
 
 ---
 

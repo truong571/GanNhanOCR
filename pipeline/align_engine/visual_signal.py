@@ -36,6 +36,12 @@ from pipeline.align_engine.nom_classifier.infer import NomEncoder
 # A crop is scored against a candidate by the trimmed top-k cosine to its bank.
 PROTO_K = 8        # max real-crop references kept per class
 PROTO_TOPK = 3     # score = mean of the top-k reference cosines (robust to 1 bad ref)
+# P0: head-logit accept margin. The ArcFace head ranks the true glyph top-1 78.1%
+# (vs the buggy max-of-tiers 60.2%); head_margin>=0.30 is the measured ~97.6%
+# GOLD-test-precision operating point (validate_head_consensus.py). A confident
+# head pick is accepted even when the bank calibration is low (the crop-less /
+# below_visual_threshold case this rescues).
+HEAD_ACCEPT_MARGIN = 0.30
 
 
 def _is_cjk(ch: str) -> bool:
@@ -268,9 +274,17 @@ class VisualS3:
                     if p is not None:
                         ps.append(p)
                 scored[c] = max(ps) if ps else 0.0
+            # BANK pick — independent of the head (kept for the gate + consensus).
             ranked = sorted(scored.items(), key=lambda x: x[1], reverse=True)
-            top_char, p_top = ranked[0]
-            p_run = ranked[1][1] if len(ranked) > 1 else 0.0
+            bank_top, bank_p = ranked[0]
+            # ---- P0 fix: the ArcFace HEAD is the PRIMARY ranker -------------------
+            # `scored` above is max-over-tiers of calibrated P, but the crop tier tops
+            # at P≈0.98 while fd tops at 0.487, so a noisy real-crop proto almost always
+            # won → measured top-1 60.2% vs the head-logit's 78.1% (−18 pts). Rank by the
+            # head when it covers the candidates; fall back to the bank pick otherwise.
+            top_char = head_top if head_top is not None else bank_top
+            p_top = scored.get(top_char, bank_p)
+            p_run = max((v for c, v in scored.items() if c != top_char), default=0.0)
             margin = p_top - p_run
             gw, glyph_contra = None, False
             if glyph_cos:
@@ -278,12 +292,17 @@ class VisualS3:
                 gmarg = self.calib.get("glyph_guard_margin", 0.10)
                 if gw != top_char and glyph_cos[gw] - glyph_cos.get(top_char, -1.0) > gmarg:
                     glyph_contra = True               # winner won only via crop; glyph disagrees
-            reject = (p_top < self.calib["tau_p"]) or (margin < self.calib["delta_p"]) \
-                or (guard and glyph_contra)
+            # Accept if EITHER the calibrated bank gate passes AND agrees with the head,
+            # OR the head itself is confident (head_margin ≥ HEAD_ACCEPT_MARGIN). The
+            # second arm rescues the below_visual_threshold chars the bank under-scored
+            # (crop-less true glyph): count already matched, only the SCORE was wrong.
+            bank_ok = (bank_p >= self.calib["tau_p"]) and (bank_top == top_char)
+            head_ok = (head_top is not None and head_margin >= HEAD_ACCEPT_MARGIN)
+            reject = (not (bank_ok or head_ok)) or (guard and glyph_contra)
             return {"top_char": top_char, "p_match": p_top, "p_margin": margin,
                     "reject": bool(reject), "glyph_winner": gw, "glyph_contra": glyph_contra,
                     "head_top": head_top, "head_margin": head_margin,
-                    "head_agree": bool(head_top is not None and head_top == top_char)}
+                    "head_agree": bool(head_top is not None and head_top == bank_top)}
 
         # FALLBACK (no calibration): shared-tier remapped cosine + TAU/DELTA gate.
         shared = next((t for t in TIERS if all(banks[c].get(t) is not None for c in cands)), None)

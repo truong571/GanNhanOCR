@@ -1,0 +1,9 @@
+# Kaggle GPU images already ship torch/torchvision/numpy/pandas — this file is for
+# a local run or a from-scratch venv. Pin nothing tighter than the repo's Py3.13/3.14.
+torch>=2.1
+torchvision>=0.16
+numpy>=1.24
+pandas>=2.0
+opencv-python-headless>=4.8
+# optional, only for nicer eval; evaluate.py has a numpy fallback AUC:
+# scikit-learn>=1.3

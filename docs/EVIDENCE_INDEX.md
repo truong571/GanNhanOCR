@@ -245,3 +245,22 @@ phạm vi: build remediate fuse confusion publish | strict=0 | reseg=detector | 
 | `dataset_out/release/crops.csv` | `0bf40da4b8708a16c0dfe5955452a7bd0c135b5654f147c0e474bda56f2027cf` |
 | `dataset_out/release/datapackage.json` | `fc9c165ce644fe7a8925e1636bb1bb643356b912a07467d8f8664a91c4fb90f5` |
 | `dataset_out/release/croissant.json` | `3093e4821414ad1bb6a788dfa0038d1ee2ed88ea6238683ab1d6e7518f67c424` |
+
+## Lần chạy 2026-07-22T14:01:38Z
+
+sách: STT2 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `8e214572229ae3fa14eb7f478999d8c68eefc46417199f0fafb2b798c16f0b19` |
+| `dataset_out/labels_remediated.csv` | `96ee3741a9a912229b89e244ad3f98e779f85809daab94a4abef923ed3f13b01` |
+
+## Lần chạy 2026-07-22T14:49:00Z
+
+sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `8e214572229ae3fa14eb7f478999d8c68eefc46417199f0fafb2b798c16f0b19` |
+| `dataset_out/labels_remediated.csv` | `96ee3741a9a912229b89e244ad3f98e779f85809daab94a4abef923ed3f13b01` |
+| `dataset/labels.csv` | `fe286d05804d5ba18754b28237f8b248d367f72da4da2be8143c9019faeaf87f` |

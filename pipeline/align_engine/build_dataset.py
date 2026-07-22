@@ -44,7 +44,7 @@ from core.text.dictionary import load_qn_to_nom, load_similarity_dict  # noqa: E
 from core.text.text_utils import is_plausible_qn_syllable  # noqa: E402
 from pipeline.align_engine.align_production import align_page          # noqa: E402
 from pipeline.align_engine.consensus import decide_label              # noqa: E402
-from pipeline.align_engine.bbox_fix import tighten_box                # noqa: E402
+from pipeline.align_engine.bbox_fix import tighten_box, carve_neighbor_ink  # noqa: E402
 
 
 def _book_code(name: str) -> str:
@@ -108,18 +108,26 @@ def _seg_flag(crop_gray) -> str:
     return "tall" if h > 1.8 * max(w, 1) else "ok"
 
 
-def save_crop(img, bbox, pad, path: Path, tighten: bool = True) -> dict | None:
-    """Cut + (tighten) + save a crop; return per-crop quality stats or None."""
+def save_crop(img, gray_full, bbox, pad, path: Path, tighten: bool = True,
+              prev_bbox=None, next_bbox=None) -> dict | None:
+    """Cut + carve-neighbour-ink + (tighten) + save a crop; return per-crop quality
+    stats or None. prev_bbox/next_bbox = raw bbox of the char immediately before/after
+    THIS one in the SAME column (by y-order) — used to erase neighbour ink that
+    bled into the padded window (tighten_box alone can't separate 2 touching glyphs)."""
     if img is None or not bbox:
         return None
     H, W = img.shape[:2]
-    x1, y1, x2, y2 = (int(v) for v in bbox)
-    pw, ph = int((x2 - x1) * pad), int((y2 - y1) * pad)
-    x1, y1 = max(0, x1 - pw), max(0, y1 - ph)
-    x2, y2 = min(W, x2 + pw), min(H, y2 + ph)
+    ox1, oy1, ox2, oy2 = (int(v) for v in bbox)
+    pw, ph = int((ox2 - ox1) * pad), int((oy2 - oy1) * pad)
+    x1, y1 = max(0, ox1 - pw), max(0, oy1 - ph)
+    x2, y2 = min(W, ox2 + pw), min(H, oy2 + ph)
     crop = img[y1:y2, x1:x2]
     if crop.size == 0:
         return None
+    crop = crop.copy()
+    if gray_full is not None and (prev_bbox is not None or next_bbox is not None):
+        crop = carve_neighbor_ink(crop, gray_full, x1, y1, x2, y2, (oy1, oy2),
+                                  prev_bbox, next_bbox)
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
     if tighten:
         tb = tighten_box(gray)
@@ -150,6 +158,10 @@ def main():
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--no-crops", action="store_true")
     ap.add_argument("--no-tighten", action="store_true")
+    ap.add_argument("--no-carve", action="store_true",
+                    help="skip seam-carve neighbour-ink erasure (debug/compare only; "
+                         "carving is ON by default — it's what fixes crops bleeding "
+                         "into the char above/below in the same column)")
     ap.add_argument("--crop-review", action="store_true",
                     help="also materialize REVIEW crops (kept in labels.csv either way)")
     ap.add_argument("--pad", type=float, default=0.12)
@@ -303,12 +315,30 @@ def main():
     for png, recs in by_page.items():
         need = (not args.no_crops) and any(r["tier"] in crop_tiers for r in recs)
         img = cv2.imread(png, cv2.IMREAD_COLOR) if need else None
+        gray_full = (cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                    if img is not None and not args.no_carve else None)
+
+        # Neighbour bbox (prev/next by y-order) of every record IN THE SAME COLUMN,
+        # over ALL records on this page (not just crop_tiers) — a REVIEW-tier char
+        # still marks where neighbour ink sits, needed to bound the carve seam even
+        # when its own crop isn't materialized. Stashed as temp keys, never emitted.
+        by_col = defaultdict(list)
+        for r in recs:
+            if r.get("bbox"):
+                by_col[r["column"]].append(r)
+        for col_recs in by_col.values():
+            col_recs.sort(key=lambda r: (r["bbox"][1] + r["bbox"][3]) / 2.0)
+            for i, r in enumerate(col_recs):
+                r["_prev_bbox"] = col_recs[i - 1]["bbox"] if i > 0 else None
+                r["_next_bbox"] = col_recs[i + 1]["bbox"] if i < len(col_recs) - 1 else None
+
         for r in recs:
             img_rel = q = None
             if img is not None and r["tier"] in crop_tiers:
                 fn = f"{r['book']}_{r['page']}_c{r['column']:02d}_{r['idx']:03d}.png"
-                q = save_crop(img, r.get("bbox"), args.pad, out / r["tier"].lower() / fn,
-                              tighten=not args.no_tighten)
+                q = save_crop(img, gray_full, r.get("bbox"), args.pad, out / r["tier"].lower() / fn,
+                              tighten=not args.no_tighten,
+                              prev_bbox=r.get("_prev_bbox"), next_bbox=r.get("_next_bbox"))
                 if q:
                     img_rel = f"{r['tier'].lower()}/{fn}"
             labels.append({

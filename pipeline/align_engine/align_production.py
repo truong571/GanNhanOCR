@@ -178,7 +178,9 @@ def _get_detector():
     _DETECTOR_TRIED = True
     try:
         from pipeline.align_engine.char_detector.detector_infer import DetectorInfer
-        _DETECTOR = DetectorInfer()        # tự tìm ckpt v1 ở train_crop/detector_r34.best.pt
+        # thr 0.2->0.3: bớt detection tin cậy thấp (dễ lệch vị trí) lọt vào
+        # enforce_count/column_boxes -> ít box sai hơn feed cho _monotone_assign.
+        _DETECTOR = DetectorInfer(thr=0.3)  # tự tìm ckpt v1 ở train_crop/detector_r34.best.pt
         if not _DETECTOR.trained:
             print("  [reseg detector] không thấy train_crop/detector_r34.best.pt -> midpoint fallback "
                   "(tải: huggingface-cli download mdnt571/nom-char-det detector_r34.best.pt --local-dir train_crop/).",
@@ -237,7 +239,7 @@ def _mean_mls(boxes, page_bgr, encoder):
     return float(np.mean(vals)) if vals else None
 
 
-def _monotone_assign(cys, boxes, mid, guard=0.5, pitch=None):
+def _monotone_assign(cys, boxes, mid, guard=0.35, pitch=None):
     """Assign each char y-center in `cys` to a DISTINCT box, monotone (non-crossing),
     minimising total |cy - box_center_y| via DP. Returns boxes in the ORIGINAL char
     order, or None if there are fewer boxes than chars (caller falls back to midpoint).
@@ -320,8 +322,10 @@ def _pick_reseg(cluster, syllables, binary, reseg_mode, encoder=None, page_bgr=N
                 return mid
             # x-range guard (fixes F1): reject a box whose center-x falls outside this
             # column, replacing it with the midpoint box rather than a neighbour glyph.
+            # Tightened 0.15->0.10 (+ guard 0.5->0.35 above): fewer marginal detector
+            # boxes accepted, more (safer) midpoint fallback — trims residual bleed.
             x1, x2 = cluster["x_range"]
-            xtol = 0.15 * (x2 - x1)
+            xtol = 0.10 * (x2 - x1)
             out = []
             for i, box in enumerate(assigned):
                 if box is None:

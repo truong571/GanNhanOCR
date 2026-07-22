@@ -107,3 +107,99 @@ def tighten_box(gray: "np.ndarray", thr: int = 128, edge_line: float = 0.65,
     if b - a < 6 or d - c < 6:
         return None
     return (a, c, b, d)
+
+
+def _compute_seam(gray_box: "np.ndarray", y_lo: int, y_hi: int) -> "np.ndarray | None":
+    """Đường đi NGANG năng-lượng-tối-thiểu (mực) qua dải [y_lo,y_hi] của gray_box.
+
+    Mỗi cột x chọn 1 hàng y, |y(x)-y(x-1)| <= 1 (liền mạch); năng lượng = mực
+    (255-gray) — seam luồn theo kẽ hở ít mực nhất giữa 2 ký tự chồng nhau theo
+    chiều dọc. Trả seam[W] (toạ độ y TRONG gray_box), hoặc None nếu dải rỗng.
+
+    Bản port thuần numpy của train_crop/infer_centernet.compute_seam — port
+    thay vì import để module này không phải kéo theo torch (train_crop/infer_centernet.py
+    nạp model_centernet/train_centernet ở top-level) chỉ để tính 1 đường seam.
+    """
+    H, W = gray_box.shape[:2]
+    y_lo = max(0, min(y_lo, H - 1))
+    y_hi = max(y_lo, min(y_hi, H - 1))
+    if W < 2 or y_hi <= y_lo:
+        return None
+    ink = (255.0 - gray_box.astype(np.float32))[y_lo:y_hi + 1, :]
+    R = ink.shape[0]
+    M = np.empty((R, W), np.float32)
+    back = np.zeros((R, W), np.int32)
+    M[:, 0] = ink[:, 0]
+    rows = np.arange(R)
+    for x in range(1, W):
+        prev = M[:, x - 1]
+        up = np.concatenate(([np.inf], prev[:-1]))
+        down = np.concatenate((prev[1:], [np.inf]))
+        cand = np.stack([up, prev, down])
+        arg = np.argmin(cand, axis=0)
+        M[:, x] = ink[:, x] + cand[arg, rows]
+        back[:, x] = np.clip(rows + (arg - 1), 0, R - 1)
+    r = int(np.argmin(M[:, -1]))
+    seam = np.empty(W, np.int32)
+    for x in range(W - 1, -1, -1):
+        seam[x] = y_lo + r
+        r = int(back[r, x])
+    return seam
+
+
+def _seam_boundary(gray_full: "np.ndarray", x1: int, x2: int, ya: int, yb: int):
+    """Seam (toạ độ y TUYỆT ĐỐI, hệ full-page) giữa 2 ký tự trong dải y∈[ya,yb], x∈[x1,x2]."""
+    sub = gray_full[max(0, ya):yb, max(0, x1):x2]
+    if sub.size == 0 or sub.shape[0] < 3 or sub.shape[1] < 2:
+        return None
+    seam = _compute_seam(sub, 0, sub.shape[0] - 1)
+    return None if seam is None else (seam + max(0, ya))
+
+
+def carve_neighbor_ink(crop: "np.ndarray", gray_full: "np.ndarray", cx1: int, cy1: int,
+                       cx2: int, cy2: int, own_y: tuple[int, int],
+                       prev_bbox=None, next_bbox=None, bg: int = 255) -> "np.ndarray":
+    """Xoá (tô nền) mực của ký tự HÀNG XÓM (cùng cột, trên/dưới) tràn vào `crop`,
+    theo seam cong tại ranh giới — bịt đúng lỗ hổng mà `tighten_box` không xử lý
+    được: nó chỉ co về hộp bao mực, không tách được 2 khối mực DÍNH NHAU.
+
+    crop bị SỬA TRỰC TIẾP (in-place, cũng trả về để tiện dùng). (cx1,cy1,cx2,cy2)
+    = cửa sổ đã pad của `crop` trong hệ toạ độ full-page. own_y=(y1,y2) = bbox GỐC
+    (chưa pad) của CHÍNH ký tự này — mốc chia đôi trên/dưới để biết seam nào
+    giới hạn phía nào. prev_bbox/next_bbox = bbox GỐC của ký tự liền trước/sau
+    trong CÙNG CỘT (None nếu không có, hoặc không hạn chế thêm).
+
+    Logic giống hệt train_crop/infer_centernet.carve_crops() — port lại (áp lên
+    cửa sổ pad theo TỶ LỆ của build_dataset thay vì pad cố định 2px của bản gốc).
+
+    CHẶN CỨNG (khác bản gốc carve_crops): erasure KHÔNG BAO GIỜ được lấn vào
+    [oy1,oy2] — bbox GỐC của chính ký tự — dù seam tìm được nằm sâu hơn. Lý do:
+    khi 2 box hàng xóm CHỒNG LẤN nhau (lỗi định vị box có sẵn từ align, không
+    hiếm), dải tìm seam có thể trùm cả lên nét của chính ký tự; nếu không chặn,
+    đường seam "rẻ nhất" (ít mực nhất) có thể cắt xuyên qua giữa ký tự, xoá
+    trắng gần hết hoặc toàn bộ crop (đo được: ink_pct=0.0 hàng loạt trước khi
+    thêm chặn này). Bleed hàng xóm CHỈ có thể nằm trong phần PAD (ngoài
+    [oy1,oy2]), nên giới hạn cả vùng tìm-seam lẫn vùng-được-xoá vào đúng phần
+    pad là đủ để loại bỏ rủi ro này mà không mất tác dụng carve.
+    """
+    oy1, oy2 = own_y
+    ch, cw = crop.shape[:2]
+    if prev_bbox is not None and oy1 > cy1:
+        ya = max(int((prev_bbox[1] + prev_bbox[3]) / 2), cy1)
+        if ya < oy1:
+            seam = _seam_boundary(gray_full, cx1, cx2, ya, oy1)
+            if seam is not None and len(seam) == cw:
+                top_limit = oy1 - cy1
+                for j in range(cw):
+                    yy = min(max(int(seam[j]) - cy1, 0), top_limit)
+                    crop[:yy, j] = bg
+    if next_bbox is not None and oy2 < cy2:
+        yb = min(int((next_bbox[1] + next_bbox[3]) / 2) + 1, cy2)
+        if yb > oy2:
+            seam = _seam_boundary(gray_full, cx1, cx2, oy2, yb)
+            if seam is not None and len(seam) == cw:
+                bot_limit = oy2 - cy1
+                for j in range(cw):
+                    yy = max(min(int(seam[j]) - cy1, ch), bot_limit)
+                    crop[yy:, j] = bg
+    return crop

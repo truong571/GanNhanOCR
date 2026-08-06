@@ -43,8 +43,24 @@ def _verdict_source(rec: dict) -> str:
     return str(rec.get("source") or "human").strip().lower()
 
 
+def _verdict_files(path: str | Path) -> list[Path]:
+    """Một file, hoặc MỌI verdicts*.jsonl trong một thư mục.
+
+    Công cụ chấm xuất ra từng phần (`verdicts_001.jsonl`, `verdicts_002.jsonl`, ...) nên
+    truyền cả thư mục là cách dùng tự nhiên — và đúng như hướng dẫn trong README của các
+    mẻ audit.
+    """
+    p = Path(path)
+    if p.is_dir():
+        files = sorted(p.glob("verdicts*.jsonl"))
+        if not files:
+            raise FileNotFoundError(f"không thấy verdicts*.jsonl nào trong {p}")
+        return files
+    return [p]
+
+
 def load_verdicts(path: str | Path, include_ai: bool = False) -> pd.DataFrame:
-    """Đọc verdicts.jsonl thành frame (item_id, verdict, source).
+    """Đọc verdicts.jsonl (hoặc cả thư mục chứa verdicts*.jsonl) thành frame.
 
     MẶC ĐỊNH chỉ nhận verdict của NGƯỜI chấm: bản ghi có source ∈ AI_VERDICT_SOURCES
     (vd 'ai_vision') bị LOẠI, trừ khi include_ai=True. Verdict thiếu trường `source`
@@ -53,26 +69,28 @@ def load_verdicts(path: str | Path, include_ai: bool = False) -> pd.DataFrame:
     rows = []
     kept: dict[str, int] = {}
     skipped: dict[str, int] = {}
-    for ln in Path(path).read_text(encoding="utf-8").splitlines():
-        ln = ln.strip()
-        if not ln:
-            continue
-        d = json.loads(ln)
-        if "item_id" not in d or "verdict" not in d:
-            raise ValueError(f"verdict line missing keys: {ln}")
-        if d["verdict"] not in VALID_VERDICTS:
-            raise ValueError(f"unknown verdict {d['verdict']!r}")
-        src = _verdict_source(d)
-        if src in AI_VERDICT_SOURCES and not include_ai:
-            skipped[src] = skipped.get(src, 0) + 1
-            continue
-        kept[src] = kept.get(src, 0) + 1
-        rows.append({"item_id": str(d["item_id"]), "verdict": d["verdict"], "source": src})
+    files = _verdict_files(path)
+    for fp in files:
+        for ln in fp.read_text(encoding="utf-8").splitlines():
+            ln = ln.strip()
+            if not ln:
+                continue
+            d = json.loads(ln)
+            if "item_id" not in d or "verdict" not in d:
+                raise ValueError(f"{fp.name}: verdict line missing keys: {ln}")
+            if d["verdict"] not in VALID_VERDICTS:
+                raise ValueError(f"{fp.name}: unknown verdict {d['verdict']!r}")
+            src = _verdict_source(d)
+            if src in AI_VERDICT_SOURCES and not include_ai:
+                skipped[src] = skipped.get(src, 0) + 1
+                continue
+            kept[src] = kept.get(src, 0) + 1
+            rows.append({"item_id": str(d["item_id"]), "verdict": d["verdict"], "source": src})
 
     def _fmt(dd: dict[str, int]) -> str:
         return ", ".join(f"{k}={v}" for k, v in sorted(dd.items())) or "0"
-    print(f"[estimate] verdicts: nạp {sum(kept.values())} ({_fmt(kept)}), "
-          f"bỏ qua {sum(skipped.values())} ({_fmt(skipped)})")
+    print(f"[estimate] verdicts từ {len(files)} file: nạp {sum(kept.values())} "
+          f"({_fmt(kept)}), bỏ qua {sum(skipped.values())} ({_fmt(skipped)})")
     if skipped and not include_ai:
         print(f"[cảnh báo] đã LOẠI {sum(skipped.values())} verdict source=ai_vision "
               f"(dùng --include-ai-verdicts nếu thực sự muốn dùng nhãn máy)")
@@ -98,11 +116,37 @@ def load_manifest(path: str | Path) -> pd.DataFrame:
     return df
 
 
-def join_manifest(verdicts: pd.DataFrame, manifest: pd.DataFrame) -> pd.DataFrame:
+def join_manifest(verdicts: pd.DataFrame, manifest: pd.DataFrame,
+                  drop_unknown: bool = False) -> pd.DataFrame:
+    """Ghép verdict với manifest. Verdict không có hàng manifest tương ứng là LỖI THẬT.
+
+    Nguyên nhân thường gặp: bản xuất kéo theo verdict của MẺ KHÁC. Các mẻ dựng trước
+    2026-08-03 dùng chung một khoá localStorage (`gt_audit_verdicts`) nên kho verdict bị
+    trộn giữa các mẻ; khoá nay đã tách theo mẻ. Với các bản xuất cũ, dùng drop_unknown=True
+    để bỏ phần lạc — hàm sẽ IN RÕ số bị bỏ chứ không im lặng.
+    """
+    known = set(manifest["item_id"].astype(str))
+    unknown = verdicts.loc[~verdicts["item_id"].astype(str).isin(known)]
+    if len(unknown):
+        if not drop_unknown:
+            raise ValueError(
+                f"{len(unknown)} verdict không có hàng manifest tương ứng "
+                f"(vd {unknown['item_id'].iloc[0]!r}). Gần như chắc chắn là verdict của MẺ "
+                f"KHÁC lọt vào do localStorage dùng chung khoá trước 2026-08-03. "
+                f"Dùng drop_unknown=True / --drop-unknown-verdicts để bỏ chúng.")
+        print(f"[estimate] BỎ {len(unknown)} verdict lạc (không thuộc mẻ này): "
+              f"{', '.join(unknown['item_id'].astype(str).head(5))}")
+        verdicts = verdicts.loc[verdicts["item_id"].astype(str).isin(known)]
+
     j = verdicts.merge(manifest, on="item_id", how="left", validate="one_to_one")
     missing = j["stratum"].isna().sum() if "stratum" in j.columns else j.isna().all(axis=1).sum()
     if missing:
         raise ValueError(f"{missing} verdicts have no matching manifest row")
+    n_ungraded = len(known) - len(j)
+    if n_ungraded > 0:
+        print(f"[estimate] CẢNH BÁO: {n_ungraded}/{len(known)} ô trong mẻ CHƯA được chấm — "
+              f"chúng bị loại khỏi mẫu. Nếu việc bỏ sót có liên quan tới độ khó của ô thì "
+              f"ước lượng sẽ chệch; kiểm lại trước khi trích dẫn.")
     j["correct"] = (j["verdict"] == "correct").astype(int)
     j["is_wrong_label"] = (j["verdict"] == "wrong_label").astype(int)
     j["is_wrong_image"] = (j["verdict"] == "wrong_image").astype(int)
@@ -129,9 +173,56 @@ class PrecisionReport:
     ppi_note: str | None
     acceptance: dict | None
     per_stratum: list[dict]
+    # Số ô bị LOẠI vì thuộc mẫu chủ đích (design_weight rỗng) + thống kê mô tả của chúng.
+    # Luôn báo ra để việc loại là minh bạch, không phải cắt bớt âm thầm.
+    n_purposive_excluded: int = 0
+    purposive: dict | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+
+def _split_purposive(joined: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Tách (mẫu xác suất, mẫu chủ đích). Chủ đích = design_weight rỗng.
+
+    Chỉ tách khi khung có CẢ HAI loại; nếu toàn bộ đều có trọng số (mọi mẻ cũ) thì
+    không đổi gì — hàm là no-op và tương thích ngược tuyệt đối.
+    """
+    if "design_weight" not in joined.columns:
+        return joined, joined.iloc[0:0]
+    w = pd.to_numeric(joined["design_weight"], errors="coerce")
+    is_purposive = w.isna()
+    if is_purposive.all():
+        print("[estimate] CẢNH BÁO: KHÔNG hàng nào có design_weight — mẻ này không phải "
+              "mẫu xác suất (vd mẻ kiểm tra lặp, lấy vượt tỷ lệ nhóm lỗi). Mọi con số "
+              "precision/CI dưới đây CHỈ mô tả chính mẫu, KHÔNG suy rộng ra dân số được.")
+    if not is_purposive.any() or is_purposive.all():
+        # toàn xác suất -> giữ nguyên; toàn chủ đích -> để nguyên cho người dùng tự chịu
+        # trách nhiệm (và cảnh báo ở tầng CLI), tránh trả về khung rỗng gây lỗi khó hiểu.
+        return joined, joined.iloc[0:0]
+    return joined.loc[~is_purposive].copy(), joined.loc[is_purposive].copy()
+
+
+def _purposive_summary(purposive: pd.DataFrame) -> dict | None:
+    """Thống kê MÔ TẢ cho tầng chủ đích — cố ý KHÔNG có CI, vì CI ở đây vô nghĩa."""
+    if purposive.empty:
+        return None
+    s = purposive[purposive["is_unsure"] == 0]
+    n = len(s)
+    k = int(s["correct"].sum()) if n else 0
+    batches = (sorted(set(purposive["audit_batch"].dropna().astype(str)))
+               if "audit_batch" in purposive.columns else [])
+    return {
+        "n_audited": len(purposive),
+        "n_scored": n,
+        "n_correct": k,
+        "error_rate": (1.0 - k / n) if n else None,
+        "audit_batch": batches,
+        "note": ("Mẫu CHỦ ĐÍCH (design_weight rỗng) — đã LOẠI khỏi mọi ước lượng "
+                 "precision. Chỉ dùng để đo AUC / hiệu chỉnh ngưỡng. Tỷ lệ lỗi ở đây "
+                 "CAO hơn dân số theo đúng thiết kế và KHÔNG được trích dẫn như "
+                 "precision của tier."),
+    }
 
 
 def _weighted(joined: pd.DataFrame, conf: float) -> tuple[float, tuple[float, float]] | None:
@@ -174,6 +265,14 @@ def estimate(
     p0: target precision for the acceptance claim (e.g. 0.97).
     unlabeled_scores: surrogate scores over the un-audited usable population for PPI.
     """
+    # --- LOẠI phần mẫu CHỦ ĐÍCH khỏi mọi ước lượng precision ------------------ #
+    # Mẻ hai tầng (make_gold_batch) trộn một tầng xác suất với một tầng chọn-chủ-đích
+    # theo margin thấp. Tầng chủ đích có tỷ lệ lỗi cao hơn hẳn dân số theo đúng thiết kế;
+    # gộp nó vào Clopper–Pearson sẽ cho precision THẤP GIẢ. Dấu hiệu nhận biết là
+    # design_weight rỗng — mẫu không xác suất thì không có trọng số quy về dân số.
+    joined, purposive = _split_purposive(joined)
+    n_purposive = len(purposive)
+
     n_aud = len(joined)
     scored = joined[joined["is_unsure"] == 0]
     n_scored = len(scored)
@@ -258,4 +357,5 @@ def estimate(
         weighted_precision=w_point, weighted_ci=w_ci,
         ppi_precision=ppi_p, ppi_ci=ppi_ci, ppi_note=ppi_note,
         acceptance=acceptance, per_stratum=per_stratum,
+        n_purposive_excluded=n_purposive, purposive=_purposive_summary(purposive),
     )

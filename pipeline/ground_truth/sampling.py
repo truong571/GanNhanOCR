@@ -18,6 +18,8 @@ __all__ = ["DEFAULT_OVERSAMPLE", "stratified_sample", "simple_random_sample"]
 # Multiply the proportional allocation of these risk strata (reweighted out later).
 DEFAULT_OVERSAMPLE = {
     "dup_defect": 3.0,
+    "head_disagree": 3.0,     # bằng chứng trực tiếp từ ảnh -> đáng soi nhất sau lớp trùng
+
     "similar_bridge_lowcos": 3.0,
     "similar_bridge": 2.0,
     "silver_headbank": 2.0,

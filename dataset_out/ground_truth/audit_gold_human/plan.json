@@ -1,0 +1,35 @@
+{
+  "labels_source": "dataset_out/labels_remediated.csv",
+  "population_gold": 50286,
+  "seed": 42,
+  "conf": 0.95,
+  "strata": [
+    {
+      "audit_batch": "srs",
+      "n": 120,
+      "probability_sample": true,
+      "design_weight": 419.05,
+      "usable_for": "precision + CI"
+    },
+    {
+      "audit_batch": "active_lowmargin",
+      "n": 80,
+      "probability_sample": false,
+      "design_weight": null,
+      "usable_for": "AUC / hiệu chỉnh ngưỡng — KHÔNG dùng cho precision"
+    }
+  ],
+  "cp_lower_bound_srs": {
+    "0": 0.0,
+    "1": 0.0004273527786733243,
+    "2": 0.0029693483439173795,
+    "5": 0.016559140745761713
+  },
+  "grid": {
+    "items": 200,
+    "skipped_no_crop": 0,
+    "missing_reference_glyph": 0,
+    "missing_context": 0,
+    "manifest": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/dataset_out/ground_truth/audit_gold_human/manifest.jsonl"
+  }
+}

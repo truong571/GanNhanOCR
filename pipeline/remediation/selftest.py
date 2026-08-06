@@ -139,15 +139,21 @@ def test_real() -> None:
     # dup_bbox: đo 0 (lịch sử 701) — dedup upstream đã xoá mọi trùng-bbox cùng cột.
     check("real dup_bbox == 0 (dedup closed; hist 701)", res.dup_bbox_rows == 0,
           str(res.dup_bbox_rows))
-    # cross_col: đo 8 (lịch sử 1686) = 4 nhóm xung đột nhãn cross-column còn sót.
-    check("real cross_col == 8 (dedup closed; hist 1686)", res.cross_col_rows == 8,
+    # cross_col: BẤT BIẾN == 0. Lịch sử 1686 -> 8 (labels.csv 21/07) -> 0 (22/07).
+    check("real cross_col == 0 (dedup closed; hist 1686->8->0)", res.cross_col_rows == 0,
           str(res.cross_col_rows))
-    # union: đo 8 (lịch sử 2321) = union(dup_bbox=0, cross_col=8). Lớp trùng đã đóng.
-    check("real union == 8 (dedup closed; hist 2321)", res.union_rows == 8,
+    # union: BẤT BIẾN == 0 = union(dup_bbox=0, cross_col=0). Lịch sử 2321 -> 8 -> 0.
+    check("real union == 0 (dedup closed; hist 2321->8->0)", res.union_rows == 0,
           str(res.union_rows))
-    # provably-wrong: đo 4 (lịch sử ~1177) = 1 nhãn sai / mỗi nhóm xung đột (4 nhóm).
-    check("real provably-wrong == 4 (dedup closed; hist ~1177)",
-          res.provably_wrong_rows == 4, str(res.provably_wrong_rows))
+    # provably-wrong: BẤT BIẾN == 0 (1 nhãn sai / nhóm xung đột; 0 nhóm còn lại).
+    # Lịch sử ~1177 -> 4 -> 0.
+    check("real provably-wrong == 0 (dedup closed; hist 1177->4->0)",
+          res.provably_wrong_rows == 0, str(res.provably_wrong_rows))
+    # CẤU TRÚC (không phụ thuộc thế hệ dữ liệu): union = |dup_bbox ∪ cross_col|.
+    check("real union là hợp của 2 lớp con",
+          max(res.dup_bbox_rows, res.cross_col_rows) <= res.union_rows
+          <= res.dup_bbox_rows + res.cross_col_rows,
+          f"union={res.union_rows} dup_bbox={res.dup_bbox_rows} cross={res.cross_col_rows}")
     out, rep = remediate_mod.remediate(df)
     check("real: outputs same #rows", len(out) == len(df))
     # BẤT BIẾN cốt lõi (giữ nguyên): không md5 nào span >1 split sau remediation.
@@ -157,18 +163,34 @@ def test_real() -> None:
     # giữ đúng từ đầu vào tới đầu ra (0 -> 0), không còn leak để vá tại bước này.
     check("real: original split leak == 0 (dedup closed; hist 288)",
           rep.md5_spanning_splits_original == 0, str(rep.md5_spanning_splits_original))
-    # 820 similar-bridge GOLD have cosine<0.62 in raw data; ~72 are also dup-defects
-    # (quarantined first, correctly), so post-quarantine demotions == 748.
-    check("real: demoted similar-bridge (post-quarantine)",
-          700 <= rep.demoted_similar_lowcos <= 850, str(rep.demoted_similar_lowcos))
-    # quarantined: đo 8 (lịch sử >1000, ~2321 hàng trùng). Dedup upstream đã loại các bản
-    # trùng md5/bbox; còn đúng 8 hàng cross-column XUNG ĐỘT nhãn -> tất cả bị cách ly.
-    # Giữ Ý NGHĨA kiểm định "dedup đóng lớp trùng": 8 = toàn conflict, 0 duplicate thuần.
-    check("real: quarantined == 8, all-conflict, 0 pure-dup (dedup closed; hist >1000)",
-          rep.quarantined_rows == 8 and rep.quarantined_conflict == 8
+    # Demote similar-bridge: kiểm CẤU TRÚC, không phải số cứng — quarantine chạy TRƯỚC
+    # nên hàng đã bị cách ly không còn tier GOLD và không bị demote nữa. Kỳ vọng =
+    # |GOLD ∩ similar_bridge ∩ s3<τ| trừ đi phần đã bị quarantine cướp.
+    # Lịch sử: 748 (khi quarantine lấy ~72 hàng) -> 925 (quarantine = 0).
+    s3_in = pd.to_numeric(df["s3_cosine"], errors="coerce")
+    cand_demote = (
+        df["tier"].eq("GOLD")
+        & df["rule"].eq(remediate_mod.SIMILAR_RULE)
+        & s3_in.notna()
+        & (s3_in < remediate_mod.TAU_SILVER)
+    )
+    q_mask = out["tier"].eq(remediate_mod.QUARANTINE_TIER)
+    expect_demote = int((cand_demote & ~q_mask).sum())
+    check("real: demoted similar-bridge == |GOLD∩bridge∩s3<τ| \\ quarantine",
+          rep.demoted_similar_lowcos == expect_demote,
+          f"{rep.demoted_similar_lowcos} vs expect {expect_demote}")
+    # quarantined: BẤT BIẾN == 0. Lịch sử >1000 (~2321 hàng trùng) -> 8 -> 0. Không còn
+    # hàng trùng md5/bbox nào để cách ly.
+    check("real: quarantined == 0 (dedup closed; hist >1000->8->0)",
+          rep.quarantined_rows == 0 and rep.quarantined_conflict == 0
           and rep.quarantined_duplicate == 0,
           f"rows={rep.quarantined_rows} conflict={rep.quarantined_conflict} "
           f"dup={rep.quarantined_duplicate}")
+    # CẤU TRÚC: quarantine chỉ rút từ lớp trùng, và rows = conflict + duplicate thuần.
+    check("real: quarantine ⊆ lớp trùng, rows = conflict + dup",
+          rep.quarantined_rows <= res.union_rows
+          and rep.quarantined_rows == rep.quarantined_conflict + rep.quarantined_duplicate,
+          f"rows={rep.quarantined_rows} union={res.union_rows}")
     check("real: usable decreased", rep.usable_after < rep.usable_before,
           f"{rep.usable_before}->{rep.usable_after}")
     # idempotence: re-running remediation changes nothing further

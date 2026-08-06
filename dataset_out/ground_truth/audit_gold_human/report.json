@@ -1,0 +1,87 @@
+{
+  "n_audited": 119,
+  "n_scored": 117,
+  "n_correct": 114,
+  "n_wrong_label": 2,
+  "n_wrong_image": 1,
+  "n_unsure": 2,
+  "precision": 0.9743589743589743,
+  "wilson_ci": [
+    0.9273169764853294,
+    0.9912419442961798
+  ],
+  "cp_ci": [
+    0.9268932096293925,
+    0.9946806651020963
+  ],
+  "cp_lower_one_sided": 0.9350649852549251,
+  "weighted_precision": 0.9743586189306527,
+  "weighted_ci": [
+    0.9456633710728908,
+    1.0
+  ],
+  "ppi_precision": 0.9455238758510393,
+  "ppi_ci": [
+    0.9049300630960495,
+    0.986117688606029
+  ],
+  "ppi_note": null,
+  "acceptance": {
+    "p0": 0.97,
+    "defects": 3,
+    "n": 117,
+    "one_sided_lower_bound": 0.9350649852549251,
+    "accept": false,
+    "design": "srs",
+    "note": "valid SRS acceptance claim"
+  },
+  "per_stratum": [
+    {
+      "stratum": "gold_direct",
+      "n": 103,
+      "correct": 100,
+      "precision": 0.970873786407767,
+      "wrong_label": 2,
+      "wrong_image": 1,
+      "unsure": 0
+    },
+    {
+      "stratum": "head_disagree",
+      "n": 4,
+      "correct": 4,
+      "precision": 1.0,
+      "wrong_label": 0,
+      "wrong_image": 0,
+      "unsure": 0
+    },
+    {
+      "stratum": "quality_flag",
+      "n": 3,
+      "correct": 3,
+      "precision": 1.0,
+      "wrong_label": 0,
+      "wrong_image": 0,
+      "unsure": 2
+    },
+    {
+      "stratum": "similar_bridge",
+      "n": 7,
+      "correct": 7,
+      "precision": 1.0,
+      "wrong_label": 0,
+      "wrong_image": 0,
+      "unsure": 0
+    }
+  ],
+  "n_purposive_excluded": 80,
+  "purposive": {
+    "n_audited": 80,
+    "n_scored": 79,
+    "n_correct": 79,
+    "error_rate": 0.0,
+    "audit_batch": [
+      "active_lowmargin"
+    ],
+    "note": "Mẫu CHỦ ĐÍCH (design_weight rỗng) — đã LOẠI khỏi mọi ước lượng precision. Chỉ dùng để đo AUC / hiệu chỉnh ngưỡng. Tỷ lệ lỗi ở đây CAO hơn dân số theo đúng thiết kế và KHÔNG được trích dẫn như precision của tier."
+  }
+}

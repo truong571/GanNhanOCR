@@ -1,0 +1,21 @@
+{
+  "n": 40,
+  "seed": 42,
+  "purpose": "test-retest reliability (KHÔNG dùng để ước lượng precision)",
+  "composition": {
+    "audit_confusion_奴_nó|correct": 10,
+    "audit_confusion_奴_nó|wrong_image": 10,
+    "audit_confusion_奴_nó|wrong_label": 4,
+    "audit_gold_human|correct": 10,
+    "audit_gold_human|unsure": 3,
+    "audit_gold_human|wrong_image": 1,
+    "audit_gold_human|wrong_label": 2
+  },
+  "grid": {
+    "items": 40,
+    "skipped_no_crop": 0,
+    "missing_reference_glyph": 0,
+    "missing_context": 0,
+    "manifest": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/dataset_out/ground_truth/audit_retest/manifest.jsonl"
+  }
+}

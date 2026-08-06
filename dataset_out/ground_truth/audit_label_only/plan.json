@@ -1,0 +1,27 @@
+{
+  "tier": "GOLD",
+  "n": 250,
+  "population": 50286,
+  "population_unaudited": 50031,
+  "excluded_already_audited": 255,
+  "design": "srs",
+  "mode": "label_only",
+  "seed": 42,
+  "conf": 0.95,
+  "design_weight": 200.124,
+  "cp_lower_bound": {
+    "0": 0.9880885802850193,
+    "1": 0.9811660343888138,
+    "2": 0.975032318230728,
+    "3": 0.9692791358546338,
+    "5": 0.958410171217179,
+    "8": 0.9430034507359433
+  },
+  "grid": {
+    "items": 250,
+    "skipped_no_crop": 0,
+    "missing_reference_glyph": 0,
+    "missing_context": 0,
+    "manifest": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/dataset_out/ground_truth/audit_label_only/manifest.jsonl"
+  }
+}

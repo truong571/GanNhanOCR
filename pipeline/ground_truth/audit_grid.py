@@ -6,11 +6,22 @@ label — plus the proposed Nôm character and its dictionary readings. Everythi
 could bias the auditor (tier, rule, book, S3 score, stratum, suspicion) is withheld
 and written only to the manifest, which estimate.py re-joins after labelling.
 
-Verdict axes (recorded per item, keys 1–4):
-  1 correct        image shows one clean glyph AND the label matches it
-  2 wrong_label    image is a clean glyph BUT the label is the wrong character
-  3 wrong_image    crop is miscut / merged / a neighbour glyph (AE-1 / F1 defect)
-  4 unsure         illegible or ambiguous variant
+Hai bộ lựa chọn, chọn qua tham số `mode` (xem CHOICE_SETS):
+
+  mode="full" (4 mức, nguyên bản)
+    1 correct        ảnh là một glyph sạch VÀ nhãn khớp
+    2 wrong_label    glyph sạch NHƯNG nhãn sai ký tự
+    3 wrong_image    crop cắt lỗi / dính / glyph hàng xóm
+    4 unsure         không đọc được / biến thể mơ hồ
+
+  mode="label_only" (3 mức) — NÊN DÙNG cho mọi mẻ đo precision nhãn
+    1 correct  2 wrong_label  3 unsure
+
+Vì sao tách: bộ 4 mức trộn HAI câu hỏi khác hẳn nhau vào một lần bấm. Kiểm tra lặp
+2026-08-04 đo được κ=0,14 cho chiều "crop có sạch không" (người chấm tự đảo verdict
+8 gắn mới / 6 gỡ bỏ trên 40 ô), trong khi chiều nhãn ổn định theo hướng không báo động
+giả (0/20). Chính sự trộn lẫn làm precision GOLD dao động 95,8% ↔ 84,0% giữa hai buổi.
+Chất lượng crop nay được ĐO bằng hình học ở `crop_bleed.py` thay vì bỏ phiếu.
 
 Output HTML is a local file (no external requests); verdicts are kept in localStorage
 and exported as verdicts.jsonl by the auditor.
@@ -18,6 +29,7 @@ and exported as verdicts.jsonl by the auditor.
 from __future__ import annotations
 
 import base64
+import hashlib
 import html
 import io
 import json
@@ -33,6 +45,15 @@ _HIDDEN_FIELDS = (
     "tier", "rule", "book", "page", "column", "label", "unicode", "syllable",
     "s3_cosine", "s3_val", "stratum", "suspicion", "design_weight", "risk_reason",
     "split", "image", "image_md5", "bbox",
+    # tầng của mẻ hai-tầng — người chấm KHÔNG được thấy, nếu không mất tính mù
+    "audit_batch", "risk_stratum",
+    # mẻ kiểm tra lặp: verdict CŨ phải vào manifest để so, nhưng lộ ra HTML thì cả mẻ
+    # mất giá trị — người chấm sẽ chỉ chép lại đáp án cũ.
+    "orig_verdict", "orig_batch", "orig_group",
+    # 6 tín hiệu S3 corpus-wide: mang thẳng vào manifest để bước B đo AUC trên verdict
+    # người mà không phải join lại (join lại dễ lệch thế hệ dữ liệu)
+    "s3_head_cos", "s3_head_prob", "s3_head_margin", "s3_head_isarg",
+    "s3_bank_cos", "s3_mls",
 )
 
 
@@ -139,6 +160,7 @@ def build_audit(
     with_context: bool = True,
     title: str = "Audit ground-truth · Hán-Nôm",
     batch_size: int | None = 150,
+    mode: str = "full",
 ) -> dict:
     """Render the blinded audit HTML + manifest. Returns a small stats summary.
 
@@ -228,6 +250,7 @@ def build_audit(
     out_html.parent.mkdir(parents=True, exist_ok=True)
 
     # split into browser-friendly batches sharing one manifest
+    all_ids = [it["id"] for it in items]
     if batch_size and len(items) > batch_size:
         n_batches = (len(items) + batch_size - 1) // batch_size
         html_files = []
@@ -235,11 +258,12 @@ def build_audit(
             chunk = items[b * batch_size:(b + 1) * batch_size]
             fp = out_html.with_name(f"{out_html.stem}_{b + 1:03d}{out_html.suffix}")
             fp.write_text(
-                _render_html(chunk, f"{title} — phần {b + 1}/{n_batches}"), encoding="utf-8")
+                _render_html(chunk, f"{title} — phần {b + 1}/{n_batches}", all_ids, mode),
+                encoding="utf-8")
             html_files.append(str(fp))
         html_out = html_files
     else:
-        out_html.write_text(_render_html(items, title), encoding="utf-8")
+        out_html.write_text(_render_html(items, title, all_ids, mode), encoding="utf-8")
         html_out = str(out_html)
 
     return {
@@ -252,8 +276,44 @@ def build_audit(
     }
 
 
-def _render_html(items: list[dict], title: str) -> str:
+# Bộ lựa chọn của công cụ chấm.
+#   full        4 mức nguyên bản — TRỘN hai câu hỏi khác hẳn nhau (nhãn có đúng chữ /
+#               crop có sạch) vào một lần bấm. Kiểm tra lặp 2026-08-04 đo được κ=0,14 cho
+#               chiều crop, và chính sự trộn lẫn đó làm precision dao động 95,8% ↔ 84,0%.
+#   label_only  CHỈ hỏi về nhãn. Chiều này đã đo được là ổn định theo hướng không báo động
+#               giả (0/20 ô đúng bị gọi mới là sai). Chất lượng crop nay đo bằng hình học
+#               trong `crop_bleed.py`, không bỏ phiếu nữa.
+CHOICE_SETS = {
+    "full": [
+        (1, "correct", "đúng"),
+        (2, "wrong_label", "sai nhãn"),
+        (3, "wrong_image", "sai ảnh"),
+        (4, "unsure", "không chắc"),
+    ],
+    "label_only": [
+        (1, "correct", "nhãn ĐÚNG"),
+        (2, "wrong_label", "nhãn SAI"),
+        (3, "unsure", "không đọc được"),
+    ],
+}
+
+
+def _batch_key(all_ids: list[str]) -> str:
+    """Khoá localStorage của MỘT mẻ audit — dẫn xuất từ chính tập item của mẻ."""
+    return hashlib.sha1(",".join(sorted(all_ids)).encode()).hexdigest()[:12]
+
+
+def _render_html(items: list[dict], title: str, all_ids: list[str] | None = None,
+                 mode: str = "full") -> str:
     data_json = json.dumps(items, ensure_ascii=False)
+    ids = list(all_ids) if all_ids is not None else [it["id"] for it in items]
+    all_ids_json = json.dumps(ids)
+    batch_key = _batch_key(ids)
+    if mode not in CHOICE_SETS:
+        raise ValueError(f"mode phải thuộc {sorted(CHOICE_SETS)}, nhận {mode!r}")
+    choices = CHOICE_SETS[mode]
+    choices_json = json.dumps([[k, v, lbl] for k, v, lbl in choices], ensure_ascii=False)
+    hint = " · ".join(f"{k} {lbl}" for k, _, lbl in choices) + " · ←/→ chuyển"
     t = html.escape(title)
     # NOTE: this is a standalone local file (not an Artifact) — inline JS is intentional.
     return f"""<!DOCTYPE html>
@@ -296,7 +356,7 @@ def _render_html(items: list[dict], title: str) -> str:
 <body>
 <header>
   <b>Audit ground-truth</b>
-  <span class="hint">phím 1 đúng · 2 sai-nhãn · 3 sai-ảnh · 4 không-chắc · ←/→ chuyển</span>
+  <span class="hint">phím {hint}</span>
   <div class="bar"><i id="prog"></i></div>
   <span id="count" style="font-variant-numeric:tabular-nums">0/0</span>
   <button id="export">Xuất verdicts.jsonl</button>
@@ -304,9 +364,19 @@ def _render_html(items: list[dict], title: str) -> str:
 <main id="main"></main>
 <script>
 const ITEMS = {data_json};
-const KEY = "gt_audit_verdicts";
-const VLABEL = {{1:"correct",2:"wrong_label",3:"wrong_image",4:"unsure"}};
+// Khoá localStorage phải RIÊNG cho từng mẻ. Trước đây dùng chung hằng "gt_audit_verdicts"
+// nên mẻ sau thừa hưởng verdict của mẻ trước: bản xuất kéo theo item lạ, và tệ hơn — ảnh
+// nào trùng giữa hai mẻ sẽ hiện ra như ĐÃ CHẤM, người chấm bỏ qua, verdict cũ bị nhập lại
+// một cách âm thầm. Khoá dẫn xuất từ chính tập item của mẻ nên mỗi mẻ một không gian riêng.
+const KEY = "gt_audit_verdicts::{batch_key}";
+// Danh sách id của TOÀN mẻ (mọi phần audit_001/002/...), không chỉ phần đang mở — nhờ vậy
+// các phần dùng CHUNG một kho và bấm Xuất ở phần nào cũng ra đủ verdict của cả mẻ.
+const _ALLOWED = new Set({all_ids_json});
+const CHOICES = {choices_json};
+const VLABEL = Object.fromEntries(CHOICES.map(c => [c[0], c[1]]));
+const VKEYS = CHOICES.map(c => String(c[0]));
 let store = JSON.parse(localStorage.getItem(KEY) || "{{}}");
+for (const k of Object.keys(store)) if (!_ALLOWED.has(k)) delete store[k];
 
 function save() {{ localStorage.setItem(KEY, JSON.stringify(store)); refresh(); }}
 function refresh() {{
@@ -355,7 +425,7 @@ function focusCard(i) {{
   if (el) el.scrollIntoView({{behavior:"smooth", block:"center"}});
 }}
 document.addEventListener("keydown", e => {{
-  if (["1","2","3","4"].includes(e.key)) {{ choose(ITEMS[cur].id, +e.key); focusCard(cur+1); }}
+  if (VKEYS.includes(e.key)) {{ choose(ITEMS[cur].id, +e.key); focusCard(cur+1); }}
   else if (e.key === "ArrowRight") focusCard(cur+1);
   else if (e.key === "ArrowLeft") focusCard(cur-1);
 }});

@@ -41,6 +41,9 @@ fi
 
 echo "Committing: $MSG"
 "$GIT" commit -m "$MSG"
-"$GIT" push origin main
+
+# Push the branch you are actually on, not a hard-coded "main".
+BRANCH=$("$GIT" rev-parse --abbrev-ref HEAD)
+"$GIT" push -u origin "$BRANCH"
 echo ""
 echo "Done."

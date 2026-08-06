@@ -79,5 +79,6 @@ d = decide_label("二", "nhị", True, QN2NOM, None, s3=None)
 check("guard scoped to out-of-dict only", d.tier == "GOLD")
 
 
-print(f"\n{_passed} passed, {_failed} failed")
+# Tiền tố RESULT: = hợp đồng chung với scripts/run_all_selftests.sh (nó grep '^RESULT:').
+print(f"\nRESULT: {_passed} passed, {_failed} failed")
 raise SystemExit(1 if _failed else 0)

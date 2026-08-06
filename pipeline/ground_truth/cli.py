@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import audit_grid, estimate as est_mod, sampling, stats, suspicion
+from . import audit_grid, estimate as est_mod, s3_signals, sampling, stats, suspicion
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_LABELS = REPO / "dataset_out" / "labels.csv"
@@ -45,13 +45,31 @@ def _paths(cfg: dict) -> dict:
     }
 
 
+def _load_labels(args) -> pd.DataFrame:
+    """Đọc labels.csv và GẮN tín hiệu S3 corpus-wide nếu có.
+
+    Không có bước gắn này thì ~94% GOLD (luật s1_inter_s2_direct) chưa từng được đối chiếu
+    với ảnh, và xếp hạng nghi ngờ hoàn toàn mù trước lớp đó — xem s3_signals.py.
+    """
+    labels = pd.read_csv(args.labels, dtype={"image_md5": str})
+    if getattr(args, "no_s3_signals", False):
+        print("[labels] BỎ QUA tín hiệu S3 corpus-wide (--no-s3-signals)")
+        return labels
+    try:
+        labels, rep = s3_signals.attach(labels)
+        print(f"[labels] {rep}")
+    except FileNotFoundError as e:
+        print(f"[labels] CẢNH BÁO: {e}\n"
+              f"[labels] -> chạy tiếp KHÔNG có tín hiệu S3; ~94% GOLD sẽ không được soi ảnh.")
+    return labels
+
+
 def _ranked(args) -> pd.DataFrame:
     """Load or compute the ranked frame (cached to labels_ranked.csv)."""
     cache = Path(args.out) / "labels_ranked.csv"
     if cache.exists() and not getattr(args, "force", False):
         return pd.read_csv(cache, dtype={"image_md5": str})
-    labels = pd.read_csv(args.labels, dtype={"image_md5": str})
-    ranked = suspicion.add_suspicion(labels)
+    ranked = suspicion.add_suspicion(_load_labels(args))
     cache.parent.mkdir(parents=True, exist_ok=True)
     ranked.to_csv(cache, index=False)
     return ranked
@@ -59,8 +77,7 @@ def _ranked(args) -> pd.DataFrame:
 
 # --------------------------------------------------------------------------- #
 def cmd_rank(args) -> None:
-    labels = pd.read_csv(args.labels, dtype={"image_md5": str})
-    ranked = suspicion.add_suspicion(labels)
+    ranked = suspicion.add_suspicion(_load_labels(args))
     out = Path(args.out) / "labels_ranked.csv"
     out.parent.mkdir(parents=True, exist_ok=True)
     ranked.to_csv(out, index=False)
@@ -69,6 +86,12 @@ def cmd_rank(args) -> None:
     print(summ.to_string(index=False))
     print(f"[rank] provably-compromised dup_defect rows: "
           f"{int(ranked['dup_defect'].sum()):,}")
+    blind = int(ranked["s3_missing"].sum())
+    print(f"[rank] hàng CHƯA từng được đối chiếu ảnh (s3_missing): {blind:,} "
+          f"({blind / len(ranked):.1%})")
+    if "head_disagree" in ranked.columns:
+        print(f"[rank] head_disagree (đầu ArcFace chọn chữ khác nhãn): "
+              f"{int(ranked['head_disagree'].sum()):,}")
 
 
 def cmd_plan(args) -> None:
@@ -132,9 +155,11 @@ def cmd_estimate(args) -> None:
               "người chấm, chỉ dùng để thăm dò")
     verdicts = est_mod.load_verdicts(args.verdicts, include_ai=include_ai)
     manifest = est_mod.load_manifest(args.manifest)
-    joined = est_mod.join_manifest(verdicts, manifest)
+    joined = est_mod.join_manifest(verdicts, manifest,
+                                   drop_unknown=args.drop_unknown)
 
     unlabeled = None
+    surrogate = args.surrogate
     if args.ranked and Path(args.ranked).exists():
         ranked = pd.read_csv(args.ranked, dtype={"image_md5": str})
         audited = set(manifest["item_id"])
@@ -142,12 +167,34 @@ def cmd_estimate(args) -> None:
         ranked["item_id"] = ranked["image"].map(
             lambda v: hashlib.sha1(str(v).encode()).hexdigest()[:16])
         un = ranked[~ranked["item_id"].isin(audited)]
-        unlabeled = pd.to_numeric(un.get("s3_cosine"), errors="coerce").to_numpy()
+        # PPI chỉ hợp lệ khi biến thay thế phủ (gần) TOÀN dân số. `s3_cosine` của engine
+        # chỉ phủ ~30-40% (nó bỏ qua mọi hàng GOLD-direct), nên PPI vẫn luôn bị bỏ. Các cột
+        # từ s3_corpus phủ 100% phần chấm được -> chọn cột phủ rộng nhất và NÓI RÕ ra.
+        cands = [c for c in ("s3_bank_cos", "s3_head_cos", "s3_cosine")
+                 if c in un.columns and c in joined.columns]
+        cov = {c: float(pd.to_numeric(un[c], errors="coerce").notna().mean()) for c in cands}
+        if surrogate == "auto":
+            surrogate = max(cov, key=cov.get) if cov else "s3_cosine"
+        if cov:
+            print("[estimate] độ phủ biến thay thế trên dân số chưa chấm: "
+                  + ", ".join(f"{c}={v:.1%}" for c, v in cov.items())
+                  + f"  -> dùng {surrogate!r}")
+        unlabeled = pd.to_numeric(un.get(surrogate), errors="coerce").to_numpy()
+    elif surrogate == "auto":
+        surrogate = "s3_cosine"
 
     rep = est_mod.estimate(
         joined, conf=args.conf, p0=args.p0, design=args.design,
-        surrogate_col="s3_cosine", unlabeled_scores=unlabeled,
+        surrogate_col=surrogate, unlabeled_scores=unlabeled,
     )
+    if rep.n_purposive_excluded:
+        p = rep.purposive or {}
+        print(f"[estimate] ĐÃ LOẠI {rep.n_purposive_excluded} ô thuộc mẫu CHỦ ĐÍCH "
+              f"({', '.join(p.get('audit_batch') or ['design_weight rỗng'])}) khỏi mọi "
+              f"ước lượng precision.")
+        if p.get("error_rate") is not None:
+            print(f"           (tỷ lệ lỗi trong tầng chủ đích: {p['error_rate']:.1%} trên "
+                  f"{p['n_scored']} ô — chỉ để hiệu chỉnh ngưỡng, KHÔNG phải precision)")
     out = Path(args.out) / "report.json"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(rep.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -181,6 +228,9 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--out", default=str(DEFAULT_OUT))
     p.add_argument("--config", default=str(DEFAULT_CONFIG))
     p.add_argument("--conf", type=float, default=0.95)
+    p.add_argument("--no-s3-signals", action="store_true", dest="no_s3_signals",
+                   help="KHÔNG gắn tín hiệu S3 corpus-wide (dataset_out/fusion/s3_corpus.csv); "
+                        "chỉ để tái lập lại cách xếp hạng cũ, khi đó ~94%% GOLD không được soi ảnh")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     r = sub.add_parser("rank", help="score every usable crop by error suspicion")
@@ -213,6 +263,11 @@ def build_parser() -> argparse.ArgumentParser:
                    help="ranked csv for PPI unlabeled surrogate scores")
     e.add_argument("--p0", type=float, default=None)
     e.add_argument("--design", choices=["stratified", "srs"], default="stratified")
+    e.add_argument("--drop-unknown-verdicts", action="store_true", dest="drop_unknown",
+                   help="bỏ verdict không thuộc mẻ (bản xuất cũ bị trộn localStorage)")
+    e.add_argument("--surrogate", default="auto",
+                   choices=["auto", "s3_bank_cos", "s3_head_cos", "s3_cosine"],
+                   help="biến thay thế cho PPI; 'auto' chọn cột phủ dân số rộng nhất")
     e.add_argument("--include-ai-verdicts", action="store_true", dest="include_ai",
                    help="CHO PHÉP dùng verdict do MÁY chấm (source=ai_vision) làm ground "
                         "truth để tính precision; mặc định TẮT — chỉ verdict người chấm")

@@ -15,7 +15,26 @@ signal already verified against the corpus in the 3-round evaluation:
   s3_low            recorded S3 cosine below the SILVER acceptance threshold.
   head_bank         SILVER rule s3_head_bank_consensus (measured median cosine ~0.32).
   quality_flag      aspect-ratio or ink-percentile outlier.
-  s3_missing        GOLD-direct rows where S3 was never computed (baseline, mild).
+  s3_missing        rows where NO visual signal exists at all (baseline, mild).
+
+Các thành phần dưới đây chỉ bật khi khung đã đi qua `s3_signals.attach()` (tức có
+`dataset_out/fusion/s3_corpus.csv`); nếu không có, hàm chạy y hệt như trước:
+
+  head_disagree     đầu ArcFace xếp một chữ KHÁC cao điểm hơn chính nhãn đang gán
+                    (`head_isarg == 0`). Đây là bằng chứng mạnh nhất và KHÔNG cần
+                    ngưỡng — không có số ma nào phải chọn.
+  bank_low          `bank_cos` nằm trong nhóm thấp nhất theo PHÂN VỊ của chính khung.
+
+CẢNH BÁO VỀ TRỌNG SỐ: hai trọng số `r_head_disagree` / `r_bank_low` là TIÊN NGHIỆM CHƯA
+ĐƯỢC KIỂM ĐỊNH — sức phân biệt thật của tín hiệu đầu ArcFace trên nhãn NGƯỜI chưa từng
+được đo (các số AUC đang lưu hành đều đo trên verdict do MÁY chấm). Chúng chỉ ảnh hưởng
+tới việc mẫu audit được ưu tiên ra sao, KHÔNG bao giờ đổi `tier`/`label`. Bước B (sau khi
+có verdict người) sẽ đo AUC thật rồi mới thay các số này.
+
+LƯU Ý THANG ĐO: `bank_cos` KHÔNG cùng thang với cột `s3_cosine` của engine (đo trên 15.267
+hàng có cả hai: tương quan 0,836 nhưng lệch tuyệt đối trung bình 0,13; trung vị 0,676 so
+với 0,780). Vì vậy ngưỡng τ=0,62 của SILVER KHÔNG được tái sử dụng cho `bank_cos`; ở đây
+chỉ dùng phân vị, giống cách `ink_pct` đã làm.
 """
 from __future__ import annotations
 
@@ -32,6 +51,7 @@ USABLE_TIERS = ("GOLD", "SILVER", "SYLLABLE")
 # mutually exclusive and a row lands in its highest-risk applicable bucket.
 STRATA = (
     "dup_defect",
+    "head_disagree",          # chỉ xuất hiện khi khung có tín hiệu S3 corpus-wide
     "similar_bridge_lowcos",
     "similar_bridge",
     "silver_headbank",
@@ -50,6 +70,7 @@ class RiskConfig:
     aspect_lo: float = 0.55           # crop_h / crop_w  (wide)
     ink_lo_pct: float = 1.0           # percentile thresholds for ink_pct outliers
     ink_hi_pct: float = 99.0
+    bank_cos_lo_pct: float = 10.0     # phân vị dưới của bank_cos -> cờ bank_low
     # noisy-OR risk contributions (documented priors, in [0,1])
     r_dup: float = 0.90
     r_similar_verylow: float = 0.70
@@ -61,6 +82,10 @@ class RiskConfig:
     r_aspect: float = 0.20
     r_ink: float = 0.15
     r_s3_missing: float = 0.10
+    # TIÊN NGHIỆM CHƯA KIỂM ĐỊNH — chỉ dùng để ưu tiên mẫu audit, không đổi nhãn.
+    # Bước B đo AUC trên verdict NGƯỜI rồi mới chốt lại hai số này.
+    r_head_disagree: float = 0.45
+    r_bank_low: float = 0.25
 
 
 def _f(series: pd.Series) -> pd.Series:
@@ -111,7 +136,39 @@ def add_suspicion(labels: pd.DataFrame, cfg: RiskConfig | None = None) -> pd.Dat
     # --- S3 cosine risk ----------------------------------------------------- #
     df["s3_low"] = df["s3_present"] & (s3 < cfg.tau_silver)
     df["s3_verylow"] = df["s3_present"] & (s3 < cfg.s3_very_low)
-    df["s3_missing"] = ~df["s3_present"]
+
+    # --- tín hiệu S3 corpus-wide (chỉ có sau s3_signals.attach) -------------- #
+    # Tách khỏi khối trên vì đây là ĐẠI LƯỢNG KHÁC, không cùng thang với s3_cosine.
+    if "s3_head_isarg" in df.columns:
+        isarg = _f(df["s3_head_isarg"])
+        # Cờ hiện diện lấy từ s3_signals.attach nếu có: nó dựa trên việc hàng CÓ MẶT trong
+        # corpus, không dựa trên head_* — vì nhãn ngoài từ vựng ArcFace vẫn có bank_cos/mls.
+        if "s3_signals_present" in df.columns:
+            df["s3_signals_present"] = df["s3_signals_present"].astype(bool)
+        else:
+            df["s3_signals_present"] = isarg.notna()
+        # KHÔNG cần ngưỡng: đầu ArcFace xếp một chữ khác trên chính nhãn đang gán.
+        df["head_disagree"] = isarg.notna() & (isarg == 0)
+    else:
+        df["s3_signals_present"] = False
+        df["head_disagree"] = False
+
+    if "s3_bank_cos" in df.columns:
+        bank = _f(df["s3_bank_cos"])
+        df["bank_cos_val"] = bank
+        if bank.notna().any():
+            bank_lo = float(np.nanpercentile(bank.to_numpy(dtype=float), cfg.bank_cos_lo_pct))
+        else:
+            bank_lo = -np.inf
+        df["bank_low"] = bank.notna() & (bank < bank_lo)
+    else:
+        df["bank_cos_val"] = np.nan
+        df["bank_low"] = False
+
+    # s3_missing = KHÔNG có tín hiệu thị giác nào. Trước đây 94% GOLD rơi vào đây vì
+    # engine bỏ qua S3 khi OCR khớp từ điển; nay s3_corpus đã chấm bù nên các hàng đó
+    # KHÔNG còn mù nữa và không đáng bị tính rủi ro "chưa từng soi ảnh".
+    df["s3_missing"] = ~df["s3_present"] & ~df["s3_signals_present"]
 
     # --- crop-quality flags ------------------------------------------------- #
     cw = _f(df["crop_w"]).replace(0, np.nan)
@@ -151,6 +208,8 @@ def add_suspicion(labels: pd.DataFrame, cfg: RiskConfig | None = None) -> pd.Dat
     apply(df["aspect_out"], cfg.r_aspect)
     apply(df["ink_out"], cfg.r_ink)
     apply(df["s3_missing"] & ~df["dup_defect"], cfg.r_s3_missing)
+    apply(df["head_disagree"], cfg.r_head_disagree)
+    apply(df["bank_low"], cfg.r_bank_low)
 
     df["suspicion"] = 1.0 - keep
 
@@ -163,6 +222,9 @@ def add_suspicion(labels: pd.DataFrame, cfg: RiskConfig | None = None) -> pd.Dat
     stratum = np.where(df["head_bank"].to_numpy(), "silver_headbank", stratum)
     stratum = np.where(sim, "similar_bridge", stratum)
     stratum = np.where(sim & sl, "similar_bridge_lowcos", stratum)
+    # head_disagree đứng trên mọi tầng dựa-trên-luật: đây là bằng chứng TRỰC TIẾP từ ảnh
+    # rằng nhãn có thể sai, trong khi các tầng kia chỉ suy từ luật sinh nhãn.
+    stratum = np.where(df["head_disagree"].to_numpy(), "head_disagree", stratum)
     stratum = np.where(df["dup_defect"].to_numpy(), "dup_defect", stratum)
     df["stratum"] = stratum
 
@@ -186,6 +248,10 @@ def _reasons(df: pd.DataFrame) -> pd.Series:
             tags.append("silver-headbank")
         if r["s3_present"] and r["s3_low"]:
             tags.append(f"s3={r['s3_val']:.2f}<τ")
+        if r.get("head_disagree", False):
+            tags.append("head-disagree")
+        if r.get("bank_low", False):
+            tags.append(f"bank={r['bank_cos_val']:.2f}(p10)")
         if r["aspect_out"]:
             tags.append(f"aspect={r['aspect']:.2f}")
         if r["ink_out"]:

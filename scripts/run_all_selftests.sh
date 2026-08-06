@@ -1,14 +1,32 @@
 #!/usr/bin/env bash
 # Chạy toàn bộ selftest và so với MỐC ĐÃ CHỐT.
 #
-# Mốc đo ngày 2026-07-21 (Giai đoạn 3 — sau khi chốt số liệu):
-#     ground_truth      60 passed,  0 failed
-#     consensus_fusion  44 passed,  0 failed
-#     publish           56 passed,  0 failed
-#     remediation       33 passed,  0 failed
-#     phase1_engine     30 passed,  0 failed
-#     ------------------------------------------
-#     TỔNG             223 passed,  0 failed
+# Mốc đo ngày 2026-08-03 (bước A — chuẩn bị audit người):
+#     parser (bước 2)          18 passed,  0 failed   <- MỚI đưa vào runner
+#     syllable_validation      39 passed,  0 failed   <- MỚI đưa vào runner
+#     ground_truth            138 passed,  0 failed   <- +77 cho code bước A-B
+#     consensus_fusion         44 passed,  0 failed
+#     publish                  56 passed,  0 failed
+#     remediation              35 passed,  0 failed
+#     phase1_engine            30 passed,  0 failed
+#     -------------------------------------------
+#     TỔNG                    360 passed,  0 failed
+#
+# ĐỔI SO VỚI MỐC 2026-07-21 (223/0):
+#   +57  hai selftest bước 1-2 (core.pdf.parser, core.text.syllable_validation) TRƯỚC ĐÂY
+#        BỊ BỎ NGOÀI runner dù vẫn xanh — nên con số "223 assertions" đã bỏ sót bước 1-2.
+#   +3   assertion CẤU TRÚC mới (union = hợp 2 lớp con ×2, quarantine ⊆ lớp trùng ×1).
+#   +38  test cho code mới của bước A: s3_signals (gắn tín hiệu + chống lệch thế hệ),
+#        make_gold_batch (mẻ hai tầng + làm mù), estimate (LOẠI mẫu chủ đích khỏi
+#        precision), nạp verdict từ thư mục, và tương thích ngược của suspicion.
+#   8 assertion đỏ ngày 03/08 KHÔNG phải hồi quy code: chúng hard-code census của thế hệ
+#        labels.csv 21/07 (cross_col 8, union 8, provably-wrong 4, quarantine 8), trong khi
+#        labels.csv được sinh lại ngày 22/07 và lớp trùng lặp tụt về 0 — đã kiểm chứng độc
+#        lập (dup_bbox 0, cross_col 0, md5 rỗng 0, chỉ 2 hàng chung md5 toàn corpus).
+#        Cách sửa: đổi từ SỐ CỨNG sang BẤT BIẾN (== 0) + kiểm cấu trúc, để lần sinh dữ liệu
+#        sau không đỏ giả nữa. Lịch sử before/after giữ trong docs/census_history.md.
+#   demoted_similar_lowcos 748 -> 925: quarantine = 0 nên không còn cướp hàng của bước
+#        demote; nay kiểm theo công thức |GOLD∩bridge∩s3<τ| \ quarantine thay vì khoảng cứng.
 #
 # LỊCH SỬ: mốc 2026-07-20 là 212/11. 11 assertion đỏ KHÔNG phải lỗi code —
 # chúng hard-code census của thế hệ labels.csv CŨ (dup_bbox 701, cross_col 1686,
@@ -19,7 +37,8 @@
 # xanh. Riêng phase1 "low-purity" là lỗi TEST (placeholder 'x' bị lọc là rác nên
 # purity không được kiểm) — đã sửa placeholder thành âm tiết hợp lệ 'an'/'ba'.
 #
-# => Con số "223 assertions" trong luận văn giờ ĐÚNG trở lại (223 pass, 0 fail).
+# => Con số trích dẫn trong luận văn phải là 360 assertions (360 pass, 0 fail), KHÔNG
+#    còn là 223 — 223 là mốc cũ và đã bỏ sót toàn bộ selftest của bước 1-2.
 
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -27,10 +46,12 @@ cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=223
+BASELINE_PASS=360
 BASELINE_FAIL=0
 
 MODULES=(
+  core.pdf.parser_selftest
+  core.text.syllable_validation_selftest
   pipeline.ground_truth.selftest
   pipeline.consensus_fusion.selftest
   pipeline.publish.selftest
@@ -61,7 +82,7 @@ done
 
 echo "----------------------------------------------------------------"
 printf "%-38s %s\n" "TỔNG" "$total_pass passed, $total_fail failed"
-printf "%-38s %s\n" "MỐC 2026-07-21" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
+printf "%-38s %s\n" "MỐC 2026-08-03" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
 echo "================================================================"
 
 if [ "$total_pass" -eq "$BASELINE_PASS" ] && [ "$total_fail" -eq "$BASELINE_FAIL" ]; then

@@ -7,10 +7,14 @@
 #   ./push.sh                      # mặc định "update code"
 #   ./push.sh -n                   # chạy thử: chỉ xem sẽ đẩy gì, KHÔNG commit
 #
-# Script làm 5 việc, dừng ngay nếu có việc nào hỏng:
-#   1. Chặn file rác / file quá nặng lọt vào commit
-#   2. Cảnh báo submodule có thay đổi chưa đẩy (đây là kiểu MẤT CODE hay gặp nhất:
+# Quy ước của repo này: CHỈ dùng nhánh main (một người code, không cần nhánh phụ).
+# Script sẽ nhắc nếu bạn đang đứng ở nhánh khác.
+#
+# Script làm 6 việc, dừng ngay nếu có việc nào hỏng:
+#   0. Nhắc nếu không đứng ở main, kèm sẵn lệnh gộp về main
+#   1. Cảnh báo submodule có thay đổi chưa đẩy (đây là kiểu MẤT CODE hay gặp nhất:
 #      repo cha trỏ vào một commit mà submodule chưa push -> máy khác clone về hỏng)
+#   2. Chặn file rác / file quá nặng lọt vào commit
 #   3. Commit + push nhánh đang đứng
 #   4. Xác nhận nhánh trên GitHub đã bắt kịp máy
 #   5. Liệt kê những thứ CHỈ CÒN trên máy này (bị .gitignore chặn) để biết mà sao lưu
@@ -35,7 +39,23 @@ cd "$(dirname "$0")"
 
 hr() { printf '%s\n' "------------------------------------------------------------"; }
 
-# ---- 2/5 submodule: kiểm TRƯỚC khi commit repo cha ------------------------
+# ---- 0/6 quy ước một nhánh: mọi thứ về main ------------------------------
+# Một người code thì nhánh phụ chỉ tạo chỗ để quên code. Không tự chuyển nhánh
+# hộ (dễ mất thay đổi đang dở), chỉ in sẵn lệnh cần chạy.
+BRANCH=$("$GIT" rev-parse --abbrev-ref HEAD)
+if [[ "$BRANCH" != "main" ]]; then
+    hr
+    echo "⚠ Đang ở nhánh '$BRANCH', không phải main. Repo này quy ước mọi thứ nằm trên main."
+    if "$GIT" merge-base --is-ancestor main HEAD 2>/dev/null; then
+        echo "  main đi sau nhánh này -> gộp thẳng được, không xung đột:"
+        echo "     ./push.sh \"$MSG\" && git checkout main && git merge --ff-only $BRANCH && git push origin main"
+    else
+        echo "  main đã đi trước -> gộp tay:  git checkout main && git merge $BRANCH"
+    fi
+    echo "  (vẫn tiếp tục đẩy lên '$BRANCH' bên dưới)"
+fi
+
+# ---- 1/6 submodule: kiểm TRƯỚC khi commit repo cha ------------------------
 # Repo cha chỉ lưu một con trỏ commit. Nếu submodule có thay đổi chưa commit/chưa
 # push thì con trỏ đó vô nghĩa với người clone về — và code trong submodule chỉ
 # còn tồn tại trên máy này. Không tự động commit hộ vì trong đó thường là
@@ -66,7 +86,7 @@ if [[ -f .gitmodules ]]; then
              | sed -E 's/^submodule\.(.*)\.path (.*)$/\1 \2/')
 fi
 
-# ---- 1/5 staging + chặn file không được phép -----------------------------
+# ---- 2/6 staging + chặn file không được phép -----------------------------
 "$GIT" add -A
 
 hr; echo "SẼ COMMIT"
@@ -110,15 +130,14 @@ if [[ "$DRY" == "1" ]]; then
     exit 0
 fi
 
-# ---- 3/5 commit + push ----------------------------------------------------
-BRANCH=$("$GIT" rev-parse --abbrev-ref HEAD)
+# ---- 3/6 commit + push ----------------------------------------------------
 hr; echo "COMMIT: $MSG   (nhánh $BRANCH)"
 "$GIT" commit -q -m "$MSG"
 # --recurse-submodules=check: từ chối đẩy nếu repo cha trỏ vào commit submodule
 # chưa có trên remote — chặn đúng kiểu hỏng "clone về thiếu code".
 "$GIT" push --recurse-submodules=check -u origin "$BRANCH"
 
-# ---- 4/5 xác nhận GitHub đã bắt kịp --------------------------------------
+# ---- 4/6 xác nhận GitHub đã bắt kịp --------------------------------------
 "$GIT" fetch -q origin "$BRANCH"
 BEHIND=$("$GIT" log --oneline "origin/$BRANCH..HEAD" | wc -l | tr -d ' ')
 hr
@@ -129,7 +148,7 @@ else
     exit 1
 fi
 
-# ---- 5/5 những gì CHỈ còn trên máy này ------------------------------------
+# ---- 5/6 những gì CHỈ còn trên máy này ------------------------------------
 hr
 echo "CHỈ CÓ TRÊN MÁY NÀY (git không giữ — mất máy là mất)"
 for p in dataset dataset_out/gold dataset_out/silver dataset_out/syllable \

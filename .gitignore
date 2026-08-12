@@ -39,11 +39,12 @@ train_crop/kaggle_pkg/
 /dataset_out/syllable/
 /dataset_out/review/
 
-# Công cụ chấm tay dạng HTML: mỗi mẻ 40-120 MB vì nhúng ảnh crop base64, và dựng
-# lại được từ manifest.jsonl + crops. Chỉ verdicts/manifest/plan/report là BẰNG
-# CHỨNG không tái tạo được — những file đó vẫn được commit bình thường.
-/dataset_out/ground_truth/**/*.html
-/dataset_out/ground_truth/*.html
+# HTML công cụ chấm tay được GIỮ trong git, kể cả khi nặng (mỗi mẻ 10-45 MB vì
+# nhúng ảnh crop base64). Lý do: đó là bản ghi CHÍNH XÁC những gì người chấm đã
+# nhìn thấy khi bấm từng ô — dựng lại từ manifest có thể ra thẻ khác nếu code
+# render đổi, nên không thay thế được khi cần trình bằng chứng.
+# Chỉ loại mẻ dựng ra rồi bỏ, chưa chấm ô nào:
+/dataset_out/ground_truth/audit_label_only/
 
 # Bản đóng gói quốc tế: dựng lại bằng bước 8 publish từ labels_final.csv
 /dataset_out/release/

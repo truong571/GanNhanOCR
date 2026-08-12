@@ -1,0 +1,147 @@
+{
+  "design": "stratified (tier x sách), phân bổ tỷ lệ, SRS trong từng ô",
+  "labels_source": "dataset_out/labels_final.csv",
+  "mode": "label_only",
+  "seed": 2026,
+  "conf": 0.95,
+  "n_sample": 800,
+  "n_repeat": 60,
+  "n_items_total": 860,
+  "min_gap_repeat": 200,
+  "excluded_already_audited": 3516,
+  "tiers": [
+    {
+      "tier": "GOLD",
+      "N": 48893,
+      "N_unaudited": 48395,
+      "n": 250,
+      "cp_lower_bound": {
+        "0": 0.9880885802850193,
+        "1": 0.9811660343888138,
+        "2": 0.975032318230728,
+        "3": 0.9692791358546338,
+        "5": 0.958410171217179,
+        "8": 0.9430034507359433,
+        "12": 0.923388658409159
+      }
+    },
+    {
+      "tier": "SILVER",
+      "N": 10887,
+      "N_unaudited": 10887,
+      "n": 300,
+      "cp_lower_bound": {
+        "0": 0.9900639180555423,
+        "1": 0.9842854451084161,
+        "2": 0.9791637694729753,
+        "3": 0.9743586069173904,
+        "5": 0.965277755698705,
+        "8": 0.9523999255850285,
+        "12": 0.9359960846212926
+      }
+    },
+    {
+      "tier": "SYLLABLE",
+      "N": 6809,
+      "N_unaudited": 6809,
+      "n": 250,
+      "cp_lower_bound": {
+        "0": 0.9880885802850193,
+        "1": 0.9811660343888138,
+        "2": 0.975032318230728,
+        "3": 0.9692791358546338,
+        "5": 0.958410171217179,
+        "8": 0.9430034507359433,
+        "12": 0.923388658409159
+      }
+    }
+  ],
+  "strata": [
+    {
+      "stratum": "GOLD|stt11",
+      "book": "stt11",
+      "N_h": 16307,
+      "n_h": 84,
+      "design_weight": 194.131
+    },
+    {
+      "stratum": "GOLD|stt2",
+      "book": "stt2",
+      "N_h": 16122,
+      "n_h": 83,
+      "design_weight": 194.241
+    },
+    {
+      "stratum": "GOLD|stt4",
+      "book": "stt4",
+      "N_h": 15966,
+      "n_h": 83,
+      "design_weight": 192.3614
+    },
+    {
+      "stratum": "SILVER|stt11",
+      "book": "stt11",
+      "N_h": 3111,
+      "n_h": 86,
+      "design_weight": 36.1744
+    },
+    {
+      "stratum": "SILVER|stt2",
+      "book": "stt2",
+      "N_h": 4029,
+      "n_h": 111,
+      "design_weight": 36.2973
+    },
+    {
+      "stratum": "SILVER|stt4",
+      "book": "stt4",
+      "N_h": 3747,
+      "n_h": 103,
+      "design_weight": 36.3786
+    },
+    {
+      "stratum": "SYLLABLE|stt11",
+      "book": "stt11",
+      "N_h": 2523,
+      "n_h": 93,
+      "design_weight": 27.129
+    },
+    {
+      "stratum": "SYLLABLE|stt2",
+      "book": "stt2",
+      "N_h": 2204,
+      "n_h": 81,
+      "design_weight": 27.2099
+    },
+    {
+      "stratum": "SYLLABLE|stt4",
+      "book": "stt4",
+      "N_h": 2082,
+      "n_h": 76,
+      "design_weight": 27.3947
+    }
+  ],
+  "coverage": {
+    "distinct_labels": 253,
+    "distinct_pages": 362,
+    "books": [
+      "stt11",
+      "stt2",
+      "stt4"
+    ],
+    "splits": {
+      "train": 663,
+      "test": 75,
+      "val": 62
+    }
+  },
+  "estimation": "pipeline.ground_truth.report_combined — precision + CI theo TỪNG tier (Wilson/Clopper-Pearson trên các ô của tier đó), tổng hợp Horvitz-Thompson có FPC, và kappa nội tại từ các ô lặp.",
+  "note": "Ô lặp mang design_weight rỗng nên estimate._split_purposive tự loại khỏi mọi phép tính precision — không có nguy cơ đếm hai lần.",
+  "grid": {
+    "items": 860,
+    "skipped_no_crop": 0,
+    "missing_reference_glyph": 269,
+    "missing_context": 0,
+    "manifest": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/dataset_out/ground_truth/audit_combined/manifest.jsonl"
+  }
+}

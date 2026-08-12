@@ -4,24 +4,33 @@
 #
 #   ./run_pipeline.sh
 #     -> hỏi 1) chọn sách   2) chạy cache cũ hay xoá-cache-chạy-mới
-#     -> chạy: setup -> extract -> build -> remediate -> export
+#     -> chạy: setup -> extract -> build -> remediate -> confusion -> export
 #     -> ra:   dataset/labels.csv (+ ảnh crop copy hẳn) = BẢN CUỐI CÙNG, TỰ CHỨA
 #              dataset/ bị XOÁ SẠCH và ghi lại mỗi lần chạy — luôn là bản MỚI
 #              NHẤT, không cộng dồn. dataset_out/ vẫn giữ nguyên làm nơi làm
 #              việc trung gian (labels_remediated.csv đầy đủ tier + report...).
 #
-# 5 BƯỚC (đúng thứ tự, KHÔNG có cờ dòng lệnh — mọi lựa chọn hỏi qua stdin):
+# 6 BƯỚC (đúng thứ tự, KHÔNG có cờ dòng lệnh — mọi lựa chọn hỏi qua stdin):
 #   1 setup       pipeline.step0_setup — kiểm cấu hình/đường dẫn
 #   2 extract     PDF -> khung -> OCR (cache) -> 9 cột/trang  (CHỈ sách đã chọn)
 #   3 build       align_engine.build_dataset -> labels.csv + crops (LUÔN cả 3 sách
 #                 trong config — build không lọc theo sách vừa extract, xem lưu ý
 #                 ở step_build())
 #   4 remediate   pipeline.remediation -> labels_remediated.csv + remediation_report.json
-#   5 export      pipeline/export_final_dataset.py -> dataset/ (chỉ tier
+#   5 confusion   pipeline.remediation.confusion_fix -> labels_final.csv (BẢN CÔNG BỐ)
+#                 hạ tier các confusion HỆ THỐNG đã chứng minh bằng audit người
+#   6 export      pipeline/export_final_dataset.py -> dataset/ (chỉ tier
 #                 GOLD+SILVER+SYLLABLE = usable; XOÁ SẠCH dataset/ cũ trước khi ghi)
 #
+# ⚠️ BƯỚC 5 KHÔNG ĐƯỢC BỎ. Trước 2026-08-11 script này export thẳng từ
+#   labels_remediated.csv, trong khi confusion_fix chỉ được chạy tay một lần hồi
+#   21/07 -> bộ giao nộp mang 1.926 crop 㝵/'người' ở tier GOLD/SILVER dù chính
+#   lớp lỗi đó đã được chứng minh sai hệ thống (Fisher p=5,4e-8), CÒN mẻ audit
+#   lại rút mẫu từ labels_final.csv. Hai tập khác nhau = số precision đo được
+#   không áp cho bộ thật. Nối bước 5 vào chuỗi để nhánh đó không tái diễn.
+#
 # TẠM BỎ QUA theo yêu cầu (chưa cần cho việc sinh dataset thô):
-#   5 audit · 6 fuse · 7 confusion · 8 publish
+#   audit người · fuse · publish
 #   Bản đầy đủ 8 bước (có cờ --only/--from/--until/--all, audit người, publish
 #   quốc tế...) vẫn còn nguyên trong lịch sử git: `git log -- run_pipeline.sh`
 #   (commit 47dfbfe0f trở về trước) — khôi phục bằng
@@ -44,6 +53,8 @@ RESEG="${RESEG:-detector}"
 TAU_REMEDIATE="${TAU_REMEDIATE:-0.62}"
 LABELS_RAW="dataset_out/labels.csv"
 LABELS_REMED="dataset_out/labels_remediated.csv"
+LABELS_FINAL="dataset_out/labels_final.csv"   # BẢN CÔNG BỐ — nguồn của export + audit
+CONFUSION_FIXES="${CONFUSION_FIXES:-config/confusion_fixes.yaml}"
 FINAL_DIR="dataset"
 EVIDENCE="docs/EVIDENCE_INDEX.md"
 
@@ -68,7 +79,7 @@ die()  { printf '%s[LỖI]%s %s\n' "$RED" "$RST" "$*" >&2; exit 1; }
 banner() {   # banner <số> <tên bước> <mô tả>
   log ""
   log "${BLD}================================================================${RST}"
-  printf '%s>>> BƯỚC %s/5 · %s%s — %s\n' "$BLD" "$1" "$2" "$RST" "$3"
+  printf '%s>>> BƯỚC %s/6 · %s%s — %s\n' "$BLD" "$1" "$2" "$RST" "$3"
   log "${BLD}================================================================${RST}"
 }
 
@@ -144,8 +155,8 @@ confirm_frozen_override() {
 }
 
 # ============================== PREFLIGHT ====================================
-# Chỉ kiểm những gì 5 bước setup/extract/build/remediate/export cần — KHÔNG kiểm
-# confusion_fixes.yaml / verdicts người / v.v. (thuộc các bước tạm bỏ qua).
+# Chỉ kiểm những gì 6 bước setup/extract/build/remediate/confusion/export cần —
+# KHÔNG kiểm verdicts người / mẻ audit / v.v. (thuộc các bước tạm bỏ qua).
 book_pdf() {   # book_pdf <tên-sách-trong-config>
   "$PY" -c "
 import yaml
@@ -199,6 +210,16 @@ PYEOF
     die "không thấy $CONFIG — mọi bước đọc cấu hình sẽ hỏng."
   fi
   ok "config: $CONFIG"
+
+  # Bước 5 đọc file này. Thiếu nó thì confusion-fix chạy rỗng và bộ công bố lặng lẽ
+  # giữ lại các nhãn đã chứng minh sai — báo ngay ở preflight, đừng để tới bước 5.
+  if [[ -f "$CONFUSION_FIXES" ]]; then
+    ok "confusion fixes: $CONFUSION_FIXES ($("$PY" -c "
+import yaml,sys
+print(len((yaml.safe_load(open('$CONFUSION_FIXES')) or {}).get('fixes', [])))" 2>/dev/null || echo '?') fix)"
+  else
+    warn "thiếu $CONFUSION_FIXES -> bước 5 sẽ DỪNG. Bộ công bố cần file này (dù là 'fixes: []')."
+  fi
 
   if [[ -f nom-embed/best.pt ]]; then
     ok "checkpoint S3: nom-embed/best.pt"
@@ -292,21 +313,38 @@ step_remediate() {
   [[ -f "$LABELS_REMED" ]] || die "bước remediate không sinh $LABELS_REMED"
 }
 
-# ---- 5/5 export -------------------------------------------------------------
+# ---- 5/6 confusion ----------------------------------------------------------
+# -> labels_final.csv + confusion_fix_report.json
+# Hàm thuần, idempotent: đọc labels_remediated.csv, hạ tier các cặp (âm tiết, chữ)
+# liệt trong config/confusion_fixes.yaml -> ghi BẢN CÔNG BỐ. KHÔNG remap codepoint.
+# Đây là bộ nhãn mà export VÀ mẻ audit người CÙNG đọc — một nguồn duy nhất.
+step_confusion() {
+  banner 5 confusion "hạ tier confusion hệ thống đã chứng minh -> $LABELS_FINAL (bản công bố)"
+  [[ -f "$CONFUSION_FIXES" ]] || die "không thấy $CONFUSION_FIXES.
+      Bước này quyết định bộ nhãn công bố nên KHÔNG được bỏ qua âm thầm:
+      thiếu file = mọi confusion đã chứng minh sẽ lặng lẽ ở lại tier GOLD/SILVER.
+      Nếu thật sự chưa có fix nào, tạo file với đúng nội dung:  fixes: []"
+  X "$PY" -m pipeline.remediation.confusion_fix \
+      --in "$LABELS_REMED" --out "$LABELS_FINAL" --fixes "$CONFUSION_FIXES" --measure
+  [[ -f "$LABELS_FINAL" ]] || die "bước confusion không sinh $LABELS_FINAL"
+}
+
+# ---- 6/6 export -------------------------------------------------------------
 # -> dataset/labels.csv + ảnh crop copy hẳn (chỉ tier usable: GOLD+SILVER+SYLLABLE)
-# XOÁ SẠCH dataset/ trước khi ghi -> luôn là bản MỚI NHẤT, không cộng dồn qua
-# các lần chạy trước. dataset_out/ KHÔNG bị đụng — vẫn còn labels_remediated.csv
-# đầy đủ mọi tier (kể cả REVIEW/QUARANTINE) để tra cứu/audit sau này.
+# Nguồn là labels_final.csv (SAU confusion-fix), KHÔNG phải labels_remediated.csv —
+# xem cảnh báo ở đầu file. XOÁ SẠCH dataset/ trước khi ghi -> luôn là bản MỚI NHẤT,
+# không cộng dồn qua các lần chạy trước. dataset_out/ KHÔNG bị đụng — vẫn còn
+# labels_remediated.csv đầy đủ mọi tier (kể cả REVIEW/QUARANTINE) để tra cứu sau.
 step_export() {
-  banner 5 export "xuất bộ dataset CUỐI CÙNG (GOLD+SILVER+SYLLABLE) -> $FINAL_DIR/ (tự chứa)"
+  banner 6 export "xuất bộ dataset CUỐI CÙNG (GOLD+SILVER+SYLLABLE) -> $FINAL_DIR/ (tự chứa)"
   X "$PY" pipeline/export_final_dataset.py \
-      --labels "$LABELS_REMED" --src-root dataset_out --out "$FINAL_DIR"
+      --labels "$LABELS_FINAL" --src-root dataset_out --out "$FINAL_DIR"
   [[ -f "$FINAL_DIR/labels.csv" ]] || die "bước export không sinh $FINAL_DIR/labels.csv"
 }
 
 # ====================== FREEZE / EVIDENCE ====================================
 evidence() {
-  local files=("$LABELS_RAW" "$LABELS_REMED" "$FINAL_DIR/labels.csv")
+  local files=("$LABELS_RAW" "$LABELS_REMED" "$LABELS_FINAL" "$FINAL_DIR/labels.csv")
   local sha_cmd=""
   if command -v shasum >/dev/null 2>&1; then sha_cmd="shasum -a 256"
   elif command -v sha256sum >/dev/null 2>&1; then sha_cmd="sha256sum"; fi
@@ -335,7 +373,7 @@ evidence() {
 
 # =============================== MAIN ========================================
 log "${BLD}================================================================${RST}"
-log "${BLD}  GanNhanOCR — sinh bộ dataset (setup -> extract -> build -> remediate -> export)${RST}"
+log "${BLD}  GanNhanOCR — sinh bộ dataset (setup -> extract -> build -> remediate -> confusion -> export)${RST}"
 log "${BLD}================================================================${RST}"
 
 preflight
@@ -347,7 +385,7 @@ if [[ -f dataset_out/.FROZEN ]]; then
 fi
 
 log ""
-log "${BLD}Sẽ chạy:${RST} setup -> extract($BOOKS_LABEL) -> build(cả 3 sách) -> remediate -> export"
+log "${BLD}Sẽ chạy:${RST} setup -> extract($BOOKS_LABEL) -> build(cả 3 sách) -> remediate -> confusion -> export"
 log "  cache OCR : $([[ $FRESH_OCR == 1 ]] && echo 'XOÁ & OCR lại mới' || echo 'dùng cache cũ')"
 log "  ${YEL}export sẽ XOÁ SẠCH $FINAL_DIR/ hiện có rồi ghi lại bản mới nhất${RST}"
 read -r -p "Enter để bắt đầu, Ctrl-C để huỷ... " _
@@ -356,6 +394,7 @@ step_setup
 step_extract
 step_build
 step_remediate
+step_confusion
 step_export
 evidence
 
@@ -365,10 +404,15 @@ log "${GRN}${BLD}  Xong — bộ dataset CUỐI CÙNG (tự chứa, đã ghi đ�
 log "  $FINAL_DIR/labels.csv  (chỉ GOLD+SILVER+SYLLABLE, kèm ảnh crop copy hẳn)"
 log ""
 log "  Bản làm việc trung gian (đủ mọi tier kể cả REVIEW/QUARANTINE, không bị đụng):"
-log "  $LABELS_REMED"
+log "  $LABELS_REMED   (trước confusion-fix)"
+log "  $LABELS_FINAL   (BẢN CÔNG BỐ — nguồn của $FINAL_DIR/ và của mẻ audit người)"
 log "  dataset_out/{gold,silver,syllable}/"
 log "  cảnh báo    : $N_WARN"
 log ""
-log "  TẠM BỎ QUA (theo yêu cầu): audit · fuse · confusion · publish của bản 8-bước cũ"
+log "  ${YEL}Nhãn vừa đổi -> mẻ audit người dựng từ bản cũ đã hết hiệu lực.${RST}"
+log "  Dựng lại: rm -rf dataset_out/ground_truth/audit_combined && \\"
+log "            $PY -m pipeline.ground_truth.make_combined_batch --seed 2026"
+log ""
+log "  TẠM BỎ QUA (theo yêu cầu): audit người · fuse · publish của bản 8-bước cũ"
 log "  Bản đầy đủ 8 bước còn trong lịch sử git: git log -- run_pipeline.sh"
 log "${BLD}================================================================${RST}"

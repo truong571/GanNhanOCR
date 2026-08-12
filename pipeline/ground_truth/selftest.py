@@ -17,7 +17,7 @@ from scipy.stats import beta, binom, norm
 
 from . import (
     audit_grid, estimate as est_mod, make_confusion_batch, make_gold_batch,
-    make_retest_batch, s3_signals, sampling, stats, suspicion,
+    make_retest_batch, report_combined, s3_signals, sampling, stats, suspicion,
 )
 
 REPO = Path(__file__).resolve().parents[2]
@@ -710,6 +710,202 @@ def test_verdict_dir() -> None:
 
 
 # --------------------------------------------------------------------------- #
+def _write_jsonl(path: Path, rows: list[dict]) -> None:
+    path.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n",
+                    encoding="utf-8")
+
+
+def _combined_fixture(d: Path) -> None:
+    """Mẻ gộp tổng hợp, mọi con số chọn sao cho tính tay ra được.
+
+    Bốn tầng khác dân số và khác tỷ lệ lỗi (để lộ ra ngay nếu quên trọng số), một tier
+    toàn "không đọc được", hai ô chưa chấm, và 12 ô lặp có ma trận (8,1,1,2) -> κ = 5/9.
+    """
+    man: list[dict] = []
+    ver: list[dict] = []
+
+    def add(iid: str, stratum: str, N_h: int, n_h: int, verdict: str | None) -> None:
+        man.append({"item_id": iid, "stratum": stratum, "stratum_N": N_h,
+                    "design_weight": round(N_h / n_h, 4), "image": f"{iid}.png"})
+        if verdict:
+            ver.append({"item_id": iid, "verdict": verdict})
+
+    for i in range(20):        # GOLD|stt2 — N=1.000: 3 sai nhãn, 1 không đọc được, 16 đúng
+        add(f"g{i}", "GOLD|stt2", 1000, 20,
+            "wrong_label" if i < 3 else ("unsure" if i == 3 else "correct"))
+    for i in range(20):        # GOLD|stt4 — N=3.000: đúng hết (tầng nặng, sạch)
+        add(f"h{i}", "GOLD|stt4", 3000, 20, "correct")
+    for i in range(10):        # SILVER|stt2 — N=500: 10 ô nhưng CHỈ 8 ô được chấm
+        add(f"s{i}", "SILVER|stt2", 500, 10,
+            None if i >= 8 else ("wrong_label" if i == 0 else "correct"))
+    for i in range(5):         # SYLLABLE|stt2 — toàn "không đọc được"
+        add(f"y{i}", "SYLLABLE|stt2", 200, 5, "unsure")
+
+    repeats = ([(f"g{i}", "correct") for i in range(4, 12)]      # đúng -> đúng  ×8
+               + [("g12", "wrong_label")]                        # đúng -> sai   ×1
+               + [("g0", "correct")]                             # sai  -> đúng  ×1
+               + [("g1", "wrong_label"), ("g2", "wrong_label")])  # sai  -> sai   ×2
+    for i, (orig, v) in enumerate(repeats):
+        man.append({"item_id": f"r{i}", "stratum": "__repeat__", "design_weight": None,
+                    "repeat_of": orig, "image": f"{orig}.png"})
+        ver.append({"item_id": f"r{i}", "verdict": v})
+    # ô lặp trỏ về ô chưa hề được chấm -> không ghép cặp được, phải báo riêng
+    man.append({"item_id": "r99", "stratum": "__repeat__", "design_weight": None,
+                "repeat_of": "khong-co-that", "image": "x.png"})
+    ver.append({"item_id": "r99", "verdict": "correct"})
+
+    _write_jsonl(d / "manifest.jsonl", man)
+    _write_jsonl(d / "verdicts.jsonl", ver)
+    (d / "plan.json").write_text(json.dumps(
+        {"tiers": [{"tier": "GOLD", "N": 4200, "N_unaudited": 4000}]}), encoding="utf-8")
+
+
+def test_report_combined() -> None:
+    """Module sinh BẢNG HEADLINE của luận văn — sai ở đây là sai thẳng vào kết quả."""
+    print("[report_combined · precision theo tier + κ nội tại]")
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        _combined_fixture(d)
+        rep = report_combined.build(d, conf=0.95)
+        tiers = {t["tier"]: t for t in rep["tiers"]}
+
+        check("tách đúng ba tier, ô lặp không thành 'tier' thứ tư",
+              set(tiers) == {"GOLD", "SILVER", "SYLLABLE"}, str(sorted(tiers)))
+
+        g = tiers["GOLD"]
+        check("ô lặp KHÔNG lọt vào precision của tier",
+              g["n_audited"] == 40 and g["n_scored"] == 39,
+              f"n_audited={g['n_audited']} n_scored={g['n_scored']}")
+        check("GOLD precision = 36/39", approx(g["precision"], 36 / 39, 1e-12),
+              f"{g['precision']:.6f}")
+        check("'không đọc được' bị loại khỏi mẫu số nhưng vẫn báo riêng",
+              g["n_unsure"] == 1 and g["n_wrong_label"] == 3,
+              f"unsure={g['n_unsure']} wrong={g['n_wrong_label']}")
+
+        w_expect = (1000 * (16 / 19) + 3000 * 1.0) / 4000
+        check("precision có trọng số lấy N_h từ stratum_N, không phải trung bình cộng",
+              approx(g["weighted_precision"], w_expect, 1e-9)
+              and abs(g["weighted_precision"] - g["precision"]) > 0.01,
+              f"{g['weighted_precision']:.6f} vs kỳ vọng {w_expect:.6f}")
+        check("population_N cộng từ các tầng của tier", g["population_N"] == 4000,
+              str(g.get("population_N")))
+
+        lcb = float(beta.ppf(0.05, 36, 39 - 36 + 1))
+        check("cận dưới một phía khớp Clopper–Pearson tính độc lập",
+              approx(g["cp_lower_one_sided"], lcb, 1e-9),
+              f"{g['cp_lower_one_sided']:.6f} vs {lcb:.6f}")
+        acc = g["acceptance"]
+        check("ngưỡng GOLD mặc định 0,97 và mẻ này CHƯA đạt",
+              acc["p0"] == 0.97 and acc["accept"] is False and acc["defects"] == 3,
+              str(acc))
+        g_low = {t["tier"]: t for t in
+                 report_combined.build(d, p0={"GOLD": 0.5})["tiers"]}["GOLD"]
+        check("hạ p0 xuống dưới cận dưới thì kết luận đảo thành ĐẠT",
+              g_low["acceptance"]["accept"] is True)
+
+        s = tiers["SILVER"]
+        check("ô chưa chấm không âm thầm được tính là đúng",
+              s["n_scored"] == 8 and approx(s["precision"], 7 / 8, 1e-12),
+              f"n={s['n_scored']} p={s.get('precision')}")
+        check("số ô CHƯA chấm được báo ra", rep["n_ungraded"] == 2, str(rep["n_ungraded"]))
+        check("n_items_in_batch đếm cả ô lặp", rep["n_items_in_batch"] == 68,
+              str(rep["n_items_in_batch"]))
+
+        y = tiers["SYLLABLE"]
+        check("tier toàn 'không đọc được' -> KHÔNG bịa ra precision",
+              "precision" not in y and y["n_unsure"] == 5, str(y))
+
+        ov = rep["overall_usable"]
+        ov_expect = (1000 * (16 / 19) + 3000 * 1.0 + 500 * (7 / 8)) / 4500
+        check("toàn tập gộp bằng Horvitz–Thompson trên MỌI tầng của MỌI tier",
+              approx(ov["weighted_precision"], ov_expect, 1e-9)
+              and ov["population_N"] == 4500,
+              f"{ov['weighted_precision']:.6f} vs {ov_expect:.6f}, N={ov['population_N']}")
+
+        rel = rep["reliability"]
+        check("κ nội tại khớp giá trị tính tay 5/9", approx(rel["kappa"], 5 / 9, 1e-9),
+              f"{rel['kappa']:.6f}")
+        check("đồng thuận thô = 10/12 (báo cạnh κ, không để κ đứng một mình)",
+              approx(rel["observed_agreement"], 10 / 12, 1e-12))
+        check("ma trận đảo verdict đúng chiều lần 1 -> lần 2",
+              rel["matrix"].get("correct->wrong_label") == 1
+              and rel["matrix"].get("wrong_label->correct") == 1
+              and rel["matrix"].get("correct->correct") == 8, str(rel["matrix"]))
+        check("ô lặp không ghép được đếm riêng, không lặng lẽ biến mất",
+              rel["n_repeat_items"] == 13 and rel["n_repeat_unmatched"] == 1,
+              f"{rel['n_repeat_items']}/{rel['n_repeat_unmatched']}")
+        check("κ báo kèm theo từng tier", approx(rel["per_tier"]["GOLD"]["kappa"], 5 / 9, 1e-9))
+
+        check("khung rút mẫu đọc từ plan.json (để nói đúng phạm vi suy rộng)",
+              bool(rep["sampling_frame"]) and rep["sampling_frame"][0]["N_frame"] == 4000)
+
+        md = report_combined._md(rep)
+        check("bảng Markdown dựng được, đủ ba tier + κ",
+              all(t in md for t in ("GOLD", "SILVER", "SYLLABLE")) and "Cohen's κ" in md)
+        check("tier không có precision vẫn render, không vỡ bảng", "| SYLLABLE | — |" in md)
+        check("dòng toàn tập có mặt trong bảng", "Toàn tập có nhãn" in md)
+
+        # verdict của MẺ KHÁC lọt vào -> phải chặn, vì nó phá cả mẫu số lẫn khung mẫu
+        _write_jsonl(d / "verdicts_lac.jsonl", [{"item_id": "lac-de", "verdict": "correct"}])
+        try:
+            report_combined.build(d)
+            check("verdict lạc mẻ khác -> chặn", False, "không ném lỗi")
+        except ValueError:
+            check("verdict lạc mẻ khác -> chặn", True)
+        rep2 = report_combined.build(d, drop_unknown=True)
+        check("--drop-unknown bỏ đúng verdict lạc, số còn lại không đổi",
+              rep2["n_verdicts"] == rep["n_verdicts"]
+              and approx(rep2["tiers"][0]["precision"], rep["tiers"][0]["precision"], 1e-12),
+              f"{rep2['n_verdicts']} vs {rep['n_verdicts']}")
+
+
+def test_interrater() -> None:
+    """κ liên người là câu trả lời cho 'ai kiểm tra lại tác giả' — phải đúng."""
+    print("[report_combined · κ liên người]")
+    pairs = ([("correct", "correct")] * 8 + [("correct", "wrong_label")]
+             + [("wrong_label", "correct")] + [("wrong_label", "wrong_label")] * 2)
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        man = [{"item_id": f"i{i}", "stratum": "GOLD|stt2", "orig_verdict": v1}
+               for i, (v1, _) in enumerate(pairs)]
+        ver = [{"item_id": f"i{i}", "verdict": v2} for i, (_, v2) in enumerate(pairs)]
+        man.append({"item_id": "i99", "stratum": "SILVER|stt2", "orig_verdict": "correct"})
+        _write_jsonl(d / "manifest.jsonl", man)
+        _write_jsonl(d / "verdicts.jsonl", ver)
+
+        r = report_combined.interrater(d)
+        check("κ liên người khớp giá trị tính tay 5/9", approx(r["kappa"], 5 / 9, 1e-9),
+              f"{r['kappa']:.6f}")
+        check("ô người thứ hai chưa chấm được báo riêng", r["n_ungraded"] == 1,
+              str(r["n_ungraded"]))
+        cond = r["conditional_agreement"]
+        check("đồng thuận CÓ ĐIỀU KIỆN tách theo verdict của người 1",
+              cond["correct"]["n"] == 9 and cond["correct"]["trùng khớp"] == 8
+              and cond["wrong_label"]["n"] == 3 and cond["wrong_label"]["trùng khớp"] == 2,
+              str(cond))
+        ov = r["defect_overlap"]
+        check("bảng chồng lấn lỗi đếm đúng theo hướng bất đồng",
+              ov["cả hai gọi là lỗi"] == 2 and ov["chỉ người 1 gọi là lỗi"] == 1
+              and ov["chỉ người 2 gọi là lỗi"] == 1
+              and ov["cả hai gọi là đúng/không đọc được"] == 8, str(ov))
+        lo, hi = r["agreement_ci"]
+        check("có CI cho đồng thuận thô", 0.0 <= lo < 10 / 12 < hi <= 1.0, f"[{lo}, {hi}]")
+        md = report_combined._md_interrater(r)
+        check("trang κ liên người dựng được", "Cohen's κ" in md and "Landis & Koch" in md)
+
+    # thư mục KHÔNG phải mẻ liên người -> chặn, đừng lặng lẽ trả κ vô nghĩa
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        _write_jsonl(d / "manifest.jsonl", [{"item_id": "a", "stratum": "GOLD|stt2"}])
+        _write_jsonl(d / "verdicts.jsonl", [{"item_id": "a", "verdict": "correct"}])
+        try:
+            report_combined.interrater(d)
+            check("thiếu orig_verdict -> báo lỗi rõ", False, "không ném lỗi")
+        except ValueError:
+            check("thiếu orig_verdict -> báo lỗi rõ", True)
+
+
+# --------------------------------------------------------------------------- #
 def main() -> int:
     print("=" * 64)
     print("GROUND-TRUTH SELFTEST")
@@ -723,6 +919,8 @@ def main() -> int:
     test_label_only_mode()
     test_purposive_exclusion()
     test_verdict_dir()
+    test_report_combined()
+    test_interrater()
     if not LABELS.exists():
         print(f"[warn] {LABELS} not found — skipping data-dependent tests")
     else:

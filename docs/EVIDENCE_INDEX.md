@@ -68,7 +68,7 @@ Commit này gộp **76 file** vào một lần với message `"update code"`. Kh
 | `dataset_out/labels_final.csv` | `62f9791bff858a79…9e70a2615` | `python -m pipeline.remediation.confusion_fix --in dataset_out/labels_remediated.csv --out dataset_out/labels_final.csv --fixes config/confusion_fixes.yaml --measure` |
 | `dataset_out/summary.json` | `b5b05761b9899088…6950fa5ab` | sinh kèm `build_dataset` |
 
-**Số liệu chốt** (`labels_final.csv`, 82.274 dòng): GOLD **48.969** · SILVER **10.856** · SYLLABLE **6.751** · REVIEW **15.690** · QUARANTINE **8**. Dataset có-nhãn ≈ **66.576**.
+**Số liệu chốt** (`labels_final.csv`, đo 2026-08-11, 82.274 dòng): GOLD **48.893** · SILVER **10.887** · SYLLABLE **6.809** · REVIEW **15.685** · QUARANTINE **0**. Dataset có-nhãn = **66.589**, khớp đúng `dataset/labels.csv`.
 
 ### 3.2. Báo cáo xử lý
 
@@ -77,7 +77,7 @@ Commit này gộp **76 file** vào một lần với message `"update code"`. Kh
 | `dataset_out/remediation_report.json` | `0490277e9787c3ff…0a7f1b71` | `pipeline.remediation apply` |
 | `dataset_out/confusion_fix_report.json` | `28189cc49334592a…de167d961` | `pipeline.remediation.confusion_fix --measure` |
 
-`confusion_fix_report`: 1 fix (người→㝵), demote **1.923 crop** → REVIEW; precision GOLD **0,9708 → 0,9800**.
+`confusion_fix_report`: 1 fix (người→㝵), demote **1.926 crop** → REVIEW; precision GOLD **0,9708 → 0,9800** — tính trên mẫu neo 846 verdict, còn là số **post-hoc**.
 
 ### 3.3. Bằng chứng audit (ground truth)
 

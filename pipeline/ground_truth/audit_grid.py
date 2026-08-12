@@ -43,13 +43,16 @@ __all__ = ["build_audit", "book_to_scan_dir"]
 
 _HIDDEN_FIELDS = (
     "tier", "rule", "book", "page", "column", "label", "unicode", "syllable",
-    "s3_cosine", "s3_val", "stratum", "suspicion", "design_weight", "risk_reason",
+    "s3_cosine", "s3_val", "stratum", "stratum_N", "suspicion", "design_weight",
+    "risk_reason",
     "split", "image", "image_md5", "bbox",
     # tầng của mẻ hai-tầng — người chấm KHÔNG được thấy, nếu không mất tính mù
     "audit_batch", "risk_stratum",
     # mẻ kiểm tra lặp: verdict CŨ phải vào manifest để so, nhưng lộ ra HTML thì cả mẻ
     # mất giá trị — người chấm sẽ chỉ chép lại đáp án cũ.
     "orig_verdict", "orig_batch", "orig_group",
+    # mẻ gộp: ô lặp-trong-mẻ trỏ về item_id gốc để tính κ nội tại. Tuyệt đối không lộ.
+    "repeat_of",
     # 6 tín hiệu S3 corpus-wide: mang thẳng vào manifest để bước B đo AUC trên verdict
     # người mà không phải join lại (join lại dễ lệch thế hệ dữ liệu)
     "s3_head_cos", "s3_head_prob", "s3_head_margin", "s3_head_isarg",
@@ -181,12 +184,17 @@ def build_audit(
         except Exception:
             font = None
 
-    sample = sample.sort_values("audit_order")
-    # open each scan page once
-    scans: dict[tuple[str, str], Image.Image | None] = {}
+    # Duyệt theo (sách, trang) chứ KHÔNG theo audit_order, rồi mới xếp lại theo
+    # audit_order ở cuối. Lý do là bộ nhớ: mỗi trang scan giải nén ~13,7 MB, và bản cũ
+    # giữ MỌI trang đã mở trong dict cho tới hết hàm. Mẻ 250 ô đã ngốn ~3 GB; mẻ gộp
+    # ~860 ô chạm ~600 trang sẽ cần ~8 GB và chết máy. Duyệt theo trang thì chỉ cần
+    # giữ ĐÚNG một trang tại một thời điểm.
+    sample = sample.sort_values(["book", "page", "audit_order"], kind="stable")
+    cur_key: tuple[str, str] | None = None
+    cur_scan: Image.Image | None = None
 
     items: list[dict] = []
-    manifest_lines: list[str] = []
+    manifest_lines: list[tuple[int, str]] = []
     n_no_crop = n_no_ref = n_no_ctx = 0
 
     for _, r in sample.iterrows():
@@ -202,14 +210,17 @@ def build_audit(
         ctx_uri = ""
         if with_context:
             key = (str(r["book"]), str(r["page"]))
-            if key not in scans:
+            if key != cur_key:
+                if cur_scan is not None:
+                    cur_scan.close()
                 sdir = book_to_scan_dir(r["book"])
                 sp = prepared_dir / sdir / "pages" / f"{r['page']}.png"
                 try:
-                    scans[key] = Image.open(sp).convert("RGB") if sp.exists() else None
+                    cur_scan = Image.open(sp).convert("RGB") if sp.exists() else None
                 except Exception:
-                    scans[key] = None
-            scan = scans[key]
+                    cur_scan = None
+                cur_key = key
+            scan = cur_scan
             bbox = _parse_bbox(r.get("bbox"))
             if scan is not None and bbox is not None:
                 ctx = _context_crop(scan, bbox)
@@ -220,12 +231,20 @@ def build_audit(
             else:
                 n_no_ctx += 1
 
-        syl = str(r.get("syllable", "") or "")
-        label = str(r.get("label", "") or "")
+        # pd.isna PHẢI đứng trước `or ""`: NaN là truthy trong Python, nên `nan or ""`
+        # trả về chính nan và str(nan) == "nan". Hàng tier SYLLABLE có label rỗng, và bản
+        # cũ vì lỗi này in chữ "nan" cỡ 56px lên thẻ như thể đó là nhãn đề xuất.
+        def _txt(v) -> str:
+            return "" if v is None or (isinstance(v, float) and pd.isna(v)) else str(v).strip()
+
+        syl = _txt(r.get("syllable"))
+        label = _txt(r.get("label"))
         cands = qn_dict.get(syl, []) if (qn_dict and syl) else []
         cand_str = " ".join(cands[:12])
 
+        order = int(r["audit_order"])
         items.append({
+            "_ord": order,
             "id": item_id,
             "crop": _data_uri(crop),
             "ref": _data_uri(ref) if ref is not None else "",
@@ -243,10 +262,19 @@ def build_audit(
                     float(v) if isinstance(v, (int, float)) and not isinstance(v, bool)
                     else str(v) if not isinstance(v, (str, bool, int, float)) else v
                 )
-        manifest_lines.append(json.dumps(manifest, ensure_ascii=False))
+        manifest_lines.append((order, json.dumps(manifest, ensure_ascii=False)))
+
+    if cur_scan is not None:
+        cur_scan.close()
+    # trả về ĐÚNG thứ tự chấm (audit_order) sau khi đã duyệt theo trang để tiết kiệm RAM
+    items.sort(key=lambda it: it["_ord"])
+    for it in items:
+        it.pop("_ord")
+    manifest_lines.sort(key=lambda t: t[0])
 
     out_manifest.parent.mkdir(parents=True, exist_ok=True)
-    out_manifest.write_text("\n".join(manifest_lines) + "\n", encoding="utf-8")
+    out_manifest.write_text("\n".join(ln for _, ln in manifest_lines) + "\n",
+                            encoding="utf-8")
     out_html.parent.mkdir(parents=True, exist_ok=True)
 
     # split into browser-friendly batches sharing one manifest
@@ -334,8 +362,12 @@ def _render_html(items: list[dict], title: str, all_ids: list[str] | None = None
     border-radius:6px; cursor:pointer; }}
   button:hover {{ background:#eef; }}
   main {{ max-width:760px; margin:0 auto; padding:16px; }}
+  /* content-visibility: mẻ gộp một-file có thể tới ~900 thẻ với ~2700 ảnh base64 nội tuyến.
+     Không có dòng này trình duyệt giải mã toàn bộ ngay khi mở -> treo vài chục giây và
+     cuộn giật suốt buổi chấm. Có nó thì chỉ thẻ trong tầm nhìn mới được dựng. */
   .card {{ background:var(--card); border:1px solid var(--line); border-radius:10px;
-    padding:18px; margin-bottom:16px; }}
+    padding:18px; margin-bottom:16px;
+    content-visibility:auto; contain-intrinsic-size:auto 460px; }}
   .imgs {{ display:flex; gap:18px; align-items:flex-start; flex-wrap:wrap; }}
   .imgs figure {{ margin:0; text-align:center; }}
   .imgs img {{ max-width:200px; max-height:230px; border:1px solid var(--line); background:#fff; }}
@@ -385,7 +417,12 @@ function refresh() {{
   document.getElementById("prog").style.width = (total? 100*done/total : 0) + "%";
 }}
 function choose(id, v) {{
+  if (VLABEL[v] === undefined) return;   // phím/nút ngoài bộ lựa chọn của mẻ này
   store[id] = {{verdict: VLABEL[v], v: v, ts: Date.now()}};
+  // bấm chuột cũng phải dời con trỏ, nếu không phím ←/→ và phím số sau đó nhảy về
+  // chỗ cũ — trên mẻ gộp gần 900 ô thì đó là nguồn chấm nhầm ô rất dễ xảy ra.
+  const at = ITEMS.findIndex(x => x.id === id);
+  if (at >= 0) cur = at;
   const card = document.getElementById("card-"+id);
   card.querySelectorAll(".choices button").forEach(b=>b.classList.remove("sel"));
   card.querySelector(".c"+v).classList.add("sel");
@@ -405,14 +442,24 @@ function render() {{
         (it.ctx? '<figure><img src="'+it.ctx+'"><figcaption>vị trí trên scan</figcaption></figure>':'') +
         (it.ref? '<figure><img src="'+it.ref+'"><figcaption>glyph tham chiếu</figcaption></figure>':'') +
       '</div>' +
-      '<div class="lab">'+ (it.label||'?') +'</div>' +
-      '<div class="meta">âm: <b>'+ (it.syl||'—') +'</b></div>' +
+      // Hàng tier âm tiết KHÔNG có chữ Nôm đề xuất — nhãn của nó CHÍNH LÀ âm tiết. Đưa
+      // âm tiết lên ô chữ lớn và nói thẳng, thay vì bỏ trống rồi để người chấm tự đoán
+      // xem "nhãn" đang hỏi là cái gì.
+      (it.label
+        ? '<div class="lab">'+it.label+'</div><div class="meta">âm: <b>'+(it.syl||'—')+'</b></div>'
+        : '<div class="lab">'+(it.syl||'?')+'</div>' +
+          '<div class="meta">nhãn ở ô này là <b>ÂM TIẾT</b>, không có chữ Nôm đề xuất — '+
+          'hỏi: chữ trong ô có đọc là âm này không?</div>') +
       (it.cands? '<div class="cands">ứng viên: '+it.cands+'</div>':'') +
+      // Nút phải dựng TỪ CHOICES. Trước 2026-08-10 chỗ này hardcode 4 nút, nên mẻ
+      // mode="label_only" vẫn hiện "3 · sai ảnh" (bấm vào lại ghi 'unsure') và
+      // "4 · không chắc" (VLABEL[4] undefined -> dòng xuất ra MẤT hẳn trường verdict,
+      // estimate ném lỗi "verdict line missing keys"). Cả mẻ chấm sẽ hỏng.
       '<div class="choices">' +
-        '<button class="c1'+(prev&&prev.v==1?" sel":"")+'" onclick="choose(\\''+it.id+'\\',1)">1 · đúng</button>' +
-        '<button class="c2'+(prev&&prev.v==2?" sel":"")+'" onclick="choose(\\''+it.id+'\\',2)">2 · sai nhãn</button>' +
-        '<button class="c3'+(prev&&prev.v==3?" sel":"")+'" onclick="choose(\\''+it.id+'\\',3)">3 · sai ảnh</button>' +
-        '<button class="c4'+(prev&&prev.v==4?" sel":"")+'" onclick="choose(\\''+it.id+'\\',4)">4 · không chắc</button>' +
+        CHOICES.map(c =>
+          '<button class="c'+c[0]+(prev&&prev.v==c[0]?" sel":"")+
+          '" onclick="choose(\\''+it.id+'\\','+c[0]+')">'+c[0]+' · '+c[2]+'</button>'
+        ).join('') +
       '</div>';
     if (prev) d.classList.add("done");
     m.appendChild(d);
@@ -430,8 +477,9 @@ document.addEventListener("keydown", e => {{
   else if (e.key === "ArrowLeft") focusCard(cur-1);
 }});
 document.getElementById("export").onclick = () => {{
-  const lines = Object.entries(store).map(([id,v]) =>
-    JSON.stringify({{item_id:id, verdict:v.verdict, ts:v.ts}}));
+  const lines = Object.entries(store)
+    .filter(([id,v]) => v && v.verdict)     // không bao giờ xuất dòng thiếu verdict
+    .map(([id,v]) => JSON.stringify({{item_id:id, verdict:v.verdict, ts:v.ts}}));
   const blob = new Blob([lines.join("\\n")+"\\n"], {{type:"application/x-ndjson"}});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = "verdicts.jsonl"; a.click();

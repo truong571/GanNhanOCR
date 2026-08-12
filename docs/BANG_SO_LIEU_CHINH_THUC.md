@@ -1,7 +1,6 @@
 # BẢNG SỐ LIỆU CHÍNH THỨC
 
-**Lập**: 2026-07-21 (Giai đoạn 3 — một nguồn số liệu duy nhất)
-**Đóng băng tại**: tag `dataset-frozen-v1`
+**Đo ngày**: 2026-08-11 · **Bộ nhãn**: `dataset_out/labels_final.csv` (sinh bởi `run_pipeline.sh` 6 bước)
 
 > **QUY TẮC BẤT DI BẤT DỊCH**: mọi con số trong luận văn (mọi chương, mọi bảng, mọi slide) **chỉ được trích từ file này**. Không chương nào được lấy số từ chỗ khác. Mỗi số dưới đây có: giá trị · file nguồn · lệnh tái sinh · ngày đo · **nguồn kiểm định** (người / AI / chưa đo).
 
@@ -15,28 +14,30 @@ labels.csv  --[remediation apply]-->  labels_remediated.csv  --[confusion_fix]--
 
 | File | sha256 (16 ký tự đầu) | Lệnh tái sinh |
 |---|---|---|
-| `dataset_out/labels.csv` | `189b61d8801db1d3` | `python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --use-s3 --reseg detector` |
-| `dataset_out/labels_remediated.csv` | `715b98d0ccdb54b0` | `python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62` |
-| `dataset_out/labels_final.csv` | `62f9791bff858a79` | `python -m pipeline.remediation.confusion_fix --in dataset_out/labels_remediated.csv --out dataset_out/labels_final.csv --fixes config/confusion_fixes.yaml` |
+| `dataset_out/labels.csv` | `8a0739affed489cf` | `python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --use-s3 --reseg detector` |
+| `dataset_out/labels_remediated.csv` | `8bf513cfbdc8ce51` | `python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62` |
+| `dataset_out/labels_final.csv` | `8eb1c5c773ce1f54` | `python -m pipeline.remediation.confusion_fix --in dataset_out/labels_remediated.csv --out dataset_out/labels_final.csv --fixes config/confusion_fixes.yaml` |
+| `dataset/labels.csv` (bộ giao nộp) | `af385a2eb69472c6` | `python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset` |
 
 ✅ **Reproduction-check 2026-07-21**: chạy lại 2 bước cuối từ `labels.csv` ra thư mục tạm → `labels_remediated.csv` và `labels_final.csv` **byte-identical** (sha256 khớp) với bản đã đóng băng. Chuỗi remediation→confusion là **tất định**.
 
 ---
 
-## 1. DATASET CUỐI (`labels_final.csv`, đo 2026-07-21)
+## 1. DATASET CUỐI (`labels_final.csv`, đo 2026-08-11)
 
 Tổng: **82.274 dòng**.
 
 | Tier | Số crop | label_level | Nguồn kiểm định precision |
 |---|---|---|---|
-| **GOLD** | **48.969** | char | 👤 **NGƯỜI** — xem §2 |
-| SILVER | 10.856 | char | 🤖 AI-vision (chưa hiệu chuẩn) — xem §3 |
-| SYLLABLE | 6.751 | syllable | ⚪ **CHƯA ĐO** |
-| REVIEW | 15.690 | — | loại khỏi tập có nhãn (~93% không có crop) |
-| QUARANTINE | 8 | — | loại (đều conflict, 0 duplicate) |
+| **GOLD** | **48.893** | char | 👤 **NGƯỜI** — xem §2 |
+| SILVER | 10.887 | char | 🤖 AI-vision (chưa hiệu chuẩn) — xem §3 |
+| SYLLABLE | 6.809 | syllable | ⚪ **CHƯA ĐO** |
+| REVIEW | 15.685 | — | loại khỏi tập có nhãn (~93% không có crop) |
+| QUARANTINE | 0 | — | không còn hàng nào: lớp trùng lặp đã đóng ở gốc (engine-fix), census 22/07 ra 0 |
 
-- **Dataset có-nhãn (usable)** = GOLD + SILVER + SYLLABLE = **66.576 crop**
-- **Số lớp ký tự phân biệt** (GOLD+SILVER, có unicode) = **1.564**
+- **Dataset có-nhãn (usable)** = GOLD + SILVER + SYLLABLE = **66.589 crop** — khớp đúng
+  `dataset/labels.csv` (66.589 dòng, 66.589 ảnh copy, 0 ảnh thiếu)
+- **Số lớp ký tự phân biệt** (GOLD+SILVER, có unicode) = **1.552**
 - Phạm vi: **3 sách** (SachThanhTruyen 2/4/11), **445 trang**, 1 nét chữ (đơn nguồn)
 
 Tái sinh phân bố tier: `python -c "import pandas as pd; print(pd.read_csv('dataset_out/labels_final.csv')['tier'].value_counts())"`
@@ -53,9 +54,9 @@ Nguồn: `dataset_out/ground_truth/verdicts_reanchored.csv` (846 verdict ngườ
 | **Precision GOLD sau demote 㝵/người** | **98,00%** | 784/800 |
 | Precision toàn mẫu 846 (mọi tier, loại unsure) | 97,04% | 819/844 |
 
-⚠️ **Cảnh báo trung thực (phải viết trong luận văn)**: con số **98,00% là POST-HOC** — tính lại trên chính mẫu đã dùng để phát hiện lỗi 㝵/người. Theo acceptance sampling, cần một **mẫu SRS xác nhận MỚI** (GĐ4) mới được tuyên bố "≥97% (acceptance)". Trước GĐ4, trình bày trình tự: *audit → phát hiện (Fisher p=5,4e-8) → demote 1.923 crop → tính lại*.
+⚠️ **Cảnh báo trung thực (phải viết trong luận văn)**: con số **98,00% là POST-HOC** — tính lại trên chính mẫu đã dùng để phát hiện lỗi 㝵/người. Theo acceptance sampling, cần một **mẫu SRS xác nhận MỚI** (GĐ4) mới được tuyên bố "≥97% (acceptance)". Trước GĐ4, trình bày trình tự: *audit → phát hiện (Fisher p=5,4e-8) → demote 1.926 crop → tính lại*.
 
-Case study demote: 1 fix (người→㝵), demote **1.923 crop** sang REVIEW (`confusion_fix_report.json`: total_demoted 1923).
+Case study demote: 1 fix (người→㝵), demote **1.926 crop** sang REVIEW (`confusion_fix_report.json`: `total_demoted = 1926`). Precision GOLD 97,08 % → 98,00 % ở §2 tính trên mẫu neo `verdicts_reanchored.csv` (846 verdict), nên giữ nguyên tư cách **post-hoc** cho tới khi có mẻ SRS mới (mẻ 860 ô).
 
 ---
 
@@ -63,8 +64,8 @@ Case study demote: 1 fix (người→㝵), demote **1.923 crop** sang REVIEW (`c
 
 | Tier | Trạng thái | Ghi chú |
 |---|---|---|
-| SILVER (10.856) | 🤖 chỉ có AI-audit | `audit_SILVER/verdicts_ai.jsonl` = 750 dòng **100% `source='ai_vision'`**. Con số 72,98% (`report.json`) là **AI chấm, KHÔNG phải người** — không được trình bày như human audit. |
-| SYLLABLE (6.751) | ⚪ 0 verdict | grid đã dựng, chưa ai chấm. |
+| SILVER (10.887) | 🤖 chỉ có AI-audit | `audit_SILVER/verdicts_ai.jsonl` = 750 dòng **100% `source='ai_vision'`**. Con số 72,98% (`report.json`) là **AI chấm, KHÔNG phải người** — không được trình bày như human audit. |
+| SYLLABLE (6.809) | ⚪ 0 verdict | grid đã dựng, chưa ai chấm. |
 
 🔒 **Guard đã cài (GĐ3)**: `pipeline/ground_truth/estimate.py` — module sinh precision/CI — mặc định **LOẠI** verdict `source='ai_vision'`, raise lỗi to tiếng nếu toàn bộ là AI. Muốn dùng verdict máy phải khai `--include-ai-verdicts` tường minh. Nghĩa là **không thể vô tình** biến nhãn máy thành ground truth.
 
@@ -97,7 +98,7 @@ Chi tiết before/after ở **`docs/census_history.md`**. Tóm tắt:
 | split-leak (md5 cross-split) | 288 | **0** |
 | quarantine | (n/a) | **8** (đều conflict, 0 duplicate) |
 
-Số "hiện tại" là bất biến selftest (kiểm bằng `bash scripts/run_all_selftests.sh` = **223/0**). Số "lịch sử" **không còn tái lập được** (thế hệ labels.csv trước dedup không còn trên đĩa) — bảo tồn làm bằng chứng engine-fix.
+Số "hiện tại" là bất biến selftest (kiểm bằng `bash scripts/run_all_selftests.sh` = **392/0**). Số "lịch sử" **không còn tái lập được** (thế hệ labels.csv trước dedup không còn trên đĩa) — bảo tồn làm bằng chứng engine-fix.
 
 ---
 

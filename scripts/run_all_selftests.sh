@@ -1,16 +1,27 @@
 #!/usr/bin/env bash
 # Chạy toàn bộ selftest và so với MỐC ĐÃ CHỐT.
 #
-# Mốc đo ngày 2026-08-03 (bước A — chuẩn bị audit người):
-#     parser (bước 2)          18 passed,  0 failed   <- MỚI đưa vào runner
-#     syllable_validation      39 passed,  0 failed   <- MỚI đưa vào runner
-#     ground_truth            138 passed,  0 failed   <- +77 cho code bước A-B
+# Mốc đo ngày 2026-08-11 (chốt bộ nhãn công bố + phủ test cho bảng kết quả audit):
+#     parser (bước 2)          18 passed,  0 failed
+#     syllable_validation      39 passed,  0 failed
+#     ground_truth            170 passed,  0 failed   <- +32 cho report_combined
 #     consensus_fusion         44 passed,  0 failed
 #     publish                  56 passed,  0 failed
 #     remediation              35 passed,  0 failed
 #     phase1_engine            30 passed,  0 failed
 #     -------------------------------------------
-#     TỔNG                    360 passed,  0 failed
+#     TỔNG                    392 passed,  0 failed
+#
+# ĐỔI SO VỚI MỐC 2026-08-03 (360/0):
+#   +32  report_combined — module sinh BẢNG HEADLINE của luận văn (precision/CI/acceptance
+#        theo tier + κ nội tại + κ liên người) trước đây KHÔNG có một assertion nào.
+#        Nay kiểm: ô lặp không lọt vào precision, "không đọc được" bị loại khỏi mẫu số,
+#        trọng số lấy từ stratum_N (không phải trung bình cộng), Horvitz–Thompson toàn tập,
+#        κ khớp giá trị tính tay 5/9 theo cả hai hướng ma trận, verdict lạc mẻ khác bị chặn,
+#        và mẻ thiếu orig_verdict không lặng lẽ trả κ vô nghĩa.
+#
+# Mốc trước đó — 2026-08-03 (bước A — chuẩn bị audit người), TỔNG 360:
+#     ground_truth 138 (+77 cho code bước A-B), các module khác như bảng trên.
 #
 # ĐỔI SO VỚI MỐC 2026-07-21 (223/0):
 #   +57  hai selftest bước 1-2 (core.pdf.parser, core.text.syllable_validation) TRƯỚC ĐÂY
@@ -37,8 +48,8 @@
 # xanh. Riêng phase1 "low-purity" là lỗi TEST (placeholder 'x' bị lọc là rác nên
 # purity không được kiểm) — đã sửa placeholder thành âm tiết hợp lệ 'an'/'ba'.
 #
-# => Con số trích dẫn trong luận văn phải là 360 assertions (360 pass, 0 fail), KHÔNG
-#    còn là 223 — 223 là mốc cũ và đã bỏ sót toàn bộ selftest của bước 1-2.
+# => Con số trích dẫn trong luận văn phải là 392 assertions (392 pass, 0 fail), KHÔNG
+#    còn là 360 hay 223 — 223 là mốc cũ và đã bỏ sót toàn bộ selftest của bước 1-2.
 
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -46,7 +57,7 @@ cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=360
+BASELINE_PASS=392
 BASELINE_FAIL=0
 
 MODULES=(
@@ -82,7 +93,7 @@ done
 
 echo "----------------------------------------------------------------"
 printf "%-38s %s\n" "TỔNG" "$total_pass passed, $total_fail failed"
-printf "%-38s %s\n" "MỐC 2026-08-03" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
+printf "%-38s %s\n" "MỐC 2026-08-11" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
 echo "================================================================"
 
 if [ "$total_pass" -eq "$BASELINE_PASS" ] && [ "$total_fail" -eq "$BASELINE_FAIL" ]; then

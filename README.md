@@ -247,8 +247,8 @@ books:
 paths:
   data_dir: prepared
   output_dir: dataset
-  qn_to_nom_dict: Dict/QuocNgu_SinoNom_TongHop3.csv
-  similar_dict:   Dict/SinoNom_Similar_Dic_v2.csv
+  qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv
+  similar_dict:   Dict/SinoNom_Similar.csv
   font_path:      font_diffusion/fonts/NomNaTong-Regular.ttf
   fontdiffusion_ckpt:        font_diffusion/ckpt/PROD
   fontdiffusion_phase1_ckpt: font_diffusion/ckpt/PROD
@@ -288,7 +288,7 @@ step4: { min_samples_per_class: 1 }
 1. **Can chinh banded-DP neo tu dien** (thay ghep theo index cu): chi phi xoa
    theo chieu cao ky tu (<30% median = 0.3 / 30-50% = 0.6 / >=50% = 1.2).
 2. **3 tin hieu** moi cap Nom↔QN: S1 = ky tu OCR SinoNom · S2 = tu dien
-   QN↔Nom + chu tuong tu (`SinoNom_Similar_Dic_v2`) · S3 = **so khop anh bang
+   QN↔Nom + chu tuong tu (`SinoNom_Similar`) · S3 = **so khop anh bang
    encoder Nom da train** (ArcFace) voi glyph FontDiffusion cua ung vien.
    *(DINOv2 da bi tat — khong phan biet duoc chu Nom; xem
    `pipeline/align_engine/README.md`.)*

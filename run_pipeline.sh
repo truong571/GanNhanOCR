@@ -221,6 +221,24 @@ print(len((yaml.safe_load(open('$CONFUSION_FIXES')) or {}).get('fixes', [])))" 2
     warn "thiếu $CONFUSION_FIXES -> bước 5 sẽ DỪNG. Bộ công bố cần file này (dù là 'fixes: []')."
   fi
 
+  # Từ điển: bước build đọc hai file này qua config. Đổi tên/di chuyển chúng là kiểu
+  # hỏng lặng lẽ nhất — step0_setup KHÔNG kiểm, nên trước 2026-08-19 việc đổi tên
+  # Dict/*.csv chỉ lộ ra khi build đã chạy được vài phút rồi mới ném FileNotFoundError.
+  local d_qn d_sim
+  d_qn=$(sed -n 's/^[[:space:]]*qn_to_nom_dict:[[:space:]]*//p' "$CONFIG" | sed -n 1p)
+  d_sim=$(sed -n 's/^[[:space:]]*similar_dict:[[:space:]]*//p' "$CONFIG" | sed -n 1p)
+  for d in "$d_qn" "$d_sim"; do
+    if [[ -z "$d" ]]; then
+      warn "config thiếu khai báo từ điển (qn_to_nom_dict / similar_dict) -> build sẽ hỏng."
+    elif [[ -f "$d" ]]; then
+      ok "từ điển: $d ($(( $(wc -l <"$d") - 1 )) dòng)"
+    else
+      die "KHÔNG thấy từ điển '$d' khai trong $CONFIG.
+      Bước build đọc file này; thiếu nó là hỏng cả mẻ.
+      Kiểm nhanh:  ls Dict/   ·  grep -n 'dict' $CONFIG"
+    fi
+  done
+
   if [[ -f nom-embed/best.pt ]]; then
     ok "checkpoint S3: nom-embed/best.pt"
   elif [[ -f nom-embed/last.pt ]]; then

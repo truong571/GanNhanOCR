@@ -40,7 +40,7 @@ def _paths(cfg: dict) -> dict:
         "dataset_dir": REPO / "dataset_out",
         "prepared_dir": REPO / p.get("data_dir", "prepared"),
         "fd_dir": REPO / p.get("fd_cache_universal", "gannhanocr-fd"),
-        "qn_dict": REPO / p.get("qn_to_nom_dict", "Dict/QuocNgu_SinoNom_TongHop3.csv"),
+        "qn_dict": REPO / p.get("qn_to_nom_dict", "Dict/QuocNgu_SinoNom.csv"),
         "font": REPO / p.get("font_path", "font_diffusion/fonts/NomNaTong-Regular.ttf"),
     }
 

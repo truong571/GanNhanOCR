@@ -5,7 +5,7 @@ The old v3-tier batch driver and its parse_v3 / cluster_columns / probe
 imports were removed as dead code (2026-06).
 
 `load_similar` cũng đã xoá (2026-07, 0 caller): bản chính thức để nạp
-SinoNom_Similar_Dic_v2.csv là core.text.dictionary.load_similarity_dict.
+SinoNom_Similar.csv là core.text.dictionary.load_similarity_dict.
 """
 from __future__ import annotations
 

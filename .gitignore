@@ -64,3 +64,22 @@ dataset_out/release/parquet/
 dataset_out/release/parquet_sample/
 dataset_out/release/imagefolder/
 ArcFace/nom-embed-arcface/
+
+# Font dự phòng tải thêm (2026-08-19): Plangothic P1/P2, ~33 MB, giấy phép OFL.
+# Là tài nguyên bên thứ ba tải lại được -> KHÔNG đưa vào git (push.sh chặn file nặng).
+# Chuỗi font trong pipeline/ground_truth/audit_grid.py tự bỏ qua font vắng mặt, nên
+# repo thiếu chúng vẫn chạy — chỉ 6 chữ mặt phẳng 3 mất glyph tham chiếu.
+# Tải lại: xem fonts/README.md (vẫn được track).
+fonts/*
+!fonts/README.md
+
+# NGOẠI LỆ cho *.xlsx ở trên: các file trong Dict/ là NGUỒN GỐC do người dùng cung cấp,
+# KHÔNG dựng lại được từ pipeline (khác mọi .xlsx báo cáo khác vốn là đầu ra). Mất chúng
+# là mất xuất xứ của từ điển đang dùng. Tổng ~6 MB.
+!Dict/**/*.xlsx
+
+# Mẻ audit TÁCH THEO TIER: dựng lại nguyên vẹn từ audit_combined/manifest.jsonl bằng
+#   .venv/bin/python -m pipeline.ground_truth.split_combined
+# Mỗi mẻ ~12-16 MB HTML nhúng ảnh base64 -> không đưa vào git. Mẻ GỘP (audit_combined)
+# thì VẪN track: đó là mẻ thật sự đem chấm, là bằng chứng.
+/dataset_out/ground_truth/audit_split_*/

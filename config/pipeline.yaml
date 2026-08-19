@@ -23,8 +23,8 @@ paths:
   data_dir: prepared
   output_dir: dataset
   dict_dir: Dict
-  qn_to_nom_dict: Dict/QuocNgu_SinoNom_TongHop3.csv
-  similar_dict: Dict/SinoNom_Similar_Dic_v2.csv
+  qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv
+  similar_dict: Dict/SinoNom_Similar.csv
   font_path: font_diffusion/fonts/NomNaTong-Regular.ttf
   # Production weights from HF root (dzungpham/font-diffusion-weights). The
   # /FST/checkpoint_step_1500/ subfolder is an undertrained snapshot — never use it.

@@ -24,7 +24,7 @@ BATCH_SIZE = 150
 def _qn_dict():
     try:
         from core.text.dictionary import load_qn_to_nom
-        p = REPO / "Dict" / "QuocNgu_SinoNom_TongHop3.csv"
+        p = REPO / "Dict" / "QuocNgu_SinoNom.csv"
         return load_qn_to_nom(str(p)) if p.exists() else {}
     except Exception:
         return {}

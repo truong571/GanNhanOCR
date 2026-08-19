@@ -29,7 +29,6 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from PIL import ImageFont
 
 from . import audit_grid
 from .cli import _load_config, _paths
@@ -69,20 +68,15 @@ def pick(labels: pd.DataFrame, per_tier: int, seed: int, exclude: set[str]) -> p
 
 def build_cards(sample: pd.DataFrame, paths: dict, qn_dict: dict | None) -> list[dict]:
     """Dựng dữ liệu thẻ: 3 ảnh + nhãn hiển thị + các trường BỊ GIẤU khi chấm thật."""
-    font = None
-    fp = paths["font"]
-    if fp and Path(fp).exists():
-        try:
-            font = ImageFont.truetype(str(fp), 96)
-        except OSError:
-            font = None
+    # chuỗi font dự phòng, xem audit_grid.build_font_chain — font đơn thiếu 568 chữ
+    fonts = audit_grid.build_font_chain(paths["font"])
 
     cards = []
     for _, r in sample.iterrows():
         crop = audit_grid._load_crop(paths["dataset_dir"], str(r["image"]))
         if crop is None:
             continue
-        ref = audit_grid._reference_glyph(paths["fd_dir"], r.get("unicode", ""), font)
+        ref = audit_grid._reference_glyph(paths["fd_dir"], r.get("unicode", ""), fonts)
 
         ctx_uri = ""
         sp = (paths["prepared_dir"] / audit_grid.book_to_scan_dir(r["book"])

@@ -8,19 +8,21 @@
 #   ./push.sh -n                   # chạy thử: chỉ xem sẽ đẩy gì, KHÔNG commit
 #
 # Quy ước của repo này: CHỈ dùng nhánh main (một người code, không cần nhánh phụ).
-# Script sẽ nhắc nếu bạn đang đứng ở nhánh khác.
+# Script TỰ ĐƯA mọi thứ về main — đứng ở nhánh nào cũng vậy.
 #
 # Script làm 6 việc, dừng ngay nếu có việc nào hỏng:
-#   0. Nhắc nếu không đứng ở main, kèm sẵn lệnh gộp về main
+#   0. Nếu đang ở nhánh khác: commit tại đó rồi gộp về main và đẩy main
 #   1. Cảnh báo submodule có thay đổi chưa đẩy (đây là kiểu MẤT CODE hay gặp nhất:
 #      repo cha trỏ vào một commit mà submodule chưa push -> máy khác clone về hỏng)
 #   2. Chặn file rác / file quá nặng lọt vào commit
-#   3. Commit + push nhánh đang đứng
+#   3. Commit, gộp về main, push main
 #   4. Xác nhận nhánh trên GitHub đã bắt kịp máy
 #   5. Liệt kê những thứ CHỈ CÒN trên máy này (bị .gitignore chặn) để biết mà sao lưu
 #
 # Không commit: *.png *.jpg *.pdf *.xlsx *.zip *.pt, dataset/, prepared/,
 # dataset_out/{gold,silver,syllable,review}/, HTML công cụ chấm, release/.
+# NGOẠI LỆ: Dict/**/*.xlsx — từ điển gốc do người dùng cung cấp, pipeline KHÔNG dựng
+# lại được, mất là mất xuất xứ.
 # Xem .gitignore để biết đầy đủ.
 
 set -euo pipefail
@@ -40,19 +42,15 @@ cd "$(dirname "$0")"
 hr() { printf '%s\n' "------------------------------------------------------------"; }
 
 # ---- 0/6 quy ước một nhánh: mọi thứ về main ------------------------------
-# Một người code thì nhánh phụ chỉ tạo chỗ để quên code. Không tự chuyển nhánh
-# hộ (dễ mất thay đổi đang dở), chỉ in sẵn lệnh cần chạy.
 BRANCH=$("$GIT" rev-parse --abbrev-ref HEAD)
-if [[ "$BRANCH" != "main" ]]; then
+TARGET="main"
+# Một người code thì nhánh phụ chỉ tạo chỗ để quên code. Script đưa hết về main.
+# KHÔNG tự chuyển nhánh khi cây làm việc còn thay đổi chưa commit — chuyển nhánh lúc đó
+# kéo theo thay đổi sang nhánh khác và rất dễ mất. Nên: commit ở nhánh hiện tại trước,
+# gộp sau (xem khối 3/6).
+if [[ "$BRANCH" != "$TARGET" ]]; then
     hr
-    echo "⚠ Đang ở nhánh '$BRANCH', không phải main. Repo này quy ước mọi thứ nằm trên main."
-    if "$GIT" merge-base --is-ancestor main HEAD 2>/dev/null; then
-        echo "  main đi sau nhánh này -> gộp thẳng được, không xung đột:"
-        echo "     ./push.sh \"$MSG\" && git checkout main && git merge --ff-only $BRANCH && git push origin main"
-    else
-        echo "  main đã đi trước -> gộp tay:  git checkout main && git merge $BRANCH"
-    fi
-    echo "  (vẫn tiếp tục đẩy lên '$BRANCH' bên dưới)"
+    echo "Đang ở nhánh '$BRANCH' — sẽ commit tại đây rồi GỘP VỀ $TARGET và đẩy $TARGET."
 fi
 
 # ---- 1/6 submodule: kiểm TRƯỚC khi commit repo cha ------------------------
@@ -94,8 +92,10 @@ hr; echo "SẼ COMMIT"
 CHANGED=$("$GIT" --no-pager diff --cached --name-only | wc -l | tr -d ' ')
 echo "  ($CHANGED file)"
 
+# Ngoại lệ Dict/**/*.xlsx: từ điển gốc do người dùng cung cấp, không dựng lại được.
 BLOCK=$("$GIT" --no-pager diff --cached --name-only --diff-filter=d \
-        | grep -Ei '\.(png|jpe?g|pdf|xlsx|zip|pt|ckpt)$' || true)
+        | grep -Ei '\.(png|jpe?g|pdf|xlsx|zip|pt|ckpt)$' \
+        | grep -v '^Dict/' || true)
 if [[ -n "$BLOCK" ]]; then
     hr
     echo "DỪNG: các file này thuộc loại không được commit (ảnh/checkpoint/gói nén):"
@@ -133,6 +133,24 @@ fi
 # ---- 3/6 commit + push ----------------------------------------------------
 hr; echo "COMMIT: $MSG   (nhánh $BRANCH)"
 "$GIT" commit -q -m "$MSG"
+
+# Gộp về main. Cây làm việc lúc này đã sạch (vừa commit) nên chuyển nhánh an toàn.
+if [[ "$BRANCH" != "$TARGET" ]]; then
+    hr; echo "GỘP '$BRANCH' -> $TARGET"
+    "$GIT" checkout -q "$TARGET"
+    # --no-edit: không mở editor. Nếu xung đột thì huỷ gộp và trả về nhánh cũ NGUYÊN VẸN —
+    # dừng ở trạng thái nửa vời là kiểu mất code khó gỡ nhất.
+    if ! "$GIT" merge --no-edit "$BRANCH"; then
+        "$GIT" merge --abort 2>/dev/null || true
+        "$GIT" checkout -q "$BRANCH"
+        echo "✗ XUNG ĐỘT khi gộp vào $TARGET — đã huỷ gộp, bạn vẫn ở '$BRANCH' và commit vừa rồi còn nguyên."
+        echo "  Gỡ tay:  git checkout $TARGET && git merge $BRANCH   (sửa xung đột rồi ./push.sh)"
+        exit 1
+    fi
+    BRANCH="$TARGET"
+    echo "✓ đã gộp, hiện đứng ở $TARGET"
+fi
+
 # --recurse-submodules=check: từ chối đẩy nếu repo cha trỏ vào commit submodule
 # chưa có trên remote — chặn đúng kiểu hỏng "clone về thiếu code".
 "$GIT" push --recurse-submodules=check -u origin "$BRANCH"

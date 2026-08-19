@@ -87,8 +87,84 @@ def _load_crop(dataset_dir: Path, image_rel: str) -> Image.Image | None:
         return None
 
 
+# ---------------------------------------------------------------------------
+# CHUỖI FONT DỰ PHÒNG — chống "lỗi font rồi chấm sai"
+#
+# PIL KHÔNG báo lỗi khi font thiếu glyph: nó vẽ .notdef (ô rỗng / hộp vuông) và trả về
+# một ảnh trông y như glyph thật. Thẻ audit khi đó hiện một ô trắng dưới nhãn "GLYPH THAM
+# CHIẾU" và người chấm so nét chữ trong ảnh với... không gì cả. Đo trên corpus hiện tại:
+# NomNaTong-Regular thiếu 568 chữ = 3.326 ô — tức 3.326 lần có thể chấm sai vì lý do
+# thuần kỹ thuật.
+#
+# Nên: tra cmap TRƯỚC khi vẽ, đi lần lượt qua chuỗi font, và nếu KHÔNG font nào có glyph
+# thì trả về None để thẻ bỏ hẳn ô "glyph tham chiếu" — thà không có còn hơn có mà sai.
+# Chuỗi dưới đây chọn bằng phủ tham lam trên chính corpus (3 font phủ 4.690/4.696 chữ).
+# Thứ tự = ưu tiên NÉT trước, PHỦ sau: font gốc của dự án đứng đầu để đa số thẻ giữ
+# nguyên kiểu chữ quen thuộc, các font sau chỉ nhận những chữ mà font trước không có.
+# Đo trên corpus (4.696 chữ): chuỗi này phủ 4.696/4.696 — KHÔNG còn ô nào phải bỏ trống.
+_FONT_PREFERENCE = (
+    "NomNaTong-Regular.ttf",      # font gốc của dự án (thiếu 568 chữ nếu đứng một mình)
+    "Han-nom Minh 1.42.otf",      # phủ rộng nhất trong các font Nôm: 4.367 chữ
+    "HanaMinA.ttf",               # Ext-A/B
+    "HanaMinB.ttf",
+    "PlangothicP1-Regular.ttf",   # Ext-C..G, +275 chữ — tải 2026-08-19, OFL
+    "PlangothicP2-Regular.ttf",   # mặt phẳng 3 (U+30000+), +6 chữ cuối cùng
+)
+_font_cache: dict[tuple[str, int], object] = {}
+_cmap_cache: dict[str, set] = {}
+
+
+def _cmap_of(path: Path) -> set:
+    key = str(path)
+    if key not in _cmap_cache:
+        try:
+            from fontTools.ttLib import TTFont
+            cm: set = set()
+            for tb in TTFont(str(path), fontNumber=0)["cmap"].tables:
+                cm |= set(tb.cmap)
+        except Exception:
+            cm = set()
+        _cmap_cache[key] = cm
+    return _cmap_cache[key]
+
+
+def build_font_chain(font_path: str | Path | None) -> list[Path]:
+    """Font chính + các font dự phòng theo thứ tự ưu tiên đã đo.
+
+    Tìm ở HAI nơi: thư mục của font chính (`font_diffusion/fonts/` — là SUBMODULE, không
+    bỏ file mới vào đó) và `fonts/` ở gốc repo, nơi để các font tải thêm.
+    """
+    if not font_path:
+        return []
+    main = Path(font_path)
+    dirs = [main.parent, Path(__file__).resolve().parents[2] / "fonts"]
+    chain = [main] if main.exists() else []
+    for name in _FONT_PREFERENCE:
+        for dp in dirs:
+            cand = dp / name
+            if cand.exists() and cand not in chain:
+                chain.append(cand)
+                break
+    return chain
+
+
+def _font_for(cp: int, chain: list[Path], size: int):
+    """Font ĐẦU TIÊN trong chuỗi thật sự có glyph cho codepoint này, hoặc None."""
+    for fp in chain:
+        if cp in _cmap_of(fp):
+            key = (str(fp), size)
+            if key not in _font_cache:
+                try:
+                    _font_cache[key] = ImageFont.truetype(str(fp), size)
+                except Exception:
+                    _font_cache[key] = None
+            if _font_cache[key] is not None:
+                return _font_cache[key]
+    return None
+
+
 def _reference_glyph(
-    fd_dir: Path, unicode_str: str, font: ImageFont.FreeTypeFont | None, size: int = 120
+    fd_dir: Path, unicode_str: str, fonts: list[Path] | None, size: int = 120
 ) -> Image.Image | None:
     """Font-diffusion PNG for the codepoint, else render from the fallback font."""
     try:
@@ -102,6 +178,7 @@ def _reference_glyph(
             return Image.open(p).convert("RGB")
         except Exception:
             pass
+    font = _font_for(cp, fonts or [], 96)
     if font is not None:
         img = Image.new("RGB", (size, size), "white")
         d = ImageDraw.Draw(img)
@@ -177,12 +254,7 @@ def build_audit(
     out_html = Path(out_html)
     out_manifest = Path(out_manifest)
 
-    font = None
-    if font_path and Path(font_path).exists():
-        try:
-            font = ImageFont.truetype(str(font_path), 96)
-        except Exception:
-            font = None
+    fonts = build_font_chain(font_path)
 
     # Duyệt theo (sách, trang) chứ KHÔNG theo audit_order, rồi mới xếp lại theo
     # audit_order ở cuối. Lý do là bộ nhớ: mỗi trang scan giải nén ~13,7 MB, và bản cũ
@@ -203,7 +275,7 @@ def build_audit(
         if crop is None:
             n_no_crop += 1
             continue
-        ref = _reference_glyph(fd_dir, r.get("unicode", ""), font)
+        ref = _reference_glyph(fd_dir, r.get("unicode", ""), fonts)
         if ref is None:
             n_no_ref += 1
 

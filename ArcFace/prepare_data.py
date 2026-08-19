@@ -54,7 +54,7 @@ def main():
     ap.add_argument("--labels", default=str(REPO / "dataset_out" / "labels_final.csv"))
     ap.add_argument("--crops-root", default=str(REPO / "dataset_out"))
     ap.add_argument("--fd-dir", default=str(REPO / "gannhanocr-fd"))
-    ap.add_argument("--similar", default=str(REPO / "Dict" / "SinoNom_Similar_Dic_v2.csv"))
+    ap.add_argument("--similar", default=str(REPO / "Dict" / "SinoNom_Similar.csv"))
     ap.add_argument("--out", default=str(HERE / "data"))
     ap.add_argument("--tiers", default="GOLD,SILVER", help="comma tiers to include")
     ap.add_argument("--link", action="store_true", help="hardlink instead of copy (same FS)")

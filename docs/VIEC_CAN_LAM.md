@@ -17,14 +17,14 @@ dưới là căn cứ, không phải danh sách việc:
 1. **Đề tài có 0 phán quyết người.** Toàn bộ "chấm tay" trước đây là máy chấm; verdict thô đã mất.
    Mọi con số precision / error-AUC / κ đã bị huỷ.
 2. **Chấm tay đang tạm gác.** Sẽ rút ô chưa chấm từ bộ dữ liệu, chấm, nạp lại sau.
-3. **Chưa có gì được commit.** Trên `HEAD`, `labels_final.csv` vẫn là thế hệ cũ.
+3. ~~Chưa có gì được commit.~~ ✅ Đã chốt mốc `17289d145c` (2026-08-23): `HEAD` giờ khớp đĩa.
 
 ---
 
 ## ĐƯỜNG GĂNG
 
 ```
-KHỐI 0 (hôm nay)  →  KHỐI 1 (vá lỗi)  →  KHỐI 3 (bàn thí nghiệm)  →  KHỐI 4 (T1→T6)
+KHỐI 0 ✅       →  KHỐI 1 (vá lỗi)  →  KHỐI 3 (bàn thí nghiệm)  →  KHỐI 4 (T1→T6)
                             ↓                                              ↓
                      KHỐI 2 (dọn số liệu)                          KHỐI 5 (tín hiệu nghĩa)
                                                                            ↓

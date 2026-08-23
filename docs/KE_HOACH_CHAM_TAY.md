@@ -1,5 +1,13 @@
 # KIỂM ĐỊNH NHÃN BẰNG NGƯỜI — CƠ SỞ, THIẾT KẾ VÀ KẾ HOẠCH THỰC HIỆN
 
+> ⛔ **TÀI LIỆU NÀY ĐÃ BỊ THAY THẾ (2026-08-22).** Mẻ chấm mà nó mô tả hoá ra do **máy** chấm,
+> verdict thô đã mất, nên mọi số precision/κ trong đây **đã huỷ**. Thiết kế mẻ chấm MỚI —
+> có **ô mồi 10%** (nửa cố ý gán sai) để phát hiện chấm ẩu/chấm máy, lặp ẩn 8%, tách chiều
+> NHÃN (người) khỏi chiều CROP (máy đo hình học), chia DEV 650 / TEST 1.050 niêm phong —
+> nằm ở `docs/VIEC_CAN_LAM.md` KHỐI 6 và `docs/KE_HOACH_TONG_THE_2026-08-22.md` GĐ 1.
+> Giữ tệp này làm **bằng chứng lịch sử**, không dùng để thi hành.
+
+
 **Lập**: 2026-08-10 · **Dựng lại mẻ**: 2026-08-11 · **Dân số tham chiếu**: `dataset_out/labels_final.csv` (82.274 dòng)
 **Phạm vi**: toàn bộ phần công việc bắt buộc phải do **người** thực hiện trong quy trình gán nhãn tự động.
 

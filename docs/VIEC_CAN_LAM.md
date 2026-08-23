@@ -26,7 +26,7 @@ dưới là căn cứ, không phải danh sách việc:
 ```
 KHỐI 0 ✅       →  KHỐI 1 (vá lỗi)  →  KHỐI 3 (bàn thí nghiệm)  →  KHỐI 4 (T1→T6)
                             ↓                                              ↓
-                     KHỐI 2 (dọn số liệu)                          KHỐI 5 (tín hiệu nghĩa)
+                     KHỐI 2 ✅                          KHỐI 5 (tín hiệu nghĩa)
                                                                            ↓
                                                     KHỐI 6 (dựng hạ tầng chấm — làm SONG SONG)
                                                                            ↓
@@ -109,19 +109,30 @@ KHỐI 0 ✅       →  KHỐI 1 (vá lỗi)  →  KHỐI 3 (bàn thí nghiệm)
 **Còn lại**: cột `seg_backend` chỉ xuất hiện sau lần **build** tới (bước 3) — bước 4→7 không sinh
 lại cột. Không chặn gì.
 
-# KHỐI 2 — DỌN SỐ LIỆU (1 ngày, làm song song KHỐI 1)
+# KHỐI 2 — DỌN SỐ LIỆU ✅ HOÀN THÀNH 2026-08-23
 
-- [ ] **2.1** Đánh dấu **CHƯA ĐO** mọi số sau, ở mọi tài liệu: precision GOLD 97,98% / 98,00% /
-  97,08% · `rule_precision_direct` 737/752 · `rule_precision_similar` 40/41 · error-AUC 0,566 và
-  0,577 · κ = 0,13.
-- [ ] **2.2** Xoá bảng số cũ trong `BANG_SO_LIEU_CHINH_THUC.md` (dòng 59-70 — không khớp tệp nào
-  trên đĩa); sửa `EVIDENCE_INDEX.md:71` (66.589 → **66.529**).
-- [ ] **2.3** Giữ Bước 6 (`s3_unwind`) nhưng **viết lại lý do**: "tín hiệu chưa chứng minh được",
-  **không** phải "đã bác bỏ".
-- [ ] **2.4** Ghi vào datasheet: mẻ phán quyết trước 2026-08-22 **bị huỷ vì không truy nguyên được
-  xuất xứ**. Khai thẳng — đây là điểm cộng liêm chính, không phải điểm trừ.
+- [x] **2.1 Đánh dấu CHƯA ĐO / ĐÃ HUỶ** — quét toàn bộ `docs/`; các số huỷ tập trung ở 4 tệp, cả 4
+  đã gắn cờ: `CODE_FREEZE.md` · `EVIDENCE_INDEX.md` · `FLOW_CAP_NHAT_2026-08-19.md` ·
+  `KE_HOACH_CHAM_TAY.md` (gắn banner **ĐÃ BỊ THAY THẾ** — mẻ chấm nó mô tả chính là mẻ máy chấm).
 
----
+- [x] **2.2 Viết lại `BANG_SO_LIEU_CHINH_THUC.md`** — bản cũ chứa **đồng thời hai bộ số mâu thuẫn**,
+  một bộ không khớp tệp nào trên đĩa, và ghi selftest 414. Bản mới có 3 nhãn nguồn kiểm định
+  (🔢 MÁY ĐẾM / ⚪ CHƯA ĐO / 🔴 ĐÃ HUỶ), §4 liệt kê từng số bị rút kèm lý do, §6 quy tắc trích dẫn.
+  Sửa câu sai ở `EVIDENCE_INDEX.md` ("66.589 khớp đúng dataset/labels.csv" — đĩa khi đó 66.529,
+  nay **56.776**).
+
+- [x] **2.3 Sửa cách phát biểu Bước 6** — trong chính `s3_unwind.py`: "CHƯA CHỨNG MINH ĐƯỢC",
+  không phải "ĐÃ BÁC BỎ", kèm ba lẽ (lớp âm 24 ca → AUC nhỏ nhất phát hiện được 0,607 · đo trên
+  GOLD nơi S3 không gán nhãn, chỉ 7,7% ô có điểm · 74,7% crop rò rỉ vào TRAIN). Báo cáo JSON thêm
+  `provenance` + `how_to_state_it`. Gỡ nốt hai chỗ docstring còn viện 40/41 và 737/752.
+
+- [x] **2.4 Datasheet khai đủ giới hạn** — `pipeline/publish/datasheet.py`: bỏ hẳn câu
+  "measured estimate on a stratified **human** audit sample" (nay sai sự thật), thay bằng 6 giới hạn
+  bắt buộc, mở đầu bằng **"NO HUMAN-VERIFIED PRECISION IS AVAILABLE"** kèm bằng chứng 846/846
+  item_id và 47/846 verdict. Có cả giới hạn DPI STT4 và tư cách tier SYLLABLE/SILVER.
+
+**Kiểm chứng**: selftest **448 passed, 0 failed** (khớp mốc, không hồi quy) · quét lại toàn `docs/`:
+0 tệp còn số huỷ mà thiếu cờ.
 
 # KHỐI 3 — DỰNG BÀN THÍ NGHIỆM (3–4 ngày)
 

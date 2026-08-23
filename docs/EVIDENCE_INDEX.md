@@ -68,7 +68,10 @@ Commit này gộp **76 file** vào một lần với message `"update code"`. Kh
 | `dataset_out/labels_final.csv` | `62f9791bff858a79…9e70a2615` | `python -m pipeline.remediation.confusion_fix --in dataset_out/labels_remediated.csv --out dataset_out/labels_final.csv --fixes config/confusion_fixes.yaml --measure` |
 | `dataset_out/summary.json` | `b5b05761b9899088…6950fa5ab` | sinh kèm `build_dataset` |
 
-**Số liệu chốt** (`labels_final.csv`, đo 2026-08-11, 82.274 dòng): GOLD **48.893** · SILVER **10.887** · SYLLABLE **6.809** · REVIEW **15.685** · QUARANTINE **0**. Dataset có-nhãn = **66.589**, khớp đúng `dataset/labels.csv`.
+~~**Số liệu chốt** (đo 2026-08-11, 82.274 dòng): GOLD 48.893 · SILVER 10.887 · SYLLABLE 6.809 · REVIEW 15.685. Dataset có-nhãn = 66.589.~~
+
+🔴 **SỐ TRÊN ĐÃ HUỶ (2026-08-23)** — không khớp tệp nào trên đĩa. Câu "66.589 khớp đúng `dataset/labels.csv`" **sai**: đĩa khi đó là 66.529, và sau KHỐI 1 là **56.776**.
+Số hiện hành (commit `2eb51e66f6`): `labels_final.csv` **82.269** dòng — GOLD **50.015** · SILVER_uncalibrated **10.890** · SYLLABLE **6.761** · REVIEW **14.603**; bộ giao nộp **56.776**. Nguồn duy nhất: `docs/BANG_SO_LIEU_CHINH_THUC.md`.
 
 ### 3.2. Báo cáo xử lý
 

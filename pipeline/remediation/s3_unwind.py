@@ -2,12 +2,22 @@
 
 VÌ SAO
 ------
-Đo ngày 2026-08-19 trên 826 verdict NGƯỜI (`ArcFace/eval_human_verdicts.py`):
+⚠️ CẬP NHẬT 2026-08-22 — CÁCH PHÁT BIỂU ĐÃ SỬA. Bộ 826 phán quyết dưới đây KHÔNG phải
+người chấm (xuất xứ không truy nguyên được, verdict thô đã mất — xem
+docs/KE_HOACH_TONG_THE_2026-08-22.md §0). Quyết định gỡ S3 VẪN GIỮ, nhưng lý do đúng là
+"CHƯA CHỨNG MINH ĐƯỢC", KHÔNG phải "ĐÃ BÁC BỎ", vì ba lẽ:
+  (a) lớp âm chỉ 24 ca -> Hanley-McNeil cho AUC nhỏ nhất phát hiện được = 0,607, nên tín
+      hiệu có AUC thật 0,55-0,60 KHÔNG THỂ bị phát hiện bằng mẻ đó;
+  (b) đo trên GOLD, nơi S3 không tham gia gán nhãn và chỉ 7,7% số ô có điểm S3;
+  (c) 617/826 (74,7%) crop nằm trong split TRAIN của chính lần train ArcFace.
+Các số dưới đây giữ lại làm LỊCH SỬ, không còn tư cách bằng chứng.
+
+Đo ngày 2026-08-19 trên 826 verdict (`ArcFace/eval_human_verdicts.py`):
 
     ArcFace retrain (Kaggle, Sub-center K=3 + SAM)  error-AUC = 0,577  CI95 [0,442-0,706]
     S3 cũ (nom-embed/best.pt)                       error-AUC = 0,566  CI95 [0,459-0,672]
 
-CI của cả hai đều CHỨA 0,5 → không tín hiệu thị giác nào phân biệt được nhãn đúng/sai.
+CI của cả hai đều CHỨA 0,5 → CHƯA chứng minh được tín hiệu thị giác phân biệt đúng/sai.
 Val head-top1 tăng 0,23 -> 0,806 mà AUC bắt lỗi đứng yên: encoder giỏi XẾP HẠNG chứ
 không PHÁT HIỆN SAI. Vậy S3 không được quyền phong hay hạ tier nữa.
 
@@ -15,10 +25,11 @@ BỐN VIỆC, KHÔNG CÓ VIỆC THỨ NĂM
 --------------------------------
 1. TRẢ VỀ GOLD các ô `s1_inter_s2_similar|demoted_lowcos_s3`.
    Chúng đã thoả S1 ∩ S2 (giao từ điển qua cầu nối tự dạng) và bị hạ CHỈ vì cosine thấp
-   — tiêu chí vừa bị bác. Căn cứ: chính luật `s1_inter_s2_similar` đo được 97,6%
-   (40/41, CI95 [87,1-99,9]), không phân biệt được với `s1_inter_s2_direct` 98,0%
-   (737/752, CI95 [96,7-98,9]). Mỗi ô trả về được gắn cờ `readmitted_from_s3_demotion`
-   vì trong mẫu 846 chỉ có 2 ô thuộc đúng nhóm này — người dùng dataset phải lọc được.
+   — tiêu chí chưa chứng minh được. (Căn cứ cũ là 97,6% (40/41) vs 98,0% (737/752):
+   🔴 CẢ HAI ĐÃ HUỶ 2026-08-22 cùng bộ verdict. Quyết định giữ nguyên vì lý do quản
+   trị — không cho một tín hiệu chưa chứng minh được quyền HẠ cấp — chứ không còn
+   dựa trên hai con số đó.) Mỗi ô trả về vẫn được gắn cờ `readmitted_from_s3_demotion`
+   để người dùng dataset lọc được.
 
 2. ĐỔI TIER SILVER -> `SILVER_uncalibrated`. KHÔNG xoá dòng nào, KHÔNG đổi nhãn nào.
    Toàn bộ SILVER do S3 quyết và có ĐÚNG 0 verdict người trên 10.890 ô. Tên tier mới
@@ -40,9 +51,9 @@ BỐN VIỆC, KHÔNG CÓ VIỆC THỨ NĂM
 
 BƯỚC NÀY KHÔNG SỬA MỘT CHỮ NÀO
 ------------------------------
-Không ô nào đổi `label`. Precision GOLD dự kiến đổi khoảng -0,01 điểm (pha 1.185 ô
-97,6% vào 48.878 ô 98,0%). Cái bước này mua là TƯ CÁCH CÔNG BỐ, không phải độ chính
-xác. Đừng trình bày nó như một phép làm sạch.
+Không ô nào đổi `label` (assertion ở cuối hàm). Cái bước này mua là TƯ CÁCH CÔNG BỐ,
+không phải độ chính xác — đừng trình bày nó như một phép làm sạch. Tác động lên
+precision KHÔNG ĐO ĐƯỢC: hiện chưa có phán quyết người nào.
 
     .venv/bin/python -m pipeline.remediation.s3_unwind --in dataset_out/labels_final.csv \
         --out dataset_out/labels_s3free.csv --report dataset_out/s3_unwind_report.json
@@ -175,7 +186,11 @@ def unwind(df: pd.DataFrame,
             "arcface_retrain_ci95": [0.442, 0.706],
             "s3_old_error_auc": 0.566,
             "s3_old_ci95": [0.459, 0.672],
-            "n_human_verdicts": 826,
+            "n_verdicts": 826,
+            "provenance": "UNVERIFIED_machine_graded__withdrawn_2026-08-22",
+            "how_to_state_it": ("CHƯA CHỨNG MINH ĐƯỢC, không phải ĐÃ BÁC BỎ: lớp âm 24 ca "
+                                "-> AUC nhỏ nhất phát hiện được 0,607; đo trên GOLD nơi S3 "
+                                "không gán nhãn; 74,7% crop rò rỉ vào TRAIN."),
             "rule_precision_similar": "40/41 = 97.6% CI95 [87.1, 99.9]",
             "rule_precision_direct": "737/752 = 98.0% CI95 [96.7, 98.9]",
             "note": ("Bước này KHÔNG sửa nhãn nào. Nó gỡ quyền quyết định của một tín "

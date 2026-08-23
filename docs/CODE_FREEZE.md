@@ -1,5 +1,12 @@
 # TUYÊN BỐ CODE-FREEZE TÍNH NĂNG
 
+> 🔴 **CẢNH BÁO SỐ ĐÃ HUỶ (2026-08-22)** — tài liệu này chứa các con số neo vào bộ 846
+> phán quyết mà **xuất xứ không truy nguyên được** (thực chất do máy chấm; verdict thô đã
+> mất). Precision GOLD, error-AUC S3, κ người chấm ở đây **đều đã bị huỷ**, KHÔNG được
+> trích vào luận văn. Số hiện hành: `docs/BANG_SO_LIEU_CHINH_THUC.md`.
+> Căn cứ huỷ: `docs/KE_HOACH_TONG_THE_2026-08-22.md` §0.
+
+
 **Hiệu lực từ**: 2026-07-20, commit `3c93615346`, sau khi Giai đoạn 1 hoàn tất
 **Hết hiệu lực**: sau khi bảo vệ luận văn
 
@@ -59,7 +66,7 @@ Làm trên **nhánh riêng**, theo đúng thứ tự rủi ro tăng dần:
 | Tag | `freeze-pre-thesis-2026-07-20` |
 | Selftest | **212 passed, 11 failed** (`bash scripts/run_all_selftests.sh`) |
 | Dataset (`labels_final.csv`) | GOLD 48.969 · SILVER 10.856 · SYLLABLE 6.751 · REVIEW 15.690 · QUARANTINE 8 |
-| Precision GOLD | 97,08% → **98,00%** sau demote 1.923 crop 㝵/người |
+| Precision GOLD | 🔴 ~~97,08% → 98,00% sau demote 1.923 crop~~ — **ĐÃ HUỶ**; số demote hiện hành là **1.972** |
 | Sao lưu | 3 gói ở `~/ThS_archive/backup_2026-07-20/`, đã verify sha256 |
 
 **11 assertion đỏ không phải bug code** — chúng hard-code census của thế hệ `labels.csv` cũ. Đây là biểu hiện của blocker "số liệu bất nhất", phải xử lý ở Giai đoạn 3 chứ không phải bằng cách sửa code.

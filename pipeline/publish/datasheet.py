@@ -112,13 +112,35 @@ Cultural Heritage* extension (JOHD 2023). Generated from dataset statistics.
 
 
 def _default_limitations(stats: dict) -> list[str]:
+    """Năm giới hạn BẮT BUỘC khai (docs/BANG_SO_LIEU_CHINH_THUC.md §6.4).
+
+    Câu cũ nói "GOLD precision is a measured estimate on a stratified HUMAN audit sample"
+    — nay SAI: bộ 846 phán quyết ấy thực chất do máy chấm và verdict thô đã mất
+    (2026-08-22). Khai thẳng việc đó là điểm cộng liêm chính, không phải điểm trừ.
+    """
     return [
-        "GOLD precision is a measured estimate on a stratified human audit sample with a "
-        "confidence interval — not a per-row guarantee.",
-        f"~{_fmt(stats.get('quarantined', 0))} duplicate-crop rows were quarantined; "
-        "residual wrong-image crops may remain below the detection floor.",
-        "Dictionary coverage figures are partly self-referential (measured against OCR "
-        "output); true coverage vs. an external gold lexicon may be lower.",
-        "REVIEW tier (~14k rows) is a genuine reject tier, mostly S3/coverage failures.",
-        "Three books only; a leave-one-book-out split is provided to expose domain shift.",
+        "NO HUMAN-VERIFIED PRECISION IS AVAILABLE. The 846-verdict audit batch previously "
+        "cited was found (2026-08-22) to be machine-graded: it shares 846/846 item_ids with "
+        "a machine-grading batch, agrees on only 47/846 verdict values, and the raw verdict "
+        "files are lost. All precision, error-AUC and inter-rater kappa figures derived from "
+        "it have been WITHDRAWN. Tier quality is therefore UNMEASURED, not estimated.",
+
+        "RESOLUTION IS NOT UNIFORM ACROSS BOOKS. Nom page images are extracted embedded "
+        "images, not renders: median effective DPI is ~302 for STT2 and STT11 but ~202 for "
+        "STT4 (about one third of the corpus). Report per-book metrics; do not pool blindly.",
+
+        "SYLLABLE tier carries SYLLABLE-LEVEL labels, not character identities. Its 316 "
+        "(character, reading) pairs are confirmed by 0/316 external sources including Unihan.",
+
+        "SILVER is published separately and explicitly marked 'uncalibrated': it was decided "
+        "by a visual signal whose discriminative power was never established, and it has zero "
+        "human verdicts. It is outside USABLE_TIERS and not part of the delivered set.",
+
+        "Three books, one carving style, 19th-century Vietnamese Catholic woodblock prints. "
+        "A leave-one-book-out split is provided, but with only 3 books the strongest defensible "
+        "claim is cross-volume intra-style adaptation, not general Nom OCR.",
+
+        f"~{_fmt(stats.get('quarantined', 0))} duplicate-crop rows were quarantined; residual "
+        "wrong-image crops may remain below the detection floor. The CROP dimension is measured "
+        "geometrically (crop_quality.py), not by eye.",
     ]

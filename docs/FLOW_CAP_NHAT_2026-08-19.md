@@ -1,5 +1,12 @@
 # Đánh giá tổng thể & flow đề nghị cập nhật — 2026-08-19
 
+> 🔴 **CẢNH BÁO SỐ ĐÃ HUỶ (2026-08-22)** — tài liệu này chứa các con số neo vào bộ 846
+> phán quyết mà **xuất xứ không truy nguyên được** (thực chất do máy chấm; verdict thô đã
+> mất). Precision GOLD, error-AUC S3, κ người chấm ở đây **đều đã bị huỷ**, KHÔNG được
+> trích vào luận văn. Số hiện hành: `docs/BANG_SO_LIEU_CHINH_THUC.md`.
+> Căn cứ huỷ: `docs/KE_HOACH_TONG_THE_2026-08-22.md` §0.
+
+
 Mọi con số trong tài liệu này đều đo lại được bằng lệnh ghi kèm. Chỗ nào là suy đoán thì
 ghi rõ là suy đoán.
 
@@ -22,7 +29,7 @@ ghi rõ là suy đoán.
 
 | # | vấn đề | số đo | hệ quả |
 |---|---|---|---|
-| B1 | **Độ tin cậy người chấm** κ = 0,13 test-retest; tỷ lệ lỗi trôi 4,2% → 16% → 35% qua ba buổi | 40 ô lặp, 2026-08-04 | mọi precision đo bằng tay đều lung lay, trừ chiều NHÃN |
+| B1 | 🔴 ~~**Độ tin cậy người chấm** κ = 0,13 test-retest; trôi 4,2% → 16% → 35%~~ — **ĐÃ HUỶ 2026-08-22**: không có người chấm để mà đo κ | ~~40 ô lặp, 2026-08-04~~ | Vấn đề THẬT không phải κ thấp mà là **không có ground truth nào cả** |
 | B2 | **Nhiệm vụ chấm bị trộn hai chiều** — NHÃN (đọc chữ) và CROP (cắt đúng ô) chấm chung một nút | κ chiều CROP = 0,14 vs chiều NHÃN 0/20 báo động giả | phải tách hẳn: NHÃN cho người, CROP đo bằng hình học |
 | B3 | **S3 ngược dấu** trên verdict người | 6/6 AUC < 0,5; bank_cos 0,26 | không được dùng S3 làm cổng hạ cấp GOLD |
 | B4 | **1.851 ô lệch DẤU THANH** giữa âm OCR và từ điển — nhưng CHỈ **88 ô** là lỗi thanh chắc chắn | A: 88 ô (âm không phải từ tiếng Việt có thật) · B: 1.763 ô (âm là từ có thật → có thể CHỮ sai chứ không phải thanh sai) | chỉ nhóm A sửa tự động được; nhóm B phải qua mắt người, sửa máy sẽ CHE lỗi chữ |

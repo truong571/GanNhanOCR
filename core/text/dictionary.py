@@ -128,3 +128,20 @@ def fuzzy_dict_lookup(
                     seen.add(c)
                     candidates.append(c)
     return candidates
+
+
+def dict_dir(repo_root=None):
+    """Thư mục từ điển, KHÔNG phụ thuộc hoa/thường.
+
+    Cây commit lưu `Dict/` (`git ls-tree HEAD`), còn máy phát triển có `dict/` —
+    `core.ignorecase=true` nên git không báo. Trên macOS cả hai cùng trỏ một chỗ,
+    trên Linux thì chỉ một cái tồn tại. Hàm này trả cái CÓ THẬT thay vì ghim cứng
+    một lối viết rồi chết trên môi trường kia.
+    """
+    from pathlib import Path as _P
+    root = _P(repo_root) if repo_root else _P(__file__).resolve().parents[2]
+    for name in ("Dict", "dict"):
+        cand = root / name
+        if cand.is_dir():
+            return cand
+    return root / "Dict"

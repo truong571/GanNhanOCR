@@ -275,3 +275,30 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 | `dataset_out/labels_remediated.csv` | `6232b64d3c147d9f669f834a8c051b4a789e8e6418c8045abe749fd57595963c` |
 | `dataset_out/labels_final.csv` | `80bcb2cd3ed2bcdd7002a774f623277099851f580154893e27cfe5639d243d7c` |
 | `dataset/labels.csv` | `5a4848648bdee1355613dc28f606100784235f92f65bdb1dcb0239bac55397e6` |
+
+## Lần chạy 2026-08-23T09:17:03Z
+
+sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `7e0a2f3901c84a82a293ff5703c80f24406fd88847252d9a6f4643c1e4eac786` |
+| `dataset_out/labels_remediated.csv` | `532f7c7de777fa524b9d045c221bc7d5ea2f974692645b19bbf291fb2b558b31` |
+| `dataset_out/labels_final.csv` | `3208cdab6272e154279a4f25ac573489c5912b6bceca45c7dd66e1ec60c2792a` |
+| `dataset/labels.csv` | `dbad35e92c76f84882757f74cd50a8670224d2f0d741691ce5f38469459c472a` |
+<!-- HIEN_HANH:START -->
+## BẢN HIỆN HÀNH (tự sinh — ghi đè mỗi lần chạy, ĐỪNG sửa tay)
+
+- sinh lúc: `2026-08-23T09:17:03Z`
+- commit  : `203f67e85a`
+- sách    : STT2+STT4+STT11 | reseg=detector
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `7e0a2f3901c84a82a293ff5703c80f24406fd88847252d9a6f4643c1e4eac786` |
+| `dataset_out/labels_remediated.csv` | `532f7c7de777fa524b9d045c221bc7d5ea2f974692645b19bbf291fb2b558b31` |
+| `dataset_out/labels_final.csv` | `3208cdab6272e154279a4f25ac573489c5912b6bceca45c7dd66e1ec60c2792a` |
+| `dataset/labels.csv` | `dbad35e92c76f84882757f74cd50a8670224d2f0d741691ce5f38469459c472a` |
+
+Kiểm lại: `bash scripts/check_evidence.sh`
+<!-- HIEN_HANH:END -->

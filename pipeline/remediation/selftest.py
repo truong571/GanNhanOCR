@@ -13,6 +13,7 @@ import pandas as pd
 
 from . import census as census_mod
 from . import remediate as remediate_mod
+from . import confusion_fix as cfix_mod
 from . import s3_unwind as unwind_mod
 
 REPO = Path(__file__).resolve().parents[2]
@@ -265,15 +266,76 @@ def test_s3_unwind() -> None:
     check("luỹ đẳng (0 trả về, 0 đổi tên ở lần 2)",
           rep2["readmitted_to_gold"] == 0 and rep2["silver_renamed"] == 0
           and rep2["review_reason_renamed"] == 0)
+    # --- chốt chặn lớp confusion (2026-08-23) ---------------------------
+    pairs = [{"syllable": "người", "label": "\u3775", "reason": "systematic_confusion_nguoi_3775"}]
+    dfc = pd.DataFrame({
+        "image": [f"c{i}.png" for i in range(4)],
+        "label": ["\u3775", "\u3775", "b", "\u3775"],
+        "syllable": ["người", "người", "người", "khác"],
+        "label_level": ["char"] * 4,
+        "tier": ["REVIEW", "GOLD", "REVIEW", "GOLD"],
+        "rule": ["s1_inter_s2_similar|demoted_lowcos_s3", "s1_inter_s2_similar",
+                 "s1_inter_s2_similar|demoted_lowcos_s3", "s1_inter_s2_direct"],
+    })
+    oc, rc = unwind_mod.unwind(dfc, confusion_pairs=pairs)
+    check("ô confusion KHÔNG được readmit về GOLD", oc.loc[0, "tier"] == "REVIEW", oc.loc[0, "tier"])
+    check("ô confusion bị chặn mang rule confusion_fix",
+          oc.loc[0, "rule"].startswith("confusion_fix:"), oc.loc[0, "rule"])
+    check("ô confusion bị chặn KHÔNG mang cờ readmit", oc.loc[0, unwind_mod.FLAG_COL] == "")
+    check("ô confusion ĐANG Ở GOLD sẵn thì bị CHỮA về REVIEW",
+          oc.loc[1, "tier"] == "REVIEW", oc.loc[1, "tier"])
+    check("ô KHÔNG thuộc lớp confusion vẫn được readmit", oc.loc[2, "tier"] == "GOLD")
+    check("ô cùng chữ nhưng KHÁC âm không bị đụng", oc.loc[3, "tier"] == "GOLD")
+    check("báo cáo đếm đúng số ô bị demote", rc["confusion_demoted_after_unwind"] == 2,
+          str(rc["confusion_demoted_after_unwind"]))
+    check("label_level bị xoá cho ô demote", oc.loc[1, "label_level"] == "")
+    oc2, rc2 = unwind_mod.unwind(oc, confusion_pairs=pairs)
+    check("chốt confusion luỹ đẳng", rc2["confusion_demoted_after_unwind"] == 0)
+    ocz, rcz = unwind_mod.unwind(dfc, confusion_pairs=[])
+    check("truyền [] thì tắt chốt (ô confusion về GOLD)", ocz.loc[0, "tier"] == "GOLD")
+    check("load_confusion_pairs đọc được 㝵/người từ yaml",
+          any(x["label"] == "\u3775" and x["syllable"] == "người"
+              for x in unwind_mod.load_confusion_pairs()))
+
     # dữ liệu thật
     if LABELS.exists():
         real = pd.read_csv(REPO / "dataset_out" / "labels_final.csv", dtype=str, low_memory=False)
         ro, rr = unwind_mod.unwind(real)
-        check("thật: GOLD tăng đúng bằng số hàng trả về",
+        check("thật: GOLD đổi đúng bằng (trả về - demote confusion)",
               int((ro.tier == "GOLD").sum()) - int((real.tier == "GOLD").sum())
-              == rr["readmitted_to_gold"])
+              == rr["readmitted_to_gold"] - rr["confusion_demoted_after_unwind"])
         check("thật: không còn tier SILVER", int((ro.tier == "SILVER").sum()) == 0)
+        conf = unwind_mod._confusion_mask(ro, unwind_mod.load_confusion_pairs())
+        check("thật: 0 ô lớp confusion còn ở tier dùng được",
+              int((conf & ro["tier"].isin(unwind_mod.USABLE_TIERS)).sum()) == 0)
         check("thật: nhãn bất biến", ro["label"].fillna("").equals(real["label"].fillna("")))
+
+
+def test_confusion_fix_join() -> None:
+    """Join verdict<->nhãn: tiền tố sách đời cũ `yen*` phải được chuẩn hoá về `stt*`.
+
+    Trước 2026-08-23 join thô khớp 0/825 nên `--measure` trả `null` TRONG IM LẶNG.
+    """
+    print("[confusion-fix join]")
+    n = cfix_mod.normalize_image_key
+    check("gold/yen11_... -> gold/stt11_...",
+          n("gold/yen11_page_0018_c05_094.png") == "gold/stt11_page_0018_c05_094.png")
+    check("silver/yen4_... -> silver/stt4_...", n("silver/yen4_x.png") == "silver/stt4_x.png")
+    check("yen ở đầu chuỗi cũng đổi", n("yen2_a.png") == "stt2_a.png")
+    check("stt* giữ nguyên (luỹ đẳng)", n("gold/stt2_p.png") == "gold/stt2_p.png")
+    check("'yen' KHÔNG ở ranh giới đường dẫn thì không đụng",
+          n("abc_yen9_x.png") == "abc_yen9_x.png")
+    check("luỹ đẳng khi gọi 2 lần", n(n("gold/yen11_a.png")) == n("gold/yen11_a.png"))
+
+    vp = REPO / "dataset_out" / "ground_truth" / "verdicts_reanchored.csv"
+    if vp.exists() and (REPO / "dataset_out" / "labels_final.csv").exists():
+        final = pd.read_csv(REPO / "dataset_out" / "labels_final.csv", dtype=str, low_memory=False)
+        r = cfix_mod.measure_gold_precision(final)
+        check("thật: join khớp phần lớn verdict (không còn 0)",
+              r["joined"] > 0.9 * r["verdicts"], f"{r['joined']}/{r['verdicts']}")
+        check("thật: precision GOLD tính ra được (không null)", r["precision"] is not None)
+        check("thật: có gắn cờ xuất xứ chưa xác minh",
+              r.get("provenance", "").startswith("UNVERIFIED"), str(r.get("provenance")))
 
 
 def main() -> int:
@@ -284,6 +346,7 @@ def main() -> int:
     test_remediate_synthetic()
     test_real()
     test_s3_unwind()
+    test_confusion_fix_join()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

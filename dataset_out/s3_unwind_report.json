@@ -1,17 +1,19 @@
 {
   "n_rows": 82269,
-  "readmitted_to_gold": 1185,
+  "readmitted_to_gold": 0,
+  "confusion_demoted_after_unwind": 0,
+  "confusion_demoted_by_pair": {},
   "silver_renamed": 10890,
   "review_reason_renamed": 10934,
   "tier_before": {
-    "GOLD": 48878,
-    "REVIEW": 15740,
+    "GOLD": 50015,
+    "REVIEW": 14603,
     "SILVER": 10890,
     "SYLLABLE": 6761
   },
   "tier_after": {
-    "GOLD": 50063,
-    "REVIEW": 14555,
+    "GOLD": 50015,
+    "REVIEW": 14603,
     "SILVER_uncalibrated": 10890,
     "SYLLABLE": 6761
   },

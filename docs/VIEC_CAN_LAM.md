@@ -82,24 +82,32 @@ KHỐI 0 ✅       →  KHỐI 1 (vá lỗi)  →  KHỐI 3 (bàn thí nghiệm)
   mô hình đã sinh ra `s3_cosine` trong bộ nhãn. Cần quyết định: commit trong submodule, hay đẩy
   checkpoint lên HuggingFace và ghi hash vào `EVIDENCE_INDEX.md`.
 
-# KHỐI 1 — VÁ 9 LỖI CHẶN (2–3 ngày)
+# KHỐI 1 — VÁ 9 LỖI CHẶN ✅ HOÀN THÀNH 2026-08-23
 
-| # | lỗi | vá thế nào |
-|---|---|---|
-| 1.1 | **48 ô 㝵/"người" đang ở GOLD** trong bản công bố | `s3_unwind.py`: sau readmit, chặn mọi ô thuộc lớp trong `confusion_fixes.yaml` |
-| 1.2 | `confusion_fix --measure` trả `null` **trong im lặng** (join `yen*` vs `stt*` khớp 0/825) | chuẩn hoá tiền tố trước khi join (`confusion_fix.py:53-60`) |
-| 1.3 | Thiếu checkpoint detector ⇒ **rơi ngầm về midpoint**, không ném lỗi, không ghi vết | `align_production.py:183`: `raise FileNotFoundError` + ghi cột `seg_backend` vào labels |
-| 1.4 | `CHECKSUMS.txt` **chưa từng được sinh**; hash hiện hành không có trong `EVIDENCE_INDEX.md` | ép `checkpoint()` ghi thật; `evidence()` **thêm bảng mới**, không chỉ append log |
-| 1.5 | `banner()` in ra **"BƯỚC 7/6"**; đánh số lệch ở 6 chỗ | `run_pipeline.sh:83` + các chú thích khối |
-| 1.6 | Thư mục từ điển: git lưu `Dict/`, đĩa là `dict/` (7 tệp `.py` + 2 config hard-code) | `git mv` hai bước rồi thống nhất mã |
-| 1.7 | `index.csv` (crop-proto) thuộc **thế hệ cũ**: 100% hàng trỏ `yen2/yen4/yen11`, giao với bộ hiện hành = 0 | sinh lại từ `stt*`; preflight thêm kiểm "cùng thế hệ", không chỉ "tệp tồn tại" |
-| 1.8 | `config/pipeline_today.yaml:29` còn `qn_line_detector: auto` — bẫy copy-paste | xoá tệp |
-| 1.9 | 73 ô sửa dấu thanh **mồ côi** (`labels_tonefix.csv` không vào bản công bố) | đưa chuẩn hoá thanh **lên trước build** (xem T1), không vá sau |
+| # | lỗi | đã vá thế nào | kiểm chứng |
+|---|---|---|---|
+| 1.1 | 48 ô 㝵/"người" ở GOLD | `s3_unwind.py`: chốt chặn lớp confusion — **CHỮA** (demote) chứ không chỉ chặn readmit, nên chạy trên tệp hỏng sẵn cũng ra sạch. Bất biến mới ở cuối `unwind()`. | bước 5 demote **1.972** ô (trước 1.924, +48); 㝵/người ở GOLD = **0** |
+| 1.2 | `--measure` trả `null` im lặng | `confusion_fix.normalize_image_key()` chuẩn hoá `yen*`→`stt*` trước join; thêm cờ `provenance` + cảnh báo in ra | join **816/825** (trước **0/825**) |
+| 1.3 | Rơi ngầm về midpoint | `DetectorUnavailableError` + `preflight_detector()` fail-fast **trước** khi duyệt trang; `build_dataset` **re-raise** thay vì nuốt thành warning (nếu không sẽ bỏ qua cả 445 trang); ghi cột `seg_backend` | thử giấu checkpoint → ném lỗi ✓; có checkpoint → `detector_centernet_v1` |
+| 1.4 | `CHECKSUMS.txt` chưa từng sinh; hash hiện hành không có trong index | `evidence()` thêm khối `<!-- HIEN_HANH -->` **ghi đè mỗi lần chạy** (nhật ký "## Lần chạy" vẫn cộng dồn); thêm `scripts/check_evidence.sh` | `check_evidence.sh` → **khớp 4 · lệch 0 · thiếu 0** |
+| 1.5 | `banner()` in "BƯỚC 7/6" | đổi toàn bộ đánh số về `/7` (8 dòng) | không còn `/6` nào trong tệp |
+| 1.6 | `Dict/` (git) vs `dict/` (đĩa) | `core.text.dictionary.dict_dir()` — dò tên có thật lúc chạy, **không** ghim cứng lối viết nào. Áp cho 5 tệp | 5/5 module import OK; `dict_dir()` → `Dict/` |
+| 1.7 | `index.csv` lệch thế hệ | preflight kiểm **thế hệ** chứ không chỉ "tệp tồn tại" | đo được **51.195** dòng `yen*` / **0** dòng `stt*` → sẽ cảnh báo |
+| 1.8 | `pipeline_today.yaml` còn `auto` | xoá tệp | — |
+| 1.9 | 73 ô sửa dấu mồ côi | ghi rõ trạng thái mồ côi trong docstring + trỏ sang T1 (chỗ đúng là chuẩn hoá **trước** build) | — |
 
-**Hoàn thành khi**: chạy lại từ bước 4 ra **56.776 dòng**; đếm ô 㝵/"người" ở GOLD ra **0**;
-`CHECKSUMS.txt` tồn tại; selftest xanh.
+## Nghiệm thu
 
----
+| tiêu chí | kết quả |
+|---|---|
+| Chạy lại bước 4→7 | **56.776 dòng** (GOLD 50.015 + SYLLABLE 6.761), 0 ảnh thiếu |
+| 㝵/"người" ở GOLD | **0** (toàn bộ 1.972 ô ở REVIEW) |
+| `CHECKSUMS.txt` | đã sinh, 3 mốc |
+| Chuỗi bằng chứng | `check_evidence.sh` → **4/4 khớp** |
+| Selftest | **448 passed, 0 failed** (mốc 427 → 448, +21) |
+
+**Còn lại**: cột `seg_backend` chỉ xuất hiện sau lần **build** tới (bước 3) — bước 4→7 không sinh
+lại cột. Không chặn gì.
 
 # KHỐI 2 — DỌN SỐ LIỆU (1 ngày, làm song song KHỐI 1)
 

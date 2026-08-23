@@ -41,10 +41,12 @@ from pathlib import Path
 import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
+from core.text.dictionary import dict_dir  # noqa: E402
+DICT_DIR = dict_dir(REPO)
 # Nguồn nghĩa Hán, xét theo thứ tự: cờ --unihan -> bản đầy đủ người dùng đặt trong Dict/
 # -> bản cache nhỏ chỉ chứa các chữ của corpus này.
-FULL = REPO / "Dict" / "unihan_kdefinition_full.csv"
-CACHE = REPO / "Dict" / "_sources" / "unihan_kdefinition.csv"
+FULL = DICT_DIR / "unihan_kdefinition_full.csv"
+CACHE = DICT_DIR / "_sources" / "unihan_kdefinition.csv"
 
 # Từ khoá trong nghĩa Hán báo hiệu chữ CHỨC NĂNG (hư từ) — loại chữ không có nghĩa thực
 # để mượn. 而 "and; but" và 爾 "you; final particle" đều rơi vào đây.
@@ -94,7 +96,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"[gapcheck] kDefinition: {len(kdef):,} chữ")
 
     from core.text.dictionary import load_qn_to_nom
-    qn = load_qn_to_nom(str(REPO / "Dict" / "QuocNgu_SinoNom.csv"))
+    qn = load_qn_to_nom(str(DICT_DIR / "QuocNgu_SinoNom.csv"))
     readings: dict[str, set[str]] = collections.defaultdict(set)
     for syl, chars in qn.items():
         for ch in chars:

@@ -27,6 +27,18 @@ có hai đích (gọi/gỏi), nhưng 噲 xuất hiện 17 lần với "gọi" v�
 Còn nhập nhằng thì ĐỂ NGUYÊN và ghi vào báo cáo. Thà còn 15 ô chờ người xem còn hơn
 sửa bừa 15 ô rồi không ai biết chỗ nào đã bị đoán.
 
+⚠️ TỆP NÀY LÀ NHÁNH MỒ CÔI — ĐỌC TRƯỚC KHI DÙNG SỐ CỦA NÓ
+-----------------------------------------------------------
+`dataset_out/labels_tonefix.csv` KHÔNG nằm trong bộ công bố và KHÔNG được bước nào
+của `run_pipeline.sh` tiêu thụ. Đo 2026-08-22: nó lệch 73 ô so với `labels_final.csv`,
+và `labels_final.csv` không có cột `syllable_raw`. Báo cáo `tonefix_report.json` còn
+ghi tier `SILVER` trong khi bộ hiện hành đã đổi tên thành `SILVER_uncalibrated`.
+
+Chỗ ĐÚNG của phép sửa này là bước chuẩn hoá TRƯỚC build (chương trình T1 trong
+docs/CHUONG_TRINH_THI_NGHIEM_2026-08-22.md) — sửa sau khi tier đã chốt là vá, đặt
+trước là hết bệnh. Cho tới khi T1 xong, coi tệp này là BẰNG CHỨNG ĐO ĐƯỢC rằng phép
+sửa chạy đúng, KHÔNG phải bản thay thế.
+
 KHÔNG GHI ĐÈ BỘ CÔNG BỐ
 -----------------------
 Ghi ra file riêng, giữ cột `syllable_raw`. Chỗ đúng của phép sửa này là bước normalize
@@ -110,7 +122,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     from core.text.dictionary import load_qn_to_nom
-    qn = load_qn_to_nom(str(REPO / "Dict" / "QuocNgu_SinoNom.csv"))
+    qn = load_qn_to_nom(str(DICT_DIR / "QuocNgu_SinoNom.csv"))
     labels = pd.read_csv(args.labels, dtype=str, low_memory=False)
 
     fixes, extra = plan(labels, qn)

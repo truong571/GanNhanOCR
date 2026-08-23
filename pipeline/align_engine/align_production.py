@@ -168,29 +168,60 @@ _DETECTOR = None
 _DETECTOR_TRIED = False
 
 
-def _get_detector():
-    """Lazy, cached CenterNet detector (char_detector/detector.pt). Returns a
-    DetectorInfer (with .trained flag) or None if the module/checkpoint is missing.
-    Only used by reseg_mode='detector'."""
+class DetectorUnavailableError(FileNotFoundError):
+    """Yêu cầu reseg=detector nhưng không dựng được detector — KHÔNG rơi ngầm."""
+
+
+_HINT = ("tải: huggingface-cli download mdnt571/nom-char-det detector_r34.best.pt "
+         "--local-dir train_crop/  — hoặc chạy lại với --reseg midpoint nếu CỐ Ý "
+         "muốn dùng trung điểm (bộ crop sẽ KHÁC HẲN, phải đo lại).")
+
+
+def _get_detector(strict: bool = True):
+    """Lazy, cached CenterNet detector (train_crop/detector_r34.best.pt).
+
+    strict=True (mặc định): thiếu checkpoint -> NÉM DetectorUnavailableError.
+    Trước 2026-08-23 hàm này chỉ IN một dòng log rồi lặng lẽ rơi về midpoint: toàn bộ
+    hộp ký tự bị tách bằng trung điểm thay vì CenterNet, cho ra bộ crop khác hẳn, mà
+    labels.csv KHÔNG ghi lại backend nào đã dùng -> không ai truy được về sau.
+    Chỉ dùng bởi reseg_mode='detector'.
+    """
     global _DETECTOR, _DETECTOR_TRIED
     if _DETECTOR_TRIED:
+        if strict and (_DETECTOR is None or not getattr(_DETECTOR, "trained", False)):
+            raise DetectorUnavailableError(f"reseg=detector nhưng detector không dùng được. {_HINT}")
         return _DETECTOR
     _DETECTOR_TRIED = True
+    err = None
     try:
         from pipeline.align_engine.char_detector.detector_infer import DetectorInfer
         # thr 0.2->0.3: bớt detection tin cậy thấp (dễ lệch vị trí) lọt vào
         # enforce_count/column_boxes -> ít box sai hơn feed cho _monotone_assign.
         _DETECTOR = DetectorInfer(thr=0.3)  # tự tìm ckpt v1 ở train_crop/detector_r34.best.pt
         if not _DETECTOR.trained:
-            print("  [reseg detector] không thấy train_crop/detector_r34.best.pt -> midpoint fallback "
-                  "(tải: huggingface-cli download mdnt571/nom-char-det detector_r34.best.pt --local-dir train_crop/).",
-                  flush=True)
+            err = "không thấy train_crop/detector_r34.best.pt"
         else:
             print(f"  [reseg detector] CenterNet v1 (img {_DETECTOR.img}, seam) — N = #âm tiết.", flush=True)
     except Exception as e:
-        print(f"  [reseg detector] unavailable ({type(e).__name__}: {e}) -> midpoint fallback.", flush=True)
+        err = f"{type(e).__name__}: {e}"
         _DETECTOR = None
+    if err:
+        if strict:
+            raise DetectorUnavailableError(f"reseg=detector nhưng {err}. {_HINT}")
+        print(f"  [reseg detector] {err} -> midpoint fallback.", flush=True)
     return _DETECTOR
+
+
+def preflight_detector(reseg_mode: str) -> str:
+    """Kiểm detector MỘT LẦN trước khi duyệt trang. Trả tên backend sẽ dùng.
+
+    Fail fast: thiếu checkpoint thì dừng ngay ở trang đầu tiên chứ không âm thầm
+    tách bằng trung điểm cho cả 445 trang.
+    """
+    if reseg_mode != "detector":
+        return reseg_mode
+    _get_detector(strict=True)
+    return "detector_centernet_v1"
 
 
 def _valley_boxes(cluster, binary, n):
@@ -402,12 +433,14 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
     if reseg_mode in ("valley_guarded", "detector"):
         import cv2 as _cv2
         page_bgr = _cv2.imread(str(data_dir / "pages" / f"{page_name}.png"), _cv2.IMREAD_COLOR)
-    if reseg_mode == "detector" and page_bgr is not None:
-        detector = _get_detector()
-        if detector is not None and detector.trained:
-            page_boxes = detector.boxes_for_page(page_bgr)   # all char boxes, once per page
-        else:
-            detector = None     # no trained detector.pt -> _pick_reseg falls back to midpoint
+    seg_backend = reseg_mode
+    if reseg_mode == "detector":
+        if page_bgr is None:
+            raise DetectorUnavailableError(
+                f"reseg=detector nhưng không đọc được ảnh trang {page_name}.png. {_HINT}")
+        detector = _get_detector(strict=True)     # thiếu ckpt -> ném lỗi, KHÔNG rơi ngầm
+        page_boxes = detector.boxes_for_page(page_bgr)   # all char boxes, once per page
+        seg_backend = "detector_centernet_v1"
 
     pairs: list[dict] = []
     n_gap_total = 0
@@ -443,4 +476,4 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                          anchored=bool(nbr))
             pairs.extend(col_pairs)
     return {"page": page_name, "page_ok": page_ok, "pairs": pairs,
-            "n_review_gap": n_gap_total}
+            "n_review_gap": n_gap_total, "seg_backend": seg_backend}

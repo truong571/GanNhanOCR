@@ -10,7 +10,7 @@
 #              NHẤT, không cộng dồn. dataset_out/ vẫn giữ nguyên làm nơi làm
 #              việc trung gian (labels_remediated.csv đầy đủ tier + report...).
 #
-# 6 BƯỚC (đúng thứ tự, KHÔNG có cờ dòng lệnh — mọi lựa chọn hỏi qua stdin):
+# 7 BƯỚC (đúng thứ tự, KHÔNG có cờ dòng lệnh — mọi lựa chọn hỏi qua stdin):
 #   1 setup       pipeline.step0_setup — kiểm cấu hình/đường dẫn
 #   2 extract     PDF -> khung -> OCR (cache) -> 9 cột/trang  (CHỈ sách đã chọn)
 #   3 build       align_engine.build_dataset -> labels.csv + crops (LUÔN cả 3 sách
@@ -19,7 +19,7 @@
 #   4 remediate   pipeline.remediation -> labels_remediated.csv + remediation_report.json
 #   5 confusion   pipeline.remediation.confusion_fix -> labels_final.csv (BẢN CÔNG BỐ)
 #                 hạ tier các confusion HỆ THỐNG đã chứng minh bằng audit người
-#   6 export      pipeline/export_final_dataset.py -> dataset/ (chỉ tier
+#   7 export      pipeline/export_final_dataset.py -> dataset/ (chỉ tier
 #                 GOLD+SILVER+SYLLABLE = usable; XOÁ SẠCH dataset/ cũ trước khi ghi)
 #
 # ⚠️ BƯỚC 5 KHÔNG ĐƯỢC BỎ. Trước 2026-08-11 script này export thẳng từ
@@ -80,7 +80,7 @@ die()  { printf '%s[LỖI]%s %s\n' "$RED" "$RST" "$*" >&2; exit 1; }
 banner() {   # banner <số> <tên bước> <mô tả>
   log ""
   log "${BLD}================================================================${RST}"
-  printf '%s>>> BƯỚC %s/6 · %s%s — %s\n' "$BLD" "$1" "$2" "$RST" "$3"
+  printf '%s>>> BƯỚC %s/7 · %s%s — %s\n' "$BLD" "$1" "$2" "$RST" "$3"
   log "${BLD}================================================================${RST}"
 }
 
@@ -270,6 +270,17 @@ print(len((yaml.safe_load(open('$CONFUSION_FIXES')) or {}).get('fixes', [])))" 2
       warn "$idx_csv RỖNG (không có dòng dữ liệu) -> crop-protos = 0 -> SILVER tụt ~32%."
     elif [[ -f "$first_crop" ]]; then
       ok "crop-proto: $idx_csv -> $first_crop (có thật, $(wc -l <"$idx_csv" | tr -d ' ') dòng)"
+      # THẾ HỆ: tệp tồn tại chưa đủ — index đời cũ trỏ sách tên `yen*` trong khi bộ
+      # nhãn hiện hành dùng `stt*`, giao nhau = 0 nên crop-proto rỗng trên thực tế
+      # mà preflight cũ vẫn báo xanh.
+      local n_old n_new
+      n_old=$(grep -c '/yen[0-9]*_' "$idx_csv" 2>/dev/null || echo 0)
+      n_new=$(grep -c '/stt[0-9]*_' "$idx_csv" 2>/dev/null || echo 0)
+      if (( n_old > 0 && n_new == 0 )); then
+        warn "crop-proto LỆCH THẾ HỆ: $idx_csv có $n_old dòng trỏ sách 'yen*' và 0 dòng 'stt*',
+      trong khi bộ nhãn hiện hành dùng 'stt*' -> giao nhau = 0 -> crop-protos RỖNG
+      trên thực tế dù tệp vẫn tồn tại. Sinh lại index sau lần build tới."
+      fi
     else
       warn "crop-proto TRỎ HỤT: $idx_csv dòng 2 = '$first_crop' KHÔNG có trên đĩa
       -> crop-protos = 0 -> SILVER tụt ~32% ÂM THẦM.
@@ -281,13 +292,13 @@ print(len((yaml.safe_load(open('$CONFUSION_FIXES')) or {}).get('fixes', [])))" 2
 }
 
 # ============================== CÁC BƯỚC =====================================
-# ---- 1/5 setup --------------------------------------------------------------
+# ---- 1/7 setup --------------------------------------------------------------
 step_setup() {
   banner 1 setup "kiểm cấu hình, đường dẫn, tài nguyên (pipeline.step0_setup)"
   X "$PY" -m pipeline.step0_setup "$CONFIG"
 }
 
-# ---- 2/5 extract ------------------------------------------------------------
+# ---- 2/7 extract ------------------------------------------------------------
 # Cache OCR trong prepared/*/detected/*_ocr_cache.json = PRIMARY DATA.
 # Còn cache = tái lập được. Xoá cache = gọi API ngoài = KHÔNG tái lập + tốn tiền.
 step_extract() {
@@ -310,7 +321,7 @@ step_extract() {
   done
 }
 
-# ---- 3/5 build --------------------------------------------------------------
+# ---- 3/7 build --------------------------------------------------------------
 # -> dataset_out/labels.csv + crops gold/silver/syllable
 # LƯU Ý: build_dataset.py duyệt TOÀN BỘ config["books"] (cả 3 sách), KHÔNG lọc
 # theo sách vừa chọn ở bước extract. Đây là chủ ý: nếu chỉ chọn 1 sách để
@@ -339,7 +350,7 @@ checkpoint() {
   log "  ${CYA}sha256 -> $CHECKSUMS ($tag)${RST}"
 }
 
-# ---- 4/5 remediate ----------------------------------------------------------
+# ---- 4/7 remediate ----------------------------------------------------------
 # -> labels_remediated.csv + remediation_report.json
 step_remediate() {
   banner 4 remediate "kiểm kê trùng lặp + cách ly/hạ tier -> $LABELS_REMED"
@@ -348,7 +359,7 @@ step_remediate() {
   [[ -f "$LABELS_REMED" ]] || die "bước remediate không sinh $LABELS_REMED"
 }
 
-# ---- 5/6 confusion ----------------------------------------------------------
+# ---- 5/7 confusion ----------------------------------------------------------
 # -> labels_final.csv + confusion_fix_report.json
 # Hàm thuần, idempotent: đọc labels_remediated.csv, hạ tier các cặp (âm tiết, chữ)
 # liệt trong config/confusion_fixes.yaml -> ghi BẢN CÔNG BỐ. KHÔNG remap codepoint.
@@ -421,7 +432,42 @@ evidence() {
       printf '| `%s` | (chưa có) |\n' "$f" >>"$EVIDENCE"
     fi
   done
-  ok "bảng sha256 đã ghi vào $EVIDENCE"
+  ok "bảng sha256 đã ghi vào $EVIDENCE (nhật ký)"
+
+  # --- BẢN HIỆN HÀNH: khối luôn được GHI ĐÈ, không phải nhật ký ----------------
+  # Trước 2026-08-23 evidence() CHỈ append mục "## Lần chạy", nên bảng §3 "đóng băng
+  # 2026-07-20" chắc chắn lệch sau mỗi lần chạy, và hash của labels_final.csv hiện
+  # hành KHÔNG xuất hiện ở đâu trong tệp. Khối dưới đây là chỗ DUY NHẤT bảo đảm phản
+  # ánh trạng thái hiện tại — mọi phép đối chiếu phải dùng nó.
+  local blk_start='<!-- HIEN_HANH:START -->' blk_end='<!-- HIEN_HANH:END -->'
+  local tmp; tmp="$(mktemp)"
+  {
+    printf '%s\n' "$blk_start"
+    printf '## BẢN HIỆN HÀNH (tự sinh — ghi đè mỗi lần chạy, ĐỪNG sửa tay)\n\n'
+    printf -- '- sinh lúc: `%s`\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+    printf -- '- commit  : `%s`\n' "$(git rev-parse --short HEAD 2>/dev/null || echo 'không phải git')"
+    printf -- '- sách    : %s | reseg=%s\n\n' "$BOOKS_LABEL" "$RESEG"
+    printf '| file | sha256 |\n|---|---|\n'
+    local f h
+    for f in "${files[@]}"; do
+      if [[ -f "$f" ]]; then h=$($sha_cmd "$f" | awk '{print $1}')
+      else h='(chưa có)'; fi
+      printf '| `%s` | `%s` |\n' "$f" "$h"
+    done
+    printf '\nKiểm lại: `bash scripts/check_evidence.sh`\n'
+    printf '%s\n' "$blk_end"
+  } >"$tmp"
+
+  if grep -qF "$blk_start" "$EVIDENCE" 2>/dev/null; then
+    awk -v s="$blk_start" -v e="$blk_end" -v f="$tmp" '
+      index($0,s){ while ((getline l < f) > 0) print l; close(f); skip=1; next }
+      index($0,e){ skip=0; next }
+      !skip' "$EVIDENCE" >"$EVIDENCE.new" && mv "$EVIDENCE.new" "$EVIDENCE"
+  else
+    cat "$tmp" >>"$EVIDENCE"
+  fi
+  rm -f "$tmp"
+  ok "khối BẢN HIỆN HÀNH đã cập nhật trong $EVIDENCE"
 }
 
 # =============================== MAIN ========================================

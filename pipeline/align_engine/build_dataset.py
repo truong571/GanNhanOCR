@@ -42,7 +42,8 @@ sys.path.insert(0, str(REPO))
 from pipeline.step0_setup import load_config                       # noqa: E402
 from core.text.dictionary import load_qn_to_nom, load_similarity_dict  # noqa: E402
 from core.text.text_utils import is_plausible_qn_syllable  # noqa: E402
-from pipeline.align_engine.align_production import align_page          # noqa: E402
+from pipeline.align_engine.align_production import (                    # noqa: E402
+    DetectorUnavailableError, align_page, preflight_detector)
 from pipeline.align_engine.consensus import decide_label              # noqa: E402
 from pipeline.align_engine.bbox_fix import tighten_box, carve_neighbor_ink  # noqa: E402
 
@@ -219,6 +220,10 @@ def main():
             print(f"  [reseg] valley_guarded needs the encoder ({e}) -> midpoint fallback.", flush=True)
     if args.reseg != "midpoint":
         print(f"  [reseg] mode = {args.reseg}", flush=True)
+        # FAIL FAST: dựng detector NGAY, trước khi duyệt trang nào. Thiếu checkpoint mà
+        # chạy tiếp = lặng lẽ tách chữ bằng trung điểm cho cả 445 trang.
+        _backend = preflight_detector(args.reseg)
+        print(f"  [reseg] backend thực dùng = {_backend}", flush=True)
 
     # ---------- PASS 1: align all pages, collect records (no crop yet) ----------
     records = []
@@ -236,6 +241,10 @@ def main():
             try:
                 rec = align_page(page, data_dir, qn_dict_set, qn_to_nom, similar, "new",
                                  reseg_mode=args.reseg, encoder=reseg_encoder)
+            except DetectorUnavailableError:
+                # KHÔNG nuốt: thiếu detector mà vẫn chạy tiếp = lặng lẽ tách chữ bằng
+                # trung điểm cho TOÀN BỘ corpus. Phải dừng hẳn.
+                raise
             except Exception as e:
                 print(f"   [warn] {book}/{page}: {type(e).__name__}: {e}", flush=True)
                 continue
@@ -258,6 +267,7 @@ def main():
                     "syllable": str(p["syllable"]).lower(), "bbox": p.get("bbox"),
                     "tier": dec.tier, "rule": dec.rule_id, "label": dec.label or "",
                     "s3_cosine": round(s3.cosine, 3) if s3 else "",
+                    "seg_backend": rec.get("seg_backend", ""),
                 })
 
     # ---------- PROMOTE: cross-page-consistent unconfirmed -> SYLLABLE [#6] ----------

@@ -10,7 +10,14 @@
 #     remediation              35 passed,  0 failed
 #     phase1_engine            30 passed,  0 failed
 #     -------------------------------------------
-#     TỔNG                    427 passed,  0 failed  (mốc 2026-08-22, +13: chốt cache OCR)
+#     TỔNG                    448 passed,  0 failed  (mốc 2026-08-23, +21: KHỐI 1)
+#
+# ĐỔI SO VỚI MỐC 2026-08-22 (427/0):
+#   +12  remediation::test_s3_unwind — chốt chặn lớp confusion: không cặp (âm,chữ) đã
+#        chứng minh sai hệ thống nào được quay lại tier dùng được sau s3_unwind. 48 ô
+#        㝵/"người" đã lọt vào bộ công bố theo đúng đường này.
+#   + 9  remediation::test_confusion_fix_join — chuẩn hoá tiền tố sách yen*->stt*.
+#        Trước đó join khớp 0/825 nên --measure trả null TRONG IM LẶNG; nay 816/825.
 #
 # ĐỔI SO VỚI MỐC 2026-08-19 (414/0):
 #   +13  phase1_engine_selftest::test_ocr_cache_guard — chốt đối chiếu cache OCR với
@@ -55,7 +62,7 @@
 # xanh. Riêng phase1 "low-purity" là lỗi TEST (placeholder 'x' bị lọc là rác nên
 # purity không được kiểm) — đã sửa placeholder thành âm tiết hợp lệ 'an'/'ba'.
 #
-# => Con số trích dẫn trong luận văn phải là 427 assertions (427 pass, 0 fail), KHÔNG
+# => Con số trích dẫn trong luận văn phải là 448 assertions (448 pass, 0 fail), KHÔNG
 #    còn là 360 hay 223 — 223 là mốc cũ và đã bỏ sót toàn bộ selftest của bước 1-2.
 
 set -uo pipefail
@@ -64,7 +71,7 @@ cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=427
+BASELINE_PASS=448
 BASELINE_FAIL=0
 
 MODULES=(
@@ -100,7 +107,7 @@ done
 
 echo "----------------------------------------------------------------"
 printf "%-38s %s\n" "TỔNG" "$total_pass passed, $total_fail failed"
-printf "%-38s %s\n" "MỐC 2026-08-22" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
+printf "%-38s %s\n" "MỐC 2026-08-23" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
 echo "================================================================"
 
 if [ "$total_pass" -eq "$BASELINE_PASS" ] && [ "$total_fail" -eq "$BASELINE_FAIL" ]; then

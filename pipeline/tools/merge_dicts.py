@@ -29,7 +29,9 @@ from pathlib import Path
 import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
-DICT = REPO / "Dict"
+from core.text.dictionary import dict_dir  # noqa: E402
+DICT_DIR = dict_dir(REPO)
+DICT = DICT_DIR
 QN_CSV = DICT / "QuocNgu_SinoNom.csv"
 SIM_CSV = DICT / "SinoNom_Similar.csv"
 

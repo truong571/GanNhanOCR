@@ -42,8 +42,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
 
     from core.text.dictionary import load_qn_to_nom, load_similarity_dict
-    qn = load_qn_to_nom(str(REPO / "Dict" / "QuocNgu_SinoNom.csv"))
-    sim = load_similarity_dict(str(REPO / "Dict" / "SinoNom_Similar.csv"))
+    qn = load_qn_to_nom(str(DICT_DIR / "QuocNgu_SinoNom.csv"))
+    sim = load_similarity_dict(str(DICT_DIR / "SinoNom_Similar.csv"))
     readings_of = {}
     for syl, chars in qn.items():
         for ch in chars:

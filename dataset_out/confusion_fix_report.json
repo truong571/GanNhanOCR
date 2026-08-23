@@ -1,15 +1,15 @@
 {
   "n_fixes": 1,
-  "total_demoted": 1924,
+  "total_demoted": 1972,
   "tier_before": {
-    "GOLD": 50272,
-    "REVIEW": 13816,
+    "GOLD": 51457,
+    "REVIEW": 12631,
     "SILVER": 11420,
     "SYLLABLE": 6761
   },
   "tier_after": {
-    "GOLD": 48878,
-    "REVIEW": 15740,
+    "GOLD": 50015,
+    "REVIEW": 14603,
     "SILVER": 10890,
     "SYLLABLE": 6761
   },
@@ -18,25 +18,31 @@
       "syllable": "người",
       "label": "㝵",
       "to_tier": "REVIEW",
-      "demoted": 1924,
+      "demoted": 1972,
       "by_book": {
         "stt2": 741,
-        "stt4": 631,
-        "stt11": 552
+        "stt4": 632,
+        "stt11": 599
       },
       "reason": "systematic_confusion_nguoi_3775"
     }
   ],
   "precision_gold_before": {
-    "gold_audited": 0,
-    "correct": 0,
-    "precision": null,
-    "wrong": 0
+    "gold_audited": 814,
+    "correct": 791,
+    "precision": 0.9717,
+    "wrong": 23,
+    "joined": 816,
+    "verdicts": 825,
+    "provenance": "UNVERIFIED_machine_graded__see_KE_HOACH_TONG_THE_2026-08-22_§0"
   },
   "precision_gold_after": {
-    "gold_audited": 0,
-    "correct": 0,
-    "precision": null,
-    "wrong": 0
+    "gold_audited": 791,
+    "correct": 775,
+    "precision": 0.9798,
+    "wrong": 16,
+    "joined": 816,
+    "verdicts": 825,
+    "provenance": "UNVERIFIED_machine_graded__see_KE_HOACH_TONG_THE_2026-08-22_§0"
   }
 }

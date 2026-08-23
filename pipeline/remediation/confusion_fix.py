@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 
 import pandas as pd
@@ -49,21 +50,44 @@ def apply_fixes(df: pd.DataFrame, fixes: list[dict]) -> tuple[pd.DataFrame, list
     return out, log
 
 
+_BOOK_ALIAS = re.compile(r"(^|/)yen(\d+)_")
+
+
+def normalize_image_key(path: str) -> str:
+    """Chuẩn hoá tiền tố sách đời cũ `yen*` -> `stt*` trước khi join.
+
+    `verdicts_reanchored.csv` ghi `gold/yen11_page_0018_c05_094.png` trong khi bộ nhãn
+    dùng `gold/stt11_...`. Join thô khớp 0/825 nên `--measure` trả `null` TRONG IM LẶNG
+    suốt nhiều lần chạy. Sau khi chuẩn hoá: 816/825.
+    """
+    return _BOOK_ALIAS.sub(lambda m: f"{m.group(1)}stt{m.group(2)}_", str(path))
+
+
 def measure_gold_precision(final: pd.DataFrame) -> dict | None:
-    """Precision GOLD sau fix, neo trên verdicts_reanchored.csv (join theo image)."""
+    """Precision GOLD sau fix, neo trên verdicts_reanchored.csv (join theo image).
+
+    ⚠️ XUẤT XỨ CHƯA XÁC MINH ĐƯỢC (2026-08-22). Bộ 846 phán quyết trong tệp này dùng
+    ĐÚNG mẫu của một mẻ MÁY chấm (`audit_gold/audit_gold.jsonl`, trùng 846/846 item_id)
+    nhưng giá trị verdict chỉ khớp 47/846, và verdict thô gốc đã mất
+    (`docs/EVIDENCE_INDEX.md:18`). Mọi con số ra từ đây phải gắn nhãn CHƯA ĐO cho tới
+    khi có mẻ chấm người mới — xem docs/KE_HOACH_TONG_THE_2026-08-22.md §0.
+    """
     vp = REPO / "dataset_out" / "ground_truth" / "verdicts_reanchored.csv"
     if not vp.exists():
         return None
     v = pd.read_csv(vp, dtype=str)
     v = v[v["status"] == "matched"]
-    tier_by_img = dict(zip(final["image"], final["tier"]))
-    v = v.assign(tier_now=v["image_new"].map(tier_by_img))
+    tier_by_img = {normalize_image_key(k): t for k, t in zip(final["image"], final["tier"])}
+    joined = v["image_new"].map(normalize_image_key).map(tier_by_img)
+    v = v.assign(tier_now=joined)
     g = v[(v["tier_now"] == "GOLD") & (v["verdict"] != "unsure")]
     n = len(g)
     correct = int((g["verdict"] == "correct").sum())
     return {"gold_audited": n, "correct": correct,
             "precision": round(correct / n, 4) if n else None,
-            "wrong": n - correct}
+            "wrong": n - correct,
+            "joined": int(joined.notna().sum()), "verdicts": int(len(v)),
+            "provenance": "UNVERIFIED_machine_graded__see_KE_HOACH_TONG_THE_2026-08-22_§0"}
 
 
 def run(in_csv: Path, out_csv: Path, fixes_yaml: Path, measure: bool) -> dict:
@@ -98,6 +122,10 @@ def run(in_csv: Path, out_csv: Path, fixes_yaml: Path, measure: bool) -> dict:
         if b.get("precision") is not None and a.get("precision") is not None:
             print(f" precision GOLD: {b['precision']:.4f} (n={b['gold_audited']}, sai {b['wrong']}) "
                   f"→ {a['precision']:.4f} (n={a['gold_audited']}, sai {a['wrong']})")
+            print(f" join khớp {a['joined']}/{a['verdicts']} verdict")
+            print(" ⚠️  XUẤT XỨ CHƯA XÁC MINH — bộ verdict này dùng đúng mẫu của một mẻ")
+            print("    MÁY chấm và verdict thô gốc đã mất. KHÔNG trích số này vào luận")
+            print("    văn cho tới khi có mẻ chấm người mới (KE_HOACH_TONG_THE §0).")
         else:
             # precision = None khi CHƯA có verdict NGƯỜI cho GOLD (không có audit để đo).
             # Trước đây format None -> TypeError làm CHẾT bước confusion sau khi đã ghi

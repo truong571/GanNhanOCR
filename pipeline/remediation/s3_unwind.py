@@ -11,8 +11,8 @@ CI của cả hai đều CHỨA 0,5 → không tín hiệu thị giác nào phâ
 Val head-top1 tăng 0,23 -> 0,806 mà AUC bắt lỗi đứng yên: encoder giỏi XẾP HẠNG chứ
 không PHÁT HIỆN SAI. Vậy S3 không được quyền phong hay hạ tier nữa.
 
-BA VIỆC, KHÔNG CÓ VIỆC THỨ TƯ
------------------------------
+BỐN VIỆC, KHÔNG CÓ VIỆC THỨ NĂM
+--------------------------------
 1. TRẢ VỀ GOLD các ô `s1_inter_s2_similar|demoted_lowcos_s3`.
    Chúng đã thoả S1 ∩ S2 (giao từ điển qua cầu nối tự dạng) và bị hạ CHỈ vì cosine thấp
    — tiêu chí vừa bị bác. Căn cứ: chính luật `s1_inter_s2_similar` đo được 97,6%
@@ -28,6 +28,15 @@ BA VIỆC, KHÔNG CÓ VIỆC THỨ TƯ
 3. ĐỔI LÝ DO `below_visual_threshold` -> `no_s1_inter_s2`. Tier vẫn REVIEW, chỉ sửa
    cái tên cho đúng bản chất: các ô này ở REVIEW vì KHÔNG có giao S1∩S2, chứ không
    phải vì "điểm thị giác thấp" — lý do cũ viện đến một ngưỡng không còn hiệu lực.
+
+4. CHỐT CHẶN LỚP CONFUSION (thêm 2026-08-23). Không cặp (âm, chữ) nào trong
+   `config/confusion_fixes.yaml` được phép nằm ở tier dùng được sau bước này.
+   VÌ SAO CẦN: 48 ô 㝵/"người" đã lọt vào bộ công bố theo đúng đường này —
+   bước 4 hạ chúng xuống REVIEW theo S3, bước 5 `confusion_fix` chỉ demote tier
+   {GOLD, SILVER} nên BỎ QUA (chúng đang ở REVIEW), rồi bước 6 readmit trả thẳng
+   về GOLD. Ba chốt an toàn cũ chỉ kiểm số dòng / cột label / hậu tố demote nên
+   không ai thấy. Bước này CHỮA (demote) chứ không chỉ chặn, để chạy trên tệp đã
+   hỏng sẵn cũng ra kết quả sạch, và bất biến ở cuối hàm trở thành assertion thật.
 
 BƯỚC NÀY KHÔNG SỬA MỘT CHỮ NÀO
 ------------------------------
@@ -46,17 +55,57 @@ from pathlib import Path
 
 import pandas as pd
 
-__all__ = ["DEMOTE_SUFFIX", "SILVER_UNCAL", "unwind"]
+__all__ = ["DEMOTE_SUFFIX", "SILVER_UNCAL", "unwind", "load_confusion_pairs"]
 
 DEMOTE_SUFFIX = "|demoted_lowcos_s3"
 SILVER_UNCAL = "SILVER_uncalibrated"
 OLD_REVIEW_REASON = "below_visual_threshold"
 NEW_REVIEW_REASON = "no_s1_inter_s2"
 FLAG_COL = "readmitted_from_s3_demotion"
+USABLE_TIERS = {"GOLD", "SILVER", "SILVER_uncalibrated", "SYLLABLE"}
+DEFAULT_FIXES = Path(__file__).resolve().parents[2] / "config" / "confusion_fixes.yaml"
 
 
-def unwind(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
-    """Trả (bảng đã gỡ S3, báo cáo). Tất định, không phụ thuộc thứ tự dòng."""
+def load_confusion_pairs(path: Path | str | None = None) -> list[dict]:
+    """Đọc các cặp (syllable, label) đã chứng minh sai hệ thống từ confusion_fixes.yaml.
+
+    Trả [] nếu tệp không tồn tại — KHÔNG ném lỗi, vì `unwind` vẫn phải chạy được trên
+    một cây chỉ có dữ liệu. Nhưng preflight của run_pipeline.sh đã bắt thiếu tệp này.
+    """
+    import yaml
+    p = Path(path) if path is not None else DEFAULT_FIXES
+    if not p.exists():
+        return []
+    cfg = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+    return [
+        {"syllable": str(f["syllable"]).lower(), "label": str(f["label"]),
+         "reason": str(f.get("reason", "demote"))}
+        for f in (cfg.get("fixes") or [])
+        if f.get("action") == "demote" and f.get("syllable") and f.get("label")
+    ]
+
+
+def _confusion_mask(df: pd.DataFrame, pairs: list[dict]):
+    """Mặt nạ các dòng khớp BẤT KỲ cặp confusion nào (so trên cột `label`)."""
+    m = pd.Series(False, index=df.index)
+    if not pairs or "syllable" not in df.columns or "label" not in df.columns:
+        return m          # bảng không đủ cột để phán -> không chặn gì (test tổng hợp)
+    syl = df["syllable"].fillna("").astype(str).str.lower()
+    lab = df["label"].fillna("").astype(str)
+    for fx in pairs:
+        m |= (syl == fx["syllable"]) & (lab == fx["label"])
+    return m
+
+
+def unwind(df: pd.DataFrame,
+           confusion_pairs: list[dict] | None = None) -> tuple[pd.DataFrame, dict]:
+    """Trả (bảng đã gỡ S3, báo cáo). Tất định, không phụ thuộc thứ tự dòng.
+
+    `confusion_pairs=None` -> tự nạp từ config/confusion_fixes.yaml (mặc định AN TOÀN).
+    Truyền [] để tắt hẳn chốt chặn (chỉ dùng trong test).
+    """
+    if confusion_pairs is None:
+        confusion_pairs = load_confusion_pairs()
     out = df.copy()
     rule = out["rule"].fillna("").astype(str)
 
@@ -72,6 +121,28 @@ def unwind(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
     silver = out["tier"] == "SILVER"
     out.loc[silver, "tier"] = SILVER_UNCAL
 
+    # --- 4. CHỐT CHẶN LỚP CONFUSION (thêm 2026-08-23) --------------------
+    # Không lớp (âm, chữ) nào ĐÃ CHỨNG MINH SAI HỆ THỐNG được phép ở tier dùng được
+    # sau bước này. Trước đó 48 ô 㝵/"người" lọt vào bộ công bố theo đúng đường này:
+    #   bước 4 hạ chúng xuống REVIEW theo S3
+    #   -> bước 5 confusion_fix chỉ demote tier {GOLD, SILVER} nên BỎ QUA (chúng đang REVIEW)
+    #   -> bước 6 readmit trả thẳng về GOLD, không ai kiểm lại.
+    # Ở đây CHỮA chứ không chỉ chặn, để chạy trên tệp đã hỏng sẵn cũng ra kết quả sạch.
+    conf = _confusion_mask(out, confusion_pairs)
+    demote = conf & out["tier"].isin(USABLE_TIERS)
+    by_pair: dict[str, int] = {}
+    if demote.any():
+        syl_l = out["syllable"].fillna("").astype(str).str.lower()
+        lab_s = out["label"].fillna("").astype(str)
+        for fx in confusion_pairs:
+            m = demote & (syl_l == fx["syllable"]) & (lab_s == fx["label"])
+            if m.any():
+                out.loc[m, "rule"] = "confusion_fix:" + fx["reason"]
+                out.loc[m, "label_level"] = ""
+                by_pair[f"{fx['label']}/{fx['syllable']}"] = int(m.sum())
+        out.loc[demote, "tier"] = "REVIEW"
+        out.loc[demote, FLAG_COL] = ""      # không được mang cờ "đã trả về GOLD"
+
     # --- 3. đổi tên lý do REVIEW ----------------------------------------
     reason = out["rule"].fillna("").astype(str)
     renamed = reason.eq(OLD_REVIEW_REASON)
@@ -84,10 +155,17 @@ def unwind(df: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
         raise SystemExit("cột label bị đụng — dừng, bước này không được sửa nhãn")
     if (out["rule"].fillna("").astype(str).str.contains(DEMOTE_SUFFIX.lstrip("|"))).any():
         raise SystemExit("còn sót hậu tố demote — dừng")
+    # BẤT BIẾN MỚI: sau bước này không lớp confusion nào còn nằm ở tier dùng được.
+    leaked = _confusion_mask(out, confusion_pairs) & out["tier"].isin(USABLE_TIERS)
+    if leaked.any():
+        got = out.loc[leaked, ["label", "syllable", "tier"]].value_counts().to_dict()
+        raise SystemExit(f"BẤT BIẾN HỎNG — lớp confusion còn ở tier dùng được: {got}")
 
     report = {
         "n_rows": int(len(out)),
         "readmitted_to_gold": int(readmit.sum()),
+        "confusion_demoted_after_unwind": int(demote.sum()),
+        "confusion_demoted_by_pair": by_pair,
         "silver_renamed": int(silver.sum()),
         "review_reason_renamed": int(renamed.sum()),
         "tier_before": {k: int(v) for k, v in df["tier"].value_counts().items()},

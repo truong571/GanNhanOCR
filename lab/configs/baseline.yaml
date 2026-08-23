@@ -1,0 +1,13 @@
+# MỐC XUẤT PHÁT — trạng thái pipeline sau KHỐI 1/2 (commit 163db1ff59).
+# Mọi cấu hình thí nghiệm về sau phải so với dòng này.
+name: baseline
+labels: dataset_out/labels_final.csv
+src_root: dataset_out
+crops: true
+crop_sample: 0          # 0 = đo toàn bộ 56.776 crop
+perturb:
+  enabled: true
+  seeds: 3
+  max_columns: 0        # 0 = cả 3.966 cột
+  band_slack: null      # null = giữ BAND_SLACK=2 của engine
+  cost: {}              # rỗng = giữ ma trận chi phí hiện hành

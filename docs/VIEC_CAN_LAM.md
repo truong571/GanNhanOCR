@@ -24,7 +24,7 @@ dưới là căn cứ, không phải danh sách việc:
 ## ĐƯỜNG GĂNG
 
 ```
-KHỐI 0 ✅       →  KHỐI 1 (vá lỗi)  →  KHỐI 3 (bàn thí nghiệm)  →  KHỐI 4 (T1→T6)
+KHỐI 0 ✅       →  KHỐI 1 (vá lỗi)  →  KHỐI 3 ✅  →  KHỐI 4 (T1→T6)
                             ↓                                              ↓
                      KHỐI 2 ✅                          KHỐI 5 (tín hiệu nghĩa)
                                                                            ↓
@@ -134,20 +134,57 @@ lại cột. Không chặn gì.
 **Kiểm chứng**: selftest **448 passed, 0 failed** (khớp mốc, không hồi quy) · quét lại toàn `docs/`:
 0 tệp còn số huỷ mà thiếu cờ.
 
-# KHỐI 3 — DỰNG BÀN THÍ NGHIỆM (3–4 ngày)
+# KHỐI 3 — DỰNG BÀN THÍ NGHIỆM ✅ HOÀN THÀNH 2026-08-23
 
-- [ ] **3.1 `pipeline/lab/runner.py`** — chạy một cấu hình (1 YAML) vào `lab/run_<hash>/`, không
-  đụng `dataset_out/`
-- [ ] **3.2 `pipeline/lab/metrics.py`** — thư viện thước đo hình học; **nối `crop_quality.py` vào
-  đây** (lần đầu tiên module 208 dòng này được dùng)
-- [ ] **3.3 `pipeline/lab/perturb.py`** — sinh nhiễu loạn có đáp án trên dữ liệu thật (7 loại × 3 mức)
-- [ ] **3.4 `pipeline/lab/synth.py`** — sinh trang tổng hợp từ 89.898 glyph FontDiffusion, nhiễu
-  hiệu chuẩn theo `ink_pct` thật
-- [ ] **3.5 `lab/results.csv`** — mỗi dòng = 1 cấu hình × mọi thước đo
+- [x] **3.1 `pipeline/lab/runner.py`** — chạy 1 cấu hình YAML → 1 dòng `lab/results.csv`, không đụng
+  `dataset_out/`. `run_id` = 12 ký tự đầu sha256 của cấu hình đã chuẩn hoá (**bỏ qua `name`** vì đó
+  chỉ là nhãn người đọc) → đổi tham số là thành dòng mới, không ghi đè nhầm. Có `--quick` để thử tay.
+- [x] **3.2 `pipeline/lab/metrics.py`** — 4 nhóm thước đo họ D: hình học crop (**lần đầu tiên
+  `crop_quality.py` được dùng thật**), chất lượng âm QN, cấu trúc cột + tỉ lệ ô neo, thành phần
+  tier/lớp + mâu thuẫn md5.
+- [x] **3.3 `pipeline/lab/perturb.py`** — chuẩn nhiễu loạn có đáp án: 7 loại hỏng × 3 mức × N seed,
+  chỉ số `anchor_retention`. Mốc không hỏng = **1,0 chính xác** (chuẩn không thiên lệch).
+- [x] **3.4 `pipeline/lab/synth.py`** — trang tổng hợp 9 cột từ **89.898 glyph** FontDiffusion, đáp
+  án hộp chính xác 100%, nhiễu (đứt nét/nhoè/vân gỗ) **hiệu chuẩn theo `ink_pct` đo trên ảnh thật**
+  qua `calibrate()` đọc `results.csv`. Giới hạn khai thẳng trong docstring: kiểm **hành vi thuật
+  toán**, KHÔNG dùng để công bố số chất lượng của bộ thật.
+- [x] **3.5 `lab/results.csv`** — 62 cột/dòng; `append_row` ghi đè theo `run_id` và tự mở rộng header.
 
-**Hoàn thành khi**: chạy baseline ghi được 1 dòng đầy đủ, chạy lại **byte-identical**.
+## MỐC XUẤT PHÁT (`baseline`, run_id `d004238795fe`)
 
----
+### Chất lượng hình học 56.776 crop — **lần đo đầu tiên của đề tài**
+
+| cờ | số ô | % |
+|---|---|---|
+| `ok` | 52.787 | **92,97%** |
+| `bleed` (dính mực hàng xóm) | 3.560 | **6,27%** |
+| `truncated` (cắt vào nét) | 389 | 0,69% |
+| `blank` | 40 | 0,07% |
+
+Ngoại lai tỉ lệ khung 1,98% · `stray_ink` p95 0,136 · `border_ink` p95 0,100 · `ink_pct` p50 0,175.
+⇒ **7,03% bộ giao nộp có khuyết tật hình học đo được** — chiều CROP nay do **máy** đo, không phải mắt người.
+
+### Độ bền căn chỉnh — **2.827.637 phép thử ô neo**
+
+| loại hỏng | retention | |
+|---|---|---|
+| `subst_char` (S1 đọc nhầm tự dạng) | 0,9997 | bền nhất |
+| `drop_syl` · `drop_char` · `tone_syl` | 0,999 | |
+| `ins_syl` | 0,9937 | |
+| **`swap_syl`** (lỗi thứ tự) | **0,9438** | |
+| **`split_char`** (detector cắt đôi hộp) | **0,9112** | **yếu nhất** |
+| **TỔNG** | **0,9773** | |
+
+⇒ Căn chỉnh giòn nhất trước **over-segmentation** và **lỗi thứ tự âm** — định hướng trực tiếp cho T3/T4.
+
+## Một lỗi tự bắt được
+
+Phép kiểm tất định của chính bàn thí nghiệm **bắt được lỗi trong bàn thí nghiệm**: seed dựng bằng
+`tuple.__hash__()` chứa chuỗi, mà hash chuỗi bị **ngẫu nhiên hoá theo `PYTHONHASHSEED`** → hai lần
+chạy ra hai con số khác nhau (78.866 vs 78.841). Thay bằng md5 ổn định; 3/3 tiến trình nay ra số y
+hệt. Đã thêm assertion chạy `_seed` dưới `PYTHONHASHSEED` 0/1/random để không tái diễn.
+
+**Kiểm chứng**: selftest **495 passed, 0 failed** (mốc 448 → 495, +47) · baseline chạy lại ra số y hệt.
 
 # KHỐI 4 — SÁU CHƯƠNG TRÌNH THÍ NGHIỆM (4 tuần)
 

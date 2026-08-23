@@ -10,7 +10,13 @@
 #     remediation              35 passed,  0 failed
 #     phase1_engine            30 passed,  0 failed
 #     -------------------------------------------
-#     TỔNG                    448 passed,  0 failed  (mốc 2026-08-23, +21: KHỐI 1)
+#     TỔNG                    495 passed,  0 failed  (mốc 2026-08-23b, +47: KHỐI 3 lab)
+#
+# ĐỔI SO VỚI MỐC 448 (KHỐI 1):
+#   +47  pipeline.lab.selftest — bàn thí nghiệm (metrics/perturb/runner). Gồm chốt
+#        TẤT ĐỊNH LIÊN TIẾN TRÌNH: seed từng được dựng bằng tuple.__hash__() chứa
+#        chuỗi, mà hash chuỗi bị ngẫu nhiên hoá theo PYTHONHASHSEED -> hai lần chạy
+#        ra hai con số khác nhau. Test chạy _seed dưới PYTHONHASHSEED 0/1/random.
 #
 # ĐỔI SO VỚI MỐC 2026-08-22 (427/0):
 #   +12  remediation::test_s3_unwind — chốt chặn lớp confusion: không cặp (âm,chữ) đã
@@ -62,7 +68,7 @@
 # xanh. Riêng phase1 "low-purity" là lỗi TEST (placeholder 'x' bị lọc là rác nên
 # purity không được kiểm) — đã sửa placeholder thành âm tiết hợp lệ 'an'/'ba'.
 #
-# => Con số trích dẫn trong luận văn phải là 448 assertions (448 pass, 0 fail), KHÔNG
+# => Con số trích dẫn trong luận văn phải là 495 assertions (495 pass, 0 fail), KHÔNG
 #    còn là 360 hay 223 — 223 là mốc cũ và đã bỏ sót toàn bộ selftest của bước 1-2.
 
 set -uo pipefail
@@ -71,7 +77,7 @@ cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=448
+BASELINE_PASS=495
 BASELINE_FAIL=0
 
 MODULES=(
@@ -82,6 +88,7 @@ MODULES=(
   pipeline.publish.selftest
   pipeline.remediation.selftest
   pipeline.phase1_engine_selftest
+  pipeline.lab.selftest
 )
 
 total_pass=0

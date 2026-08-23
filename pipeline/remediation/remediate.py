@@ -6,8 +6,13 @@ labels.csv without re-running the pipeline:
   1. QUARANTINE the AE-1 ∪ F1 duplicate-crop defects (one crop, >1 label). Conflicting
      groups are fully quarantined (no copy is trustworthy); identical-label duplicate
      groups keep one representative and quarantine the rest.
-  2. DEMOTE similar-bridge GOLD rows whose recorded S3 cosine is below TAU_SILVER —
-     the visual evidence already contradicts the look-alike substitution.
+  2. DEMOTE similar-bridge GOLD rows whose recorded S3 cosine is below TAU_SILVER.
+     TẮT MẶC ĐỊNH từ 2026-08-19 (`s3_demote=False`): tiêu chí này dựa trên S3, mà S3
+     có error-AUC 0,566 [0,459-0,672] và bản ArcFace retrain 0,577 [0,442-0,706] —
+     CI của cả hai đều chứa 0,5. Hạ cấp bằng một tín hiệu không phân biệt được
+     đúng/sai là đánh rớt hàng sạch: luật `s1_inter_s2_similar` đo được 97,6%
+     (40/41), ngang `s1_inter_s2_direct` 98,0% (737/752). Bật lại bằng cờ
+     `--s3-demote` nếu cần tái lập thế hệ dữ liệu cũ.
   3. DEDUP-BY-MD5 SPLIT: force every surviving image_md5 into a single split, closing
      the train/test pixel leak (P0-D), then ASSERT the invariant holds.
 
@@ -66,7 +71,8 @@ def _group_key(row_md5: str, book, page, column, bbox) -> str:
     return row_md5 if row_md5 else f"{book}|{page}|{column}|{bbox}"
 
 
-def remediate(df: pd.DataFrame, tau_silver: float = TAU_SILVER) -> tuple[pd.DataFrame, RemediationReport]:
+def remediate(df: pd.DataFrame, tau_silver: float = TAU_SILVER,
+              s3_demote: bool = False) -> tuple[pd.DataFrame, RemediationReport]:
     """Return (remediated_frame, report). Input is not mutated."""
     out = df.copy()
     for col in ("tier", "rule", "split", "image_md5", "label", "bbox"):
@@ -115,7 +121,8 @@ def remediate(df: pd.DataFrame, tau_silver: float = TAU_SILVER) -> tuple[pd.Data
     # ---- Step 2: DEMOTE similar-bridge GOLD with S3 cosine below tau ----
     s3 = pd.to_numeric(out["s3_cosine"], errors="coerce")
     demote_mask = (
-        (out["tier"] == "GOLD")
+        pd.Series(s3_demote, index=out.index)
+        & (out["tier"] == "GOLD")
         & (out["rule"] == SIMILAR_RULE)
         & s3.notna()
         & (s3 < tau_silver)

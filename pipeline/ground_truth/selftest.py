@@ -134,9 +134,11 @@ def test_suspicion(labels: pd.DataFrame) -> pd.DataFrame:
     check("dup_bbox == 0 (dedup closed; hist 701)", dup_bbox == 0, f"got {dup_bbox}")
     # cross_col: BẤT BIẾN == 0. Lịch sử 1686 -> 8 (labels.csv 21/07) -> 0 (22/07).
     check("cross_col == 0 (dedup closed; hist 1686->8->0)", cross == 0, f"got {cross}")
-    # similar_bridge: đo 3850 (lịch sử 3856) — 6 hàng bridge biến động theo lần tái sinh
-    # labels.csv upstream (đây KHÔNG phải lớp dedup, chỉ là dao động nhỏ của census).
-    check("similar_bridge == 3850 (hist 3856)", sim == 3850, f"got {sim}")
+    # similar_bridge: đo 4098 sau khi gộp SinoNom_Similar_Đạt_v0 vào Dict/SinoNom_Similar.csv
+    # (2026-08-19, +34.881 cặp tự dạng). Lịch sử 3856 -> 3850 -> 4098.
+    # Con số này KHÔNG bất biến: nó là hàm của từ điển tự dạng, nên đổi từ điển thì phải
+    # đổi mốc ở đây — và chính vì vậy mà giữ mốc, để đổi từ điển mà quên thì test kêu.
+    check("similar_bridge == 4098 (hist 3856->3850, +dict 08-19)", sim == 4098, f"got {sim}")
     # dup_defect union: BẤT BIẾN == 0 = union(dup_bbox=0, cross_col=0). Lịch sử 2321 -> 8 -> 0.
     # Dedup upstream đã đóng lớp trùng (REVIEW không có image, loại khỏi tập usable).
     dup_union = int(ranked["dup_defect"].sum())

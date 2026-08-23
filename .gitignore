@@ -83,3 +83,7 @@ fonts/*
 # Mỗi mẻ ~12-16 MB HTML nhúng ảnh base64 -> không đưa vào git. Mẻ GỘP (audit_combined)
 # thì VẪN track: đó là mẻ thật sự đem chấm, là bằng chứng.
 /dataset_out/ground_truth/audit_split_*/
+
+# Trang đối chiếu Nôm↔Hán: 24 MB ảnh base64, dựng lại bằng
+#   .venv/bin/python -m pipeline.ground_truth.make_lookalike_page
+/dataset_out/ground_truth/lookalike/

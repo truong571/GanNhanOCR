@@ -29,7 +29,15 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
     with open(labels_path, encoding="utf-8", newline="") as f:
         reader = csv.DictReader(f)
         fieldnames = reader.fieldnames
-        rows = [r for r in reader if r.get("tier") in USABLE_TIERS]
+        all_rows = list(reader)
+        rows = [r for r in all_rows if r.get("tier") in USABLE_TIERS]
+
+    # LOẠI TRỪ PHẢI ỒN ÀO. Từ 2026-08-19 tier SILVER_uncalibrated (10.890 ô do S3
+    # quyết, 0 verdict người) nằm ngoài USABLE_TIERS nên tự rơi khỏi bộ giao nộp —
+    # nếu im lặng thì một hôm nào đó 10.890 ô biến mất mà không ai biết vì sao.
+    excluded = Counter(r.get("tier") for r in all_rows if r.get("tier") not in USABLE_TIERS)
+    for tier, n in sorted(excluded.items(), key=lambda kv: -kv[1]):
+        print(f"[export] LOẠI khỏi bộ giao nộp: {tier or '(trống)':22} {n:>7,} dòng")
 
     if not rows:
         print("[export] 0 dòng usable (GOLD/SILVER/SYLLABLE) trong "

@@ -57,6 +57,7 @@ LABELS_FINAL="dataset_out/labels_final.csv"   # BẢN CÔNG BỐ — nguồn c�
 CONFUSION_FIXES="${CONFUSION_FIXES:-config/confusion_fixes.yaml}"
 FINAL_DIR="dataset"
 EVIDENCE="docs/EVIDENCE_INDEX.md"
+CHECKSUMS="dataset_out/CHECKSUMS.txt"
 
 BOOKS=""            # tên đầy đủ trong config, cách nhau bởi dấu cách — điền ở ask_book_choice
 BOOKS_LABEL=""       # nhãn ngắn để in log
@@ -322,6 +323,22 @@ step_build() {
   [[ -f "$LABELS_RAW" ]] || die "bước build không sinh $LABELS_RAW"
 }
 
+# ---- CHỐT CHẶN sha256 --------------------------------------------------------
+# Ghi vân tay của mọi tạo phẩm nhãn sau mỗi bước quan trọng. Đây là chốt chặn cho
+# lỗi B8: mẻ audit người phải rút từ ĐÚNG bản labels_final.csv được export, và cách
+# duy nhất chứng minh điều đó là so sha256. Không có file này thì "bộ đem đo" và
+# "bộ đem nộp" lại trôi khỏi nhau như hồi trước 08-11.
+checkpoint() {
+  local tag="$1"; shift
+  local f
+  for f in "$@"; do
+    [[ -f "$f" ]] || continue
+    printf '%s  %s  %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$tag" \
+        "$(shasum -a 256 "$f" | awk '{print $1"  "$2}')" >> "$CHECKSUMS"
+  done
+  log "  ${CYA}sha256 -> $CHECKSUMS ($tag)${RST}"
+}
+
 # ---- 4/5 remediate ----------------------------------------------------------
 # -> labels_remediated.csv + remediation_report.json
 step_remediate() {
@@ -347,14 +364,32 @@ step_confusion() {
   [[ -f "$LABELS_FINAL" ]] || die "bước confusion không sinh $LABELS_FINAL"
 }
 
-# ---- 6/6 export -------------------------------------------------------------
+# ---- 6/7 gỡ S3 -------------------------------------------------------------
+# -> ghi ĐÈ labels_final.csv (luỹ đẳng) + s3_unwind_report.json
+# Đo 2026-08-19 trên 826 verdict NGƯỜI: S3 cũ error-AUC 0,566 [0,459-0,672];
+# ArcFace retrain (K=3+SAM, val top-1 0,806) 0,577 [0,442-0,706] — CI của cả hai
+# đều CHỨA 0,5. Không tín hiệu thị giác nào được quyền phong/hạ tier nữa.
+#   * 1.185 ô `|demoted_lowcos_s3` -> trả về GOLD (cờ readmitted_from_s3_demotion)
+#   * 10.890 ô SILVER -> SILVER_uncalibrated (0 verdict người; rơi khỏi bộ giao nộp,
+#     KHÔNG bị xoá — vẫn rút mẫu chấm tay được)
+#   * 10.934 ô below_visual_threshold -> no_s1_inter_s2 (đổi tên lý do, giữ REVIEW)
+# Bước này KHÔNG sửa nhãn nào và tự dừng nếu cột label bị đụng.
+step_s3unwind() {
+  banner 6 "gỡ S3" "gỡ tín hiệu thị giác khỏi mọi quyết định tier -> $LABELS_FINAL"
+  X "$PY" -m pipeline.remediation.s3_unwind \
+      --in "$LABELS_FINAL" --out "$LABELS_FINAL" \
+      --report dataset_out/s3_unwind_report.json --apply
+  [[ -f dataset_out/s3_unwind_report.json ]] || die "bước gỡ S3 không sinh báo cáo"
+}
+
+# ---- 7/7 export -------------------------------------------------------------
 # -> dataset/labels.csv + ảnh crop copy hẳn (chỉ tier usable: GOLD+SILVER+SYLLABLE)
 # Nguồn là labels_final.csv (SAU confusion-fix), KHÔNG phải labels_remediated.csv —
 # xem cảnh báo ở đầu file. XOÁ SẠCH dataset/ trước khi ghi -> luôn là bản MỚI NHẤT,
 # không cộng dồn qua các lần chạy trước. dataset_out/ KHÔNG bị đụng — vẫn còn
 # labels_remediated.csv đầy đủ mọi tier (kể cả REVIEW/QUARANTINE) để tra cứu sau.
 step_export() {
-  banner 6 export "xuất bộ dataset CUỐI CÙNG (GOLD+SILVER+SYLLABLE) -> $FINAL_DIR/ (tự chứa)"
+  banner 7 export "xuất bộ dataset CUỐI CÙNG (GOLD+SYLLABLE; SILVER_uncalibrated bị loại) -> $FINAL_DIR/ (tự chứa)"
   X "$PY" pipeline/export_final_dataset.py \
       --labels "$LABELS_FINAL" --src-root dataset_out --out "$FINAL_DIR"
   [[ -f "$FINAL_DIR/labels.csv" ]] || die "bước export không sinh $FINAL_DIR/labels.csv"
@@ -403,7 +438,7 @@ if [[ -f dataset_out/.FROZEN ]]; then
 fi
 
 log ""
-log "${BLD}Sẽ chạy:${RST} setup -> extract($BOOKS_LABEL) -> build(cả 3 sách) -> remediate -> confusion -> export"
+log "${BLD}Sẽ chạy:${RST} setup -> extract($BOOKS_LABEL) -> build(cả 3 sách) -> remediate -> confusion -> gỡ S3 -> export"
 log "  cache OCR : $([[ $FRESH_OCR == 1 ]] && echo 'XOÁ & OCR lại mới' || echo 'dùng cache cũ')"
 log "  ${YEL}export sẽ XOÁ SẠCH $FINAL_DIR/ hiện có rồi ghi lại bản mới nhất${RST}"
 read -r -p "Enter để bắt đầu, Ctrl-C để huỷ... " _
@@ -411,9 +446,15 @@ read -r -p "Enter để bắt đầu, Ctrl-C để huỷ... " _
 step_setup
 step_extract
 step_build
+checkpoint build "$LABELS_RAW"
 step_remediate
+checkpoint remediate "$LABELS_REMED"
 step_confusion
+checkpoint confusion "$LABELS_FINAL"
+step_s3unwind
+checkpoint s3unwind "$LABELS_FINAL"
 step_export
+checkpoint export "$FINAL_DIR/labels.csv"
 evidence
 
 log ""

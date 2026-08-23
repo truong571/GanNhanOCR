@@ -1,0 +1,216 @@
+{
+  "labels_source": "labels_final.csv",
+  "n_fixed": 73,
+  "by_rule": {
+    "unique": 66,
+    "corpus": 7
+  },
+  "verified_match_after_fix": 73,
+  "tiers_of_fixed": {
+    "SILVER": 69,
+    "REVIEW": 4
+  },
+  "pairs": [
+    {
+      "ocr_char": "礼",
+      "syllable_raw": "trấy",
+      "syllable": "trẩy",
+      "n": 15
+    },
+    {
+      "ocr_char": "孛",
+      "syllable_raw": "but",
+      "syllable": "bụt",
+      "n": 10
+    },
+    {
+      "ocr_char": "意",
+      "syllable_raw": "ây",
+      "syllable": "ấy",
+      "n": 10
+    },
+    {
+      "ocr_char": "意",
+      "syllable_raw": "ay",
+      "syllable": "áy",
+      "n": 4
+    },
+    {
+      "ocr_char": "噲",
+      "syllable_raw": "goi",
+      "syllable": "gọi",
+      "n": 4
+    },
+    {
+      "ocr_char": "杜",
+      "syllable_raw": "dố",
+      "syllable": "dỗ",
+      "n": 3
+    },
+    {
+      "ocr_char": "落",
+      "syllable_raw": "rac",
+      "syllable": "rạc",
+      "n": 2
+    },
+    {
+      "ocr_char": "老",
+      "syllable_raw": "sàu",
+      "syllable": "sáu",
+      "n": 2
+    },
+    {
+      "ocr_char": "法",
+      "syllable_raw": "phep",
+      "syllable": "phép",
+      "n": 2
+    },
+    {
+      "ocr_char": "陣",
+      "syllable_raw": "giân",
+      "syllable": "giận",
+      "n": 2
+    },
+    {
+      "ocr_char": "各",
+      "syllable_raw": "cac",
+      "syllable": "các",
+      "n": 2
+    },
+    {
+      "ocr_char": "恪",
+      "syllable_raw": "khac",
+      "syllable": "khác",
+      "n": 1
+    },
+    {
+      "ocr_char": "怨",
+      "syllable_raw": "oàn",
+      "syllable": "oán",
+      "n": 1
+    },
+    {
+      "ocr_char": "合",
+      "syllable_raw": "hop",
+      "syllable": "họp",
+      "n": 1
+    },
+    {
+      "ocr_char": "移",
+      "syllable_raw": "de",
+      "syllable": "dè",
+      "n": 1
+    },
+    {
+      "ocr_char": "禮",
+      "syllable_raw": "trấy",
+      "syllable": "trẩy",
+      "n": 1
+    },
+    {
+      "ocr_char": "地",
+      "syllable_raw": "điạ",
+      "syllable": "địa",
+      "n": 1
+    },
+    {
+      "ocr_char": "盈",
+      "syllable_raw": "riệng",
+      "syllable": "riêng",
+      "n": 1
+    },
+    {
+      "ocr_char": "皮",
+      "syllable_raw": "vưa",
+      "syllable": "vừa",
+      "n": 1
+    },
+    {
+      "ocr_char": "添",
+      "syllable_raw": "them",
+      "syllable": "thèm",
+      "n": 1
+    },
+    {
+      "ocr_char": "夭",
+      "syllable_raw": "iu",
+      "syllable": "ỉu",
+      "n": 1
+    },
+    {
+      "ocr_char": "枯",
+      "syllable_raw": "gổ",
+      "syllable": "gỗ",
+      "n": 1
+    },
+    {
+      "ocr_char": "枯",
+      "syllable_raw": "gố",
+      "syllable": "gỗ",
+      "n": 1
+    },
+    {
+      "ocr_char": "杜",
+      "syllable_raw": "đở",
+      "syllable": "đỡ",
+      "n": 1
+    },
+    {
+      "ocr_char": "何",
+      "syllable_raw": "ga",
+      "syllable": "gã",
+      "n": 1
+    },
+    {
+      "ocr_char": "末",
+      "syllable_raw": "mat",
+      "syllable": "mạt",
+      "n": 1
+    },
+    {
+      "ocr_char": "宝",
+      "syllable_raw": "bau",
+      "syllable": "báu",
+      "n": 1
+    },
+    {
+      "ocr_char": "佇",
+      "syllable_raw": "giư",
+      "syllable": "giữ",
+      "n": 1
+    }
+  ],
+  "ambiguous": [
+    {
+      "ocr_char": "係",
+      "syllable_raw": "hế",
+      "candidates": "hề/hể/hễ/hệ",
+      "n": 10
+    },
+    {
+      "ocr_char": "曰",
+      "syllable_raw": "vit",
+      "candidates": "vít/vịt",
+      "n": 2
+    },
+    {
+      "ocr_char": "忍",
+      "syllable_raw": "nhin",
+      "candidates": "nhìn/nhịn",
+      "n": 1
+    },
+    {
+      "ocr_char": "湼",
+      "syllable_raw": "net",
+      "candidates": "nét/nẹt",
+      "n": 1
+    },
+    {
+      "ocr_char": "折",
+      "syllable_raw": "chet",
+      "candidates": "chét/chẹt",
+      "n": 1
+    }
+  ],
+  "note": "Chỉ sửa khi âm đọc ra không phải từ tiếng Việt có thật. Trường hợp âm là từ có thật (異 'là' vs 'lạ') KHÔNG đụng vào — đó có thể là sai chữ chứ không phải sai thanh, phải để người chấm."
+}

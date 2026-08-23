@@ -23,7 +23,38 @@ labels.csv  --[remediation apply]-->  labels_remediated.csv  --[confusion_fix]--
 
 ---
 
-## 1. DATASET CUỐI (`labels_final.csv`, đo 2026-08-11)
+## 1b. SAU KHI GỠ S3 (`labels_final.csv`, đo **2026-08-19**) — BẢN HIỆN HÀNH
+
+Bước 6 `s3_unwind` (xem §4b: mọi tín hiệu thị giác có CI chứa 0,5) đã chạy trên bộ nhãn.
+sha256 mới: `3396915e0e62b8c7` · báo cáo: `dataset_out/s3_unwind_report.json`
+
+| Tier | Số ô | Đổi | Ghi chú |
+|---|---|---|---|
+| **GOLD** | **50.063** | **+1.185** | 1.185 ô `demoted_lowcos_s3` trả về, gắn cờ `readmitted_from_s3_demotion` |
+| SYLLABLE | 6.761 | 0 | cấp âm tiết, giữ nguyên |
+| **SILVER_uncalibrated** | **10.890** | (đổi tên) | **0 verdict người**; nằm NGOÀI `USABLE_TIERS` → **rơi khỏi bộ giao nộp**, KHÔNG bị xoá |
+| REVIEW | 14.555 | −1.185 | 10.934 ô đổi lý do `below_visual_threshold` → `no_s1_inter_s2` |
+
+- **Bộ giao nộp = GOLD + SYLLABLE = 56.824 ô** (trước: 66.589; **−9.765, −14,7%**)
+- **Precision GOLD: 97,98%** (777/793 verdict người) **CI95 [96,7 – 98,8]** — trước gỡ S3 là
+  98,00% (784/800). **Không đổi trong sai số**, đúng như dự kiến: bước này KHÔNG sửa nhãn nào.
+- **Số lớp ký tự trong bộ giao nộp: 1.582** — TĂNG so với 1.559 của bộ cũ (GOLD+SILVER),
+  vì 1.185 ô trả về mang thêm lớp. Bỏ SILVER **không** làm mất phủ lớp.
+- Căn cứ trả 1.185 ô về GOLD: luật `s1_inter_s2_similar` đo được **97,6%** (40/41,
+  CI95 [87,1–99,9]), không phân biệt được với `s1_inter_s2_direct` **98,0%** (737/752,
+  CI95 [96,7–98,9]).
+
+⚠️ **Hai điều PHẢI khai báo trong datasheet**:
+1. 97,98% vẫn là **POST-HOC** (tính trên chính mẫu đã dùng phát hiện lỗi 㝵/người); chưa có
+   mẫu SRS xác nhận độc lập.
+2. Trong 1.185 ô trả về GOLD chỉ có **2 ô** từng được người chấm → dùng cờ
+   `readmitted_from_s3_demotion` để lọc được.
+
+Lệnh tái sinh: `.venv/bin/python -m pipeline.remediation.s3_unwind --in dataset_out/labels_final.csv --out dataset_out/labels_final.csv --apply` (luỹ đẳng)
+
+---
+
+## 1. DATASET CUỐI (`labels_final.csv`, đo 2026-08-11) — TRƯỚC khi gỡ S3, giữ làm lịch sử
 
 Tổng: **82.274 dòng**.
 
@@ -81,6 +112,23 @@ Case study demote: 1 fix (người→㝵), demote **1.926 crop** sang REVIEW (`c
 | **Error-detection AUC (bank_cos)** | **0,566** [0,459–0,672] | S3 phân biệt nhãn ĐÚNG/SAI thật — **gần ngẫu nhiên** |
 | ~~precision 0,9517 / 0,959 / 0,976~~ | ĐÃ BỊ BÁC | proxy circular tự sinh (GOLD-test do chính S1∩S2 sinh) |
 
+### 4b. ArcFace retrain (Kaggle, Sub-center K=3 + SAM) — ĐO 2026-08-19, KHÔNG cứu được
+
+| checkpoint | val head-top1 | **error-detection AUC** (826 verdict NGƯỜI) | CI95 bootstrap |
+|---|---|---|---|
+| `ArcFace/checkpoints/best.pt` | 0,806 (epoch tốt nhất/30) | **0,577** | [0,442 – 0,706] |
+| `ArcFace/checkpoints/last.pt` | 0,806 (epoch 30, hoàn tất) | 0,558 | — |
+| ~~S3 cũ (`nom-embed/best.pt`)~~ | — | 0,566 | [0,459 – 0,672] |
+
+Tách theo loại lỗi (`best.pt`): chiều NHÃN (`wrong_label`, n=18) AUC **0,581** [0,423–0,736];
+chiều CROP (`wrong_image`, n=6) AUC 0,564 [0,263–0,821].
+
+**Kết luận**: bản retrain **không khác 0,5 có ý nghĩa thống kê** — CI của cả ba lát cắt đều
+chứa 0,5, và không hơn S3 cũ (0,566). Val top-1 tăng 0,23→0,806 nhưng AUC bắt lỗi đứng yên:
+xác nhận encoder giỏi **xếp hạng** chứ không **phát hiện nhãn sai**. → **Không có cổng thị
+giác nào dùng được**; chiến lược phải là 2 tín hiệu văn bản (S1 ∩ S2) + chiều CROP đo bằng
+hình học. Lệnh tái sinh: `python ArcFace/eval_human_verdicts.py --ckpt ArcFace/checkpoints/best.pt`
+
 **Kết luận**: S3 là **ranker/filter**, KHÔNG phải cổng phát hiện lỗi (must-pass). Số `measured_precision=0.9517` còn nằm trong `pipeline/align_engine/s3_calibration.json` (file dữ liệu JSON engine đọc, không chú thích được) — **đây là proxy circular, chưa thay bằng đo người**; không trích vào luận văn.
 
 ---
@@ -118,8 +166,8 @@ Số "hiện tại" là bất biến selftest (kiểm bằng `bash scripts/run_a
 
 ## 7. KIỂM ĐỊNH (selftest)
 
-**223 passed, 0 failed** — `bash scripts/run_all_selftests.sh` (mốc 2026-07-21).
-Con số "223 assertions" trong luận văn giờ **đúng và toàn xanh**.
+**414 passed, 0 failed** — `bash scripts/run_all_selftests.sh` (mốc 2026-08-19; lịch sử 223 → 392 → 414).
+Con số trích vào luận văn là **414 assertions**.
 
 ---
 

@@ -190,6 +190,99 @@ def test_ocr_retry():
           and ocr_api._token_cache["exp"] == 0.0)
 
 
+def test_ocr_cache_guard():
+    """Chốt chặn cache OCR: cache chỉ hợp lệ với ĐÚNG ảnh đã sinh ra nó.
+
+    Trước 2026-08-22 `image_hash` được GHI mà không bao giờ đối chiếu -> đổi
+    pages/*.png là bbox cũ áp lên ảnh mới, lệch toạ độ, không một cảnh báo.
+    """
+    print("[ocr_api chốt chặn cache]")
+    import json as _json
+    import os as _os
+    import tempfile
+    from pathlib import Path as _Path
+    try:
+        from PIL import Image
+    except Exception:
+        check("PIL sẵn có (bỏ qua nhóm test này nếu không)", True)
+        return
+
+    tmp = _Path(tempfile.mkdtemp())
+    book = tmp / "prepared" / "BookX"
+    (book / "detected").mkdir(parents=True)
+    (book / "pages").mkdir()
+    img = book / "pages" / "p.png"
+    cache = book / "detected" / "p_ocr_cache.json"
+
+    # ảnh nhiễu tất định (seed cố định) để nén PNG không suy biến
+    px = bytes((i * 37 + (i // 64) * 11) % 251 for i in range(64 * 64))
+    Image.frombytes("L", (64, 64), px).save(img, "PNG", compress_level=9)
+
+    def write_cache(**extra):
+        d = {"image": str(img), "columns": [], "coords_space": "fullpage", "framed": False}
+        d.update(extra)
+        cache.write_text(_json.dumps(d), encoding="utf-8")
+
+    write_cache(image_hash=ocr_api._file_md5(str(img)))
+    check("hash khớp -> ok", ocr_api.verify_cache_image(str(cache), str(img)) == "ok")
+
+    write_cache()  # cache đời cũ, không có image_hash
+    check("thiếu image_hash -> skipped",
+          ocr_api.verify_cache_image(str(cache), str(img)) == "skipped")
+
+    write_cache(image_hash="deadbeef")
+    check("ảnh không tồn tại -> skipped",
+          ocr_api.verify_cache_image(str(cache), str(img) + ".nope") == "skipped")
+
+    _os.environ["SN_OCR_SKIP_CACHE_VERIFY"] = "1"
+    check("cửa thoát hiểm -> skipped",
+          ocr_api.verify_cache_image(str(cache), str(img)) == "skipped")
+    del _os.environ["SN_OCR_SKIP_CACHE_VERIFY"]
+
+    # nén lại: byte đổi, PIXEL y hệt (mô phỏng đổi phiên bản Pillow/zlib)
+    good_hash = ocr_api._file_md5(str(img))
+    good_px = ocr_api._pixel_hash(str(img))
+    Image.open(img).save(img, "PNG", compress_level=1)
+    check("nén khác -> md5 tệp đổi", ocr_api._file_md5(str(img)) != good_hash)
+    check("nén khác -> pixel KHÔNG đổi", ocr_api._pixel_hash(str(img)) == good_px)
+
+    write_cache(image_hash=good_hash)          # chưa có pixel_hash -> không phân xử được
+    try:
+        ocr_api.verify_cache_image(str(cache), str(img))
+        check("thiếu pixel_hash + byte lệch -> phải ném lỗi", False)
+    except ocr_api.StaleOCRCacheError:
+        check("thiếu pixel_hash + byte lệch -> ném lỗi", True)
+
+    write_cache(image_hash=good_hash, pixel_hash=good_px)
+    check("có pixel_hash, pixel khớp -> healed",
+          ocr_api.verify_cache_image(str(cache), str(img)) == "healed")
+    check("sau khi heal -> ok",
+          ocr_api.verify_cache_image(str(cache), str(img)) == "ok")
+
+    # đổi PIXEL thật -> phải chặn
+    Image.frombytes("L", (64, 64), bytes((i * 5) % 251 for i in range(64 * 64))).save(img, "PNG")
+    try:
+        ocr_api.verify_cache_image(str(cache), str(img))
+        check("pixel đổi thật -> phải ném lỗi", False)
+    except ocr_api.StaleOCRCacheError:
+        check("pixel đổi thật -> ném lỗi", True)
+
+    # backfill KHÔNG được vá cache mà image_hash đã lệch (đó là ca cần người xem)
+    write_cache(image_hash="0" * 32)
+    st = ocr_api.backfill_pixel_hash(str(tmp / "prepared"), verbose=False)
+    check("backfill bỏ qua cache có hash lệch", st["hash_mismatch"] == 1 and st["added"] == 0,
+          str(st))
+
+    write_cache(image_hash=ocr_api._file_md5(str(img)))
+    st = ocr_api.backfill_pixel_hash(str(tmp / "prepared"), verbose=False)
+    check("backfill thêm pixel_hash khi hash còn khớp", st["added"] == 1, str(st))
+    check("pixel_hash đã được ghi",
+          bool(_json.loads(cache.read_text(encoding="utf-8")).get("pixel_hash")))
+
+    import shutil as _shutil
+    _shutil.rmtree(tmp, ignore_errors=True)
+
+
 def main() -> int:
     print("=" * 64)
     print("PHASE-1 ENGINE-FIX SELFTEST")
@@ -197,6 +290,7 @@ def main() -> int:
     test_monotone_assign()
     test_syllable_gate()
     test_ocr_retry()
+    test_ocr_cache_guard()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

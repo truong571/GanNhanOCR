@@ -264,3 +264,14 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 | `dataset_out/labels.csv` | `8e214572229ae3fa14eb7f478999d8c68eefc46417199f0fafb2b798c16f0b19` |
 | `dataset_out/labels_remediated.csv` | `96ee3741a9a912229b89e244ad3f98e779f85809daab94a4abef923ed3f13b01` |
 | `dataset/labels.csv` | `fe286d05804d5ba18754b28237f8b248d367f72da4da2be8143c9019faeaf87f` |
+
+## Lần chạy 2026-08-19T04:51:50Z
+
+sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `7e0a2f3901c84a82a293ff5703c80f24406fd88847252d9a6f4643c1e4eac786` |
+| `dataset_out/labels_remediated.csv` | `6232b64d3c147d9f669f834a8c051b4a789e8e6418c8045abe749fd57595963c` |
+| `dataset_out/labels_final.csv` | `80bcb2cd3ed2bcdd7002a774f623277099851f580154893e27cfe5639d243d7c` |
+| `dataset/labels.csv` | `5a4848648bdee1355613dc28f606100784235f92f65bdb1dcb0239bac55397e6` |

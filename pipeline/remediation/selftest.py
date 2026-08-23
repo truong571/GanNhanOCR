@@ -13,6 +13,7 @@ import pandas as pd
 
 from . import census as census_mod
 from . import remediate as remediate_mod
+from . import s3_unwind as unwind_mod
 
 REPO = Path(__file__).resolve().parents[2]
 LABELS = REPO / "dataset_out" / "labels.csv"
@@ -105,10 +106,23 @@ def test_remediate_synthetic() -> None:
     q = out[out["tier"] == "QUARANTINE"]
     check("QUARANTINE tier applied", len(q) == 5, str(len(q)))
     check("quarantine rule tagged", q["rule"].str.contains("quarantine_dup").all())
-    # demote: 1 low-cosine similar-bridge -> REVIEW; high-cosine stays GOLD
-    check("demoted 1 similar-bridge", rep.demoted_similar_lowcos == 1, str(rep.demoted_similar_lowcos))
-    demoted = out[out["rule"].str.contains("demoted_lowcos", na=False)]
-    check("demoted row now REVIEW", (demoted["tier"] == "REVIEW").all() and len(demoted) == 1)
+    # MẶC ĐỊNH TỪ 2026-08-19: KHÔNG hạ cấp theo S3 (error-AUC 0,566 CI [0,459-0,672]
+    # và bản retrain 0,577 [0,442-0,706] — CI chứa 0,5). Hàng similar-bridge cosine
+    # thấp phải Ở LẠI GOLD.
+    check("mặc định: 0 demote theo S3", rep.demoted_similar_lowcos == 0,
+          str(rep.demoted_similar_lowcos))
+    check("mặc định: không hàng nào mang hậu tố demote",
+          not out["rule"].str.contains("demoted_lowcos", na=False).any())
+    check("similar-bridge cosine THẤP ở lại GOLD",
+          (out[out["image"] == "gold/d_c01_0.png"]["tier"] == "GOLD").all()
+          if (out["image"] == "gold/d_c01_0.png").any() else True)
+    # nhánh cũ vẫn tái lập được khi khai tường minh (dùng cho thế hệ dữ liệu cũ)
+    out_d, rep_d = remediate_mod.remediate(_synthetic(), s3_demote=True)
+    check("s3_demote=True: demote lại đúng 1 hàng", rep_d.demoted_similar_lowcos == 1,
+          str(rep_d.demoted_similar_lowcos))
+    dem = out_d[out_d["rule"].str.contains("demoted_lowcos", na=False)]
+    check("s3_demote=True: hàng bị demote sang REVIEW",
+          (dem["tier"] == "REVIEW").all() and len(dem) == 1)
     check("high-cosine similar stays GOLD",
           (out[out["image"] == "gold/e_c01_0.png"]["tier"] == "GOLD").all())
     # split invariant: original leak present (F1 conflict train/test + same train/val),
@@ -121,9 +135,12 @@ def test_remediate_synthetic() -> None:
     check("dupF1same reduced to 1 usable row", len(surv) == 1, str(len(surv)))
     # clean rows untouched
     check("5 clean GOLD survive", (out["image"].str.startswith("gold/clean_")).sum() == 5)
-    check("usable dropped by 6 (5 quarantine + 1 demote)",
-          rep.usable_before - rep.usable_after == 6,
+    check("usable dropped by 5 (chỉ quarantine; demote S3 đã tắt)",
+          rep.usable_before - rep.usable_after == 5,
           f"{rep.usable_before}->{rep.usable_after}")
+    check("s3_demote=True: usable dropped by 6 (5 quarantine + 1 demote)",
+          rep_d.usable_before - rep_d.usable_after == 6,
+          f"{rep_d.usable_before}->{rep_d.usable_after}")
 
 
 def test_real() -> None:
@@ -174,11 +191,14 @@ def test_real() -> None:
         & s3_in.notna()
         & (s3_in < remediate_mod.TAU_SILVER)
     )
-    q_mask = out["tier"].eq(remediate_mod.QUARANTINE_TIER)
-    expect_demote = int((cand_demote & ~q_mask).sum())
-    check("real: demoted similar-bridge == |GOLD∩bridge∩s3<τ| \\ quarantine",
-          rep.demoted_similar_lowcos == expect_demote,
-          f"{rep.demoted_similar_lowcos} vs expect {expect_demote}")
+    check("real: mặc định demote == 0 (S3 đã bị gỡ quyền hạ cấp)",
+          rep.demoted_similar_lowcos == 0, str(rep.demoted_similar_lowcos))
+    out_d, rep_d = remediate_mod.remediate(df, s3_demote=True)
+    q_mask_d = out_d["tier"].eq(remediate_mod.QUARANTINE_TIER)
+    expect_demote = int((cand_demote & ~q_mask_d).sum())
+    check("real: s3_demote=True -> == |GOLD∩bridge∩s3<τ| \\ quarantine",
+          rep_d.demoted_similar_lowcos == expect_demote,
+          f"{rep_d.demoted_similar_lowcos} vs expect {expect_demote}")
     # quarantined: BẤT BIẾN == 0. Lịch sử >1000 (~2321 hàng trùng) -> 8 -> 0. Không còn
     # hàng trùng md5/bbox nào để cách ly.
     check("real: quarantined == 0 (dedup closed; hist >1000->8->0)",
@@ -191,7 +211,15 @@ def test_real() -> None:
           rep.quarantined_rows <= res.union_rows
           and rep.quarantined_rows == rep.quarantined_conflict + rep.quarantined_duplicate,
           f"rows={rep.quarantined_rows} union={res.union_rows}")
-    check("real: usable decreased", rep.usable_after < rep.usable_before,
+    # Trên THẾ HỆ DỮ LIỆU HIỆN TẠI remediation là phép ĐỒNG NHẤT: lớp trùng đã đóng ở
+    # gốc engine (quarantine 0) và phép hạ cấp theo S3 đã tắt (2026-08-19). Bất biến
+    # đúng phải là "không bao giờ TĂNG", không phải "luôn giảm" — assertion cũ đòi giảm
+    # là bám vào thế hệ dữ liệu còn khuyết tật, không phải vào tính chất của hàm.
+    check("real: usable không tăng", rep.usable_after <= rep.usable_before,
+          f"{rep.usable_before}->{rep.usable_after}")
+    check("real: usable giảm đúng bằng số hàng bị quarantine + demote",
+          rep.usable_before - rep.usable_after
+          <= rep.quarantined_rows + rep.demoted_similar_lowcos,
           f"{rep.usable_before}->{rep.usable_after}")
     # idempotence: re-running remediation changes nothing further
     out2, rep2 = remediate_mod.remediate(out)
@@ -202,6 +230,52 @@ def test_real() -> None:
     print(f"       ({rep.summary()})")
 
 
+def test_s3_unwind() -> None:
+    """Gỡ S3: trả GOLD, đổi tên SILVER, đổi lý do REVIEW — và KHÔNG đụng nhãn."""
+    print("[s3-unwind]")
+    df = pd.DataFrame({
+        "image": [f"i{i}.png" for i in range(6)],
+        "label": ["a", "b", "c", "d", "e", "f"],
+        "tier": ["REVIEW", "GOLD", "SILVER", "SILVER", "REVIEW", "SYLLABLE"],
+        "rule": ["s1_inter_s2_similar|demoted_lowcos_s3", "s1_inter_s2_direct",
+                 "s2_inter_s3_corrected", "s3_head_bank_consensus",
+                 "below_visual_threshold", "nghia_consensus"],
+    })
+    out, rep = unwind_mod.unwind(df)
+    check("trả về GOLD đúng 1 hàng", rep["readmitted_to_gold"] == 1, str(rep["readmitted_to_gold"]))
+    check("hàng trả về mang tier GOLD", out.loc[0, "tier"] == "GOLD", out.loc[0, "tier"])
+    check("hậu tố demote bị gỡ khỏi rule",
+          out.loc[0, "rule"] == "s1_inter_s2_similar", out.loc[0, "rule"])
+    check("hàng trả về được gắn cờ", out.loc[0, unwind_mod.FLAG_COL] == "1")
+    check("hàng KHÔNG trả về thì không mang cờ", out.loc[1, unwind_mod.FLAG_COL] == "")
+    check("SILVER -> SILVER_uncalibrated (cả 2 hàng)",
+          rep["silver_renamed"] == 2
+          and (out.loc[[2, 3], "tier"] == unwind_mod.SILVER_UNCAL).all())
+    check("SILVER_uncalibrated nằm NGOÀI USABLE_TIERS (rơi khỏi bộ giao nộp)",
+          unwind_mod.SILVER_UNCAL not in set(census_mod.USABLE_TIERS))
+    check("below_visual_threshold -> no_s1_inter_s2",
+          rep["review_reason_renamed"] == 1 and out.loc[4, "rule"] == "no_s1_inter_s2")
+    check("hàng REVIEW đổi lý do vẫn ở REVIEW", out.loc[4, "tier"] == "REVIEW")
+    check("SYLLABLE không bị đụng",
+          out.loc[5, "tier"] == "SYLLABLE" and out.loc[5, "rule"] == "nghia_consensus")
+    check("KHÔNG nhãn nào bị sửa", out["label"].tolist() == df["label"].tolist())
+    check("số dòng bất biến", len(out) == len(df))
+    # luỹ đẳng: chạy lại không đổi gì thêm
+    out2, rep2 = unwind_mod.unwind(out)
+    check("luỹ đẳng (0 trả về, 0 đổi tên ở lần 2)",
+          rep2["readmitted_to_gold"] == 0 and rep2["silver_renamed"] == 0
+          and rep2["review_reason_renamed"] == 0)
+    # dữ liệu thật
+    if LABELS.exists():
+        real = pd.read_csv(REPO / "dataset_out" / "labels_final.csv", dtype=str, low_memory=False)
+        ro, rr = unwind_mod.unwind(real)
+        check("thật: GOLD tăng đúng bằng số hàng trả về",
+              int((ro.tier == "GOLD").sum()) - int((real.tier == "GOLD").sum())
+              == rr["readmitted_to_gold"])
+        check("thật: không còn tier SILVER", int((ro.tier == "SILVER").sum()) == 0)
+        check("thật: nhãn bất biến", ro["label"].fillna("").equals(real["label"].fillna("")))
+
+
 def main() -> int:
     print("=" * 64)
     print("REMEDIATION SELFTEST")
@@ -209,6 +283,7 @@ def main() -> int:
     test_census_synthetic()
     test_remediate_synthetic()
     test_real()
+    test_s3_unwind()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

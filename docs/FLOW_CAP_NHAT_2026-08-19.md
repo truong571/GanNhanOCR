@@ -25,7 +25,7 @@ ghi rõ là suy đoán.
 | B1 | **Độ tin cậy người chấm** κ = 0,13 test-retest; tỷ lệ lỗi trôi 4,2% → 16% → 35% qua ba buổi | 40 ô lặp, 2026-08-04 | mọi precision đo bằng tay đều lung lay, trừ chiều NHÃN |
 | B2 | **Nhiệm vụ chấm bị trộn hai chiều** — NHÃN (đọc chữ) và CROP (cắt đúng ô) chấm chung một nút | κ chiều CROP = 0,14 vs chiều NHÃN 0/20 báo động giả | phải tách hẳn: NHÃN cho người, CROP đo bằng hình học |
 | B3 | **S3 ngược dấu** trên verdict người | 6/6 AUC < 0,5; bank_cos 0,26 | không được dùng S3 làm cổng hạ cấp GOLD |
-| B4 | **1.846 ô lệch DẤU THANH** giữa âm OCR và từ điển | GOLD 167 · SILVER 308 · SYLLABLE 857 · REVIEW 514 | lỗi chuẩn hoá, sửa được tất định, hiện đang bị tính là "không khớp từ điển" |
+| B4 | **1.851 ô lệch DẤU THANH** giữa âm OCR và từ điển — nhưng CHỈ **88 ô** là lỗi thanh chắc chắn | A: 88 ô (âm không phải từ tiếng Việt có thật) · B: 1.763 ô (âm là từ có thật → có thể CHỮ sai chứ không phải thanh sai) | chỉ nhóm A sửa tự động được; nhóm B phải qua mắt người, sửa máy sẽ CHE lỗi chữ |
 | B5 | **Tier SYLLABLE 6.809 ô không có căn cứ ký tự** | 316 cặp (chữ, âm); Unihan 17.0 xác nhận **0/316** | không nguồn công khai nào lấp được; phải chấm từ chính corpus |
 | B6 | **Nghi OCR thay chữ Nôm hiếm bằng chữ Hán nhìn giống** | 妃 đọc "bà" (chữ chuẩn 妑); 而 đọc "làm" (chữ chuẩn 爫); 27 cặp/581 ô nối được qua similar-dict | nếu đúng thì đây là lớp lỗi hệ thống thứ hai sau 㝵/người |
 | B7 | **73.829 crop mồ côi** (113 MB) trong `gold/ silver/ syllable/` | mtime toàn 07/2026 | thư mục crop không phản ánh bộ hiện hành |
@@ -62,8 +62,12 @@ không bao giờ trở thành nhãn** — chỉ để xếp hạng việc cho ng
 
 Chuẩn hoá âm Quốc ngữ trước khi tier hoá, thay vì vá sau:
 
-- hợp nhất dấu thanh theo từ điển khi phần gốc âm tiết trùng khớp duy nhất
-  (rì/ri, lạ/là, mã/ma, lắm/lăm, vô/vồ, chăng/chắng…) — **1.846 ô**;
+- hợp nhất dấu thanh **chỉ cho nhóm A** — âm đọc ra KHÔNG phải từ tiếng Việt có thật nên
+  không thể là gì khác ngoài lỗi thanh của VietOCR (trấy/trẩy, but/bụt, ây/ấy, goi/gọi):
+  **88 ô**, 33 cặp, 0 ô nào ở GOLD;
+- **KHÔNG** đụng nhóm B (1.763 ô, âm là từ có thật: 異 "là" vs "lạ", 詩 "thì" vs "thi").
+  Ở đó "sai thanh" và "sai chữ" là hai giả thuyết ngang nhau — sửa thanh tự động sẽ giấu
+  mất lỗi chữ. Nhóm này đi vào mẻ chấm tay, không vào bước normalize;
 - ghi cột `syllable_raw` bên cạnh `syllable` để không mất dấu vết bản gốc;
 - ô nào sửa thanh xong khớp từ điển thì **đi thẳng vào đường GOLD**, không rơi xuống
   SYLLABLE nữa.
@@ -119,7 +123,8 @@ Ràng buộc bắt buộc: mẻ audit rút từ **đúng file** mà bước 9 ex
 
 | ưu tiên | việc | công | mở khoá |
 |---|---|---|---|
-| 1 | Bước 3 `normalize` (dấu thanh) | nửa ngày | 1.846 ô, trong đó 857 ô thoát tier SYLLABLE |
+| 0 | Bịt cổng `s2_inter_s3_corrected` bằng `is_plausible_qn_syllable` | 30 phút | 1 ô âm rác đang nằm ở SILVER — lỗ hổng thứ ba cùng loại |
+| 1 | Bước 3 `normalize` (chỉ nhóm A) | 2 giờ | 88 ô |
 | 2 | Bước 7 `gapcheck` tầng nghĩa (offline) | nửa ngày | thứ tự ưu tiên cho 316 cặp |
 | 3 | Chấm tay 50 cặp đầu của `dict_gap_syllable.csv` | một buổi | 55% tier SYLLABLE + xác nhận/bác bỏ B6 |
 | 4 | Tách chiều CROP sang đo bằng máy | một ngày | gỡ B2, làm số precision NHÃN dùng được |

@@ -10,7 +10,14 @@
 #     remediation              35 passed,  0 failed
 #     phase1_engine            30 passed,  0 failed
 #     -------------------------------------------
-#     TỔNG                    392 passed,  0 failed
+#     TỔNG                    427 passed,  0 failed  (mốc 2026-08-22, +13: chốt cache OCR)
+#
+# ĐỔI SO VỚI MỐC 2026-08-19 (414/0):
+#   +13  phase1_engine_selftest::test_ocr_cache_guard — chốt đối chiếu cache OCR với
+#        ảnh trên đĩa. Trước đó `image_hash` được GHI mà KHÔNG BAO GIỜ đối chiếu, nên
+#        đổi prepared/*/pages/*.png mà giữ cache = bbox ảnh cũ áp lên ảnh mới, lệch
+#        toạ độ, không một cảnh báo. Phân biệt "đổi nén PNG" (heal) với "đổi pixel"
+#        (ném StaleOCRCacheError, KHÔNG tự gọi lại API vì OCR lại tốn tiền).
 #
 # ĐỔI SO VỚI MỐC 2026-08-03 (360/0):
 #   +32  report_combined — module sinh BẢNG HEADLINE của luận văn (precision/CI/acceptance
@@ -48,7 +55,7 @@
 # xanh. Riêng phase1 "low-purity" là lỗi TEST (placeholder 'x' bị lọc là rác nên
 # purity không được kiểm) — đã sửa placeholder thành âm tiết hợp lệ 'an'/'ba'.
 #
-# => Con số trích dẫn trong luận văn phải là 392 assertions (392 pass, 0 fail), KHÔNG
+# => Con số trích dẫn trong luận văn phải là 427 assertions (427 pass, 0 fail), KHÔNG
 #    còn là 360 hay 223 — 223 là mốc cũ và đã bỏ sót toàn bộ selftest của bước 1-2.
 
 set -uo pipefail
@@ -57,7 +64,7 @@ cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=392
+BASELINE_PASS=427
 BASELINE_FAIL=0
 
 MODULES=(
@@ -93,7 +100,7 @@ done
 
 echo "----------------------------------------------------------------"
 printf "%-38s %s\n" "TỔNG" "$total_pass passed, $total_fail failed"
-printf "%-38s %s\n" "MỐC 2026-08-11" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
+printf "%-38s %s\n" "MỐC 2026-08-22" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
 echo "================================================================"
 
 if [ "$total_pass" -eq "$BASELINE_PASS" ] && [ "$total_fail" -eq "$BASELINE_FAIL" ]; then

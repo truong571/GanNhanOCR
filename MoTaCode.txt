@@ -1,0 +1,303 @@
+================================================================================
+GanNhanOCR — MÔ TẢ CHI TIẾT CODEBASE & PIPELINE END-TO-END
+(soạn 2026-08-22, đọc từ chính mã nguồn trong repo)
+================================================================================
+
+0. BÀI TOÁN
+--------------------------------------------------------------------------------
+Sinh bộ dữ liệu NHÃN CẤP KÝ TỰ cho chữ Nôm: mỗi ảnh crop 1 chữ Nôm cắt từ bản
+khắc gỗ  ->  1 codepoint Unicode + 1 âm Quốc ngữ.
+Nguồn: 3 cuốn "Sách Các Thánh Truyện" (data/STT2.pdf, STT4.pdf, STT11.pdf).
+Mỗi cuốn: trang ẢNH chữ Nôm (9 cột dọc) xen kẽ trang TEXT Quốc ngữ đánh số dòng
+1..9 — đây chính là "bản dịch song song" cho phép gán nhãn không cần người đọc
+chữ Nôm: 1 chữ Nôm  ≈  1 âm tiết QN.
+
+Sản phẩm cuối: dataset/labels.csv + ảnh crop (tự chứa), hiện 66.529 dòng.
+Bản làm việc: dataset_out/ (82.269 cặp, đủ mọi tier kể cả REVIEW/QUARANTINE).
+
+--------------------------------------------------------------------------------
+1. CÂY THƯ MỤC — AI LÀM GÌ
+--------------------------------------------------------------------------------
+run_pipeline.sh        Trình chạy DUY NHẤT, hỏi-đáp, 7 bước (tên cũ "6 bước").
+config/
+  pipeline.yaml        Khai báo 3 sách, đường dẫn từ điển/font/checkpoint,
+                       tham số step1..step4 (dpi 300, crop_pad_frac 0.18,
+                       qn_line_detector: projection_deskew — GHIM CỨNG).
+  confusion_fixes.yaml Danh sách cặp (âm, chữ) đã CHỨNG MINH sai hệ thống -> hạ tier.
+  lexicon/*.json       Từ vựng ngoại lệ (tên thánh...) cho chuẩn hoá text.
+core/                  THƯ VIỆN cấp thấp, không biết gì về "pipeline":
+  pdf/pdf_parser.py    Phân loại trang ảnh/text, trích ảnh Nôm, dựng 9 cột QN.
+  image/               frame_detector (khung viền), column_detector,
+                       char_segmenter (tách chữ trong cột bằng profile + valley),
+                       crop_cleaner, image_processing (Sauvola binarize, denoise).
+  ocr/ocr_api.py       Client OCR SinoNom HCMUS (kimhannom) + cache đĩa.
+  ocr/qn_ocr.py        VietOCR 2 pass (beam lấy text, greedy lấy confidence).
+  ocr/line_detector.py Tách dòng QN: dbnet | projection_deskew | projection.
+  align/parser_v5.py   Bóc "1. ... 9. ..." từ text QN, chịu được OCR hỏng marker.
+  align/nom_detect_v3.py  Dò 9 cột Nôm (hybrid -> merge -> projection fallback).
+  text/                dictionary.py (nạp QN->Nôm, similar), text_utils.py
+                       (chuẩn hoá dấu thanh cũ/mới, tách âm tiết,
+                       is_plausible_qn_syllable — cổng chặn âm rác).
+  ranking/             dinov2_ranker (ĐÃ NGHỈ HƯU, giữ để so sánh trong luận văn),
+                       fontdiffusion_gen (sinh glyph tham chiếu), ranker.py.
+pipeline/              LOGIC pipeline (package chính, chạy bằng python -m):
+  step0_setup.py       Nạp/kiểm config, tạo cây thư mục prepared/<sách>/...
+  step1_extract.py     PDF -> pages/ + pages_denoised/ + OCR cache + transcriptions/
+  step2_align.py, step3_label.py, step4_export.py   ĐƯỜNG CŨ (legacy, giữ để đối
+                       chứng; step3 dùng DINOv2 đã tắt trong config).
+  align_engine/        ENGINE THẬT của bước build (bản production đóng băng).
+  remediation/         Vá lỗi tất định trên labels.csv (census, quarantine, dedup),
+                       confusion_fix.py, s3_unwind.py.
+  ground_truth/        Giai đoạn 0 — dựng mẻ CHẤM TAY (rank/plan/sample/grid/estimate),
+                       audit_grid dựng HTML làm mù, report_combined ra bảng headline.
+  consensus_fusion/    Giai đoạn 2 — hợp phiếu nhiều kênh (Kish n_eff, stacking
+                       hiệu chỉnh, gate bất đối xứng, qwen_verifier MCQ mù).
+  publish/             Giai đoạn 3 — split page-disjoint/LOBO, Frictionless
+                       datapackage.json, Croissant, datasheet Gebru, export HF.
+  tools/               dict_gap.py, gapcheck.py (ghép nghĩa Unihan kDefinition),
+                       fix_tone.py (chỉ sửa nhóm A), merge_dicts.py.
+  export_final_dataset.py  Xuất dataset/ tự chứa.
+  phase1_engine_selftest.py + */selftest.py   414 assertion (scripts/run_all_selftests.sh).
+dict/                  QuocNgu_SinoNom.csv (104.048 cặp), SinoNom_Similar.csv
+                       (33.396 dòng tự dạng gần giống), unihan_kdefinition_full.csv.
+gannhanocr-fd/         ~89k glyph FontDiffusion U+*.png (kho tham chiếu cho S3).
+nom-embed/best.pt      Checkpoint encoder Nôm (S3) đang dùng.
+ArcFace/               Bộ retrain S3 trên Kaggle (Sub-center ArcFace K=3 + SAM,
+                       split page-disjoint/LOBO) + eval_human_verdicts.py.
+train_crop/            Detector ký tự CenterNet (dùng cho reseg=detector).
+font_diffusion/, kaggle_diffusion/   Sinh glyph tham chiếu.
+prepared/<sách>/       Trung gian: pages, pages_denoised, detected/*_ocr_cache.json
+                       (PRIMARY DATA — mất là phải gọi lại API, tốn tiền),
+                       transcriptions/.
+dataset_out/           Nơi làm việc: labels.csv -> labels_remediated.csv ->
+                       labels_final.csv (BẢN CÔNG BỐ) + gold/ silver/ syllable/ crop
+                       + các báo cáo JSON + ground_truth/ (mẻ chấm tay).
+dataset/               BỘ GIAO NỘP cuối, bị XOÁ SẠCH & ghi lại mỗi lần chạy.
+docs/                  BANG_SO_LIEU_CHINH_THUC.md (số liệu chốt),
+                       FLOW_CAP_NHAT_2026-08-19.md (đánh giá + flow đề nghị),
+                       EVIDENCE_INDEX.md (bảng sha256 từng lần chạy).
+
+--------------------------------------------------------------------------------
+2. PIPELINE END-TO-END — 7 BƯỚC TRONG run_pipeline.sh
+--------------------------------------------------------------------------------
+Chạy: ./run_pipeline.sh  (thuần hỏi-đáp, không có cờ dòng lệnh)
+  -> hỏi chọn sách để extract (STT2 / STT4 / STT11 / cả 3)
+  -> hỏi dùng cache OCR cũ hay xoá & OCR lại (phải gõ "XOA" để xoá)
+  -> nếu có dataset_out/.FROZEN thì bắt gõ "GHIDE"
+Biến môi trường ghim: PYTHONHASHSEED=0, OMP_NUM_THREADS=1 (giảm dao động số học).
+
+PREFLIGHT (trước mọi bước) — kiểm những thứ hỏng ÂM THẦM:
+  venv + module (fitz cv2 numpy pandas yaml PIL vietocr scipy torch); .env;
+  config; confusion_fixes.yaml (thiếu -> bước 5 DỪNG); 2 file từ điển;
+  nom-embed/best.pt (thiếu -> SILVER sập về REVIEW); kho glyph FD;
+  pipeline/align_engine/data/index.csv (crop-proto trỏ hụt -> SILVER −32% mà
+  không ném lỗi nào).
+
+BƯỚC 1 — setup      python -m pipeline.step0_setup config/pipeline.yaml
+  Kiểm cấu hình/tài nguyên, tạo cây thư mục prepared/<sách>/{pages, pages_denoised,
+  transcriptions, detected/crops, aligned, labeled}.
+
+BƯỚC 2 — extract    python -m pipeline.step1_extract config/pipeline.yaml <sách>
+  Với mỗi trang PDF (PyMuPDF, render 300 dpi):
+   a. is_image_page() phân loại trang ẢNH Nôm hay trang TEXT QN.
+   b. Trang ảnh: lưu pages/<page>.png + pages_denoised/ (Sauvola k=0.2, win 25);
+      gọi OCR SinoNom HCMUS qua core/ocr/ocr_api.py trên ảnh ĐÃ CẮT KHUNG
+      (framed=True) -> ghi detected/<page>_ocr_cache.json gồm columns[] với
+      char + bbox + coords_space.
+   c. Trang text: nếu reocr=true thì KHÔNG tin text nhúng PDF mà chạy lại VietOCR
+      (core/ocr/qn_ocr.py) trên từng dòng do line_detector tách (projection_deskew
+      — ghim cứng để không bị đổi backend âm thầm giữa các máy); 2 pass beam+greedy,
+      beam lấy chữ, greedy lấy xác suất; hai bản khác nhau -> hạ confidence.
+   d. parse_numbered_lines (core/align/parser_v5.py) bóc marker "1."..."9." với 9
+      pattern chống lỗi OCR (mất dấu chấm, thêm số 1 thừa, marker giữa dòng, gộp
+      cột...) -> transcriptions/<page>.json = ĐÚNG 9 cột.
+   e. normalize_syllables + normalize_tone_marks: chuẩn hoá âm về quy ước dấu MỚI
+      (hòa/úy/thủy) để khớp từ điển; chỉ ghi đè âm khi âm đó KHÔNG có trong từ điển.
+  Kiểm sau bước: pipeline/check_ocr_columns.py — mong đợi đúng 9 cột/trang.
+  *** Cache OCR = primary data. Còn cache -> tái lập 0 đồng; xoá -> gọi API ngoài. ***
+
+BƯỚC 3 — build      python -m pipeline.align_engine.build_dataset --config ... --use-s3 --reseg detector
+  LƯU Ý: build duyệt CẢ 3 sách trong config, không lọc theo sách vừa extract
+  (cố ý — để không ghi đè labels.csv thành bản thiếu sách).
+  PASS 1 (mỗi trang, align_production.align_page):
+   · Nạp ocr_cache; nếu coords_space != "fullpage" thì bbox_fix.frame_offset()
+     cộng lại (ox,oy) của khung — sửa lỗi lệch toạ độ ~252px (blank-crop 31% -> 0%).
+   · detect_nom_columns_v3(binary, ocr_columns, 9) -> 9 cột Nôm; parser_v5 -> 9 dòng QN.
+   · anchor_align.realign_column(): Needleman-Wunsch CÓ BĂNG (|i-j| <= |m-n|+2),
+     chi phí thay thế lấy từ từ điển: 0.0 nếu ocr_char là một âm đọc của âm tiết
+     (S1∩S2), 0.3 nếu qua cầu tự dạng, 0.9 nếu âm không có trong từ điển, 1.0 nếu
+     có nhưng không khớp; del/ins 0.7. => mọi chữ xác nhận được bị GHIM vào đúng
+     âm tiết, khoảng trống thật KHÔNG bị ép thành nhãn, và một lệch đếm không làm
+     trượt cả đuôi cột (bệnh của step2_align.py cũ).
+   · Tách lại chữ trong cột: --reseg detector (CenterNet train_crop) hoặc
+     midpoint/valley; hộp chồng lấn cố ý m = pitch*0.10 để giữ nét cao.
+   · Tính S3 (visual_signal.VisualS3) nếu --use-s3: encoder Nôm (nom-embed/best.pt,
+     ResNet+ArcFace) so crop với NGÂN HÀNG THAM CHIẾU mỗi ứng viên theo thứ tự
+     ưu tiên crop thật (GOLD train, tối đa 8, lấy trung bình top-3) -> simfont ->
+     glyph FontDiffusion; kèm phiếu độc lập từ ĐẦU ArcFace (1591 lớp).
+   · consensus.decide_label(S1, S2, S3) -> tier + rule:
+       GOLD  s1_inter_s2_direct   ocr_char ∈ qn_to_nom[âm]            (46.188 ô)
+       GOLD  s1_inter_s2_similar  ocr_char sai, nhưng DUY NHẤT 1 chữ
+                                  tự dạng gần giống là âm đọc hợp lệ  (3.875 ô)
+       SILVER s2_inter_s3_corrected  thị giác chọn được một âm đọc trong từ điển
+       SILVER s1_inter_s3_out_of_dict  âm không có trong từ điển (Ext-B) + thị
+                                  giác ủng hộ ocr_char + âm PHẢI hợp lệ
+       SILVER s3_head_bank_consensus   đầu ArcFace và ngân hàng cùng chọn 1 chữ
+       REVIEW diverged_column | below_visual_threshold | unconfirmed_no_s3
+  PROMOTE: syllable_gate() — cặp (chữ, âm) chưa xác nhận nhưng lặp >=5 lần, trên
+     >=3 trang, chiếm >=60% số lần đọc của chữ đó -> tier SYLLABLE (nhãn cấp ÂM
+     TIẾT, rule nghia_consensus, 6.761 ô); khoá âm viết THƯỜNG (case gap từng
+     làm mất 1.131 nhãn).
+  SPLIT: chia train/val/test theo NHÓM (sách, trang, cột) -> chống rò rỉ.
+  PASS 2: cắt crop thật (GOLD+SILVER+SYLLABLE) với pad 0.18, tighten_box +
+     carve_neighbor_ink (bbox_fix.py); ghi ink_pct + md5 mỗi ảnh.
+     LƯU Ý: pipeline/align_engine/crop_quality.py (đo stray_ink/border_ink bằng
+     PIXEL + resolve_overlap) đã viết xong nhưng KHÔNG module nào import — code
+     chết, xem mục 7.
+  RA: dataset_out/labels.csv (82.269 dòng, 21 cột: image, book, page, column,
+     ocr_char, syllable, label, unicode, label_level, tier, rule, s3_cosine,
+     ink_pct, crop_w, crop_h, image_md5, seg_flag, split, split_group, bbox,
+     readmitted_from_s3_demotion) + dataset_out/{gold,silver,syllable}/*.png
+     + summary.json.
+
+BƯỚC 4 — remediate  python -m pipeline.remediation ... census / apply --tau 0.62
+  1) QUARANTINE lỗi trùng crop (một ảnh mang >1 nhãn): nhóm mâu thuẫn -> cách ly
+     hết; nhóm trùng cùng nhãn -> giữ 1 đại diện.
+  2) DEMOTE GOLD-cầu-tự-dạng có cosine S3 thấp — TẮT MẶC ĐỊNH từ 2026-08-19
+     (bật lại bằng --s3-demote) vì tiêu chí này dựa trên S3 đã bị bác.
+  3) DEDUP-BY-MD5: ép mọi ảnh cùng md5 về CÙNG một split (rò rỉ 288 -> 0), rồi
+     ASSERT bất biến. Không xoá dòng nào — chỉ đổi tier, giữ để truy vết.
+  RA: labels_remediated.csv + remediation_report.json.
+
+BƯỚC 5 — confusion  python -m pipeline.remediation.confusion_fix --measure
+  Đọc config/confusion_fixes.yaml, hạ tier mọi dòng khớp (âm, nhãn) đã chứng minh
+  sai hệ thống — hiện là lớp 㝵 đọc "người": 1.924 ô, Fisher p=5,4e-8.
+  Hàm thuần, luỹ đẳng, KHÔNG remap codepoint, chỉ đổi tier + rule.
+  RA: labels_final.csv = BẢN CÔNG BỐ (nguồn DUY NHẤT của cả export lẫn mẻ audit).
+  *** Không được bỏ bước này: trước 08-11 export chạy thẳng từ labels_remediated
+      nên bộ giao nộp và bộ đem đo precision là hai tập khác nhau. ***
+
+BƯỚC 6 — gỡ S3     python -m pipeline.remediation.s3_unwind --apply
+  Căn cứ: đo trên 826 verdict NGƯỜI, error-AUC của S3 cũ = 0,566 [0,459-0,672],
+  của ArcFace retrain = 0,577 [0,442-0,706] — CI cả hai đều CHỨA 0,5. Không tín
+  hiệu thị giác nào được quyền phong/hạ tier nữa. Ba việc, không có việc thứ tư:
+   1) 1.185 ô `s1_inter_s2_similar|demoted_lowcos_s3` -> TRẢ VỀ GOLD (gắn cờ
+      readmitted_from_s3_demotion).
+   2) 10.890 ô SILVER -> đổi tên tier SILVER_uncalibrated (nằm ngoài USABLE_TIERS
+      nên tự rơi khỏi bộ giao nộp; KHÔNG xoá, vẫn rút mẫu chấm tay được).
+   3) lý do REVIEW `below_visual_threshold` -> `no_s1_inter_s2` (10.934 ô).
+  Không đổi một nhãn nào. RA: ghi đè labels_final.csv + s3_unwind_report.json.
+
+BƯỚC 7 — export     python pipeline/export_final_dataset.py
+  Lọc tier usable {GOLD, SILVER, SYLLABLE} từ labels_final.csv, XOÁ SẠCH dataset/
+  rồi copy hẳn ảnh + ghi dataset/labels.csv. Mọi tier bị loại được IN RA ồn ào.
+
+SAU MỖI BƯỚC: checkpoint() ghi sha256 vào dataset_out/CHECKSUMS.txt; cuối cùng
+evidence() ghi bảng sha256 của 4 file nhãn vào docs/EVIDENCE_INDEX.md. Đây là
+cách duy nhất chứng minh "bộ đem đo" và "bộ đem nộp" là MỘT.
+
+--------------------------------------------------------------------------------
+3. BA TÍN HIỆU & TRIẾT LÝ TIER
+--------------------------------------------------------------------------------
+S1 = OCR SinoNom (kimhannom HCMUS) đọc ra chữ Nôm.
+S2 = từ điển QuocNgu_SinoNom: các chữ Nôm hợp lệ của một âm QN.
+S3 = thị giác: encoder Nôm huấn luyện riêng so crop với glyph tham chiếu.
+Quy tắc: KHÔNG BAO GIỜ gán nhãn từ MỘT tín hiệu. GOLD = S1∩S2 (độc lập hoàn toàn
+với S3 -> là sàn an toàn để báo cáo). SILVER = S3 phá thế hoà — nay đã bị vô hiệu
+hoá (SILVER_uncalibrated). SYLLABLE = nhất quán liên trang, nhãn cấp âm tiết.
+REVIEW = không đủ căn cứ, giữ trong manifest kèm bbox, không phải nhãn.
+
+--------------------------------------------------------------------------------
+4. CÁC NHÁNH KHÔNG NẰM TRONG run_pipeline.sh (chạy tay)
+--------------------------------------------------------------------------------
+· pipeline.ground_truth — rank (xếp hạng nghi ngờ) -> plan (cỡ mẫu, ngưỡng chấp
+  nhận) -> sample (SRS/phân tầng) -> grid (HTML chấm tay LÀM MÙ) -> estimate
+  (Clopper-Pearson, Horvitz-Thompson, PPI). make_combined_batch dựng mẻ GỘP 860 ô
+  gồm 60 ô lặp ẩn để đo κ nội tại. report_combined ra bảng headline luận văn.
+· pipeline.consensus_fusion — hợp phiếu nhiều kênh có hiệu chỉnh, gate bất đối
+  xứng, Kish n_eff cho các kênh tương quan; ghi vào dataset_out/fusion/, KHÔNG
+  đụng bộ gốc.
+· pipeline.publish — split page-disjoint + LOBO, datapackage.json (Frictionless),
+  croissant.json, datasheet Gebru/JOHD, export HF Parquet, CI gate.
+· pipeline.tools.gapcheck / dict_gap — ghép nghĩa Unihan kDefinition vào các cặp
+  (chữ, âm) từ điển không có, ra THỨ TỰ ƯU TIÊN CHẤM TAY (không sinh nhãn).
+· pipeline.tools.fix_tone — chỉ sửa dấu thanh nhóm A (88 ô, âm đọc ra không phải
+  từ tiếng Việt có thật); tuyệt đối không đụng 1.763 ô nhóm B.
+· ArcFace/ — retrain S3 trên Kaggle; eval_human_verdicts.py là thứ đã bác bỏ S3.
+· scripts/run_all_selftests.sh — 414 assertion, mốc chốt 2026-08-19.
+
+--------------------------------------------------------------------------------
+5. SỐ LIỆU HIỆN TẠI TRÊN ĐĨA
+--------------------------------------------------------------------------------
+dataset_out/labels_final.csv  82.269 dòng
+   GOLD 50.063 · SILVER_uncalibrated 10.890 · SYLLABLE 6.761 · REVIEW 14.555
+   rule: s1_inter_s2_direct 46.188 · no_s1_inter_s2 10.934 ·
+         s2_inter_s3_corrected 10.204 · nghia_consensus 6.761 ·
+         s1_inter_s2_similar 3.875 · confusion_fix:...nguoi 1.924 ·
+         diverged_column 1.659 · s1_inter_s3_out_of_dict 370 ·
+         s3_head_bank_consensus 316 · unconfirmed_no_s3 38
+dataset/labels.csv  66.529 dòng — GOLD 48.878 · SILVER 10.890 · SYLLABLE 6.761
+   (train 55.459 / val 5.410 / test 5.660)
+summary.json: 445 trang, 1.609 lớp chữ.
+
+!! LỆCH CẦN BIẾT: dataset/ hiện là bản export TRƯỚC bước 6 (còn tier "SILVER" và
+   GOLD 48.878). Chạy lại run_pipeline.sh từ bước 6-7 sẽ ra GOLD 50.063 và loại
+   10.890 ô SILVER_uncalibrated -> 56.824 dòng.
+
+--------------------------------------------------------------------------------
+6. NHỮNG CHỖ HỎNG ÂM THẦM (đọc trước khi sửa gì)
+--------------------------------------------------------------------------------
+· Xoá dataset_out/{gold,silver,syllable}/ -> crop-protos = 0 -> luật
+  s2_inter_s3_corrected biến mất -> SILVER −32%, KHÔNG lỗi nào được ném ra.
+· qn_line_detector: auto -> máy có paddleocr tách dòng bằng backend khác, số liệu
+  lệch âm thầm. Phải để projection_deskew.
+· Đổi tên `name:` của sách trong config phá toàn bộ liên kết bằng chứng (tên crop
+  và cột book đã sinh).
+· Thiếu confusion_fixes.yaml -> nhãn đã chứng minh sai lặng lẽ ở lại GOLD/SILVER.
+· Đổi nhãn xong thì mẻ audit dựng từ bản cũ HẾT HIỆU LỰC — phải dựng lại
+  (make_combined_batch --seed 2026) và so sha256.
+
+--------------------------------------------------------------------------------
+7. CODE KHÔNG NẰM TRONG CHUỖI CHẠY (phân tích đồ thị import từ 7 entrypoint)
+--------------------------------------------------------------------------------
+Chỉ 46 module Python thực sự được nạp khi chạy run_pipeline.sh (cộng
+train_crop/infer_centernet.py + model_centernet.py nạp động qua sys.path khi
+--reseg detector). Phần còn lại chia 4 nhóm:
+
+A. CODE CHẾT THẬT SỰ — không ai import, không entrypoint nào gọi:
+   · pipeline/align_engine/crop_quality.py   (9,5 KB) — đo bleed bằng pixel +
+     resolve_overlap; docstring nói rõ nó "giải quyết phần carve KHÔNG với tới",
+     nhưng build_dataset chỉ gọi tighten_box + carve_neighbor_ink. Hoặc nối vào
+     PASS 2, hoặc ghi rõ là chưa dùng.
+   · core/text/loanword.py — chỉ step3_label (đường cũ) gọi.
+   · pipeline/align_engine/nom_classifier/model.py — infer.py không import.
+   · pipeline/align_engine/to_standard.py — trùng chức năng với pipeline/publish/.
+   · pipeline/export_review_excel.py, scripts/delete_pua_codepoints.py,
+     scripts/check_ocr_token.py, scripts/_retired/* (4 file PaddleOCR).
+
+B. ĐƯỜNG CŨ ĐÃ NGHỈ HƯU (giữ để đối chứng luận văn, KHÔNG chạy):
+   · pipeline/step3_label.py + pipeline/step4_export.py
+   · core/ranking/{ranker.py, dinov2_ranker.py, fontdiffusion_gen.py}
+     (config đã đặt use_dinov2: false; DINOv2 chứng minh không phân biệt được
+     chữ Nôm). ~50 KB.
+   Ngoại lệ: step2_align.py VẪN DÙNG — align_production import _get_qn_lines
+   từ đó.
+
+C. GIAI ĐOẠN CHẠY TAY, ngoài run_pipeline.sh (không phải code chết):
+   pipeline/ground_truth/ (~24 file, mẻ chấm tay), pipeline/consensus_fusion/
+   (12 file), pipeline/publish/ (10 file), pipeline/tools/ (6 file),
+   ArcFace/ (11 file, retrain S3 trên Kaggle).
+   Cảnh báo B8 trong docs/FLOW_CAP_NHAT: audit/fuse/publish nằm ngoài chuỗi nên
+   bộ công bố và bộ đo precision dễ trôi khỏi nhau.
+
+D. TEST (chạy qua scripts/run_all_selftests.sh, 414 assertion):
+   core/pdf/parser_selftest.py, core/text/syllable_validation_selftest.py,
+   pipeline/phase1_engine_selftest.py, */selftest.py.
+
+E. THƯ MỤC NẶNG KHÔNG THAM GIA RUNTIME:
+   NomNaOCR/ 1,4 GB · font_diffusion/ 1,0 GB (chỉ dùng khi sinh glyph mới;
+   pipeline đọc thẳng gannhanocr-fd/ 726 MB đã sinh sẵn, skip_local_fd_gen: true)
+   · kaggle_diffusion/ 12 MB · ArcFace/ 544 MB · nom-char-det-r34_kaggle.zip 1,1 GB
+   · evaluation/ chỉ còn _kinhhannom_debug (12 KB) — README align_engine vẫn trỏ
+   vào evaluation/ver_new/ đã không còn tồn tại.
+================================================================================

@@ -1,0 +1,34 @@
+{
+  "n_rows": 82269,
+  "readmitted_to_gold": 1185,
+  "silver_renamed": 10890,
+  "review_reason_renamed": 10934,
+  "tier_before": {
+    "GOLD": 48878,
+    "REVIEW": 15740,
+    "SILVER": 10890,
+    "SYLLABLE": 6761
+  },
+  "tier_after": {
+    "GOLD": 50063,
+    "REVIEW": 14555,
+    "SILVER_uncalibrated": 10890,
+    "SYLLABLE": 6761
+  },
+  "evidence": {
+    "arcface_retrain_error_auc": 0.577,
+    "arcface_retrain_ci95": [
+      0.442,
+      0.706
+    ],
+    "s3_old_error_auc": 0.566,
+    "s3_old_ci95": [
+      0.459,
+      0.672
+    ],
+    "n_human_verdicts": 826,
+    "rule_precision_similar": "40/41 = 97.6% CI95 [87.1, 99.9]",
+    "rule_precision_direct": "737/752 = 98.0% CI95 [96.7, 98.9]",
+    "note": "Bước này KHÔNG sửa nhãn nào. Nó gỡ quyền quyết định của một tín hiệu có CI chứa 0,5, và tách phần chưa ai đo ra khỏi bộ công bố."
+  }
+}

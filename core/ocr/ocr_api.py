@@ -499,6 +499,128 @@ def _translate_boxes(boxes, ox: int, oy: int):
     return boxes
 
 
+class StaleOCRCacheError(RuntimeError):
+    """Cache OCR không còn ứng với ảnh trên đĩa — toạ độ bbox sẽ SAI nếu vẫn dùng."""
+
+
+def _file_md5(path: str) -> str:
+    h = hashlib.md5()
+    with open(path, "rb") as fh:
+        for chunk in iter(lambda: fh.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def _pixel_hash(path: str) -> str | None:
+    """Băm NỘI DUNG ẢNH (mode, kích thước, pixel thô) — độc lập với cách nén PNG.
+
+    `extract_nom_image` lưu ảnh bằng `PIL.Image.save(..., "PNG")`, tức MÃ HOÁ LẠI.
+    Byte tệp vì thế phụ thuộc phiên bản Pillow/zlib, còn pixel thì không. Có hai băm
+    mới phân biệt được "ảnh đã đổi thật" với "chỉ nén khác đi".
+    """
+    try:
+        from PIL import Image
+    except Exception:
+        return None
+    try:
+        with Image.open(path) as im:
+            im.load()
+            return hashlib.md5(
+                f"{im.mode}|{im.size}|".encode() + im.tobytes()
+            ).hexdigest()
+    except Exception:
+        return None
+
+
+def verify_cache_image(cache_path: str, image_path: str, *, verbose: bool = False) -> str:
+    """Đối chiếu cache với ảnh hiện tại. Trả 'ok' | 'healed' | 'skipped'.
+
+    Ném StaleOCRCacheError nếu ảnh đã đổi NỘI DUNG — vì bbox trong cache được tính
+    trên ảnh cũ, dùng tiếp sẽ lệch toạ độ mà KHÔNG có cảnh báo nào (đúng lớp lỗi đã
+    gây lệch ~252px trước đây).
+
+    KHÔNG tự gọi lại API: OCR lại là thao tác tốn tiền, phải do người quyết định.
+    """
+    if os.environ.get("SN_OCR_SKIP_CACHE_VERIFY") == "1":
+        return "skipped"
+    if not os.path.exists(image_path):
+        return "skipped"
+    try:
+        with open(cache_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception:
+        return "skipped"
+
+    stored_file = data.get("image_hash")
+    if not stored_file:
+        return "skipped"                      # cache đời cũ, chưa có băm
+    if _file_md5(image_path) == stored_file:
+        return "ok"                           # đường nhanh, không mở ảnh
+
+    # Byte lệch -> phân xử bằng pixel.
+    stored_px = data.get("pixel_hash")
+    now_px = _pixel_hash(image_path)
+    if stored_px and now_px and stored_px == now_px:
+        data["image_hash"] = _file_md5(image_path)
+        tmp = Path(cache_path).with_suffix(".json.tmp")
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        tmp.replace(cache_path)
+        if verbose:
+            print(f"    [OCR] {Path(image_path).name}: PNG nén khác nhưng pixel y hệt "
+                  f"-> đã cập nhật image_hash, cache vẫn dùng được")
+        return "healed"
+
+    raise StaleOCRCacheError(
+        f"Cache OCR KHÔNG còn ứng với ảnh: {image_path}\n"
+        f"  cache : {cache_path}\n"
+        f"  image_hash ghi trong cache = {stored_file}\n"
+        f"  image_hash của ảnh hiện tại = {_file_md5(image_path)}\n"
+        + ("  pixel_hash cũng LỆCH -> ảnh đã đổi NỘI DUNG.\n" if stored_px and now_px
+           else "  cache chưa có pixel_hash nên không phân xử được.\n"
+                "  Chạy: python -m core.ocr.ocr_api backfill-pixel-hash\n")
+        + "  Toạ độ bbox trong cache tính trên ảnh CŨ -> dùng tiếp sẽ lệch toạ độ.\n"
+          "  Cách xử lý:\n"
+          "    1) Khôi phục ảnh gốc từ bản sao lưu (khuyên dùng — không tốn tiền), HOẶC\n"
+          "    2) Xoá tệp cache này để OCR lại (TỐN TIỀN API), HOẶC\n"
+          "    3) SN_OCR_SKIP_CACHE_VERIFY=1 để bỏ qua (CHỈ khi bạn chắc chắn)."
+    )
+
+
+def backfill_pixel_hash(root: str = "prepared", verbose: bool = True) -> dict:
+    """Thêm `pixel_hash` vào các cache đời cũ (chỉ khi image_hash còn khớp)."""
+    stats = {"added": 0, "already": 0, "hash_mismatch": 0, "no_image": 0, "no_hash": 0}
+    for cache_file in sorted(Path(root).rglob("*_ocr_cache.json")):
+        try:
+            data = json.loads(cache_file.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        if data.get("pixel_hash"):
+            stats["already"] += 1
+            continue
+        img = data.get("image")
+        if not img or not os.path.exists(img):
+            stats["no_image"] += 1
+            continue
+        if not data.get("image_hash"):
+            stats["no_hash"] += 1
+            continue
+        if _file_md5(img) != data["image_hash"]:
+            stats["hash_mismatch"] += 1     # KHÔNG vá — đây là ca cần người xem
+            continue
+        px = _pixel_hash(img)
+        if not px:
+            continue
+        data["pixel_hash"] = px
+        tmp = cache_file.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(cache_file)
+        stats["added"] += 1
+    if verbose:
+        print(f"[backfill] {stats}")
+    return stats
+
+
 def load_columns_fullpage(cache_path: str, image_path: str):
     """Read a cached OCR result and return columns in FULL-PAGE coords.
 
@@ -523,6 +645,7 @@ def ocr_page(
     frame_pad: int = 12,
     expected_cols: int = 9,
     retry_pad: int = 30,
+    verify_cache: bool = True,
 ) -> list[list[dict]] | None:
     """OCR 1 trang -> các cột char dicts (có cache).
 
@@ -533,6 +656,11 @@ def ocr_page(
     if cache_path:
         cache_file = Path(cache_path)
         if cache_file.exists():
+            # CHỐT CHẶN: cache chỉ hợp lệ với ĐÚNG ảnh đã sinh ra nó. Trước đây
+            # `image_hash` được ghi mà không bao giờ đối chiếu -> đổi pages/*.png
+            # là bbox cũ áp lên ảnh mới, lệch toạ độ, không một cảnh báo.
+            if verify_cache:
+                verify_cache_image(str(cache_file), image_path, verbose=verbose)
             if verbose:
                 print(f"    [OCR] Loaded cache: {cache_file.name}")
             # full-page coords (migrates old frame-cropped caches on the fly)
@@ -568,10 +696,10 @@ def ocr_page(
     if cache_path:
         cache_file = Path(cache_path)
         cache_file.parent.mkdir(parents=True, exist_ok=True)
-        with open(image_path, "rb") as fh:
-            img_hash = hashlib.md5(fh.read()).hexdigest()
+        img_hash = _file_md5(image_path)
         cache_data = {
             "image": image_path, "image_hash": img_hash,
+            "pixel_hash": _pixel_hash(image_path),
             "framed": framed, "frame_pad": frame_pad,
             "coords_space": "fullpage",  # boxes already translated above
             "n_columns": len(columns), "columns": columns, "boxes_raw": boxes,

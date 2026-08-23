@@ -31,7 +31,7 @@ def cmd_census(args) -> None:
 
 def cmd_apply(args) -> None:
     df = _load(args.labels)
-    out_df, report = remediate_mod.remediate(df, tau_silver=args.tau)
+    out_df, report = remediate_mod.remediate(df, tau_silver=args.tau, s3_demote=args.s3_demote)
     out_csv = Path(args.out) / "labels_remediated.csv"
     out_json = Path(args.out) / "remediation_report.json"
     out_csv.parent.mkdir(parents=True, exist_ok=True)
@@ -56,6 +56,9 @@ def build_parser() -> argparse.ArgumentParser:
     c.set_defaults(func=cmd_census)
 
     a = sub.add_parser("apply", help="apply the remediation and write outputs")
+    a.add_argument("--s3-demote", action="store_true",
+                   help="bật lại phép hạ cấp similar-bridge theo S3 (TẮT mặc định: "
+                        "S3 error-AUC 0,566 CI [0,459-0,672], không phân biệt đúng/sai)")
     a.add_argument("--tau", type=float, default=remediate_mod.TAU_SILVER,
                    help="S3 cosine threshold for demoting similar-bridge GOLD")
     a.set_defaults(func=cmd_apply)

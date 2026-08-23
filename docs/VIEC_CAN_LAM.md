@@ -37,23 +37,50 @@ KHỐI 0 (hôm nay)  →  KHỐI 1 (vá lỗi)  →  KHỐI 3 (bàn thí nghiệ
 
 ---
 
-# KHỐI 0 — CỨU DỮ LIỆU (hôm nay, không hoãn được)
+# KHỐI 0 — CỨU DỮ LIỆU ✅ HOÀN THÀNH 2026-08-23 · commit `17289d145c`
 
-- [ ] **0.1 Sao lưu cache OCR ra NGOÀI repo + ghi sha256** — 5 phút
-  `cp -r prepared/*/detected/ ~/backup_ocr_cache_2026-08-22/`
-  *Vì sao*: 890 tệp cache là **primary data**; mất là phải gọi lại API mất tiền.
-- [ ] **0.2 Commit toàn bộ cây làm việc** — `dataset_out/`, `docs/`, `pipeline/tools/fix_tone.py`,
-  `pipeline/tools/sem_score.py`, `pipeline/ground_truth/make_lookalike_page.py`
-  *Vì sao*: mọi thí nghiệm phải có một mốc SHA để so; hiện `fix_tone.py` còn `??` (untracked).
-- [ ] **0.3 Thêm chốt đối chiếu md5 vào `ocr_page`** — 5 dòng
-  *Vì sao*: `core/ocr/ocr_api.py:533-537` chỉ kiểm tệp cache **có tồn tại**; `image_hash` được ghi
-  nhưng **không bao giờ đối chiếu**. Đổi `pages/*.png` mà giữ cache ⇒ bbox ảnh cũ áp lên ảnh mới,
-  lệch toạ độ, **không một cảnh báo**. Lệch phải **ném lỗi**, không tự OCR lại (tránh đốt tiền API).
+- [x] **0.1 Sao lưu primary data + sha256** → `~/backup_ocr_cache_2026-08-22/` (**1.783 tệp, 67 MB**)
+  Checklist ban đầu ghi `cp -r prepared/*/detected/` — **thiếu một nửa**: cache QN nằm ở
+  `transcriptions/`, không phải `detected/`. Bản sao thực tế gồm:
+  445 cache Nôm (tốn tiền API) · 445 cache QN · 445 cột đã bóc · **445 `pages/*.png`** (ảnh mà
+  `image_hash` neo vào — thiếu nó thì không kiểm chứng được chuỗi) · 3 manifest.
+  Kèm `SHA256SUMS.txt` + `README.md` (cách kiểm & khôi phục). Đối chiếu từng tệp với bản gốc:
+  **khớp tuyệt đối**; `shasum -a 256 -c` → 0 dòng lỗi.
 
-> **LUẬT VÀNG cho mọi thí nghiệm về sau**: `prepared/*/pages/*.png` **đóng băng tuyệt đối**.
-> Chuẩn hoá DPI làm **downstream** bằng cách nhân tỉ lệ bbox, **không** resample `pages/`.
+- [x] **0.2 Commit mốc SHA** — commit `17289d145c`, 36 tệp.
+  `.gitignore` đã loại `*.png`/`prepared/`/`dataset/` nên chỉ 36 tệp vào commit, không phải
+  145.000 ảnh. Unihan được add theo **đúng casing `Dict/`** mà git đang dùng → index **không**
+  sinh thư mục trùng `dict/`. Xác minh: `HEAD:dataset_out/labels_final.csv` = 82.269 dòng
+  (GOLD 50.063 / SILVER_uncalibrated 10.890 / SYLLABLE 6.761 / REVIEW 14.555) — **khớp đĩa**.
+  Commit vào `main` theo quy ước repo (`push.sh:10`: chỉ dùng nhánh main). **Chưa push.**
 
----
+- [x] **0.3 Chốt đối chiếu cache OCR** — `core/ocr/ocr_api.py`
+  Không phải "5 dòng" như dự tính. Nghiên cứu cho thấy `extract_nom_image` lưu ảnh qua
+  `PIL.Image.save(..., "PNG")`, tức **mã hoá lại** → byte tệp phụ thuộc phiên bản Pillow/zlib,
+  còn pixel thì không. Chốt md5 thô sẽ **báo động giả** khi đổi môi trường. Thiết kế thực hiện:
+
+  | tình huống | xử lý |
+  |---|---|
+  | md5 tệp khớp | `ok` (đường nhanh, không mở ảnh) |
+  | byte lệch, **pixel y hệt** | `healed` — cập nhật `image_hash`, cache vẫn dùng |
+  | byte lệch, **pixel đổi** | **ném `StaleOCRCacheError`** |
+  | cache chưa có `pixel_hash` | ném lỗi kèm hướng dẫn chạy backfill |
+  | cache đời cũ không có `image_hash` | `skipped` |
+  | `SN_OCR_SKIP_CACHE_VERIFY=1` | `skipped` (cửa thoát hiểm) |
+
+  **KHÔNG tự gọi lại API khi lệch** — OCR lại tốn tiền, phải do người quyết định.
+  `backfill_pixel_hash()` đã vá **445/445** cache Nôm; verify lại toàn bộ → **445 `ok`**.
+  445 cache QN được bỏ qua an toàn (không có khoá `image`).
+  Đường QN (`qn_ocr.py:129`) **vốn đã** đối chiếu md5 → không cần sửa.
+  **+13 assertion**, mốc selftest **414 → 427**, không hồi quy.
+
+## Phát hiện thêm trong lúc làm KHỐI 0
+
+- [ ] **0.4 `nom-embed` submodule đang bẩn** — `best.pt` và `last.pt` **đã đổi nhưng chưa commit
+  trong submodule**. Con trỏ submodule ở repo cha vẫn là `7ff74f5`, nên **checkpoint S3 trên đĩa
+  KHÁC với thứ mà lịch sử git ghi lại**. Đây là một lỗ hổng tái lập: không ai dựng lại được đúng
+  mô hình đã sinh ra `s3_cosine` trong bộ nhãn. Cần quyết định: commit trong submodule, hay đẩy
+  checkpoint lên HuggingFace và ghi hash vào `EVIDENCE_INDEX.md`.
 
 # KHỐI 1 — VÁ 9 LỖI CHẶN (2–3 ngày)
 

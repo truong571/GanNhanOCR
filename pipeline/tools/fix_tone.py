@@ -52,12 +52,15 @@ from __future__ import annotations
 import argparse
 import collections
 import json
+import re
 import unicodedata as ud
 from pathlib import Path
 
 import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
+from core.text.dictionary import dict_dir  # noqa: E402
+DICT_DIR = dict_dir(REPO)
 DEFAULT_IN = REPO / "dataset_out" / "labels_final.csv"
 DEFAULT_OUT = REPO / "dataset_out" / "labels_tonefix.csv"
 DEFAULT_REPORT = REPO / "dataset_out" / "tonefix_report.json"
@@ -73,6 +76,21 @@ def strip_tone(s: str) -> str:
     return ud.normalize("NFC", "".join(
         c for c in ud.normalize("NFD", str(s))
         if not ("̀" <= c <= "̣" and c not in keep)))
+
+
+def strip_all(s: str) -> str:
+    """Bỏ MỌI dấu phụ, kể cả dấu tạo chữ (ă â ê ô ơ ư) và đ -> d.
+
+    Rộng hơn `strip_tone` nên CHỈ được thử khi `strip_tone` không tìm ra ứng viên nào,
+    và vẫn phải qua đúng hai chốt cũ (ứng viên phải là ĐỌC ÂM của chính chữ đó; nhập
+    nhằng thì chỉ corpus mới được chốt). Nhóm này bắt đúng lớp lỗi VietOCR RỤNG HẲN dấu
+    phụ: 衣 "ay" -> "ấy", 丑 "xau" -> "xấu", 門 "muon" -> "muôn", 旦 "den" -> "đến".
+    """
+    return "".join(c for c in ud.normalize("NFD", str(s))
+                   if not ud.combining(c)).replace("đ", "d").replace("Đ", "D")
+
+
+_GARBAGE = re.compile(r"^[\W\d_]+$")
 
 
 def plan(labels: pd.DataFrame, qn: dict[str, list[str]]) -> tuple[pd.DataFrame, dict]:
@@ -91,26 +109,43 @@ def plan(labels: pd.DataFrame, qn: dict[str, list[str]]) -> tuple[pd.DataFrame, 
         if s in readings[ch]:
             attested[ch][s] += 1
 
-    fixes, ambiguous = [], []
+    fixes, ambiguous, garbage = [], [], []
     for idx, ch, s in zip(rows.index, rows["ocr_char"], syl_l):
+        if _GARBAGE.match(s):
+            garbage.append((ch, s))        # rác marker: KHÔNG sửa, chỉ gắn cờ (xem báo cáo)
+            continue
         if s in readings[ch] or s in keys:
             continue                       # đã khớp, hoặc là từ có thật -> không đụng
+        # TẦNG 1 (hẹp): chỉ lệch dấu THANH.  TẦNG 2 (rộng): rụng cả dấu tạo chữ.
         cand = sorted(x for x in readings[ch] if strip_tone(x) == strip_tone(s))
+        level = "tone"
+        if not cand:
+            cand = sorted(x for x in readings[ch] if strip_all(x) == strip_all(s))
+            level = "diacritic"
         if not cand:
             continue
         if len(cand) == 1:
-            fixes.append((idx, ch, s, cand[0], "unique"))
+            fixes.append((idx, ch, s, cand[0], f"{level}_unique"))
             continue
         seen = [c for c in cand if attested[ch].get(c)]
         if len(seen) == 1:
-            fixes.append((idx, ch, s, seen[0], f"corpus:{attested[ch][seen[0]]}"))
+            fixes.append((idx, ch, s, seen[0], f"{level}_corpus:{attested[ch][seen[0]]}"))
         else:
             ambiguous.append((ch, s, "/".join(cand)))
 
     f = pd.DataFrame(fixes, columns=["idx", "ocr_char", "syllable_raw", "syllable", "rule"])
     amb = collections.Counter(ambiguous)
-    return f, {"ambiguous": [{"ocr_char": a, "syllable_raw": b, "candidates": c, "n": n}
-                             for (a, b, c), n in amb.most_common()]}
+    gb = collections.Counter(garbage)
+    return f, {
+        "ambiguous": [{"ocr_char": a, "syllable_raw": b, "candidates": c, "n": n}
+                      for (a, b, c), n in amb.most_common()],
+        # RÁC MARKER: chữ số/ký hiệu lọt vào cột nội dung (1, 0, 19, 2017, 290…).
+        # KHÔNG sửa được ở tầng này — đây là lỗi bóc marker của parser_v5, phải vá ở
+        # bước 2. Gắn cờ để đếm được và để bước sau loại khỏi bộ giao nộp.
+        "marker_garbage_cells": int(sum(gb.values())),
+        "marker_garbage_values": [{"ocr_char": a, "syllable": b, "n": n}
+                                  for (a, b), n in gb.most_common(20)],
+    }
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -127,8 +162,8 @@ def main(argv: list[str] | None = None) -> int:
 
     fixes, extra = plan(labels, qn)
     by_rule = collections.Counter(r.split(":")[0] for r in fixes["rule"])
-    print(f"[thanh] sửa được {len(fixes)} ô "
-          f"(ứng viên duy nhất {by_rule['unique']}, corpus chốt {by_rule['corpus']})")
+    print(f"[thanh] sửa được {len(fixes)} ô: "
+          + ", ".join(f"{k}={v}" for k, v in sorted(by_rule.items())))
     print(f"[thanh] còn nhập nhằng {sum(a['n'] for a in extra['ambiguous'])} ô "
           f"trên {len(extra['ambiguous'])} cặp -> để nguyên")
     top = fixes.groupby(["ocr_char", "syllable_raw", "syllable"]).size().sort_values(

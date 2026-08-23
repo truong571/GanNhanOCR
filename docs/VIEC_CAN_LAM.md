@@ -192,12 +192,60 @@ Thứ tự **bắt buộc từ thượng nguồn xuống** — chỉnh crop trê
 
 | # | chương trình | cấu hình | thước đo chính | baseline |
 |---|---|---|---|---|
-| **T1** | Đường Quốc ngữ (tách dòng × 2-pass × chuẩn hoá thanh × parser) | 54 | tỉ lệ âm **ngoài từ điển** | **0,95%** (778 ô) → mục tiêu ~0,6% |
-| **T2** | Hình học trang Nôm (DPI × nhị phân hoá × dò cột) | 48 | tỉ lệ trang đủ 9 cột | **439/445** → mục tiêu 445/445 |
+| **T1** ✅ | Đường Quốc ngữ — chuẩn hoá dấu phụ + rác marker | — | âm **ngoài từ điển** | **0,946%**, xem kết quả bên dưới |
 | **T3** | **Căn chỉnh** — chuẩn nhiễu loạn + quét ma trận chi phí | 144 | `anchor_retention` dưới nhiễu | **chưa đo bao giờ** |
 | **T4** | Tách ký tự & chất lượng crop | 144 | 6 thước đo hình học | **chưa đo bao giờ** |
 | **T5** | Độ giòn từ điển + `syllable_gate` + top-K cầu tự dạng | ~30 | độ giòn, nhất quán liên sách | — |
 | **T6** | Tái lập & bằng chứng | — | byte-identical ×2, clone sạch | — |
+
+## T1 — ĐƯỜNG QUỐC NGỮ · KẾT QUẢ 2026-08-23
+
+### Phân loại chính xác 778 ô ngoài từ điển (0,946%)
+
+| nhóm | ô | % | ví dụ | sửa máy được? |
+|---|---|---|---|---|
+| Âm hợp lệ nhưng từ điển không có | 508 | 65,3% | `樞/giu` `傳/truyen` `衣/ay` | một phần — xem dưới |
+| **Rác marker** (chữ số lọt vào nội dung) | **103** | 13,2% | `1` `0` `19` `2017` `290` | gắn cờ, không sửa |
+| Sửa thanh được (nhóm A) | 88 | 11,3% | `礼/trấy` `孛/but` | ✅ |
+| Âm không hợp lệ (hỏng nặng) | 79 | 10,2% | `mortthay` `038struyen` `rút2%` | ❌ |
+
+Bóc tiếp nhóm 508 ô: **35** có ứng viên duy nhất là đọc âm của chính chữ (`衣/ay→ấy`,
+`丑/xau→xấu`, `門/muon→muôn`) · **29** chốt được bằng bằng chứng corpus (`旦/den→đến` 526×,
+`各/cac→các` 309×) · 316 có ứng viên nhưng KHÔNG phải đọc âm của chữ (nhóm B mở rộng — hai
+giả thuyết ngang nhau, cấm sửa máy) · 125 không có ứng viên nào kể cả bỏ hết dấu.
+
+### Đã làm
+
+`fix_tone` mở rộng từ "chỉ dấu THANH" sang "mọi dấu phụ": thêm `strip_all` (bỏ cả dấu tạo
+chữ và đ→d), thử **tầng 2 chỉ khi tầng 1 không ra ứng viên**, giữ nguyên hai chốt an toàn
+(ứng viên phải là đọc âm của chính chữ; nhập nhằng chỉ corpus mới chốt). Thêm phát hiện
+rác marker (gắn cờ, không sửa). **+23 assertion** — `tools/` trước nay không có test nào.
+
+    73 ô  ->  115 ô   (tone_unique 66 · diacritic_unique 35 · tone_corpus 7 · diacritic_corpus 7)
+
+### Kết quả quyết định: VỊ TRÍ quan trọng hơn cấu hình
+
+| | |
+|---|---|
+| Sau khi sửa, đủ điều kiện `s1_inter_s2_direct` (=GOLD) | **115/115** |
+| Tier hiện tại của 115 ô | 106 SILVER_uncalibrated + 9 REVIEW — **0 ô trong bộ giao nộp** |
+| Áp **SAU** build (như hiện nay) | **+0** ô vào bộ giao nộp |
+| Áp **TRƯỚC** build | **+115 ô GOLD** → 56.776 → **56.891** |
+
+Đây là lần đầu định lượng được điều mà `fix_tone` tự viết trong docstring từ đầu. Lưới 54
+cấu hình của T1 là thứ yếu: đòn bẩy thật nằm ở **chỗ đặt phép chuẩn hoá**, không ở tham số.
+
+⚠️ Mục tiêu "~0,6%" tôi nêu lúc lập kế hoạch là **lạc quan**. Con số trung thực sau khi
+phân loại: **0,946% → 0,636%** (152 ô sửa + 103 ô rác gắn cờ), và chỉ đạt được nếu chuẩn
+hoá chạy TRƯỚC build.
+
+### Còn lại (cần quyết định)
+
+- [ ] **T1.x** Nối chuẩn hoá vào bước 2, chạy lại **build** để hiện thực +115 ô GOLD.
+  Tốn: một lần build đủ 445 trang (detector + S3) và đổi mọi số hạ nguồn.
+- [ ] **T1.y** Vá rò rỉ marker trong `parser_v5` (103 ô) — lỗi bóc marker, không phải lỗi âm.
+
+---
 
 ### Ba cảnh báo bắt buộc
 

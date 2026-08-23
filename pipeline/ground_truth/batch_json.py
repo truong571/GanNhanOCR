@@ -18,6 +18,8 @@ import json
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+from core.text.dictionary import dict_dir  # noqa: E402
+DICT_DIR = dict_dir(REPO)
 BATCH_SIZE = 150
 
 

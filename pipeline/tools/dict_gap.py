@@ -30,6 +30,8 @@ from pathlib import Path
 import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
+from core.text.dictionary import dict_dir  # noqa: E402
+DICT_DIR = dict_dir(REPO)
 
 
 def main(argv: list[str] | None = None) -> int:

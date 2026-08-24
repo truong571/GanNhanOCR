@@ -26,6 +26,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+LABELS_FINAL = REPO / "dataset_out" / "labels_final.csv"
 DOC = REPO / "docs" / "BANG_SO_LIEU_CHINH_THUC.md"
 
 FILES = [
@@ -131,10 +132,22 @@ def build_blocks() -> dict[str, str]:
     pham_vi = "\n".join(out)
 
     # --- HEADER ------------------------------------------------------------
-    sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True,
-                         text=True, cwd=REPO).stdout.strip() or "(không phải git)"
+    # HEADER PHẢI TẢ DỮ LIỆU, KHÔNG TẢ KHOẢNH KHẮC SINH TÀI LIỆU (sửa T6 2026-08-24).
+    # Bản đầu dùng `git rev-parse HEAD` + `date.today()`, nên: mỗi lần commit là HEAD
+    # đổi -> tài liệu lệch NGAY; và nửa đêm là ngày đổi -> lại lệch. Phép kiểm `--check`
+    # do đó KHÔNG BAO GIỜ xanh được, tức nó kêu sói vĩnh viễn — mà một guard luôn đỏ thì
+    # người ta sẽ bỏ qua, đúng thứ tệ nhất. Nay lấy commit CUỐI CÙNG chạm vào bộ nhãn và
+    # NGÀY SỬA của chính tệp bộ nhãn: cả hai chỉ đổi khi DỮ LIỆU đổi.
     import datetime
-    header = (f"**Đo ngày**: {datetime.date.today()} · **Commit**: `{sha}` · "
+    sha = subprocess.run(["git", "log", "-1", "--format=%h", "--", str(LABELS_FINAL)],
+                         capture_output=True, text=True, cwd=REPO).stdout.strip()
+    sha = sha or subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True,
+                                text=True, cwd=REPO).stdout.strip() or "(không phải git)"
+    try:
+        day = datetime.date.fromtimestamp(LABELS_FINAL.stat().st_mtime)
+    except OSError:
+        day = datetime.date.today()
+    header = (f"**Bộ nhãn sinh ngày**: {day} · **Commit chạm bộ nhãn gần nhất**: `{sha}` · "
               f"**Bộ nhãn**: `dataset_out/labels_final.csv` ({_n(tot)} dòng)")
 
     # --- VA_LOI: số liệu bước 4-6 -------------------------------------------

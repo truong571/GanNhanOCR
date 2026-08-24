@@ -61,7 +61,7 @@ _CHAR_IDX = re.compile(r"_c(\d+)_(\d+)\.png$")
 
 def _img_key(image: str) -> tuple[int, int]:
     """(chỉ số cột, chỉ số ký tự trong cột) từ tên tệp crop."""
-    m = _CHAR_IDX.search(image or "")
+    m = _CHAR_IDX.search(image) if isinstance(image, str) else None
     return (int(m.group(1)), int(m.group(2))) if m else (0, 0)
 
 
@@ -73,7 +73,11 @@ def load_boxes(labels: Path = LABELS, n_pages: int = 60, seed: int = 20260824):
     """
     import pandas as pd
     df = pd.read_csv(labels, usecols=["image", "book", "page", "column", "bbox", "tier"])
-    df = df[df["bbox"].notna()]
+    # REVIEW không được xuất crop -> `image` rỗng; T4 đo HÌNH HỌC ẢNH CẮT nên
+    # chỉ những hàng có ảnh thật mới vào được. Ghi rõ số bị loại.
+    n0 = len(df)
+    df = df[df["bbox"].notna() & df["image"].apply(lambda v: isinstance(v, str))]
+    print(f"[T4-A] loại {n0 - len(df):,}/{n0:,} hàng không có ảnh cắt (REVIEW)")
     pages = sorted({(b, p) for b, p in zip(df["book"], df["page"])})
     if n_pages and n_pages < len(pages):
         # tất định, phủ đều 3 sách: bước nhảy đều trên danh sách đã sắp
@@ -221,7 +225,7 @@ def diagnose(columns, cache) -> dict:
     đơn điệu theo pad và trục pad vô nghĩa — đúng lớp lỗi của trục `yield` ở T3.
     """
     rows = []
-    for pad in PADS:
+    for pad in PROBE_PADS:
         cfg = dict(BASELINE, pad=pad)
         r = run_config(columns, cfg, cache)
         r["pad"] = pad
@@ -232,16 +236,27 @@ def diagnose(columns, cache) -> dict:
     s = [r["stray_ink"] for r in rows]
     i = [r["ink_pct"] for r in rows]
     o = [r["flag_ok"] for r in rows]
-    mono_ok = all(o[k] <= o[k + 1] for k in range(len(o) - 1))
+    # PHÉP KIỂM ĐÚNG (đã siết): thước đo có BẤU VÀO trục không, tức có cực đại
+    # NỘI trên dải nới rộng không. "Có thước đo chạy ngược" là chưa đủ — phải
+    # thấy flag_ok QUAY ĐẦU, nếu không thì tối ưu nó đẩy pad ra vô cực.
+    best = max(range(len(o)), key=lambda k: o[k])
+    mono_ok = all(o[k] <= o[k + 1] + 1e-9 for k in range(len(o) - 1))
+    interior = 0 < best < len(o) - 1
     counter = (s[-1] > s[0] + 1e-4) or (i[-1] < i[0] - 1e-4)
-    verdict = ("SUY BIẾN — flag_ok đơn điệu tăng theo pad và không có lực kéo ngược"
-               if mono_ok and not counter else
-               "DÙNG ĐƯỢC — có lực kéo ngược, flag_ok không chỉ là hàm của pad")
+    verdict = ("DÙNG ĐƯỢC — flag_ok có cực đại NỘI tại pad="
+               f"{PROBE_PADS[best]:.2f}, thước đo bấu vào trục"
+               if interior else
+               "SUY BIẾN — flag_ok tăng tới hết dải (pad="
+               f"{PROBE_PADS[-1]:.2f}, ok={o[-1]:.4f}), không có cực đại nội: "
+               "thước đo họ D KHÔNG có thẩm quyền chọn pad -> khoá pad ở MỐC, "
+               "chuyển sang T4-B (IoU trên ngữ liệu tổng hợp)")
     print(f"\n  border_ink {b[0]:.4f} -> {b[-1]:.4f} | stray {s[0]:.4f} -> {s[-1]:.4f}"
           f" | ink_pct {i[0]:.4f} -> {i[-1]:.4f}")
-    print(f"  flag_ok đơn điệu theo pad: {mono_ok} | có lực kéo ngược: {counter}")
+    print(f"  flag_ok đơn điệu theo pad: {mono_ok} | cực đại nội: {interior} "
+          f"(argmax pad={PROBE_PADS[best]:.2f}) | lực kéo ngược: {counter}")
     print(f"  => {verdict}")
     return {"rows": rows, "monotone_ok": mono_ok, "counterforce": counter,
+            "interior_optimum": interior, "argmax_pad": PROBE_PADS[best],
             "verdict": verdict}
 
 
@@ -265,8 +280,40 @@ def diagnose(columns, cache) -> dict:
 #
 # Không thoả đủ 4 -> GIỮ MỐC (pad 0,12 · fixed128 · carve bật · resolve tắt).
 # Đây là kết luận ÂM hoàn toàn chấp nhận được, và T3 đã cho một tiền lệ.
+#
+# ---------------------------------------------------------------------------
+# SỬA LUẬT 2026-08-24 — SIẾT CHẶT (không nới lỏng). Ghi công khai vì luật đã
+# commit trước ở fd7da32cd9; bản gốc còn trong lịch sử git để đối chiếu.
+#
+# Điều kiện (1) bản gốc chỉ hỏi "có thước đo nào chạy ngược không". Nó ĐÃ PASS
+# một cách hình thức: `ink_pct` giảm 0,180 -> 0,167 khi pad tăng. Nhưng ngưỡng
+# `flag_blank` là 0,05 — còn rất xa, nên lực đó KHÔNG HỀ bấu vào cờ. Nới dải tới
+# pad 0,60 thì thấy rõ (đo 12 trang, 1.869 hộp):
+#
+#     pad     0,12    0,22    0,30    0,40    0,50    0,60
+#     flag_ok 0,9224  0,9465  0,9535  0,9695  0,9700  0,9738   <- tăng mãi
+#
+# Không có cực đại nội. Lý do nằm ở ĐỊNH NGHĨA hai thành phần:
+#   * `border_ink` = mực chạm mép trên/dưới = "bị cắt thiếu". Pad lớn hơn thì ít
+#     cắt hơn -> giảm đơn điệu THEO CẤU TRÚC.
+#   * `stray_ink` chỉ gọi một dải là "lạ" khi nó giữ < 35% tổng mực VÀ nằm hẳn
+#     trong 30% trên/dưới khung. Chữ láng giềng LỌT TRỌN giữ ~33% mực nhưng trải
+#     quá dải 30% -> KHÔNG bị tính. Nó bắt được MẢNH VỤN láng giềng (đúng thiết
+#     kế cho pad 0,12) nhưng KHÔNG THỂ bắt láng giềng lọt trọn.
+#
+# => `flag_ok` là thước đo TÍNH LÀNH LẶN Ở MỘT PAD CỐ ĐỊNH, không phải hàm mục
+#    tiêu để CHỌN pad. Tối ưu nó sẽ đẩy pad ra vô cực (crop = cả trang).
+#
+# Nên điều kiện (1) siết thành ĐẶC THÙ TỪNG TRỤC: một trục chỉ được quyết bằng
+# họ D nếu thước đo BẤU VÀO nó (có cực đại nội trên dải nới rộng). Trục `pad`
+# KHÔNG thoả -> `pad` bị KHOÁ ở MỐC trong T4-A và chuyển sang T4-B quyết bằng
+# IoU trên ngữ liệu tổng hợp có đáp án hộp. Các trục `thr`/`carve`/`resolve` là
+# lựa chọn RỜI RẠC, không đẩy ra vô cực được, nên vẫn quyết được ở T4-A.
+# ---------------------------------------------------------------------------
 DELTA_MIN = 0.005
 TRUNC_MAX_RISE = 0.002
+PROBE_PADS = (0.12, 0.22, 0.30, 0.40, 0.50, 0.60)
+LOCKED_AXES = ("pad",)          # trục họ D không quyết được -> khoá ở MỐC
 
 
 def decide(rows: list[dict], diag: dict | None = None) -> dict:
@@ -274,10 +321,13 @@ def decide(rows: list[dict], diag: dict | None = None) -> dict:
     base = next((r for r in rows if r.get("is_baseline")), None)
     if base is None:
         return {"verdict": "KHÔNG KẾT LUẬN", "why": "thiếu hàng MỐC"}
-    if diag is not None and not (diag.get("counterforce") or not diag.get("monotone_ok")):
-        return {"verdict": "DỪNG — TRỤC SUY BIẾN", "why": diag.get("verdict", "")}
+    # (1) đặc thù trục: pad đã khoá cứng qua LOCKED_AXES, nên `diag` ở đây chỉ
+    #     để GHI LẠI bằng chứng khoá, không còn làm cả phép quét dừng lại.
 
-    cand = sorted(rows, key=lambda r: -r["flag_ok"])[0]
+    # Trục bị khoá: chỉ xét các cấu hình để trục đó ở MỐC. Không phải "trừng
+    # phạt" pad lớn, mà là THỪA NHẬN thước đo này không có thẩm quyền trên nó.
+    pool = [r for r in rows if all(r[a] == BASELINE[a] for a in LOCKED_AXES)]
+    cand = sorted(pool, key=lambda r: -r["flag_ok"])[0]
     gain = cand["flag_ok"] - base["flag_ok"]
     trunc_rise = cand["flag_truncated"] - base["flag_truncated"]
     checks = {
@@ -288,7 +338,7 @@ def decide(rows: list[dict], diag: dict | None = None) -> dict:
     #     thế còn lại bao nhiêu. Trục nào một mình chiếm > 70% lợi thế thì cấu
     #     hình đó dựa vào một trục -> không bền.
     contrib = {}
-    for ax in ("pad", "thr", "carve", "resolve"):
+    for ax in ("thr", "carve", "resolve"):
         forced = dict(cand); forced[ax] = BASELINE[ax]
         m = next((r for r in rows if all(r[k] == forced[k]
                                         for k in ("pad", "thr", "carve", "resolve"))), None)
@@ -300,7 +350,10 @@ def decide(rows: list[dict], diag: dict | None = None) -> dict:
     return {"verdict": verdict, "gain": gain, "trunc_rise": trunc_rise,
             "candidate": {k: cand[k] for k in ("pad", "thr", "carve", "resolve")},
             "baseline_flag_ok": base["flag_ok"], "cand_flag_ok": cand["flag_ok"],
-            "checks": checks, "axis_contribution": contrib, "dominant_axis": top_ax}
+            "checks": checks, "axis_contribution": contrib, "dominant_axis": top_ax,
+            "locked_axes": list(LOCKED_AXES),
+            "locked_why": "flag_ok đơn điệu theo pad tới 0,60 -> không có thẩm quyền; "
+                          "pad quyết ở T4-B bằng IoU trên ngữ liệu tổng hợp"}
 
 
 def main(argv=None) -> int:
@@ -321,7 +374,7 @@ def main(argv=None) -> int:
         Path(REPO / "lab").mkdir(exist_ok=True)
         (REPO / "lab" / "t4a_diagnose.json").write_text(
             json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
-        return 0 if d["counterforce"] or not d["monotone_ok"] else 1
+        return 0 if d["interior_optimum"] else 1
 
     cfgs = [{"pad": p, "thr": t, "carve": c, "resolve": r}
             for p in PADS for t in THRS for c in CARVE for r in RESOLVE]

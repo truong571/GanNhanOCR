@@ -87,3 +87,10 @@ fonts/*
 # Trang đối chiếu Nôm↔Hán: 24 MB ảnh base64, dựng lại bằng
 #   .venv/bin/python -m pipeline.ground_truth.make_lookalike_page
 /dataset_out/ground_truth/lookalike/
+
+# Cache nguyên mẫu S3 — TÁI SINH ĐƯỢC và không nên nằm trong git:
+# (1) mỗi lần build lại ghi đè nó -> cây làm việc KHÔNG BAO GIỜ sạch, làm hỏng phép
+#     kiểm "commit định danh đúng mã đã chạy" (repro_check R1);
+# (2) chữ ký của nó là mtime (visual_signal.py:195), nên sau một lần clone nó KHÔNG
+#     BAO GIỜ khớp và luôn phải dựng lại -> 7 MB trong git cho 0 lợi ích.
+pipeline/align_engine/s3_proto_cache.pkl

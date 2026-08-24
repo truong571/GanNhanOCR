@@ -111,6 +111,13 @@ Số hiện hành (commit `2eb51e66f6`): `labels_final.csv` **82.269** dòng —
 
 ## 4. SAO LƯU LẠNH (ngoài repo)
 
+> 🔴 **CẢNH BÁO 2026-08-24 (T6) — MỤC NÀY ĐÃ CHẾT.** <!-- THS_ARCHIVE_CHET -->
+> `~/ThS_archive/` **KHÔNG CÒN TỒN TẠI trên máy** (đo bằng `ls -d ~/ThS_archive`), nên mọi
+> lệnh khôi phục ở mục này KHÔNG chạy được. Bản sao lưu CÒN HIỆU LỰC:
+> `~/backup_ocr_cache_2026-08-22/` (1.783 tệp cache OCR, verify 1783/1783) và
+> `~/backup_models_2026-08-24/` (detector, verify OK). Giữ nguyên văn mục dưới đây để
+> đối chiếu lịch sử, KHÔNG làm theo.
+
 Vị trí: `~/ThS_archive/backup_2026-07-20/`
 
 | Gói | Dung lượng | sha256 | Nội dung |
@@ -292,12 +299,11 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 <!-- HIEN_HANH:START -->
 ## BẢN HIỆN HÀNH (tự sinh — ghi đè mỗi lần chạy, ĐỪNG sửa tay)
 
-- sinh lúc: `2026-08-24T13:05:58Z`
-- commit  : `c8605856c8`
-- cây làm việc: 🔴 BẨN (3 tệp đã sửa chưa commit) — commit ở trên KHÔNG
+- sinh lúc: `2026-08-24T13:55:50Z`
+- commit  : `50d2669581`
+- cây làm việc: 🔴 BẨN (2 tệp đã sửa chưa commit) — commit ở trên KHÔNG
   định danh được mã đã chạy. Muốn tái lập thì phải commit trước khi chạy.
      M docs/EVIDENCE_INDEX.md
-     M pipeline/align_engine/s3_proto_cache.pkl
      M run_pipeline.sh
 - sách    : STT2+STT4+STT11 | reseg=detector
 
@@ -309,8 +315,8 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 | `dataset/labels.csv` | `236cbc4fa57f25b32270b89f95914ab62184011ffedf9ccb7c88d53c0b7ae0fc` |
 | `nom-embed/best.pt` | `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0` |
 | `pipeline/align_engine/data/index.csv` | `cca7d2a078b22c83831f8a5fd3e8d3d468a09319266a89606f889a1668020097` |
-| `dict/QuocNgu_SinoNom.csv` | `e65b98748e13e41f66e1f5527e4b07e7f89ba24522090a4050decab95f1c87d8` |
-| `dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
+| `Dict/QuocNgu_SinoNom.csv` | `e65b98748e13e41f66e1f5527e4b07e7f89ba24522090a4050decab95f1c87d8` |
+| `Dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
 | `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
 | `config/pipeline.yaml` | `a1225ed806cf6740c81f88524e2b40893c161586f8f51f9996b302430628547d` |
 
@@ -402,5 +408,22 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 | `pipeline/align_engine/data/index.csv` | `cca7d2a078b22c83831f8a5fd3e8d3d468a09319266a89606f889a1668020097` |
 | `dict/QuocNgu_SinoNom.csv` | `e65b98748e13e41f66e1f5527e4b07e7f89ba24522090a4050decab95f1c87d8` |
 | `dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
+| `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
+| `config/pipeline.yaml` | `a1225ed806cf6740c81f88524e2b40893c161586f8f51f9996b302430628547d` |
+
+## Lần chạy 2026-08-24T13:55:49Z
+
+sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `461ab90f3d4c0af57cc714e9b8633c45c6b82cf596e7fe8cfd6cf55a3127a976` |
+| `dataset_out/labels_remediated.csv` | `2a78d6196a149205521a881da8f212c90b3065a236100b8d191daef1a8787e63` |
+| `dataset_out/labels_final.csv` | `9727b4624d3e02943a8eca2a5725c4a486db1bf06b86364f1bbcd7ae6fe23368` |
+| `dataset/labels.csv` | `236cbc4fa57f25b32270b89f95914ab62184011ffedf9ccb7c88d53c0b7ae0fc` |
+| `nom-embed/best.pt` | `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0` |
+| `pipeline/align_engine/data/index.csv` | `cca7d2a078b22c83831f8a5fd3e8d3d468a09319266a89606f889a1668020097` |
+| `Dict/QuocNgu_SinoNom.csv` | `e65b98748e13e41f66e1f5527e4b07e7f89ba24522090a4050decab95f1c87d8` |
+| `Dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
 | `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
 | `config/pipeline.yaml` | `a1225ed806cf6740c81f88524e2b40893c161586f8f51f9996b302430628547d` |

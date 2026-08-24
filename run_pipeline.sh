@@ -411,6 +411,12 @@ evidence() {
   # nom-embed/best.pt: checkpoint S3 nằm trong SUBMODULE và đang có thay đổi CHƯA
   # COMMIT (mục 0.4) -> con trỏ submodule KHÔNG nhận diện được mô hình thật đã sinh ra
   # cột s3_cosine. Băm thẳng tệp là cách duy nhất hiện có để chỉ đúng mô hình đã dùng.
+  # HOA/THƯỜNG: git lưu `Dict/` (13 tệp) còn thư mục trên đĩa máy này tên `dict/`.
+  # macOS không phân biệt nên cả hai cùng trỏ một chỗ; trên Linux thì CHỈ MỘT cái tồn
+  # tại. Ghim cứng `dict/` sẽ làm 2/10 dòng băm thành "(chưa có)" và check_evidence.sh
+  # exit 1 ngay trên clone Linux — tức phá đúng tiêu chí "clone sạch ra cùng sha256".
+  # Giải như core/text/dictionary.py:dict_dir(): dùng cái CÓ THẬT.
+  local DICT_DIR="Dict"; [[ -d "$DICT_DIR" ]] || DICT_DIR="dict"
   # TỪ ĐIỂN PHẢI CÓ TRONG CHUỖI BẰNG CHỨNG (thêm 2026-08-24, khi làm T5).
   # Mọi nhãn GOLD đều do QuocNgu_SinoNom.csv quyết (s1_inter_s2_direct: ocr_char phải
   # là một âm đọc trong từ điển) và SinoNom_Similar.csv quyết luật bắc cầu — thế mà
@@ -420,7 +426,7 @@ evidence() {
   # đây khép mối nối đó, cùng cơ chế với nom-embed/best.pt và index.csv.
   local files=("$LABELS_RAW" "$LABELS_REMED" "$LABELS_FINAL" "$FINAL_DIR/labels.csv" \
                "nom-embed/best.pt" "pipeline/align_engine/data/index.csv" \
-               "dict/QuocNgu_SinoNom.csv" "dict/SinoNom_Similar.csv" \
+               "$DICT_DIR/QuocNgu_SinoNom.csv" "$DICT_DIR/SinoNom_Similar.csv" \
                "train_crop/detector_r34.best.pt" "config/pipeline.yaml")
   local sha_cmd=""
   if command -v shasum >/dev/null 2>&1; then sha_cmd="shasum -a 256"

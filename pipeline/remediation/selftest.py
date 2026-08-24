@@ -311,6 +311,51 @@ def test_s3_unwind() -> None:
         check("thật: nhãn bất biến", ro["label"].fillna("").equals(real["label"].fillna("")))
 
 
+def test_nan_syllable_not_eaten() -> None:
+    """HỒI QUY: `nan` là một ÂM TIẾNG VIỆT (難), không phải giá trị thiếu.
+
+    pandas mặc định đọc chuỗi "nan"/"NA"/"NULL"/"None"/"null"/"NaN" thành NaN. Đo
+    2026-08-24: 3 ô mất hẳn âm khi đi qua `cli._load` (2 trong đó là GOLD
+    s1_inter_s2_similar NẰM TRONG bộ giao nộp: gold/stt4_page_0040_c02_023.png và
+    gold/stt4_page_0108_c08_178.png, ocr=准 label=难), và 8 mục từ điển biến mất mỗi
+    lần QuocNgu_SinoNom.csv được đọc bằng pandas.
+
+    Cách vá: `keep_default_na=False, na_values=[""]` — ô RỖNG vẫn thành NaN (s3_cosine
+    và các cột số cần thế) nhưng mọi chuỗi CÓ NỘI DUNG được giữ nguyên.
+    """
+    import io
+    import pandas as pd
+    print("[nan-là-âm-tiếng-việt]")
+    csv_text = ("image,syllable,s3_cosine,tier\n"
+                "a.png,nan,,GOLD\n"
+                "b.png,na,0.5,GOLD\n"
+                "c.png,null,,REVIEW\n"
+                "d.png,,0.3,REVIEW\n")
+
+    naive = pd.read_csv(io.StringIO(csv_text))
+    check("tái hiện được lỗi: pandas mặc định NUỐT 'nan'/'null'",
+          int(naive["syllable"].isna().sum()) == 3)
+
+    fixed = pd.read_csv(io.StringIO(csv_text), keep_default_na=False, na_values=[""])
+    check("sau vá: 'nan' giữ nguyên là chuỗi", fixed["syllable"].iloc[0] == "nan")
+    check("sau vá: 'null' giữ nguyên là chuỗi", fixed["syllable"].iloc[2] == "null")
+    check("sau vá: ô RỖNG vẫn thành NaN", bool(pd.isna(fixed["syllable"].iloc[3])))
+    check("sau vá: cột số rỗng vẫn NaN (s3_cosine không hỏng)",
+          int(fixed["s3_cosine"].isna().sum()) == 2)
+    check("sau vá: cột số vẫn ra kiểu số", str(fixed["s3_cosine"].dtype).startswith("float"))
+
+    # đường THẬT: hàm nạp của remediation phải giữ được âm 'nan'
+    if LABELS.exists():
+        from pipeline.remediation import cli as _cli
+        import inspect
+        src = inspect.getsource(_cli)
+        check("cli.py đã dùng keep_default_na=False", "keep_default_na=False" in src)
+        real = pd.read_csv(LABELS, dtype={"image_md5": str},
+                           keep_default_na=False, na_values=[""])
+        n_nan = int((real["syllable"] == "nan").sum())
+        check(f"labels.csv giữ được {n_nan} ô âm 'nan'", n_nan >= 3, f"đếm được {n_nan}")
+
+
 def test_confusion_fix_join() -> None:
     """Join verdict<->nhãn: tiền tố sách đời cũ `yen*` phải được chuẩn hoá về `stt*`.
 
@@ -346,6 +391,7 @@ def main() -> int:
     test_remediate_synthetic()
     test_real()
     test_s3_unwind()
+    test_nan_syllable_not_eaten()
     test_confusion_fix_join()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")

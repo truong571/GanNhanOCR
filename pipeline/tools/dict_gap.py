@@ -51,7 +51,7 @@ def main(argv: list[str] | None = None) -> int:
         for ch in chars:
             readings_of.setdefault(ch, set()).add(syl)
 
-    d = pd.read_csv(args.labels, dtype=str, low_memory=False)
+    d = pd.read_csv(args.labels, dtype=str, low_memory=False, keep_default_na=False, na_values=[""])
     gold_count = d[d["tier"] == "GOLD"]["label"].value_counts()
     tiers = {t.strip().upper() for t in args.tiers.split(",") if t.strip()}
     sub = d[d["tier"].isin(tiers)].copy()

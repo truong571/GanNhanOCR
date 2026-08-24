@@ -778,3 +778,170 @@ là của bạn, và phải làm **một lần duy nhất** trước KHỐI 6.
 - [ ] **T4.f** Vòng tuần hoàn của bộ dò: GT huấn luyện CenterNet do chính pipeline sinh nên nó
   học lại mức nới 1,2×. Muốn thoát phải có hộp do người vẽ (thuộc KHỐI 6).
 - [ ] **T4.g** Đo tỷ lệ dính chữ thật — cần dụng cụ khác (xem lỗi 3).
+
+---
+
+# T5 — LUẬT TIER & ĐỘ GIÒN CỦA TỪ ĐIỂN ✅ HOÀN THÀNH 2026-08-24
+
+Luật quyết định tiền đăng ký ở `pipeline/lab/t5_rules.py`, commit `b7b1c39536` **trước** khi
+chạy bất cứ phép đo nào. Thi hành bằng 4 trinh sát song song, mỗi báo cáo qua 1 phản biện đối
+kháng được lệnh *cố bác bỏ* và tự chạy lại. **Cả 4 phản biện đều trả `MOT_PHAN`** — không báo
+cáo nào đứng nguyên vẹn.
+
+## Kết luận 1 — cột `fragility` của đặc tả: BÁC BỎ, không được xây
+
+`dict/QuocNgu_SinoNom.csv` có **104.177 dòng và đúng 104.177 cặp (âm, chữ) phân biệt — không
+một cặp nào lặp lại**. Nên "số mục từ điển hậu thuẫn cho nhãn" chỉ nhận 3 giá trị trên bộ giao
+nộp 56.909 ô:
+
+| giá trị | số ô | là gì |
+|---|---|---|
+| 1 | 50.130 (88,09%) | toàn bộ GOLD |
+| 0 | 6.755 (11,87%) | **trùng khít tầng SYLLABLE** |
+| 2 | 24 (0,04%) | tạo tác gộp chính tả cũ/mới (`choè`/`chòe`), không phải bằng chứng độc lập |
+
+Cột này là **bản diễn đạt lại cột `tier`**, mang **0 bit thông tin mới**. Vi phạm cổng
+tiền-đăng-ký **G1.2** (>95% cùng giá trị → loại). *Đầu ra chính mà đặc tả T5 đặt hàng là một
+cột không tồn tại được.*
+
+## Kết luận 2 — mọi định nghĩa "độ giòn" thay thế đều hỏng ở chỗ quan trọng nhất
+
+Đã đo 8 định nghĩa (số lần trong ngữ liệu · số sách · số trang · số cột · tỉ phần trong âm ·
+số chữ cùng âm · va chạm chữ-giống · …). Phép thử quyết định: **lớp lỗi hệ thống DUY NHẤT dự
+án từng xác định được — `㝵`/"người" — đứng ở cực AN TOÀN của mọi định nghĩa đó**:
+
+- hạng **3/2.370** theo tần suất (phân vị 99,92), sau `麻`/mà 1.625 và `朱`/cho 1.488
+- có mặt ở **3/3 sách**, **406 trang**, chiếm **90,9%** số ô của âm "người"
+
+Quét bộ giao nộp theo tần suất tăng dần thì **phải chấm tay 94,7% số ô mới chạm tới nó**. Nói
+cách khác: **chiến lược "chấm đuôi hiếm" bỏ sót đúng loại lỗi nguy hiểm nhất.** Đây là lý do
+định lượng để KHÔNG rút mẻ chấm tay theo độ hiếm.
+
+## Kết luận 3 — phản thực từ điển: con số THẬT, và nó có hai chiều
+
+Phản biện phát hiện `align_page` **chạy lại được READ-ONLY** từ `prepared/*/detected/*_ocr_cache.json`
++ `train_crop/detector_r34.best.pt`: **445 trang / 280 giây, 0 lần gọi API, 0 dòng mã sửa**, tái
+lập `labels.csv` **chính xác tuyệt đối** (82.246 cặp, 4.003 cột, 0 lệch). Nên phản thực không cần
+xấp xỉ bằng cận — đo thẳng được.
+
+**Bỏ ngẫu nhiên 10% mục từ điển (104.053 → 93.648): GOLD 51.601 → 48.923 = −2.678 ô (−5,19%).**
+
+Điều dễ bỏ sót và trinh sát đầu đã bỏ sót: **bỏ mục từ điển cũng TẠO ra GOLD**. Khi số cầu nối
+tụt từ ≥2 xuống đúng 1, luật bắc cầu kích hoạt — GOLD-similar **tăng** 4.102 → 4.645. Vì chỉ
+đếm một chiều nên "dải cận 47.184–47.264" của trinh sát **không chứa giá trị thật 47.268**.
+
+Ba bất biến đo được kèm theo: `column_count_matched` **bất biến** với từ điển (0/4.003 cột lật);
+bóc tách QN `parse_v5` **không đổi** (0/445 trang); nhưng ghép đôi crop↔âm tiết **KHÔNG bất biến**
+(212/4.003 cột = 5,30% đổi chuỗi).
+
+## Kết luận 4 — thước đo chất lượng mà CHÍNH TÔI tiền-đăng-ký là SUY BIẾN
+
+Trong `t5_rules.py` tôi viết rằng thước đo chất lượng *duy nhất được phép* cho `syllable_gate` là
+"tỷ lệ cặp qua cổng mà từ điển cũng công nhận", với lập luận rằng cổng không đọc từ điển nên từ
+điển là trọng tài độc lập.
+
+**Lập luận đó sai, và sai theo cách vòng tròn kinh điển.** Hồ chưa-xác-nhận mà cổng ăn vào được
+`decide_label` **định nghĩa** chính là "ocr_char KHÔNG nằm trong `qn_to_nom[âm]`". Nên tỷ lệ ấy
+**bằng 0,0% ở CẢ 100 tổ hợp ngưỡng** — và phản biện còn siết chặt hơn: **0/17.714 dòng** trong hồ
+có thể thoả, *bất khả theo cấu trúc*. Đo nó là đo lại chính định nghĩa.
+
+Ghi lại đây vì nó đúng là cạm bẫy mà tệp luật ấy được viết ra để chặn, và tôi vẫn rơi vào.
+
+## Kết luận 5 — `syllable_gate`: GIỮ MỐC 5/3/0,6, và một no-op
+
+Cổng **tái lập hoàn hảo ngoại tuyến**: 310 cặp → đúng **6.753 ô**, 0 sai-dương / 0 sai-âm, giống
+hệt trên `labels.csv` lẫn `labels_final.csv` → **các bước 4/5/6 không đụng vào tầng SYLLABLE**
+(giả thuyết ngược của tôi bị bác). Cổng G2.1 qua.
+
+- **`min_pages = 3` là NO-OP**: ở `min_occ = 5`, đặt 1/2/3 cho kết quả **giống từng byte**. Cổng
+  thực chất chỉ có **hai** tham số. (Nó chỉ cắt thật từ `min_pages = 5`: 310 → 301 cặp.)
+- **Không tham số nào có cực đại nội.** `min_purity` từng có vẻ đỉnh ở 0,65, nhưng chạy 8 seed
+  cho thấy 0,60/0,65/0,70/0,80 chỉ chênh 0,1–0,6 điểm trong khi nhiễu Monte-Carlo là 0,35–1,03 —
+  chỉ là **bình nguyên phẳng 0,6–0,8**. Toàn bộ phép quét suy biến → **GIỮ MỐC** theo đúng luật.
+- Lập luận "nằm trên Pareto front" là **vô nghĩa**: 53/100 tổ hợp cũng nằm trên đó. Con số phải
+  nêu là **hạng 52/100** — tức mức trung vị.
+
+## Kết luận 6 🔴 — cổng SẠCH lớp `㝵` chỉ nhờ TAI NẠN THỨ TỰ BƯỚC
+
+Đo được: nếu `confusion_fix` (bước 6) chạy **TRƯỚC** cổng — một cách sắp xếp lại hoàn toàn tự
+nhiên — cổng cho **321 cặp / 8.534 ô**, và **12 cặp MỚI đều là âm "người"**, gồm `(㝵, người)`:
+
+> `(㝵,人)(冐)(冒)(哥)(子)(尋)(早)(旱)(景)(畢)(耳)(𭘾)` — tất cả với âm "người"
+
+Tức cổng sẽ **nuốt trọn lớp lỗi hệ thống đã được chứng minh và tẩy trắng 1.781 ô thành SYLLABLE**.
+Cổng hiện sạch `㝵` **không phải vì nó có cơ chế bác lỗi OCR lặp đều — nó không có cơ chế đó** —
+mà vì thứ tự bước hiện thời cộng với việc từ điển tình cờ công nhận `㝵 → người` (nên lớp ấy lên
+GOLD chứ không rơi vào hồ của cổng). Đây là **ràng buộc thứ tự bước phải ghi vào tài liệu và canh**.
+
+## Kết luận 7 — cầu nối top-K: cổng hợp lệ CHỈ QUA MỘT NỬA
+
+`SinoNom_Similar.csv` **không có cột điểm hay thứ hạng**. Nhưng kiểm gián tiếp bằng **tính đáp lễ**
+cho thấy 20 vị trí đầu **thật sự được sắp** theo độ giống — tỷ lệ được đáp lễ giảm đơn điệu
+**94,14% (hạng 1) → 25,29% (hạng 20)** — còn **từ hạng 21 trở đi là phụ lục đối xứng VÔ THỨ TỰ**
+(đáp lễ đúng **100,00%** ở mọi hạng). Phản biện tấn công bằng nhiễu độ dài và null xáo trộn: tín
+hiệu sắp thứ tự **sống sót**.
+
+Nên **G3.1 chỉ qua với K ≤ 20**; cắt ở K > 20 là cắt ngẫu nhiên. Và **548/3.829 ô (14,3%) GOLD-similar
+đang lấy cầu từ chính phần vô thứ tự đó**, với hạng NGƯỢC trung vị 23 (chỉ 7,5% nằm trong top-20 có
+thứ tự của chữ cầu) — tức **không có chỗ dựa thứ hạng ở CẢ HAI chiều**.
+
+**Đường cong sản lượng KHÔNG đơn điệu**, và điều đó còn tệ hơn: quét đủ K = 1…89 thì cực đại là
+**NỘI TẠI ở K = 28** (3.840 ô) > K = full (3.827). Nhưng K = 28 **nằm giữa phụ lục vô thứ tự**, nên
+đó là một **cực đại GIẢ** — tối ưu theo sản lượng sẽ ra một con số trông như phát hiện mà thực chất
+vô nghĩa. Đây là biến thể tinh vi hơn của bẫy T3/T4: không phải nghiệm biên, mà là **nghiệm nội tại
+giả**.
+
+## Kết luận 8 — phép đo ĐỘC LẬP đầu tiên về 548 ô đáng ngờ: KHÔNG có dấu hiệu xấu
+
+Phản biện đề xuất một kênh **không vòng tròn với ArcFace**: Unihan kDefinition (`sem_score.py`).
+Tôi chạy:
+
+| nhóm | n chấm được | > τ_confirm |
+|---|---|---|
+| vùng có thứ tự (hạng ≤ 20) | 2.483 | 12,6% |
+| **phụ lục vô thứ tự (hạng ≥ 21)** | 528 | **26,1%** |
+
+Nhóm phụ lục **cao hơn**, và khác biệt **sống sót qua phân tầng** theo độ giàu nghĩa (tầng 1–3:
+10,4% vs 4,3%, p = 0,005; tầng 4–7: 35,3% vs 21,2%, p = 1,4e-7).
+
+**Diễn giải phải rất dè dặt**, theo đúng tính chất đã biết của kênh này: Unihan **chỉ phong, không
+bao giờ hạ** (47,7% cặp đúng cũng cho điểm 0). Nên đây là **"không có bằng chứng 548 ô đó xấu hơn"**,
+**KHÔNG phải "bằng chứng chúng tốt"**. Còn một nhiễu chưa khử hết: nhãn cầu ở nhóm phụ lục **98,0%
+là chữ Hán chuẩn** so với 79,4% ở nhóm kia, nên hai nhóm khác nhau về **loại chữ** (Hán chuẩn vs Nôm
+tự tạo), và điểm cao hơn có thể chỉ phản ánh "mượn nghĩa nhiều hơn" chứ không phải "đúng nhiều hơn".
+
+## Lỗi mã CÒN SỐNG tìm ra và ĐÃ VÁ: `nan` là một ÂM TIẾNG VIỆT
+
+`nan` (難) là âm Quốc ngữ thật. pandas mặc định đọc chuỗi `nan`/`NA`/`NULL`/`None`/`null`/`NaN`
+thành `NaN`, và **không một chỗ nào trong toàn bộ mã dùng `keep_default_na=False`**. Hậu quả đo được:
+
+- **3 ô mất hẳn âm** khi đi qua `remediation/cli.py`, trong đó **2 ô là GOLD `s1_inter_s2_similar`
+  NẰM TRONG bộ giao nộp**: `gold/stt4_page_0040_c02_023.png` và `gold/stt4_page_0108_c08_178.png`
+  (ocr = 准, label = 难)
+- **8 mục từ điển biến mất** mỗi lần `QuocNgu_SinoNom.csv` được đọc bằng pandas
+- 81 ô trong `labels.csv` có âm nằm trong danh sách NA của pandas
+
+Vá **9 chỗ** bằng `keep_default_na=False, na_values=[""]` — ô RỖNG vẫn thành NaN (`s3_cosine` cần
+thế: 49.156 NaN trước và sau, không hồi quy) nhưng mọi chuỗi có nội dung được giữ. **+8 test hồi quy**,
+mốc selftest **553 → 561**. May mắn: `core.text.dictionary.load_qn_to_nom` dùng `csv` thuần nên
+đường nạp từ điển CHÍNH luôn an toàn.
+
+## Đính chính số đã công bố
+
+`BANG_SO_LIEU_CHINH_THUC.md` ghi lớp `㝵`/"người" bị hạ **1.977** ô. Con số đó **đúng** về tổng số
+dòng bị hạ, nhưng luật khớp trên **(syllable, label)** nên 1.977 = **GOLD 1.445 + SILVER 532**.
+**Phần chạm bộ GIAO NỘP chỉ là 1.445** — 532 ô SILVER chưa bao giờ nằm trong bộ giao nộp. Cần nêu
+tách bạch, nếu không người đọc sẽ hiểu là bộ giao nộp mất 1.977 ô.
+
+## Việc T5 mở ra (chưa làm)
+
+- [ ] **T5.a** Vá 2 ô GOLD mất âm — gộp vào lần chạy lại MỘT LẦN trước KHỐI 6, cùng với T4.e.
+      Không vá riêng lúc này (ràng buộc tiền-đăng-ký: không đổi bộ nhãn đã công bố trong lượt này).
+- [ ] **T5.b** Canh ràng buộc THỨ TỰ BƯỚC: `syllable_gate` phải chạy TRƯỚC `confusion_fix`. Viết
+      thành phép kiểm chạy được, không phải ghi chú — nếu không, một lần sắp xếp lại vô hại sẽ tẩy
+      trắng 1.781 ô lớp lỗi đã chứng minh.
+- [ ] **T5.c** 548 ô cầu-phụ-lục: đưa vào mẻ chấm tay KHỐI 6 như một tầng riêng. Đây là nhóm duy
+      nhất T5 xác định được bằng lý do CẤU TRÚC (không có chỗ dựa thứ hạng ở cả hai chiều) thay vì
+      bằng tần suất — và nó chỉ 548 ô, rẻ.
+- [ ] **T5.d** `min_pages` bỏ khỏi cổng hoặc đặt ≥ 5 nếu muốn nó có tác dụng; hiện là no-op gây
+      hiểu nhầm rằng cổng có 3 lớp bảo vệ trong khi chỉ có 2.

@@ -75,7 +75,7 @@ def measure_gold_precision(final: pd.DataFrame) -> dict | None:
     vp = REPO / "dataset_out" / "ground_truth" / "verdicts_reanchored.csv"
     if not vp.exists():
         return None
-    v = pd.read_csv(vp, dtype=str)
+    v = pd.read_csv(vp, dtype=str, keep_default_na=False, na_values=[""])
     v = v[v["status"] == "matched"]
     tier_by_img = {normalize_image_key(k): t for k, t in zip(final["image"], final["tier"])}
     joined = v["image_new"].map(normalize_image_key).map(tier_by_img)
@@ -91,7 +91,7 @@ def measure_gold_precision(final: pd.DataFrame) -> dict | None:
 
 
 def run(in_csv: Path, out_csv: Path, fixes_yaml: Path, measure: bool) -> dict:
-    df = pd.read_csv(in_csv, dtype={"image_md5": str})
+    df = pd.read_csv(in_csv, dtype={"image_md5": str}, keep_default_na=False, na_values=[""])
     cfg = yaml.safe_load(fixes_yaml.read_text()) if fixes_yaml.exists() else {}
     fixes = (cfg or {}).get("fixes", [])
     before = df["tier"].value_counts().to_dict()

@@ -158,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from core.text.dictionary import load_qn_to_nom
     qn = load_qn_to_nom(str(DICT_DIR / "QuocNgu_SinoNom.csv"))
-    labels = pd.read_csv(args.labels, dtype=str, low_memory=False)
+    labels = pd.read_csv(args.labels, dtype=str, low_memory=False, keep_default_na=False, na_values=[""])
 
     fixes, extra = plan(labels, qn)
     by_rule = collections.Counter(r.split(":")[0] for r in fixes["rule"])

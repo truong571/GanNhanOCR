@@ -50,7 +50,7 @@ def process_book(config: dict, book_name: str, verbose: bool = True):
     qn_dict_path = paths.get("qn_to_nom_dict")
     if qn_dict_path and Path(qn_dict_path).exists():
         import pandas as pd
-        df = pd.read_csv(qn_dict_path)
+        df = pd.read_csv(qn_dict_path, keep_default_na=False, na_values=[""])
         col = next((c for c in df.columns if "quoc" in c.lower() or c.lower() == "qn"),
                    df.columns[0])
         # Canonicalise to the modern tone convention to match normalize_syllables

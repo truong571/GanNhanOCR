@@ -51,7 +51,7 @@ def _parse_list(v) -> list[str]:
 
 def merge_qn(stamp: str, apply: bool) -> dict:
     from core.text.text_utils import is_plausible_qn_syllable
-    cur = pd.read_csv(QN_CSV, dtype=str)
+    cur = pd.read_csv(QN_CSV, dtype=str, keep_default_na=False, na_values=[""])
     pairs: dict[str, list[str]] = collections.OrderedDict()
     for q, s in zip(cur.iloc[:, 0], cur.iloc[:, 1]):
         q, s = str(q).strip(), str(s).strip()
@@ -104,7 +104,7 @@ def merge_qn(stamp: str, apply: bool) -> dict:
 
 
 def merge_sim(stamp: str, apply: bool) -> dict:
-    cur = pd.read_csv(SIM_CSV, dtype=str)
+    cur = pd.read_csv(SIM_CSV, dtype=str, keep_default_na=False, na_values=[""])
     m: dict[str, list[str]] = collections.OrderedDict()
     for a, b in zip(cur.iloc[:, 0], cur.iloc[:, 1]):
         a = str(a).strip()

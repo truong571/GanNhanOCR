@@ -209,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--apply", action="store_true", help="thiếu cờ này = chỉ in, không ghi")
     args = ap.parse_args(argv)
 
-    df = pd.read_csv(args.src, dtype=str, low_memory=False)
+    df = pd.read_csv(args.src, dtype=str, low_memory=False, keep_default_na=False, na_values=[""])
     out, rep = unwind(df)
 
     print(f"[s3-unwind] {rep['n_rows']:,} dòng")

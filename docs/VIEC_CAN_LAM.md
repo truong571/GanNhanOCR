@@ -967,6 +967,18 @@ vào hai thư mục nháp tách biệt (bộ đã công bố **không hề bị 
 khi đo: **bộ dò CenterNet chạy trên MPS (Apple GPU) LÀ tất định** giữa các lần chạy — nó cấp
 44,62% toàn bộ hộp ký tự, nên nếu nó trôi thì mọi tiêu chí T6 đều sụp.
 
+**Toàn pipeline bước 3→7 chạy hai lần, nối chuỗi đầy đủ** (build → remediate → confusion_fix →
+s3_unwind → export), mỗi lần từ đầu ra của chính nó:
+
+| đầu ra | lần A | lần B | |
+|---|---|---|---|
+| `labels_remediated.csv` | `3050ff8f5b43ff7323` | `3050ff8f5b43ff7323` | ✅ |
+| `labels_final.csv` | `0eec0e119c2867627e` | `0eec0e119c2867627e` | ✅ |
+| `dataset/labels.csv` | `9525aeb480b1b6a9c0` | `9525aeb480b1b6a9c0` | ✅ |
+
+Bộ giao nộp tái lập được: **GOLD 50.156 — y hệt bản công bố** — cộng SYLLABLE 6.911, tổng
+**57.067** (công bố 56.909). Chênh +158 đúng bằng phần SYLLABLE đã giải thích ở dưới.
+
 Các bước hạ nguồn đo riêng, chạy hai lần trên cùng đầu vào:
 
 | bước | tất định | tái lập bản công bố |

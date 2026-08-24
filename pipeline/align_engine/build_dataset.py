@@ -42,6 +42,7 @@ sys.path.insert(0, str(REPO))
 from pipeline.step0_setup import load_config                       # noqa: E402
 from core.text.dictionary import load_qn_to_nom, load_similarity_dict  # noqa: E402
 from core.text.text_utils import is_plausible_qn_syllable  # noqa: E402
+from pipeline.align_engine import align_production as ap_mod          # noqa: E402
 from pipeline.align_engine.align_production import (                    # noqa: E402
     DetectorUnavailableError, align_page, preflight_detector)
 from pipeline.align_engine.consensus import decide_label              # noqa: E402
@@ -165,7 +166,10 @@ def main():
                          "into the char above/below in the same column)")
     ap.add_argument("--crop-review", action="store_true",
                     help="also materialize REVIEW crops (kept in labels.csv either way)")
-    ap.add_argument("--pad", type=float, default=0.12)
+    # None = LẤY TỪ CONFIG (step2.crop_pad_frac). Truyền --pad chỉ để ghi đè khi thí
+    # nghiệm; đường chạy sản xuất phải để cấu hình quyết, nếu không lại tái diễn lớp
+    # lỗi "cấu hình khai một đằng, mã chạy một nẻo" mà T4.a tìm ra.
+    ap.add_argument("--pad", type=float, default=None)
     ap.add_argument("--reseg", default="midpoint",
                     choices=["midpoint", "valley_n", "valley_guarded", "detector"],
                     help="column re-segmentation for crop boxes (default midpoint; valley_* are "
@@ -178,6 +182,15 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
     config = load_config(args.config)
     paths = config["paths"]
+
+    # --- HÌNH HỌC CẮT ẢNH: cấu hình -> mã (nối 2026-08-25) --------------------
+    _s2 = config.get("step2") or {}
+    if args.pad is None:
+        args.pad = float(_s2.get("crop_pad_frac", 0.12))
+    _ov = float(_s2.get("box_overlap_frac", ap_mod.BOX_OVERLAP_FRAC))
+    ap_mod.BOX_OVERLAP_FRAC = _ov
+    print(f"  [hình học] đệm cắt = {args.pad} | biên nới dọc F = {_ov} "
+          f"-> hộp cao {1 + 2 * _ov:.2f} × bước lặp", flush=True)
     qn_to_nom = load_qn_to_nom(str(REPO / paths["qn_to_nom_dict"]))
     qn_dict_set = set(qn_to_nom.keys())
     similar = load_similarity_dict(str(REPO / paths["similar_dict"]))
@@ -352,6 +365,8 @@ def main():
                 if q:
                     img_rel = f"{r['tier'].lower()}/{fn}"
             labels.append({
+                # khoá sắp xếp, KHÔNG ghi ra CSV (xem `fields`) — chỉ để T6.b
+                "_sort": (r["book"], r["page"], int(r["column"]), int(r["idx"])),
                 "image": img_rel or "", "book": r["book"], "page": r["page"],
                 "column": r["column"], "ocr_char": r["ocr_char"], "syllable": r["syllable"],
                 "label": r["label"], "unicode": r["unicode"], "label_level": r["label_level"],
@@ -373,6 +388,17 @@ def main():
               "crop_w", "crop_h", "image_md5", "seg_flag", "split", "split_group", "bbox",
               "seg_backend"]
     with open(out / "labels.csv", "w", encoding="utf-8", newline="") as f:
+        # T6.b — SẮP DÒNG THEO KHOÁ CANON TRƯỚC KHI GHI.
+        # build_dataset duyệt `for b in config["books"]` KHÔNG sắp, nên thứ tự sách
+        # trong cấu hình quyết định thứ tự dòng: đảo danh sách books cho ra tệp có
+        # cùng NỘI DUNG (đo T6: 3.398/3.398 dòng, cùng tập) nhưng KHÁC BYTE. Tiêu chí
+        # T6 "đổi thứ tự sách -> byte-identical" vì thế không thể đạt.
+        # Sắp theo (sách, trang, cột, chỉ-số-trong-cột) khiến thứ tự dòng KHÔNG còn phụ
+        # thuộc cấu hình. Khoá này giữ nguyên thứ tự TRONG cột, nên mọi phân tích dựa
+        # vào tính liền kề dọc cột (ví dụ dựng lại `anchored`) vẫn đúng.
+        labels.sort(key=lambda r: r["_sort"])
+        for r in labels:
+            r.pop("_sort", None)
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader(); w.writerows(labels)
 

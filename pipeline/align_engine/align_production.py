@@ -133,6 +133,38 @@ def _pair_old(cluster: dict, syllables: list[str], binary) -> list[dict]:
     return out
 
 
+# =============================================================================
+# BOX_OVERLAP_FRAC — biên nới dọc của hộp ký tự, tính theo BƯỚC LẶP của cột.
+# =============================================================================
+# Hộp = [trung điểm với chữ trên − m, trung điểm với chữ dưới + m] với m = pitch*F,
+# nên CHIỀU CAO HỘP = pitch × (1 + 2F).
+#
+# F = 0,10 (từ đầu đến 2026-08-24) làm hộp cao 1,20 × bước lặp. Đo T4 trên 537 cột /
+# 3 sách: 99,44% cột có hộp cao hơn bước lặp (trung vị 1,2069), và **84,46% cặp chữ
+# liền kề trong cùng cột CHỒNG nhau** (khe hở trung vị −0,171 chiều cao hộp). Cộng
+# đệm 0,12 lúc cắt thì CỬA SỔ CROP = 1,49 × bước lặp, tức luôn trùm sang ~24,5% chữ
+# trên và chữ dưới; chỉ `carve_neighbor_ink` giữ cho crop còn dùng được.
+#
+# Chú thích cũ nói mức nới ấy để "chữ cao giữ được đuôi nét". ĐO T4.e BÁC ĐIỀU ĐÓ:
+# quét F ∈ {−0,10 … 0,30} trên 9.404 ô / 60 trang, tỷ lệ BỊ CẮT gần như KHÔNG đổi
+# theo F (0,0165 ở F=0,10 vs 0,0179 ở F=0 — chênh 0,0014, KHÔNG vượt khoảng tin cậy
+# 95%). Mức nới không cứu được đuôi nét nào — `--pad` lúc cắt đã lo việc đó — nó chỉ
+# đổi lấy −3,81 điểm mực CỦA CHÍNH CHỮ (tinh khiết 0,9453 → 0,9072).
+#
+# F = 0 nghĩa là hộp bằng ĐÚNG MỘT Ô BƯỚC LẶP = đúng phần của một chữ trong cột. Cực
+# đại của F1 (tinh khiết × không-bị-cắt) nằm ở F ≈ −0,05, nhưng chênh chỉ 0,0027 và F
+# âm là hộp NHỎ hơn ô — rủi ro khi ước lượng bước lặp sai. Nên chọn 0: gần cực đại,
+# và có nghĩa hình học bảo vệ được.
+#
+# Chốt 2026-08-25 sau khi người dùng đối chiếu 72 ô cắt hai cách bằng MẮT — hai thước
+# đo không nhãn cho kết quả ngược nhau (`flag_ok` chuộng 0,10; tinh khiết mực chuộng
+# 0), nên phép phân định cuối cùng là thị giác người, không phải chỉ số.
+#
+# Đọc từ `config/pipeline.yaml: step2.box_overlap_frac`; build_dataset gán vào đây
+# lúc khởi động. Đổi giá trị = cắt lại toàn bộ crop.
+BOX_OVERLAP_FRAC = 0.0
+
+
 def _reseg_column(cluster) -> list | None:
     """Rebuild per-char boxes from the OCR y-CENTERS (which are reliable) with
     MIDPOINT boundaries between consecutive chars, so no crop can span into a
@@ -155,8 +187,8 @@ def _reseg_column(cluster) -> list | None:
     pitch = float(np.median(np.diff(cys))) if n >= 2 else 80.0
     if not (pitch > 0):
         pitch = 80.0
-    m = pitch * 0.10  # small overlap so tall glyphs keep their tails; far less
-    # than pitch/2 so a neighbour's CENTRE can never enter this box (no merging)
+    # BIÊN NỚI DỌC — xem BOX_OVERLAP_FRAC ở đầu tệp. Trước 2026-08-25 ghim cứng 0,10.
+    m = pitch * BOX_OVERLAP_FRAC
     boxes = []
     for i, cy in enumerate(cys):
         top = (cys[i - 1] + cy) / 2.0 - m if i > 0 else cy - pitch / 2.0

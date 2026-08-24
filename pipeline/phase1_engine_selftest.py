@@ -283,6 +283,69 @@ def test_ocr_cache_guard():
     _shutil.rmtree(tmp, ignore_errors=True)
 
 
+def test_crop_geometry_wired():
+    from pathlib import Path as _P
+    REPO = _P(__file__).resolve().parents[1]
+    """T4.e + T4.a: hình học cắt ảnh do CẤU HÌNH quyết, không ghim cứng trong mã."""
+    import yaml
+    from pipeline.align_engine import align_production as AP
+    print("[hình học cắt ảnh — cấu hình nối vào mã]")
+
+    check("BOX_OVERLAP_FRAC mặc định = 0 (T4.e)", AP.BOX_OVERLAP_FRAC == 0.0,
+          f"đang là {AP.BOX_OVERLAP_FRAC}")
+
+    cfg = yaml.safe_load((REPO / "config" / "pipeline.yaml").read_text(encoding="utf-8"))
+    s2 = cfg.get("step2") or {}
+    check("config có box_overlap_frac", "box_overlap_frac" in s2)
+    check("config box_overlap_frac = 0", float(s2.get("box_overlap_frac", -1)) == 0.0)
+    # T4.a: dòng này từng CHẾT (mã dùng 0.12 trong khi cấu hình khai 0.18)
+    check("config crop_pad_frac = 0,12 — khớp giá trị THẬT đã đo",
+          abs(float(s2.get("crop_pad_frac", -1)) - 0.12) < 1e-9,
+          f"đang là {s2.get('crop_pad_frac')}")
+
+    # hộp cao đúng pitch khi F=0, và cao 1,2*pitch khi F=0,10
+    chars = [{"bbox": [10, 100 * i, 110, 100 * i + 90]} for i in range(6)]
+    old = AP.BOX_OVERLAP_FRAC
+    try:
+        for F, want in ((0.0, 100.0), (0.10, 120.0)):
+            AP.BOX_OVERLAP_FRAC = F
+            bx = AP._reseg_column({"chars": chars})
+            hs = [b[3] - b[1] for b in bx[1:-1]]          # bỏ hộp đầu/cuối (nửa pitch)
+            check(f"F={F}: hộp giữa cao {want:.0f}px (= pitch × {1 + 2 * F:.2f})",
+                  all(abs(h - want) <= 1 for h in hs), f"đo được {hs}")
+    finally:
+        AP.BOX_OVERLAP_FRAC = old
+
+    # build_dataset phải ĐỌC cấu hình, không ghim cứng
+    src = (REPO / "pipeline" / "align_engine" / "build_dataset.py").read_text(encoding="utf-8")
+    check("build_dataset đọc step2.crop_pad_frac", 'get("crop_pad_frac"' in src)
+    check("build_dataset đọc step2.box_overlap_frac", 'get("box_overlap_frac"' in src)
+    check("--pad mặc định None (để cấu hình quyết)",
+          'ap.add_argument("--pad", type=float, default=None)' in src)
+
+
+def test_labels_sorted():
+    """T6.b: thứ tự dòng KHÔNG phụ thuộc thứ tự sách trong cấu hình."""
+    from pathlib import Path as _P
+    REPO = _P(__file__).resolve().parents[1]
+    print("[T6.b — sắp dòng theo khoá canon]")
+    src = (REPO / "pipeline" / "align_engine" / "build_dataset.py").read_text(encoding="utf-8")
+    check("có sắp trước khi ghi", 'labels.sort(key=lambda r: r["_sort"])' in src)
+    check("khoá = (sách, trang, cột, chỉ-số)", '"_sort": (r["book"], r["page"]' in src)
+    check("_sort bị gỡ trước khi ghi CSV", 'r.pop("_sort", None)' in src)
+    fields_blk = src[src.index("    fields = ["):src.index("    fields = [") + 400]
+    check("_sort KHÔNG nằm trong cột xuất ra", "_sort" not in fields_blk)
+
+    # khoá sắp phải GIỮ NGUYÊN thứ tự trong cột (nếu không, phân tích dựa vào
+    # tính liền kề dọc cột sẽ hỏng)
+    rows = [{"_sort": ("stt4", "page_0002", 3, 1)}, {"_sort": ("stt2", "page_0009", 1, 0)},
+            {"_sort": ("stt2", "page_0009", 1, 2)}, {"_sort": ("stt2", "page_0009", 1, 1)}]
+    rows.sort(key=lambda r: r["_sort"])
+    check("trong cùng cột, thứ tự chỉ-số tăng dần",
+          [r["_sort"][3] for r in rows[:3]] == [0, 1, 2])
+    check("sách sắp theo tên, không theo cấu hình", rows[0]["_sort"][0] == "stt2")
+
+
 def main() -> int:
     print("=" * 64)
     print("PHASE-1 ENGINE-FIX SELFTEST")
@@ -291,6 +354,8 @@ def main() -> int:
     test_syllable_gate()
     test_ocr_retry()
     test_ocr_cache_guard()
+    test_crop_geometry_wired()
+    test_labels_sorted()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

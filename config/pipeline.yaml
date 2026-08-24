@@ -64,10 +64,22 @@ step2:
   deletion_cost_medium: 0.6
   deletion_cost_normal: 1.2
   insertion_cost: 1.0
-  # Expand each char bbox by this fraction of (w, h) on each side before cropping,
-  # so the saved PNG captures the full glyph (descenders, top diacritics, side
-  # radicals) even at the cost of a sliver of neighbour ink.
-  crop_pad_frac: 0.18
+  # --- HÌNH HỌC CẮT ẢNH ------------------------------------------------------
+  # CẢ HAI NÚM DƯỚI ĐÂY ĐỀU ĐƯỢC build_dataset.py ĐỌC THẬT (nối 2026-08-25).
+  # Trước đó `crop_pad_frac: 0.18` là DÒNG CHẾT: không mã nào đọc, `--pad` mặc định
+  # 0.12, và run_pipeline không truyền — nên 66k crop đã giao thực ra cắt ở 0,12
+  # trong khi cấu hình khai 0,18. Nay giá trị ở đây LÀ giá trị chạy.
+
+  # Nới mỗi cạnh hộp thêm phần này của (w, h) TRƯỚC khi cắt, để crop bắt trọn nét
+  # (đuôi chữ, dấu trên, bộ bên). Đo T4-B': ở 0 thì 51,7% crop bị cắt mất nét; ở
+  # 0,12 chỉ còn 0,4%; lên 0,45 chỉ bớt thêm 0,2 điểm mà đẩy dính-láng-giềng từ
+  # 51% lên 69% số crop. Nên 0,12 là điểm làm việc, đã đo chứ không phải mặc định.
+  crop_pad_frac: 0.12
+
+  # Biên nới DỌC của hộp ký tự, theo BƯỚC LẶP của cột: hộp cao = pitch × (1 + 2F).
+  # 0 = hộp bằng ĐÚNG MỘT Ô BƯỚC LẶP. Xem align_production.BOX_OVERLAP_FRAC cho
+  # toàn bộ phép đo T4.e. Đổi giá trị này = CẮT LẠI TOÀN BỘ CROP.
+  box_overlap_frac: 0.0
 
 # Step 3 (legacy DINOv2 labeling path) — RETIRED: superseded by pipeline/align_engine Step 2
 # (build_dataset.py --use-s3, S3 = trained Nôm encoder). DINOv2 is DISABLED here

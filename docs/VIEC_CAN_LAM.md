@@ -743,8 +743,38 @@ Nên GIỮ MỐC không phải vì thiếu số liệu, mà vì đã đo và m�
 
 ## Việc T4 mở ra (chưa làm)
 
-- [ ] **T4.e** Hạ `m = pitch * 0.10` xuống 0,05 hoặc 0 và đo lại — đây là núm vặn THẬT của
-  chiều dọc, và **đặc tả T4.2 không có nó**. Phải đo bằng thước đo liên thông, không bằng `flag_ok`.
+### T4.e ✅ ĐÃ ĐO — `m = pitch * 0.10` nên hạ về **0**, lợi **+3,8 điểm** độ tinh khiết
+
+Dựng lại hộp theo **đúng công thức production** (trung điểm ± `m`) với `m = pitch × M` thay
+đổi, cắt bằng cấu hình đã giao (pad 0,12 + carve), đo bằng thước đo liên thông
+(`crop_purity.sweep_m`). **9.404 crop / 60 trang.**
+
+| M | cao hộp | độ tinh khiết mực | bị cắt | F1 |
+|---|---|---|---|---|
+| −0,10 | 0,80×pitch | 0,9570 | 0,0248 | 0,9660 |
+| −0,05 | 0,90×pitch | 0,9527 | 0,0200 | **0,9661** ← cực đại |
+| **0,00** | **1,00×pitch** | **0,9453** | **0,0179** | **0,9634** ← đề xuất |
+| **+0,10** | **1,20×pitch** | **0,9072** | **0,0165** | **0,9438** ← PRODUCTION |
+
+**Thước đo bấu vào trục theo CẢ HAI chiều** (M âm thì `bị cắt` tăng 0,0179 → 0,0248 → 0,0345
+→ 0,0508), nên khác ba lần trước, đây là cực đại nội THẬT, không phải nghiệm biên.
+
+**Kết quả bác lý do ghi trong chính mã.** `align_production.py:158` chú thích
+`m = pitch * 0.10  # small overlap so tall glyphs keep their tails`. Nhưng **`bị cắt` gần như
+KHÔNG đổi theo M** (0,0165 ở M=+0,10 vs 0,0179 ở M=0 — chênh **0,0014, KHÔNG vượt khoảng tin
+cậy 95%**). Mức nới dọc **không cứu được đuôi nét nào**; `pad 0,12` đã lo xong việc đó. Nó chỉ
+đổi lấy **−3,81 điểm** mực của chính chữ (0,9453 → 0,9072).
+
+Chọn **M = 0** chứ không phải cực đại −0,05: chênh F1 chỉ 0,0027, mà M = 0 có nghĩa hình học
+bảo vệ được — **hộp = đúng một ô bước lặp = đúng phần của một chữ trong cột** — còn M âm là
+hộp NHỎ hơn ô, rủi ro khi ước lượng bước lặp sai.
+
+🔴 **CHƯA ÁP DỤNG, và không được áp dụng lén.** Đổi `m` là cắt lại toàn bộ 66k ảnh → đổi
+`image_md5`, `crop_w/h`, `ink_pct` và mọi hash trong chuỗi bằng chứng. Đúng cảnh báo T4.4 của
+đặc tả: *"Đổi crop = đổi ảnh dưới chân bộ nhãn. Chốt cấu hình MỘT LẦN, trước khi rút mẻ chấm tay."*
+Phạm vi rủi ro **hẹp hơn tưởng**: GOLD = S1∩S2 không đọc crop nên **thành phần bộ giao nộp
+không đổi**; chỉ ảnh đổi, cộng khả năng đổi thành phần SILVER (S3 đọc crop). Quyết định cắt lại
+là của bạn, và phải làm **một lần duy nhất** trước KHỐI 6.
 - [ ] **T4.f** Vòng tuần hoàn của bộ dò: GT huấn luyện CenterNet do chính pipeline sinh nên nó
   học lại mức nới 1,2×. Muốn thoát phải có hộp do người vẽ (thuộc KHỐI 6).
 - [ ] **T4.g** Đo tỷ lệ dính chữ thật — cần dụng cụ khác (xem lỗi 3).

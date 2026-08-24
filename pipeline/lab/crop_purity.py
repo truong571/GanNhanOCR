@@ -171,3 +171,81 @@ def main(argv=None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+# =============================================================================
+# T4.e — quét HẰNG SỐ NỚI DỌC `m = pitch * M`, núm vặn THẬT của chiều dọc
+# =============================================================================
+# `align_production.py:158` đặt `m = pitch * 0.10`, nên cao hộp = pitch*(1+2M) =
+# pitch*1,20. Đặc tả T4.2 KHÔNG có trục này — nó chỉ quét `pad`, vốn nhân LÊN TRÊN
+# hộp đã nới. Đo 537 cột: 99,44% hộp cao hơn bước lặp, 84,46% cặp liền kề chồng nhau.
+#
+# Ở đây dựng lại hộp từ ĐÚNG công thức của production (trung điểm ± m) với M thay
+# đổi, rồi cắt bằng cấu hình đã giao (pad 0,12 + carve) và đo bằng thước đo liên
+# thông. Đây là phép đo trực tiếp cho câu "nới 1,2× có đáng không".
+M_GRID = (0.0, 0.05, 0.10, 0.15, 0.20, 0.30)
+
+
+def boxes_from_pitch(bs, cys, pitch, M):
+    """Dựng lại hộp theo ĐÚNG công thức production với hằng số nới `M`."""
+    m = pitch * M
+    n = len(cys)
+    out = []
+    for i, cy in enumerate(cys):
+        top = (cys[i - 1] + cy) / 2.0 - m if i > 0 else cy - pitch / 2.0
+        bot = (cys[i + 1] + cy) / 2.0 + m if i < n - 1 else cy + pitch / 2.0
+        out.append((bs[i][0], int(round(top)), bs[i][2], int(round(bot))))
+    return out
+
+
+def sweep_m(n_pages: int = 20, pad: float = 0.12) -> list[dict]:
+    import numpy as np
+    from pipeline.lab.crop_grid import cut, load_boxes, page_cache
+    cols, npg = load_boxes(n_pages=n_pages)
+    cache = page_cache()
+    prepped = []
+    for col in cols:
+        bs = sorted(col["bboxes"], key=lambda b: b[1])
+        if len(bs) < 4:
+            continue
+        cys = [(b[1] + b[3]) / 2.0 for b in bs]
+        d = np.diff(cys)
+        d = d[(d > 0) & (d < 3 * np.median([b[3] - b[1] for b in bs]))]
+        if len(d) < 3:
+            continue
+        prepped.append({**col, "bboxes": bs, "cys": cys, "pitch": float(np.median(d))})
+    print(f"[T4.e] {npg} trang · {len(prepped):,} cột · "
+          f"{sum(len(c['bboxes']) for c in prepped):,} hộp · pad={pad}")
+    rows = []
+    for M in M_GRID:
+        p_sum = 0.0
+        n = clip = 0
+        for col in prepped:
+            img, gray_full = cache(col["book"], col["page"])
+            if img is None:
+                continue
+            nb = boxes_from_pitch(col["bboxes"], col["cys"], col["pitch"], M)
+            for k, bb in enumerate(nb):
+                g, rect = cut(img, gray_full, bb, pad, "fixed128", True,
+                              nb[k - 1] if k else None,
+                              nb[k + 1] if k + 1 < len(nb) else None,
+                              return_rect=True)
+                r = score(g, rect, col["cys"][k], col["pitch"])
+                if r is None:
+                    continue
+                # bị cắt: đo theo ĐÚNG ngưỡng của border_ink (>0,20 hàng biên),
+                # KHÔNG phải 'có pixel nào chạm mép' (lỗi tôi đã mắc lần đầu)
+                bw = (g < 128)
+                p_sum += r[0]
+                clip += int(max(bw[:2, :].mean(), bw[-2:, :].mean()) > 0.20)
+                n += 1
+        d0 = max(n, 1)
+        pur, clr = p_sum / d0, clip / d0
+        f1 = 2 * pur * (1 - clr) / max(pur + (1 - clr), 1e-9)
+        rows.append({"M": M, "box_h_over_pitch": round(1 + 2 * M, 3), "n": n,
+                     "purity": round(pur, 5), "clipped": round(clr, 5),
+                     "f1": round(f1, 5)})
+        print(f"  M={M:.2f} (cao hộp = {1 + 2 * M:.2f}×pitch)  tinh khiết={pur:.4f}"
+              f"  bị cắt={clr:.4f}  F1={f1:.4f}"
+              f"{'   <-- PRODUCTION' if abs(M - 0.10) < 1e-9 else ''}", flush=True)
+    return rows

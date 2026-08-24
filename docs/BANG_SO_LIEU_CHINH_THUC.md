@@ -1,7 +1,7 @@
 # BẢNG SỐ LIỆU CHÍNH THỨC
 
 <!-- AUTO:HEADER:START -->
-**Đo ngày**: 2026-08-24 · **Commit**: `279cdc9a69` · **Bộ nhãn**: `dataset_out/labels_final.csv` (82.246 dòng)
+**Đo ngày**: 2026-08-24 · **Commit**: `36c6747300` · **Bộ nhãn**: `dataset_out/labels_final.csv` (82.246 dòng)
 <!-- AUTO:HEADER:END -->
 
 > **QUY TẮC BẤT DI BẤT DỊCH**: mọi con số trong luận văn (mọi chương, mọi bảng, mọi slide) **chỉ

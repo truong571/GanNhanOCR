@@ -164,18 +164,26 @@ lại cột. Không chặn gì.
 Ngoại lai tỉ lệ khung 1,98% · `stray_ink` p95 0,136 · `border_ink` p95 0,100 · `ink_pct` p50 0,175.
 ⇒ **7,03% bộ giao nộp có khuyết tật hình học đo được** — chiều CROP nay do **máy** đo, không phải mắt người.
 
-### Độ bền căn chỉnh — **2.827.637 phép thử ô neo**
+### Độ bền căn chỉnh — 🔴 **BẢNG CŨ ĐÃ SAI, ĐÃ RÚT LẠI**
 
-| loại hỏng | retention | |
+Bảng công bố ở KHỐI 3 (`split_char` 0,9112 và `swap_syl` 0,9438 là "hai chỗ giòn nhất")
+là **GIẢ TẠO DO CÁCH CHẤM**, không phải tính chất của thuật toán. Đợt phản biện độc lập
+2026-08-24 phát hiện và tôi đã tự xác minh lại:
+
+| loại hỏng | ĐÃ CÔNG BỐ (sai) | ĐÚNG |
 |---|---|---|
-| `subst_char` (S1 đọc nhầm tự dạng) | 0,9997 | bền nhất |
-| `drop_syl` · `drop_char` · `tone_syl` | 0,999 | |
-| `ins_syl` | 0,9937 | |
-| **`swap_syl`** (lỗi thứ tự) | **0,9438** | |
-| **`split_char`** (detector cắt đôi hộp) | **0,9112** | **yếu nhất** |
-| **TỔNG** | **0,9773** | |
+| `split_char` | **0,9112** ← *"yếu nhất"* | **0,9997** |
+| `drop_char` · `drop_syl` · `ins_syl` | 0,999 | 0,999 |
+| `swap_syl` | 0,9438 | 0,9423 |
+| **`subst_char`** | 0,9997 | **0,9132** ← yếu nhất thật |
+| **`tone_syl`** | 0,9987 | **0,9160** |
 
-⇒ Căn chỉnh giòn nhất trước **over-segmentation** và **lỗi thứ tự âm** — định hướng trực tiếp cho T3/T4.
+**Kết luận đúng, ngược hẳn kết luận cũ**: căn chỉnh **BỀN trước hỏng CẤU TRÚC** (mất hộp,
+thêm hộp, tách đôi hộp) nhưng **GIÒN trước hỏng NỘI DUNG** (OCR đọc nhầm chữ, sai dấu
+thanh). Hợp lý, vì phép tra từ điển phụ thuộc nội dung chứ không phụ thuộc vị trí.
+
+⇒ Định hướng cho T4 cũng đổi theo: **over-segmentation KHÔNG phải vấn đề của align**
+(0,9997). Nếu crop hỏng thì hỏng ở khâu cắt ảnh, không ở khâu ghép.
 
 ## Một lỗi tự bắt được
 
@@ -194,7 +202,7 @@ Thứ tự **bắt buộc từ thượng nguồn xuống** — chỉnh crop trê
 |---|---|---|---|---|
 | **T1** ✅ | Đường Quốc ngữ — chuẩn hoá dấu phụ + rác marker | — | âm **ngoài từ điển** | **0,946%**, xem kết quả bên dưới |
 | **T2** ✅ | Hình học trang Nôm — dò cột + bóc dòng QN | — | trang đủ **9 cột** | **439/445 → 443/445** |
-| **T3** | **Căn chỉnh** — chuẩn nhiễu loạn + quét ma trận chi phí | 144 | `anchor_retention` dưới nhiễu | **chưa đo bao giờ** |
+| **T3** ✅ | Căn chỉnh — chuẩn nhiễu loạn + quét chi phí | 78 (từ 144) | `anchor_retention` (đã sửa) | **GIỮ MỐC** — xem dưới |
 | **T4** | Tách ký tự & chất lượng crop | 144 | 6 thước đo hình học | **chưa đo bao giờ** |
 | **T5** | Độ giòn từ điển + `syllable_gate` + top-K cầu tự dạng | ~30 | độ giòn, nhất quán liên sách | — |
 | **T6** | Tái lập & bằng chứng | — | byte-identical ×2, clone sạch | — |
@@ -347,6 +355,88 @@ mang theo cả âm ngoài từ điển của chúng. Đây là **thêm dữ li�
 `similar_bridge` là assertion **phụ thuộc dữ liệu**, hỏng sau mỗi lần đổi bộ nhãn (4098 →
 4100 ở T1 → 4102 ở T2). Nay tách làm hai: **băng rộng 3500–4700** bắt sụp thật (bền, không
 phải sửa) và **mốc chính xác** làm canary bắt "đổi dữ liệu mà quên cập nhật".
+
+---
+
+## T3 — CĂN CHỈNH · KẾT QUẢ 2026-08-24
+
+### Bản đầu bị bác: THIẾT KẾ HỎNG
+
+Đợt phản biện 6 góc độc lập bác bản đầu và **bác cả kết quả KHỐI 3 tôi đã báo cáo**. Ba lỗi chặn:
+
+| # | lỗi | bằng chứng |
+|---|---|---|
+| 1 | **Chấm theo chỉ số thay vì nội dung** — 88,7% "mất neo" là giả tạo | `split_char` nhân đôi chữ, DP chọn bản sao thứ hai, neo ở chỉ số cũ bị đếm là mất **dù nhãn đúng**. Tự kiểm: 0,9140 (chỉ số) → **0,9982** (nội dung) |
+| 2 | **Mốc được ưu ái tuyệt đối** | neo sinh bởi mốc ⇒ `ret@nhiễu=0` của mốc = 1,00000 theo định nghĩa. Biên độ giữa các cấu hình **khi chưa có nhiễu** (0,622pp) **lớn hơn** toàn bộ biên độ chỉ số sau nhiễu (0,577pp) = 108%. Bỏ đặc quyền → mốc rơi **1/17 → 13/17** |
+| 3 | **Trục sản lượng vòng tròn và ngược dấu** | `confirmed` không phụ thuộc chi phí ⇒ `yield_confirmed` đo "chịu bẻ đường ghép bao nhiêu để nhặt thêm cặp dict-confirm" = chính luật gán nhãn. Cấu hình "thắng" phát ra **ít hơn 352 cặp ghép**; op `del` biến mất hoàn toàn khỏi `labels.csv` |
+
+Thêm: hai trục tương quan **Pearson +0,905** (không phải đánh đổi → Pareto là trang trí);
+biên Pareto **ghim vào cạnh dưới lưới**; `seeds=1` có nhiễu **lớn hơn** khoảng cách giữa
+nhiều cặp cấu hình.
+
+### Đính chính bảng KHỐI 3 (xem mục KHỐI 3 ở trên)
+
+`split_char` **0,9112 → 0,9997**. Kết luận cũ *"giòn nhất trước over-segmentation"* **sai**.
+Đúng: **bền trước hỏng CẤU TRÚC, giòn trước hỏng NỘI DUNG** (`subst_char` 0,9078 ·
+`tone_syl` 0,9123 mới là hai chỗ yếu nhất).
+
+### Bảy phép sửa
+
+neo **độc lập cấu hình** (34.785 cặp đường chéo dict-confirm trên cột m=n, không chạy
+align) · chấm theo **nội dung** (đa tập) · thêm `ret_noise0` + `ret_drop` · trục sản lượng
+→ `yield_match` + tách `confirmed`/`unconfirmed`, trừ cặp `confusion_fix` hạ cấp ·
+`seeds` 1→3 (vòng A) / 5 (vòng B) · lưới **nới để bao cực trị** và bỏ `BAND_SLACK` khỏi
+lưới chính (144 → **78**) · luật chọn **một trục + ràng buộc**, viết trước.
+
+### Ba trong bốn núm KHÔNG nhận dạng được
+
+| núm | kết luận |
+|---|---|
+| **`BAND_SLACK`** | **bằng 0 tuyệt đối** — band2 / band3 / band4 / band2-thích-nghi cho `ret 0,96510` và `match 24.608` **giống hệt đến 5 chữ số** |
+| `COST_NODICT` | Δ ≈ 0,0003 ≈ nhiễu |
+| `COST_SIMILAR` | thật nhưng nhỏ, và **thứ hạng đảo khi đổi cách cắt** (gộp theo mọi tham số khác thì chính mốc 0,30 cao nhất) |
+| **`COST_DEL=COST_INS`** | **núm thật duy nhất**, có vách hai đầu |
+
+⇒ **Giải quyết dứt điểm đề xuất §3.3 của bản góp ý MI3** (*"nới băng `|i−j| ≤ |m−n|+3`"*):
+đo được **không đổi một ô nào**. Không phải "khó đánh giá" — là **bằng 0**.
+
+### Lưới nới rộng đã bao được cực trị
+
+```
+COST_DEL=INS  0,45 → match 16.203   sụp 34% sản lượng (đúng cấu hình bệnh hoạn phản biện dự đoán)
+              0,60 → ret 0,96538  ┐
+              0,70 → ret 0,96529  ├ cao nguyên phẳng, chênh ≈ nhiễu   ← MỐC nằm giữa
+              0,85 → ret 0,96503  ┘
+              1,00 → ret 0,95151   sụp độ bền
+```
+
+### Quyết định: GIỮ NGUYÊN ma trận chi phí
+
+Vòng B (toàn bộ 4.003 cột, seeds=5): cấu hình tốt nhất qua ràng buộc là
+`sim0,60_nod0,90_di0,70`, hơn mốc **+0,00072** — vượt nhiễu 0,00023. Nhưng:
+
+| | mốc | thắng | chênh |
+|---|---|---|---|
+| `yield_match` | 82.249 | 82.422 | +173 |
+| **`yield_confirmed`** | **53.453** | **53.266** | **−187** |
+| retention (cả 7 loại) | 0,96596 | 0,96666 | **+0,00070** |
+| **retention (bỏ `swap_syl`)** | **0,96950** | **0,96959** | **+0,00009** ← dưới nhiễu |
+
+**`swap_syl` góp 87% toàn bộ mức tăng.** Mà `swap_syl` đổi chỗ hai âm kề → tạo phép ghép
+**chéo**, thứ căn chỉnh đơn điệu **về nguyên tắc không thể sinh ra**. Một cải thiện chỉ tồn
+tại trên một phép thử bất khả thi thì không phải cải thiện — và nó còn phải trả **187 cặp
+dict-confirmed**, mà **không có ground truth** để biết 187 ô đó đúng hay sai.
+
+**Luật quyết định của tôi có lỗ hổng**: nó chỉ so mức tăng GỘP với nhiễu, không đòi mức
+tăng phải **bền qua các lớp hỏng**. Đã bổ sung điều kiện đó vào `decide()` thay vì lặng lẽ
+bỏ qua luật; chạy lại thì luật tự trả về **GIỮ MỐC**.
+
+### Sản phẩm của T3
+
+Không phải một cấu hình mới, mà là **chính cái chuẩn đo** — một phép đo độ bền tái lập được
+mà đề tài trước đây không có — cộng **ba câu trả lời phủ định có bằng chứng** (băng, nodict,
+similar) và **bằng chứng bao cực trị** cho giá trị `del/ins = 0,70` đang dùng. Kết quả âm,
+nhưng là kết quả âm *đo được*, viết vào luận văn được.
 
 ---
 

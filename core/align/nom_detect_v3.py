@@ -97,6 +97,19 @@ def detect_nom_columns_v3(binary, kim_columns, n_expected=9):
     if len(cols) == n_expected:
         return cols, "hybrid_9"
 
+    # CỘT THẬT NGẮN — nới min_len TRƯỚC khi rơi xuống projection.
+    # Một cột thật có thể chỉ 2-3 chữ (dòng cuối đoạn, dòng tiêu đề). `min_len=4` loại
+    # chúng, trang còn 8 cột nên rơi xuống nhánh projection — nhánh đó bắt nhầm MỰC
+    # VIỀN lề phải thành một cột giả (đo được: rộng 59px, 0 chữ, trong khi cột thật
+    # ~145px), cột giả chiếm mất một suất trong 9 nên một suất khác phải GỘP hai cột
+    # thật (47 chữ thay vì 23) -> cả một cột mất nhãn.
+    # Đo trên 445 trang: nới min_len sửa 12 trang (8 -> 9 cột) và KHÔNG đụng 433 trang
+    # còn lại. Chỉ thử khi min_len=4 cho THIẾU cột, nên hành vi cũ giữ nguyên.
+    if len(cols) < n_expected:
+        relaxed = nom_cols_hybrid(kim_columns, min_len=1)
+        if len(relaxed) == n_expected:
+            return relaxed, "hybrid_9_short_cols"
+
     # Try close-pair merge if too many cols
     if len(cols) > n_expected:
         cols = _close_pair_merge(cols, n_expected)

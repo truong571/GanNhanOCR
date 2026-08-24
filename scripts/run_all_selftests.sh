@@ -10,7 +10,7 @@
 #     remediation              35 passed,  0 failed
 #     phase1_engine            30 passed,  0 failed
 #     -------------------------------------------
-#     TỔNG                    532 passed,  0 failed  (mốc 2026-08-23b, +70: KHỐI 3 lab + tools)
+#     TỔNG                    533 passed,  0 failed  (mốc 2026-08-23b, +70: KHỐI 3 lab + tools)
 #
 # ĐỔI SO VỚI MỐC 448 (KHỐI 1):
 #   +47  pipeline.lab.selftest — bàn thí nghiệm (metrics/perturb/runner). Gồm chốt
@@ -68,7 +68,7 @@
 # xanh. Riêng phase1 "low-purity" là lỗi TEST (placeholder 'x' bị lọc là rác nên
 # purity không được kiểm) — đã sửa placeholder thành âm tiết hợp lệ 'an'/'ba'.
 #
-# => Con số trích dẫn trong luận văn phải là 532 assertions (532 pass, 0 fail), KHÔNG
+# => Con số trích dẫn trong luận văn phải là 533 assertions (533 pass, 0 fail), KHÔNG
 #    còn là 360 hay 223 — 223 là mốc cũ và đã bỏ sót toàn bộ selftest của bước 1-2.
 
 set -uo pipefail
@@ -77,7 +77,7 @@ cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=532
+BASELINE_PASS=533
 BASELINE_FAIL=0
 
 MODULES=(

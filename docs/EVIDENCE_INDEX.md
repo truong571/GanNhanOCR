@@ -292,16 +292,16 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 <!-- HIEN_HANH:START -->
 ## BẢN HIỆN HÀNH (tự sinh — ghi đè mỗi lần chạy, ĐỪNG sửa tay)
 
-- sinh lúc: `2026-08-24T01:16:48Z`
-- commit  : `264cfb9bc7`
+- sinh lúc: `2026-08-24T01:46:51Z`
+- commit  : `ab2499ec6d`
 - sách    : STT2+STT4+STT11 | reseg=detector
 
 | file | sha256 |
 |---|---|
-| `dataset_out/labels.csv` | `9f7c0e3560d93076ccb6a1bcd9dcbd1ad8e36723ae512358da439e768331f7d5` |
-| `dataset_out/labels_remediated.csv` | `110eea3a5f295217fba9c7dcfc4aab87e5197006ac295139c4b6197feb044336` |
-| `dataset_out/labels_final.csv` | `1fc93dfc763391aaad53b296c61684ac40235ce90157d7f88fd0cd72958bb428` |
-| `dataset/labels.csv` | `d6fe4676cd4ee7db3e5c3b2b759e7ed50d1d4cd85fe60472c31d812e162b10f8` |
+| `dataset_out/labels.csv` | `461ab90f3d4c0af57cc714e9b8633c45c6b82cf596e7fe8cfd6cf55a3127a976` |
+| `dataset_out/labels_remediated.csv` | `2a78d6196a149205521a881da8f212c90b3065a236100b8d191daef1a8787e63` |
+| `dataset_out/labels_final.csv` | `9727b4624d3e02943a8eca2a5725c4a486db1bf06b86364f1bbcd7ae6fe23368` |
+| `dataset/labels.csv` | `236cbc4fa57f25b32270b89f95914ab62184011ffedf9ccb7c88d53c0b7ae0fc` |
 
 Kiểm lại: `bash scripts/check_evidence.sh`
 <!-- HIEN_HANH:END -->
@@ -316,3 +316,14 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 | `dataset_out/labels_remediated.csv` | `110eea3a5f295217fba9c7dcfc4aab87e5197006ac295139c4b6197feb044336` |
 | `dataset_out/labels_final.csv` | `1fc93dfc763391aaad53b296c61684ac40235ce90157d7f88fd0cd72958bb428` |
 | `dataset/labels.csv` | `d6fe4676cd4ee7db3e5c3b2b759e7ed50d1d4cd85fe60472c31d812e162b10f8` |
+
+## Lần chạy 2026-08-24T01:46:51Z
+
+sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `461ab90f3d4c0af57cc714e9b8633c45c6b82cf596e7fe8cfd6cf55a3127a976` |
+| `dataset_out/labels_remediated.csv` | `2a78d6196a149205521a881da8f212c90b3065a236100b8d191daef1a8787e63` |
+| `dataset_out/labels_final.csv` | `9727b4624d3e02943a8eca2a5725c4a486db1bf06b86364f1bbcd7ae6fe23368` |
+| `dataset/labels.csv` | `236cbc4fa57f25b32270b89f95914ab62184011ffedf9ccb7c88d53c0b7ae0fc` |

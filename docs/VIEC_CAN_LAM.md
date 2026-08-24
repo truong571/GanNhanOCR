@@ -193,6 +193,7 @@ Thứ tự **bắt buộc từ thượng nguồn xuống** — chỉnh crop trê
 | # | chương trình | cấu hình | thước đo chính | baseline |
 |---|---|---|---|---|
 | **T1** ✅ | Đường Quốc ngữ — chuẩn hoá dấu phụ + rác marker | — | âm **ngoài từ điển** | **0,946%**, xem kết quả bên dưới |
+| **T2** ✅ | Hình học trang Nôm — dò cột + bóc dòng QN | — | trang đủ **9 cột** | **439/445 → 443/445** |
 | **T3** | **Căn chỉnh** — chuẩn nhiễu loạn + quét ma trận chi phí | 144 | `anchor_retention` dưới nhiễu | **chưa đo bao giờ** |
 | **T4** | Tách ký tự & chất lượng crop | 144 | 6 thước đo hình học | **chưa đo bao giờ** |
 | **T5** | Độ giòn từ điển + `syllable_gate` + top-K cầu tự dạng | ~30 | độ giòn, nhất quán liên sách | — |
@@ -286,6 +287,68 @@ Trong 11 ô từ mượn đầu-số, sửa xong chỉ **4 ô** đủ điều ki
    trước T1. Nay `run_id` gồm cả vân tay bộ nhãn (`labels_sha`).
 
 Ngoài ra một assertion phụ thuộc dữ liệu phải cập nhật: `similar_bridge` 4.098 → **4.100**.
+
+## T2 — HÌNH HỌC TRANG NÔM · KẾT QUẢ 2026-08-24
+
+Lưới 48 cấu hình **không chạy**: mỗi cấu hình phải build lại 445 trang (~20 phút) ⇒ ~16 giờ.
+Thay bằng **chẩn đoán trực tiếp 6 trang hỏng** — rẻ hơn và cho gốc rễ thay vì thứ hạng.
+
+### 6 trang tách thành hai lớp khác hẳn nhau
+
+| lớp | trang | triệu chứng | gốc rễ |
+|---|---|---|---|
+| **A** | `stt4` 0110, 0146, 0252 | cột Nôm hoàn hảo, QN chỉ ra 8 dòng | `parse_v5` bỏ dòng khi marker hỏng |
+| **B** | `stt11` 0042, `stt4` 0028, 0122 | cột 1–2 **rỗng**, cột khác **gộp** (45/44/31 chữ) | `nom_cols_hybrid(min_len=4)` |
+
+### Lớp B — gốc rễ và phép sửa
+
+`stt11 page_0042`: tâm-x thật của 9 cột cách đều ~145px, nhưng bộ dò ra một cột giả
+**(1631–1690)** ở lề phải — rộng **59px, 0 chữ**: đó là **mực viền**. Cột giả chiếm một suất
+trong 9 ⇒ suất khác phải gộp hai cột thật (47 chữ thay vì 23) ⇒ mất nguyên một cột nhãn.
+
+Nguyên nhân sâu hơn: `min_len=4` **loại cột thật chỉ 2–3 chữ** (dòng cuối đoạn) ⇒ còn 8 cột
+⇒ rơi xuống nhánh projection ⇒ chính nhánh đó bắt nhầm viền.
+
+Đo trước khi sửa trên 445 trang: nới `min_len` sửa **12 trang**, **hỏng 0 trang** (433 giữ
+nguyên). Sửa an toàn nhất — chỉ nới khi `min_len=4` cho THIẾU cột. Kết quả: **445/445 trang
+ra đúng 9 cột**, nhánh projection mong manh **không còn được dùng lần nào**.
+
+### Lớp A — hai bộ bóc giỏi ở những trang khác nhau
+
+`_get_qn_lines` bóc lại bằng `parse_v5`, **không dùng** `transcriptions/page_*.json` (do
+`parse_numbered_lines` sinh ở bước 1) — hai hàm khác nhau và bất đồng.
+
+| bộ bóc | trang ra đủ 9 dòng |
+|---|---|
+| `parse_v5` (hiện dùng) | 442/445 |
+| `parse_numbered_lines` | 415/445 |
+| **ưu tiên bộ nào ra 9** | **443/445** |
+
+Chỉ thêm 1 trang, nhưng rẻ và **chỉ kích hoạt khi `parse_v5` đã hỏng**. Hai trang còn lại
+(`0110`, `0252`) không cứu được — text OCR không có dòng thứ 9.
+
+### Kết quả
+
+| chỉ số | trước T2 | sau T2 |
+|---|---|---|
+| **Trang đủ 9 cột** | 439/445 | **443/445** |
+| Nhánh projection được dùng | 12 trang | **0** |
+| Bộ giao nộp | 56.882 | **56.909** (+27) |
+| GOLD | 50.120 | **50.156** (+36) |
+| Âm ngoài từ điển | 643 (0,782%) | 661 (0,804%) |
+| Hình học crop `ok` | 92,98% | 92,991% |
+| `anchor_retention` | 0,9773 | 0,9773 |
+
+⚠️ Âm ngoài từ điển **tăng nhẹ** — không phải hồi quy: 4 cột trước đây bị mất nay quay lại,
+mang theo cả âm ngoài từ điển của chúng. Đây là **thêm dữ liệu**, không phải giảm chất lượng.
+
+### Ghi chú về test giòn
+
+`similar_bridge` là assertion **phụ thuộc dữ liệu**, hỏng sau mỗi lần đổi bộ nhãn (4098 →
+4100 ở T1 → 4102 ở T2). Nay tách làm hai: **băng rộng 3500–4700** bắt sụp thật (bền, không
+phải sửa) và **mốc chính xác** làm canary bắt "đổi dữ liệu mà quên cập nhật".
+
+---
 
 ### Ba cảnh báo bắt buộc
 

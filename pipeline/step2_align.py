@@ -67,8 +67,25 @@ def _get_qn_lines(book_dir: Path, page_name: str,
             text = json.load(open(cache, "r", encoding="utf-8")).get("text", "")
             if text:
                 v5, _ = parse_v5(text, qn_dict=qn_dict)
+                if len(v5) == 9:
+                    return v5, "v5"
+                # HAI BỘ BÓC GIỎI Ở NHỮNG TRANG KHÁC NHAU. Khi VietOCR làm hỏng marker
+                # ("1." mất hẳn, dòng 1 bắt đầu thẳng bằng chữ), parse_v5 bỏ dòng đó còn
+                # parse_numbered_lines (9 pattern chống lỗi marker) vẫn bắt được — và
+                # ngược lại. Đo trên 445 trang: v5 ra 9 dòng ở 442 trang,
+                # parse_numbered_lines ở 415; ưu tiên bộ nào ra ĐỦ 9 -> 443 trang.
+                # Chỉ chạy khi v5 ĐÃ hỏng, nên 442 trang kia giữ nguyên hành vi.
+                from core.pdf.pdf_parser import parse_numbered_lines
+                try:
+                    pn = parse_numbered_lines(text)
+                except Exception:
+                    pn = {}
+                if len(pn) == 9:
+                    return pn, "v5_fallback_numbered"
                 if v5:
                     return v5, "v5"
+                if pn:
+                    return pn, "numbered"
         except Exception:
             pass
     v1_path = book_dir / "transcriptions" / f"{page_name}.txt"

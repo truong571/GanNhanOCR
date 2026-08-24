@@ -1,0 +1,81 @@
+{
+  "rows": [
+    {
+      "n": 1869,
+      "flag_ok": 0.922418405564473,
+      "flag_bleed": 0.060460139111824504,
+      "flag_truncated": 0.017121455323702513,
+      "flag_blank": 0.0,
+      "stray_ink": 0.014165757089352594,
+      "border_ink": 0.03158871054039591,
+      "ink_pct": 0.18034098448368147,
+      "aspect_outlier": 0.011235955056179775,
+      "pad": 0.12
+    },
+    {
+      "n": 1869,
+      "flag_ok": 0.9464954521134297,
+      "flag_bleed": 0.03691813804173355,
+      "flag_truncated": 0.016051364365971106,
+      "flag_blank": 0.0005350454788657035,
+      "stray_ink": 0.009030658105939001,
+      "border_ink": 0.01989133226324238,
+      "ink_pct": 0.1671388443017654,
+      "aspect_outlier": 0.01765650080256822,
+      "pad": 0.22
+    },
+    {
+      "n": 1869,
+      "flag_ok": 0.9534510433386838,
+      "flag_bleed": 0.02675227394328518,
+      "flag_truncated": 0.019796682718031033,
+      "flag_blank": 0.0,
+      "stray_ink": 0.006444890315676832,
+      "border_ink": 0.01650299625468163,
+      "ink_pct": 0.15706083467094722,
+      "aspect_outlier": 0.01819154628143392,
+      "pad": 0.3
+    },
+    {
+      "n": 1869,
+      "flag_ok": 0.9695024077046549,
+      "flag_bleed": 0.019796682718031033,
+      "flag_truncated": 0.010700909577314071,
+      "flag_blank": 0.0,
+      "stray_ink": 0.005000909577314072,
+      "border_ink": 0.007994221508828251,
+      "ink_pct": 0.142201391118245,
+      "aspect_outlier": 0.01819154628143392,
+      "pad": 0.4
+    },
+    {
+      "n": 1869,
+      "flag_ok": 0.9700374531835206,
+      "flag_bleed": 0.018726591760299626,
+      "flag_truncated": 0.008560727661851257,
+      "flag_blank": 0.002675227394328518,
+      "stray_ink": 0.004564365971107545,
+      "border_ink": 0.00549170679507758,
+      "ink_pct": 0.12346629213483148,
+      "aspect_outlier": 0.013911182450508293,
+      "pad": 0.5
+    },
+    {
+      "n": 1869,
+      "flag_ok": 0.9737827715355806,
+      "flag_bleed": 0.012841091492776886,
+      "flag_truncated": 0.005350454788657036,
+      "flag_blank": 0.008025682182985553,
+      "stray_ink": 0.003151845906902086,
+      "border_ink": 0.0035800428036383094,
+      "ink_pct": 0.10949347244515772,
+      "aspect_outlier": 0.012306046013911182,
+      "pad": 0.6
+    }
+  ],
+  "monotone_ok": true,
+  "counterforce": true,
+  "interior_optimum": false,
+  "argmax_pad": 0.6,
+  "verdict": "SUY BIẾN — flag_ok tăng tới hết dải (pad=0.60, ok=0.9738), không có cực đại nội: thước đo họ D KHÔNG có thẩm quyền chọn pad -> khoá pad ở MỐC, chuyển sang T4-B (IoU trên ngữ liệu tổng hợp)"
+}

@@ -234,6 +234,95 @@ def test_synth() -> None:
           S.calibrate("/khong/co/that.csv") == {})
 
 
+def test_crop_grid():
+    """T4-A: cắt tham số hoá, đệm bất đẳng hướng, luật tiền đăng ký."""
+    import numpy as np
+    from pipeline.lab import crop_grid as CG
+    print("[lab.crop_grid]")
+
+    check("lưới đúng 48 cấu hình",
+          len(CG.PADS) * len(CG.THRS) * len(CG.CARVE) * len(CG.RESOLVE) == 48)
+    check("MỐC là pad 0,12 (mốc THẬT, không phải 0,18 như config khai)",
+          CG.BASELINE["pad"] == 0.12)
+    check("trục pad bị KHOÁ (flag_ok không có thẩm quyền)", "pad" in CG.LOCKED_AXES)
+
+    check("_img_key đọc được (cột, chỉ số)",
+          CG._img_key("gold/stt2_page_0012_c07_003.png") == (7, 3))
+    check("_img_key chịu được giá trị không phải chuỗi (hàng REVIEW)",
+          CG._img_key(float("nan")) == (0, 0))
+
+    # Ảnh giả phải để MỰC LẤP KÍN cửa sổ đã đệm, nếu không `tighten_box` co về
+    # hộp bao mực và pad mất tác dụng — đúng cái làm hai test đầu của tôi sai.
+    img = np.full((200, 120, 3), 255, np.uint8)
+    img[:, 40:80] = 0                      # sọc mực dọc suốt cột
+    gray = np.full((200, 120), 255, np.uint8); gray[:, 40:80] = 0
+    bbox = (40, 80, 80, 120)
+    g0 = CG.cut(img, gray, bbox, 0.0, "fixed128", False, None, None)
+    check("cut() trả ảnh xám", g0 is not None and g0.ndim == 2)
+    g1, r1 = CG.cut(img, gray, bbox, 0.12, "fixed128", False, None, None,
+                    return_rect=True)
+    check("cut(return_rect) trả hình chữ nhật toạ độ TRANG",
+          r1 is not None and len(r1) == 4 and r1[0] >= 0 and r1[2] <= 120)
+    # đệm bất đẳng hướng: pad_y lớn hơn thì hộp CAO hơn, RỘNG không đổi
+    _, ra = CG.cut(img, gray, bbox, (0.0, 0.5), "fixed128", False, None, None,
+                   return_rect=True)
+    _, rb = CG.cut(img, gray, bbox, (0.0, 0.0), "fixed128", False, None, None,
+                   return_rect=True)
+    check("đệm bất đẳng hướng: pad_y chỉ đổi chiều CAO",
+          (ra[3] - ra[1]) > (rb[3] - rb[1]) and (ra[2] - ra[0]) == (rb[2] - rb[0]))
+
+    # 3 chế độ ngưỡng cho CÙNG kết quả trên ảnh NHỊ PHÂN (phát hiện T4.c). Ô mẫu
+    # phải có CẢ mực và nền — ô toàn mực là ảnh suy biến, Otsu/Sauvola vô định.
+    patch = np.full((60, 60), 255, np.uint8); patch[15:45, 20:40] = 0
+    outs = {m: CG._tighten(patch, m) for m in CG.THRS}
+    check("ảnh nhị phân: 3 chế độ ngưỡng cho CÙNG hộp siết (T4.c)",
+          len({str(v) for v in outs.values()}) == 1, str(outs))
+
+    # luật quyết định: mốc thắng -> GIỮ MỐC
+    base = dict(CG.BASELINE, flag_ok=0.92, flag_truncated=0.017, is_baseline=True)
+    worse = dict(CG.BASELINE, thr="otsu", flag_ok=0.90, flag_truncated=0.017,
+                 is_baseline=False)
+    d = CG.decide([base, worse])
+    check("decide(): mốc thắng -> GIỮ MỐC", d["verdict"] == "GIỮ MỐC")
+    # ứng viên pad lớn KHÔNG được xét (trục khoá)
+    big = dict(CG.BASELINE, pad=0.22, flag_ok=0.99, flag_truncated=0.017,
+               is_baseline=False)
+    d2 = CG.decide([base, big])
+    check("decide(): bỏ qua ứng viên ở trục pad ĐÃ KHOÁ",
+          d2["candidate"]["pad"] == 0.12 and d2["verdict"] == "GIỮ MỐC")
+    check("decide() ghi lý do khoá trục", "T4-B" in d2.get("locked_why", ""))
+
+
+def test_crop_purity():
+    """T4-B': thước đo liên thông — mực của mình vs mực lạ."""
+    import numpy as np
+    from pipeline.lab import crop_purity as CP
+    print("[lab.crop_purity]")
+
+    # crop 100px, ô trung tâm = tâm 50 +- 15; một khối ở giữa + một khối RỜI ở trên
+    g = np.full((100, 40), 255, np.uint8)
+    g[40:60, 10:30] = 0            # chữ của mình (trong ô)
+    pure = CP.score(g, (0, 0, 40, 100), 50.0, 30.0)
+    check("chỉ có mực của mình -> tinh khiết = 1", pure is not None
+          and abs(pure[0] - 1.0) < 1e-9)
+    check("không chạm mép -> không bị cắt", pure[1] is False)
+
+    g2 = g.copy(); g2[2:14, 10:30] = 0      # khối RỜI sát mép trên = láng giềng
+    r2 = CP.score(g2, (0, 0, 40, 100), 50.0, 30.0)
+    check("láng giềng RỜI bị bắt -> tinh khiết < 1", r2 is not None and r2[0] < 1.0)
+    check("láng giềng KHÔNG bị tính là 'của mình'", r2[1] is False)
+
+    g3 = g.copy(); g3[0:60, 18:22] = 0      # nối liền tới mép trên
+    r3 = CP.score(g3, (0, 0, 40, 100), 50.0, 30.0)
+    check("mực NỐI LIỀN tới mép -> báo bị cắt", r3 is not None and r3[1] is True)
+
+    check("ảnh trắng trơn -> None", CP.score(np.full((50, 20), 255, np.uint8),
+                                             (0, 0, 20, 50), 25.0, 20.0) is None)
+    check("ô trung tâm rỗng -> None", CP.score(g, (0, 0, 40, 100), -999.0, 30.0) is None)
+    check("dải pad có đủ 2 đầu (0 và >= 0,45)",
+          CP.PADS[0] == 0.0 and max(CP.PADS) >= 0.45)
+
+
 def main() -> int:
     print("=" * 64)
     print("LAB SELFTEST")
@@ -242,6 +331,8 @@ def main() -> int:
     test_perturb()
     test_runner()
     test_synth()
+    test_crop_grid()
+    test_crop_purity()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

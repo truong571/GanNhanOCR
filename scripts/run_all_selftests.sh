@@ -10,7 +10,7 @@
 #     remediation              35 passed,  0 failed
 #     phase1_engine            30 passed,  0 failed
 #     -------------------------------------------
-#     TỔNG                    533 passed,  0 failed  (mốc 2026-08-23b, +70: KHỐI 3 lab + tools)
+#     TỔNG                    553 passed,  0 failed  (mốc 2026-08-24, +20: T4 crop_grid + crop_purity)
 #
 # ĐỔI SO VỚI MỐC 448 (KHỐI 1):
 #   +47  pipeline.lab.selftest — bàn thí nghiệm (metrics/perturb/runner). Gồm chốt
@@ -68,7 +68,7 @@
 # xanh. Riêng phase1 "low-purity" là lỗi TEST (placeholder 'x' bị lọc là rác nên
 # purity không được kiểm) — đã sửa placeholder thành âm tiết hợp lệ 'an'/'ba'.
 #
-# => Con số trích dẫn trong luận văn phải là 533 assertions (533 pass, 0 fail), KHÔNG
+# => Con số trích dẫn trong luận văn phải là 553 assertions (553 pass, 0 fail), KHÔNG
 #    còn là 360 hay 223 — 223 là mốc cũ và đã bỏ sót toàn bộ selftest của bước 1-2.
 
 set -uo pipefail
@@ -77,7 +77,7 @@ cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=533
+BASELINE_PASS=553
 BASELINE_FAIL=0
 
 MODULES=(
@@ -115,7 +115,7 @@ done
 
 echo "----------------------------------------------------------------"
 printf "%-38s %s\n" "TỔNG" "$total_pass passed, $total_fail failed"
-printf "%-38s %s\n" "MỐC 2026-08-23" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
+printf "%-38s %s\n" "MỐC 2026-08-24" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
 echo "================================================================"
 
 if [ "$total_pass" -eq "$BASELINE_PASS" ] && [ "$total_fail" -eq "$BASELINE_FAIL" ]; then

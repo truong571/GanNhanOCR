@@ -127,7 +127,8 @@ def _tighten(gray, mode: str):
     raise ValueError(mode)
 
 
-def cut(img, gray_full, bbox, pad, thr, carve, prev_bbox, next_bbox):
+def cut(img, gray_full, bbox, pad, thr, carve, prev_bbox, next_bbox,
+        return_rect: bool = False):
     """Bản song song của `build_dataset.save_crop` nhưng THAM SỐ HOÁ và trong bộ nhớ.
 
     Giữ ĐÚNG thứ tự phép toán của production (pad -> carve -> tighten); đổi thứ tự
@@ -139,7 +140,13 @@ def cut(img, gray_full, bbox, pad, thr, carve, prev_bbox, next_bbox):
         return None
     H, W = img.shape[:2]
     ox1, oy1, ox2, oy2 = (int(v) for v in bbox)
-    pw, ph = int((ox2 - ox1) * pad), int((oy2 - oy1) * pad)
+    # `pad` nhận vô hướng HOẶC (pad_x, pad_y): hộp OCR sát mực theo chiều DỌC
+    # (trung vị dư 0,000; p90 0,013-0,025) nhưng lỏng theo chiều NGANG (trái:
+    # trung vị +0,039, p90 +0,176) — đo trên 3.191 hộp/20 trang. Chữ xếp DỌC nên
+    # trục cần đệm lại đúng là trục không có chỗ dư => đệm bất đẳng hướng là ứng
+    # viên mà đặc tả T4.2 không có.
+    px, py = (pad, pad) if isinstance(pad, (int, float)) else (pad[0], pad[1])
+    pw, ph = int((ox2 - ox1) * px), int((oy2 - oy1) * py)
     x1, y1 = max(0, ox1 - pw), max(0, oy1 - ph)
     x2, y2 = min(W, ox2 + pw), min(H, oy2 + ph)
     crop = img[y1:y2, x1:x2]
@@ -151,10 +158,14 @@ def cut(img, gray_full, bbox, pad, thr, carve, prev_bbox, next_bbox):
                                   prev_bbox, next_bbox)
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
     tb = _tighten(gray, thr)
+    rx1, ry1, rx2, ry2 = x1, y1, x2, y2
     if tb is not None:
         a, c, b, d = tb
         gray = gray[c:d, a:b]
-    return gray if gray.size else None
+        rx1, ry1, rx2, ry2 = x1 + a, y1 + c, x1 + b, y1 + d
+    if not gray.size:
+        return (None, None) if return_rect else None
+    return (gray, (rx1, ry1, rx2, ry2)) if return_rect else gray
 
 
 def run_config(columns, cfg, cache) -> dict:

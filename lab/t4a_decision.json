@@ -1,0 +1,24 @@
+{
+  "verdict": "GIỮ MỐC",
+  "gain": 0.0,
+  "trunc_rise": 0.0,
+  "candidate": {
+    "pad": 0.12,
+    "thr": "fixed128",
+    "carve": true,
+    "resolve": false
+  },
+  "baseline_flag_ok": 0.9201019974500637,
+  "cand_flag_ok": 0.9201019974500637,
+  "checks": {
+    "2_hon_that": false,
+    "3_khong_danh_doi": true,
+    "4_ben": false
+  },
+  "axis_contribution": {},
+  "dominant_axis": null,
+  "locked_axes": [
+    "pad"
+  ],
+  "locked_why": "flag_ok đơn điệu theo pad tới 0,60 -> không có thẩm quyền; pad quyết ở T4-B bằng IoU trên ngữ liệu tổng hợp"
+}

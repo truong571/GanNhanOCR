@@ -652,3 +652,99 @@ Công cụ đã có: `pipeline/tools/sem_score.py` (chạy được, `--bench` t
 Điều thứ ba phân biệt luận văn tốt với luận văn trung bình trong lĩnh vực này: phần lớn bộ dữ liệu
 di sản được công bố kèm những con số chất lượng không ai tái lập được. Đề tài này đã tự phát hiện
 mình ở trong tình trạng đó và sửa — **viết thẳng ra thì đó là chương hay nhất của luận văn**.
+
+---
+
+# T4 — CẮT ẢNH & CHẤT LƯỢNG CROP ✅ HOÀN THÀNH 2026-08-24
+
+Công cụ mới: `pipeline/lab/crop_grid.py` (lưới 48 cấu hình + luật tiền đăng ký),
+`pipeline/lab/crop_iou.py` (ngữ liệu tổng hợp), `pipeline/lab/crop_purity.py` (thước đo
+liên thông). Luật quyết định commit ở `fd7da32cd9` **trước** khi chạy; bản siết ở `d6229a9c8a`.
+
+## Kết luận: GIỮ MỐC (pad 0,12 · ngưỡng 128 · carve BẬT · resolve TẮT)
+
+Luật tiền đăng ký tự trả `GIỮ MỐC`: trong 12 cấu hình của nhóm pad-khoá, **mốc chính là
+cực đại** `flag_ok` (0,9201). Không có điều kiện nào trong (2)(3)(4) được thoả.
+
+## 4 lỗi cấu hình / mã tìm ra
+
+| # | phát hiện | bằng chứng |
+|---|---|---|
+| T4.a | **`crop_pad_frac: 0.18` là dòng cấu hình CHẾT** | `build_dataset` không đọc nó; `--pad` default **0,12**; `run_pipeline.sh:333` không truyền → **toàn bộ 66k crop đã giao cắt ở pad 0,12**, không phải 0,18 như `config/pipeline.yaml:70` khai. Đặc tả T4.2 của tôi in đậm 0,18 là "hiện tại" — sai mốc. |
+| T4.b | **`resolve_overlap` là MÃ CHẾT** | chỉ định nghĩa trong `crop_quality.py`; đường build chưa từng gọi. Bật lên thì **xấu đi**: `flag_ok` 0,9352 → 0,9317. Giữ tắt, nay có số để biện minh. |
+| T4.c | **Trục "ngưỡng siết hộp" KHÔNG THỂ có tác dụng** | ảnh trang **đã nhị phân sẵn**: 8,4% pixel < 64 · 91,6% > 192 · **0,0% trong khoảng 64–192**. Nên Otsu/Sauvola cho **đúng cùng một mặt nạ** với ngưỡng 128: **0/893 hộp** cho hộp siết khác nhau, và cả 48 cấu hình giống nhau tới 6 chữ số. Trục này đóng **vĩnh viễn**, kèm lý do — mọi kỹ thuật nhị phân hoá thích nghi đều vô nghĩa trên `pages/`. |
+| T4.d | **`flag_ok` KHÔNG có thẩm quyền chọn `pad`** | tăng đơn điệu tới pad 0,60 (0,9224 → 0,9738), không cực đại nội. Lý do cấu trúc: `border_ink` = mực chạm mép nên pad lớn thì giảm theo định nghĩa; `stray_ink` chỉ tính dải giữ < 35% mực **và** nằm trong 30% trên/dưới → chữ láng giềng **lọt trọn** (giữ ~33%, trải quá 30%) **không bị tính**. Nó bắt mảnh vụn, không bắt láng giềng nguyên chữ. |
+
+## Phát hiện cấu trúc: mọi hộp ký tự cao 1,20 × BƯỚC LẶP
+
+`align_production.py:155-163` dựng hộp từ trung điểm với `m = pitch * 0.10`, nên
+cao hộp = `pitch + 2m` = **pitch × 1,20** *theo thiết kế* (chú thích mã: "so tall glyphs
+keep their tails"). Đo trên 537 cột / 60 trang: **trung vị 1,2069** (p10 1,183 · p90 1,247),
+**99,44% cột** có hộp cao hơn bước lặp, giống nhau ở cả 3 sách (1,2015 / 1,2070 / 1,2164).
+
+Hệ quả trực tiếp: **84,46% cặp chữ liền kề trong cùng cột CHỒNG nhau** (khe hở trung vị
+**−0,171** chiều cao hộp; 4.344 cặp / 30 trang). Cộng pad 0,12 thì **cửa sổ crop = 1,49 ×
+bước lặp**, tức luôn trùm sang ~24,5% chữ trên và chữ dưới.
+
+**Bộ dò CenterNet không tách khỏi quy ước đó.** Nó cấp **44,62%** hộp (không phải "gần như
+không dùng" như tôi đoán ban đầu — 55,38% là midpoint, trộn lẫn *trong cùng* một cột, trung
+vị 52,6%/cột). Nhưng tỷ lệ cao/bước-lặp của hộp CenterNet là **1,2063**, gần trùng midpoint
+**1,2069**: bộ dò — huấn luyện trên GT do chính pipeline này sinh — **đã học lại đúng mức nới
+1,2×**. Đây là một vòng tuần hoàn, khớp với "CenterNet detector ceiling" đã ghi trước đó.
+
+## `carve_neighbor_ink` là bộ phận CHỊU LỰC, không phải tô điểm
+
+Lần đầu định lượng, gộp mọi pad/ngưỡng/resolve (48 cấu hình, 9.404 hộp/60 trang):
+
+| carve | `flag_ok` | `flag_truncated` |
+|---|---|---|
+| TẮT | 0,3167 | **0,6635** |
+| BẬT | **0,9335** | 0,0163 |
+
+**+61,7 điểm phần trăm.** Không có carve thì 2/3 crop bị cờ "cắt thiếu" — đúng hệ quả phải
+có của việc hộp cao 1,2× bước lặp. Đây là lời biện minh định lượng đầu tiên cho `bbox_fix.py`.
+
+## Vì sao pad 0,12 là điểm làm việc đúng (đo bằng thước đo thay thế)
+
+`flag_ok` không quyết được `pad`, nên dựng thước đo dựa trên **liên thông** (`crop_purity.py`):
+mực "của mình" = thành phần liên thông giao với ô bước lặp; đo *bị cắt* theo đúng ngưỡng của
+`border_ink` (> 0,20 hàng biên), không phải "có pixel nào chạm mép".
+
+| pad | bị cắt thật | mực của mình ngoài ô (tb) | crop có > 20% ngoài ô |
+|---|---|---|---|
+| 0,00 | **51,7%** | 13,0% | 24,3% |
+| **0,12 (MỐC)** | **0,4%** | 19,1% | 51,1% |
+| 0,45 | 0,2% | 28,1% | 69,0% |
+
+pad 0,12 **đã xử lý xong việc cắt thiếu** (0,4%, khớp `flag_truncated` 0,69% của production).
+Tăng lên 0,45 mua thêm **0,2 điểm phần trăm** nhưng đẩy dính-láng-giềng từ 51% lên 69% crop.
+Nên GIỮ MỐC không phải vì thiếu số liệu, mà vì đã đo và mốc thắng.
+
+## Ba lỗi CỦA TÔI trong lúc làm T4
+
+1. **Đề xuất "đệm bất đẳng hướng" bị chính phép đo của tôi bác.** Tôi thấy chỗ dư dọc ≈ 0
+   (trung vị 0,000; p90 0,013–0,025) và kết luận "hộp sát mực theo chiều dọc → nên đệm dọc
+   nhiều hơn". Sai: dư ≈ 0 là vì **mực láng giềng đã lấp kín phần dư**, nên `tighten_box`
+   không co được. Trục dọc **đã** nới 1,2× rồi; đệm thêm là đi ngược. Đã cài `cut()` nhận
+   `(pad_x, pad_y)` và giữ lại như công cụ, nhưng **không dùng để đổi cấu hình**.
+2. **Phép kiểm "bị cắt" đầu tiên sai ngưỡng.** `own_mask[:2,:].any()` bật khi *một* pixel
+   chạm mép → báo 50,36% ở pad 0,12, chọi với `flag_truncated` 0,69%. Đặt lại theo đúng
+   ngưỡng của `border_ink` thì ra 0,4%.
+3. **Ngưỡng phân loại "dính chữ > 0,50 pitch" NẰM NGOÀI dải hình học.** Cửa sổ chỉ vươn
+   0,244 pitch quá mép ô, nên "> 0,50" là **bất khả**; con số "0,00% dính chữ" là hằng đúng,
+   **không phải phát hiện**, và tôi rút lại. Điều đo được: mức vươn trung vị **0,2069** trên
+   tối đa **0,244** → blob mực lấp ~85% khoảng còn lại của cửa sổ. Câu "bao nhiêu % crop dính
+   chữ thật" **vẫn CHƯA đo được**, cần dụng cụ khác.
+4. **T4-B (ngữ liệu tổng hợp) KHÔNG dùng được để chọn pad.** `synth` vẽ glyph vừa khít ô nên
+   `recall` = 1,0000 ở *mọi* pad — mất hẳn cánh "pad nhỏ thì cắt mất nét". Thêm nữa, hiệu
+   chuẩn sai số hộp của tôi **một chiều theo cấu trúc**: nó đo bằng `tighten_box`, mà hàm đó
+   chỉ co được *trong* hộp cho sẵn → **không bao giờ quan sát được hộp THIẾU**. Giữ lại tệp
+   kèm ghi chú, không dùng làm căn cứ.
+
+## Việc T4 mở ra (chưa làm)
+
+- [ ] **T4.e** Hạ `m = pitch * 0.10` xuống 0,05 hoặc 0 và đo lại — đây là núm vặn THẬT của
+  chiều dọc, và **đặc tả T4.2 không có nó**. Phải đo bằng thước đo liên thông, không bằng `flag_ok`.
+- [ ] **T4.f** Vòng tuần hoàn của bộ dò: GT huấn luyện CenterNet do chính pipeline sinh nên nó
+  học lại mức nới 1,2×. Muốn thoát phải có hộp do người vẽ (thuộc KHỐI 6).
+- [ ] **T4.g** Đo tỷ lệ dính chữ thật — cần dụng cụ khác (xem lỗi 3).

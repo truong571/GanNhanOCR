@@ -420,7 +420,8 @@ evidence() {
   # đây khép mối nối đó, cùng cơ chế với nom-embed/best.pt và index.csv.
   local files=("$LABELS_RAW" "$LABELS_REMED" "$LABELS_FINAL" "$FINAL_DIR/labels.csv" \
                "nom-embed/best.pt" "pipeline/align_engine/data/index.csv" \
-               "dict/QuocNgu_SinoNom.csv" "dict/SinoNom_Similar.csv")
+               "dict/QuocNgu_SinoNom.csv" "dict/SinoNom_Similar.csv" \
+               "train_crop/detector_r34.best.pt" "config/pipeline.yaml")
   local sha_cmd=""
   if command -v shasum >/dev/null 2>&1; then sha_cmd="shasum -a 256"
   elif command -v sha256sum >/dev/null 2>&1; then sha_cmd="sha256sum"; fi
@@ -458,6 +459,19 @@ evidence() {
     printf '## BẢN HIỆN HÀNH (tự sinh — ghi đè mỗi lần chạy, ĐỪNG sửa tay)\n\n'
     printf -- '- sinh lúc: `%s`\n' "$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
     printf -- '- commit  : `%s`\n' "$(git rev-parse --short HEAD 2>/dev/null || echo 'không phải git')"
+    # COMMIT SHA MỘT MÌNH KHÔNG ĐỦ ĐỊNH DANH LẦN CHẠY. Nếu cây làm việc bẩn thì mã
+    # thực thi KHÁC mã ở commit đó, và hai lần chạy cùng hash vẫn không chứng minh
+    # được gì về phiên bản mã. Bỏ qua submodule vì `nom-embed` luôn báo bẩn do
+    # artefact con trỏ LFS (xem ghi chú bên dưới) chứ không phải do nội dung đổi.
+    _dirty="$(git status --porcelain --untracked-files=no --ignore-submodules=all 2>/dev/null | wc -l | tr -d ' ')"
+    if [[ "$_dirty" == "0" ]]; then
+      printf -- '- cây làm việc: SẠCH — commit ở trên định danh đúng mã đã chạy\n'
+    else
+      printf -- '- cây làm việc: 🔴 BẨN (%s tệp đã sửa chưa commit) — commit ở trên KHÔNG\n' "$_dirty"
+      printf -- '  định danh được mã đã chạy. Muốn tái lập thì phải commit trước khi chạy.\n'
+      git status --porcelain --untracked-files=no --ignore-submodules=all 2>/dev/null \
+        | head -12 | sed 's/^/    /'
+    fi
     printf -- '- sách    : %s | reseg=%s\n\n' "$BOOKS_LABEL" "$RESEG"
     printf '| file | sha256 |\n|---|---|\n'
     local f h

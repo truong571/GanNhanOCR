@@ -25,19 +25,22 @@ run() {                       # run <mô tả> <lệnh...>
   if "$@"; then :; else fail=$((fail + 1)); fi
 }
 
-run "1/3 Bằng chứng SHA256 (bộ đem đo = bộ đem nộp)" \
+run "1/4 Bằng chứng SHA256 (bộ đem đo = bộ đem nộp)" \
     bash scripts/check_evidence.sh
 
-run "2/3 Bảng số liệu chính thức khớp đĩa" \
+run "2/4 Bảng số liệu chính thức khớp đĩa" \
     "$PY" -m pipeline.tools.update_bang_so_lieu --check
 
-run "3/3 Chỉ mục crop-proto cùng thế hệ với bộ nhãn" \
+run "3/4 Chỉ mục crop-proto cùng thế hệ với bộ nhãn" \
     "$PY" -m pipeline.tools.rebuild_proto_index --check
+
+run "4/4 Tái lập: cây làm việc · cache nguyên mẫu · không RNG (T6)" \
+    "$PY" -m pipeline.tools.repro_check --check
 
 echo
 echo "================================================================"
 if (( fail )); then
-  echo "KHÔNG NHẤT QUÁN: $fail/3 phép kiểm hỏng — sửa trước khi commit."
+  echo "KHÔNG NHẤT QUÁN: $fail/4 phép kiểm hỏng — sửa trước khi commit."
   exit 1
 fi
-echo "NHẤT QUÁN: 3/3 phép kiểm khớp bộ nhãn trên đĩa."
+echo "NHẤT QUÁN: 4/4 phép kiểm khớp bộ nhãn trên đĩa."

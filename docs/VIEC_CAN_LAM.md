@@ -945,3 +945,115 @@ tách bạch, nếu không người đọc sẽ hiểu là bộ giao nộp mất
       bằng tần suất — và nó chỉ 548 ô, rẻ.
 - [ ] **T5.d** `min_pages` bỏ khỏi cổng hoặc đặt ≥ 5 nếu muốn nó có tác dụng; hiện là no-op gây
       hiểu nhầm rằng cổng có 3 lớp bảo vệ trong khi chỉ có 2.
+
+---
+
+# T6 — TÁI LẬP & BẰNG CHỨNG ✅ PHẦN TẤT ĐỊNH HOÀN THÀNH 2026-08-24
+
+## Kết quả chính: pipeline TẤT ĐỊNH TỚI TỪNG BYTE, tới tận pixel
+
+Chạy lại **bước 3** (`build_dataset --use-s3 --reseg detector`) hai lần trên cùng đầu vào, ghi
+vào hai thư mục nháp tách biệt (bộ đã công bố **không hề bị đụng**):
+
+| đầu ra | lần A | lần B | |
+|---|---|---|---|
+| `labels.csv` | `9c11f8b940d1d637…` | `9c11f8b940d1d637…` | ✅ trùng từng byte |
+| `summary.json` | `549ed52b1f9f28ca` | `549ed52b1f9f28ca` | ✅ trùng |
+| **51.601 ảnh `gold/`** | — | — | ✅ **trùng hết** |
+| **11.090 ảnh `silver/`** | — | — | ✅ **trùng hết** |
+| **6.911 ảnh `syllable/`** | — | — | ✅ **trùng hết** |
+
+**69.602 ảnh crop trùng nhau từng byte.** Điều này trả lời rủi ro sắc nhất tôi đã khoanh trước
+khi đo: **bộ dò CenterNet chạy trên MPS (Apple GPU) LÀ tất định** giữa các lần chạy — nó cấp
+44,62% toàn bộ hộp ký tự, nên nếu nó trôi thì mọi tiêu chí T6 đều sụp.
+
+Các bước hạ nguồn đo riêng, chạy hai lần trên cùng đầu vào:
+
+| bước | tất định | tái lập bản công bố |
+|---|---|---|
+| 4–5 (remediate → confusion_fix) | ✅ trùng từng byte | — |
+| 4–5–6 (thêm s3_unwind) | ✅ trùng từng byte | **lệch ĐÚNG 3 dòng** |
+| 7 (export) | ✅ trùng từng byte | ✅ **trùng tuyệt đối** (`236cbc4f…`) |
+
+**3 dòng lệch đó chính xác là 3 ô `syllable='nan'`** — tức **phép vá pandas của T5 đang hoạt
+động đúng như thiết kế**, và **không có bất kỳ sai lệch nào khác**: 0 ô đổi tier, 82.247/82.247
+dòng còn lại trùng khít. Đây là một phép tự kiểm chứng chéo rất chặt: thứ duy nhất khác là thứ
+tôi cố ý sửa.
+
+## Đính chính đặc tả: tiêu chí "đổi thứ tự sách → byte-identical" KHÔNG đạt được như câu chữ
+
+Đo bằng cách đảo ngược danh sách `books` trong config (6 trang/sách):
+
+| | kết quả |
+|---|---|
+| trùng từng byte | 🔴 **KHÔNG** |
+| nội dung sau khi sắp | ✅ **giống hệt** (3.398 dòng, cùng tập) |
+| thứ tự dòng | khác |
+
+`build_dataset.py:231` duyệt `for b in config["books"]` **theo thứ tự cấu hình, không sắp**, rồi
+ghi dòng theo thứ tự đó. Nên tiêu chí đúng phải là **bất biến theo thứ tự** (đạt), không phải
+byte-identical (không đạt, và không thể đạt trừ khi sắp dòng trước khi ghi).
+
+## Đính chính một tuyên bố của tôi ở KHỐI 1
+
+Tôi đã viết rằng sinh lại `index.csv` **"không đụng bộ giao nộp"**. Đo được nay cho thấy **đúng
+một nửa**. So lần A với bản công bố:
+
+| tier | công bố | lần A | chênh |
+|---|---|---|---|
+| GOLD | 51.601 | 51.601 | **+0** ✅ |
+| SILVER | 11.332 | 11.090 | −242 |
+| REVIEW | 12.560 | 12.644 | +84 |
+| **SYLLABLE** | **6.753** | **6.911** | **+158** 🔴 |
+
+GOLD đứng yên **tuyệt đối**, đúng bất biến trong mã (GOLD = S1∩S2 trả về **trước** mọi lần đọc
+S3). Nhưng **SYLLABLE nằm TRONG bộ giao nộp** và nó tăng 158 ô — vì S3 đổi quyết định SILVER,
+làm đổi hồ chưa-xác-nhận mà `syllable_gate` ăn vào. Vậy lần dựng lại tới, **bộ giao nộp sẽ tăng
++158 ô**. Đó là hệ quả BIẾT TRƯỚC của một đầu vào tôi đã cố ý sửa, không phải bất tất định —
+phép thử A≡B chứng minh điều đó.
+
+## Ba khoảng trống bằng chứng đã vá
+
+| # | khoảng trống | vá thế nào |
+|---|---|---|
+| E1 | `detector_r34.best.pt` (82 MB, **cấp 44,62% hộp**) chưa từng được băm — chỉ được *nhắc tên* trong một câu văn xuôi ở `EVIDENCE_INDEX.md:220` | đưa vào `evidence()`, cùng `config/pipeline.yaml`. Chuỗi **8 → 10 tệp**, `check_evidence` 10/10 |
+| E2 | `evidence()` ghi commit SHA nhưng **không ghi cây làm việc bẩn hay sạch** — commit SHA một mình không định danh được lần chạy | in rõ SẠCH/BẨN kèm danh sách tệp; bỏ qua submodule vì `nom-embed` luôn bẩn do artefact con trỏ LFS |
+| E3 | cache nguyên mẫu S3 **ký bằng mtime chứ không bằng băm nội dung** (`visual_signal.py:195`) | thêm phép kiểm `R2`; và **bỏ theo dõi git** tệp cache 7 MB đó |
+
+Về E3, hai hệ quả đo được: (a) bản `s3_proto_cache.pkl` commit trong git có chữ ký **không bao
+giờ khớp sau một lần clone** (mtime là lúc checkout) nên là 7 MB chết; (b) nó bị **ghi đè mỗi
+lần build**, nên sau bất kỳ lần chạy nào cây làm việc cũng bẩn — làm hỏng vĩnh viễn phép kiểm E2.
+Đã `git rm --cached` + `.gitignore` (tệp vẫn nguyên trên đĩa và tự tái sinh).
+
+## Chốt chặn mới: `pipeline/tools/repro_check.py`
+
+Theo đúng nếp "mỗi lớp lệch phát hiện được phải để lại một lệnh bắt được nó". Gắn vào
+`check_consistency.sh`, nay **4 phép kiểm** thay vì 3:
+
+- **R1** cây làm việc sạch — nếu bẩn thì commit trong chuỗi bằng chứng không định danh được mã
+- **R2** chữ ký cache nguyên mẫu khớp mtime hiện tại của `index.csv` + checkpoint
+- **R3** **không có RNG nào tới được đường build** — tính tất định hiện nay dựa **hoàn toàn** vào
+  bất biến này, mà trước đó không ai canh; thêm một `random.shuffle` là mất tất định trong im lặng
+
+R3 bắt được `torch.randn` ở `nom_classifier/model.py:50`. Kiểm ra là **dương tính giả**:
+`ArcMargin` là đầu ArcFace *chỉ dùng khi huấn luyện*, `grep 'ArcMargin('` chỉ khớp đúng dòng định
+nghĩa lớp (không nơi nào khởi tạo), `infer.py:31` chỉ nạp `ck['backbone']`, và giá trị ngẫu nhiên
+còn bị `xavier_uniform_` ghi đè ngay dòng sau. Đưa vào danh sách miễn trừ **có ghi lý do đã kiểm
+chứng**, để nếu sau này ai làm nó thành đường sống thì phải gỡ miễn trừ một cách có ý thức.
+
+## Điều kiện phụ đã đo
+
+- **Không tệp đầu ra nào nhúng dấu thời gian hay đường dẫn tuyệt đối** (7 tệp `.json` + `labels.csv`)
+  → tiêu chí byte-identical là đạt được **về nguyên tắc cho mọi tệp**, không riêng `labels_final.csv`.
+- **Selftest 561** — vượt xa mốc T6 yêu cầu (≥ 450).
+- `evidence()` **có** ghi commit SHA của lần chạy (không phải khoảng trống như tôi đã ngờ).
+
+## Còn khuyết (nói thẳng)
+
+- [ ] **T6.a Chưa kiểm được trên Linux/Docker.** Máy này là macOS arm64 và **không có Docker**.
+  Tất cả kết quả tất định ở trên là **cùng-máy, cùng-thiết-bị**. Câu hỏi "MPS và CPU có cho cùng
+  hộp không" và "Linux có ra cùng sha256 không" **vẫn chưa trả lời được** — mà đó chính là câu
+  quyết định cho người thứ ba tái lập.
+- [ ] **T6.b** Sắp dòng trước khi ghi `labels.csv` (theo `book, page, column, chỉ-số-ký-tự`) thì
+  tiêu chí "đổi thứ tự sách → byte-identical" sẽ đạt được thật. Rẻ, nhưng đổi thứ tự dòng của bản
+  đã công bố → gộp vào lần chạy lại MỘT LẦN trước KHỐI 6, cùng T4.e và T5.a.

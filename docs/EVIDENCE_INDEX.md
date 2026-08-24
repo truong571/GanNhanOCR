@@ -292,8 +292,8 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 <!-- HIEN_HANH:START -->
 ## BẢN HIỆN HÀNH (tự sinh — ghi đè mỗi lần chạy, ĐỪNG sửa tay)
 
-- sinh lúc: `2026-08-24T01:46:51Z`
-- commit  : `ab2499ec6d`
+- sinh lúc: `2026-08-24T02:01:00Z`
+- commit  : `279cdc9a69`
 - sách    : STT2+STT4+STT11 | reseg=detector
 
 | file | sha256 |
@@ -302,6 +302,8 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 | `dataset_out/labels_remediated.csv` | `2a78d6196a149205521a881da8f212c90b3065a236100b8d191daef1a8787e63` |
 | `dataset_out/labels_final.csv` | `9727b4624d3e02943a8eca2a5725c4a486db1bf06b86364f1bbcd7ae6fe23368` |
 | `dataset/labels.csv` | `236cbc4fa57f25b32270b89f95914ab62184011ffedf9ccb7c88d53c0b7ae0fc` |
+| `nom-embed/best.pt` | `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0` |
+| `pipeline/align_engine/data/index.csv` | `cca7d2a078b22c83831f8a5fd3e8d3d468a09319266a89606f889a1668020097` |
 
 Kiểm lại: `bash scripts/check_evidence.sh`
 <!-- HIEN_HANH:END -->
@@ -327,3 +329,16 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 | `dataset_out/labels_remediated.csv` | `2a78d6196a149205521a881da8f212c90b3065a236100b8d191daef1a8787e63` |
 | `dataset_out/labels_final.csv` | `9727b4624d3e02943a8eca2a5725c4a486db1bf06b86364f1bbcd7ae6fe23368` |
 | `dataset/labels.csv` | `236cbc4fa57f25b32270b89f95914ab62184011ffedf9ccb7c88d53c0b7ae0fc` |
+
+## Lần chạy 2026-08-24T02:00:59Z
+
+sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `461ab90f3d4c0af57cc714e9b8633c45c6b82cf596e7fe8cfd6cf55a3127a976` |
+| `dataset_out/labels_remediated.csv` | `2a78d6196a149205521a881da8f212c90b3065a236100b8d191daef1a8787e63` |
+| `dataset_out/labels_final.csv` | `9727b4624d3e02943a8eca2a5725c4a486db1bf06b86364f1bbcd7ae6fe23368` |
+| `dataset/labels.csv` | `236cbc4fa57f25b32270b89f95914ab62184011ffedf9ccb7c88d53c0b7ae0fc` |
+| `nom-embed/best.pt` | `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0` |
+| `pipeline/align_engine/data/index.csv` | `cca7d2a078b22c83831f8a5fd3e8d3d468a09319266a89606f889a1668020097` |

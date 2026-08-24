@@ -1,4 +1,20 @@
 ================================================================================
+⚠️  ẢNH CHỤP CÓ NGÀY — SỐ LIỆU TRONG TỆP NÀY ĐÃ CŨ (ghi 2026-08-24)
+================================================================================
+Tệp này mô tả codebase ở thời điểm 2026-08-22 và ĐÃ ĐƯỢC GỬI RA NGOÀI làm nguồn [1]
+cho bản góp ý MI3. Vì vậy nó được giữ NGUYÊN VĂN làm bằng chứng lịch sử, KHÔNG sửa
+lén — nhưng mọi con số trong đây nay đã lệch.
+
+    SỐ HIỆN HÀNH: docs/BANG_SO_LIEU_CHINH_THUC.md  (các khối <!-- AUTO:… --> tự sinh)
+    Kiểm nhất quán: bash scripts/check_consistency.sh
+
+Những chỗ lệch lớn nhất tính tới 2026-08-24:
+  · bộ giao nộp 66.529 -> 56.909      · GOLD 50.063 -> 50.156
+  · labels_final 82.269 -> 82.246     · selftest 414 -> 533
+  · TOÀN BỘ số precision / error-AUC / kappa trong đây ĐÃ BỊ HUỶ
+    (docs/KE_HOACH_TONG_THE_2026-08-22.md §0 — phán quyết là MÁY chấm, không phải người)
+
+================================================================================
 GanNhanOCR — MÔ TẢ CHI TIẾT CODEBASE & PIPELINE END-TO-END
 (soạn 2026-08-22, đọc từ chính mã nguồn trong repo)
 ================================================================================

@@ -371,6 +371,69 @@ phải sửa) và **mốc chính xác** làm canary bắt "đổi dữ liệu m�
 
 ---
 
+# RÀ SOÁT TOÀN BỘ — 2026-08-24
+
+Kiểm lại từng khẳng định đã tuyên bố hoàn thành. **Ba lỗ hổng thật**, đã vá.
+
+| mục | tuyên bố | thực tế |
+|---|---|---|
+| 0.1 sao lưu | khớp đĩa | ✅ 0 dòng lỗi |
+| 0.3 chốt cache | đã cài | ✅ chạy trong mọi build |
+| **0.4 submodule** | *(còn hở)* | ⚠️ **vá một phần** — xem dưới |
+| 1.1 㝵 ở GOLD | 0 | ✅ 0 |
+| 1.4 bằng chứng | 4/4 khớp | ✅ nay **6/6** |
+| 1.6 công cụ từ điển | chạy được | ✅ 6/6 |
+| **1.7 index.csv** | *"đã thêm cảnh báo"* | 🔴 **chỉ cảnh báo, chưa sửa** — nay đã sinh lại |
+| 1.8 pipeline_today | đã xoá | ✅ |
+| **KHỐI 2 bảng số liệu** | *"đã viết lại, khớp đĩa"* | 🔴 **LỆCH LẠI** sau T1+T2 — nay TỰ SINH |
+
+## Lỗ hổng 1 (nặng nhất) — bảng số liệu lệch lại ngay sau khi viết
+
+`BANG_SO_LIEU_CHINH_THUC.md` ghi 56.776 / GOLD 50.015 / hash `dbad35e9…`, đĩa là
+56.909 / 50.156 / `236cbc4f…`. **Chính lớp lệch mà KHỐI 2 viết ra để diệt** — và do tôi
+gây ra khi đổi dữ liệu hai lần mà không cập nhật.
+
+Gốc rễ: **không có gì ÉP cập nhật**. Gõ tay thì sẽ quên. Nên nay **7 khối phụ thuộc dữ
+liệu tự sinh** giữa mốc `<!-- AUTO:… -->` (header · nguồn gốc+hash · phân hạng · luật ·
+phạm vi · vá lỗi · đo khác), cùng cơ chế với `evidence()`:
+
+```bash
+python -m pipeline.tools.update_bang_so_lieu          # ghi lại
+python -m pipeline.tools.update_bang_so_lieu --check  # exit 1 nếu lệch
+```
+
+## Lỗ hổng 2 — `index.csv` mới chỉ được *cảnh báo*, chưa *sửa*
+
+KHỐI 1.7 thêm phép kiểm thế hệ vào preflight nhưng **không sinh lại chỉ mục**: nó vẫn
+**51.195/51.195 dòng trỏ `yen*`**, giao với bộ nhãn hiện hành = **0**. Các tệp `yen*` còn
+trên đĩa nên preflight cũ báo xanh — "tệp tồn tại" không có nghĩa là "đúng thế hệ".
+
+`pipeline/tools/rebuild_proto_index.py` (mới) sinh lại: **41.835 crop GOLD/train, 100%
+`stt*`, 1.571 lớp**, 300/300 mẫu có ảnh thật. Ảnh hưởng **nằm ngoài bộ giao nộp** (S3 chỉ
+quyết SILVER; GOLD = S1∩S2 trả về trước mọi lần đọc S3) và có hiệu lực ở lần build kế tiếp.
+
+## Lỗ hổng 3 — checkpoint S3 không truy nguyên được (0.4, vá một phần)
+
+`nom-embed/best.pt` và `last.pt` đổi nhưng **chưa commit trong submodule**; con trỏ ở repo
+cha vẫn `7ff74f57c4be` nên **không nhận diện được mô hình thật đã sinh ra cột `s3_cosine`**.
+Commit bên trong submodule là quyết định của bạn (repo riêng, checkpoint 140 MB), nên tôi
+làm phần an toàn: **băm thẳng tệp vào chuỗi bằng chứng mỗi lần chạy**
+(`best.pt` = `eee2f3e706b08622…`). Chuỗi bằng chứng nay gồm **6 tệp** thay vì 4.
+
+## Bài học đã đóng thành lệnh
+
+Mỗi lớp lệch phát hiện được phải để lại **một lệnh bắt được nó**, nếu không lần sau vẫn
+lệch y hệt. Nay gộp thành một:
+
+```bash
+bash scripts/check_consistency.sh     # 3/3: bằng chứng · bảng số liệu · thế hệ chỉ mục
+```
+
+`MoTaCode.txt` được gắn banner **ảnh chụp có ngày** — nó đã gửi ra ngoài làm nguồn `[1]`
+của bản góp ý nên giữ nguyên văn, không sửa lén, chỉ ghi rõ số đã cũ và trỏ về tệp hiện hành.
+
+---
+
 # KHỐI 5 — TÍN HIỆU NGHĨA HÁN (2 ngày)
 
 Công cụ đã có: `pipeline/tools/sem_score.py` (chạy được, `--bench` tái lập số).

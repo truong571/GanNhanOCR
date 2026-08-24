@@ -408,7 +408,11 @@ step_export() {
 
 # ====================== FREEZE / EVIDENCE ====================================
 evidence() {
-  local files=("$LABELS_RAW" "$LABELS_REMED" "$LABELS_FINAL" "$FINAL_DIR/labels.csv")
+  # nom-embed/best.pt: checkpoint S3 nằm trong SUBMODULE và đang có thay đổi CHƯA
+  # COMMIT (mục 0.4) -> con trỏ submodule KHÔNG nhận diện được mô hình thật đã sinh ra
+  # cột s3_cosine. Băm thẳng tệp là cách duy nhất hiện có để chỉ đúng mô hình đã dùng.
+  local files=("$LABELS_RAW" "$LABELS_REMED" "$LABELS_FINAL" "$FINAL_DIR/labels.csv" \
+               "nom-embed/best.pt" "pipeline/align_engine/data/index.csv")
   local sha_cmd=""
   if command -v shasum >/dev/null 2>&1; then sha_cmd="shasum -a 256"
   elif command -v sha256sum >/dev/null 2>&1; then sha_cmd="sha256sum"; fi

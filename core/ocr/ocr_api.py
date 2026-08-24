@@ -539,7 +539,12 @@ def verify_cache_image(cache_path: str, image_path: str, *, verbose: bool = Fals
     trên ảnh cũ, dùng tiếp sẽ lệch toạ độ mà KHÔNG có cảnh báo nào (đúng lớp lỗi đã
     gây lệch ~252px trước đây).
 
-    KHÔNG tự gọi lại API: OCR lại là thao tác tốn tiền, phải do người quyết định.
+    KHÔNG tự gọi lại API: OCR lại là thao tác KHÔNG ĐẢO NGƯỢC ĐƯỢC, phải do người quyết
+    định. (Đính chính 2026-08-25: câu này trước ghi "tốn tiền" — tôi viết ở KHỐI 0 sau khi
+    tiếp nhận cụm đó từ run_pipeline.sh mà không kiểm chứng. Nguồn là dịch vụ học thuật
+    kimhannom.fit.hcmus.edu.vn đăng nhập bằng tài khoản, không phải khoá API tính cước.
+    Lý do thật để không tự gọi lại: dịch vụ có thể đã đổi mô hình, nên kết quả mới sẽ
+    KHÁC bộ đã công bố mà không ai truy được nguyên nhân.)
     """
     if os.environ.get("SN_OCR_SKIP_CACHE_VERIFY") == "1":
         return "skipped"
@@ -581,8 +586,8 @@ def verify_cache_image(cache_path: str, image_path: str, *, verbose: bool = Fals
                 "  Chạy: python -m core.ocr.ocr_api backfill-pixel-hash\n")
         + "  Toạ độ bbox trong cache tính trên ảnh CŨ -> dùng tiếp sẽ lệch toạ độ.\n"
           "  Cách xử lý:\n"
-          "    1) Khôi phục ảnh gốc từ bản sao lưu (khuyên dùng — không tốn tiền), HOẶC\n"
-          "    2) Xoá tệp cache này để OCR lại (TỐN TIỀN API), HOẶC\n"
+          "    1) Khôi phục ảnh gốc từ bản sao lưu (KHUYÊN DÙNG — giữ nguyên tái lập), HOẶC\n"
+          "    2) Xoá tệp cache này để OCR lại (kết quả có thể KHÁC bộ đã công bố), HOẶC\n"
           "    3) SN_OCR_SKIP_CACHE_VERIFY=1 để bỏ qua (CHỈ khi bạn chắc chắn)."
     )
 

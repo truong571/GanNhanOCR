@@ -10,14 +10,31 @@
 #     prepared/*/detected/*_ocr_cache.json          (16 MB, 445 tệp)
 #     prepared/*/transcriptions/*_qn_ocr_cache.json (1,7 MB, 445 tệp)
 #
-# Đó KHÔNG phải cache theo nghĩa thông thường — đó là DỮ LIỆU GỐC mua bằng tiền
-# thật từ API ngoài. Xoá nó thì: (a) phải trả tiền gọi lại, (b) kết quả KHÔNG tái
-# lập được vì API bên ngoài có thể đã đổi. Cùng lý do đó, `prepared/*/pages/*.png`
-# cũng bị đóng băng tuyệt đối: chính nó là ảnh mà `image_hash` trong cache neo vào.
+# Đó KHÔNG phải cache theo nghĩa thông thường — đó là DỮ LIỆU GỐC, và lý do phải giữ
+# KHÔNG PHẢI tiền bạc (đính chính 2026-08-25, xem bên dưới) mà là KHÔNG TÁI TẠO ĐƯỢC:
+#
+#   * Nguồn là dịch vụ HỌC THUẬT NGOÀI TẦM KIỂM SOÁT: kimhannom.fit.hcmus.edu.vn
+#     (Khoa CNTT, ĐH Khoa học Tự nhiên TP.HCM), đăng nhập bằng tài khoản
+#     SN_OCR_USERNAME/SN_OCR_PASSWORD. Nó có thể đổi mô hình, giới hạn truy cập,
+#     hoặc ngừng chạy — và khi đó 890 tệp này là KHÔNG LẤY LẠI ĐƯỢC.
+#   * OCR lại KHÔNG bảo đảm ra cùng kết quả. Nếu dịch vụ đã cập nhật mô hình kể từ
+#     lần thu thập, bộ nhãn mới sẽ khác bộ đã công bố mà không ai biết vì sao.
+#   * Đây là điểm neo tái lập của cả dự án: pipeline đã chứng minh TẤT ĐỊNH TỚI TỪNG
+#     BYTE tính TỪ cache này. Mất cache là mất luôn khả năng tái lập bộ nhãn.
+#
+# Cùng lý do, `prepared/*/pages/*.png` đóng băng tuyệt đối: chính nó là ảnh mà
+# `image_hash` trong cache neo vào.
+#
+# ĐÍNH CHÍNH: các bản trước của tệp này (và `core/ocr/ocr_api.py`) viết rằng dữ liệu
+# đó "mua bằng tiền thật" / OCR lại thì "TỐN TIỀN". Tôi đã tiếp nhận cụm đó từ
+# `run_pipeline.sh` và khuếch đại lên mà KHÔNG KIỂM CHỨNG. Đo lại: đây là dịch vụ đại
+# học đăng nhập bằng tài khoản, không phải khoá API tính cước, và OCR chữ Quốc ngữ thì
+# dùng VietOCR chạy CỤC BỘ (0 lần gọi mạng). Tôi không có bằng chứng nào về chi phí —
+# chỉ chủ tài khoản mới biết. Lập luận giữ cache đứng vững mà không cần tới tiền.
 #
 # Script này CỐ Ý không có cờ nào xoá được hai thứ trên. Muốn OCR lại thì chạy
-# `run_pipeline.sh` rồi chọn mục 2 và gõ tay chữ XOA — để việc tiêu tiền luôn là
-# một hành động có ý thức.
+# `run_pipeline.sh` rồi chọn mục 2 và gõ tay chữ XOA — để một thao tác không đảo ngược
+# được luôn là hành động có ý thức.
 #
 # CÁI NÓ XOÁ (đều tự tái sinh, tổng ~700 MB)
 # ------------------------------------------

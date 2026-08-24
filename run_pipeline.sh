@@ -411,8 +411,16 @@ evidence() {
   # nom-embed/best.pt: checkpoint S3 nằm trong SUBMODULE và đang có thay đổi CHƯA
   # COMMIT (mục 0.4) -> con trỏ submodule KHÔNG nhận diện được mô hình thật đã sinh ra
   # cột s3_cosine. Băm thẳng tệp là cách duy nhất hiện có để chỉ đúng mô hình đã dùng.
+  # TỪ ĐIỂN PHẢI CÓ TRONG CHUỖI BẰNG CHỨNG (thêm 2026-08-24, khi làm T5).
+  # Mọi nhãn GOLD đều do QuocNgu_SinoNom.csv quyết (s1_inter_s2_direct: ocr_char phải
+  # là một âm đọc trong từ điển) và SinoNom_Similar.csv quyết luật bắc cầu — thế mà
+  # hash của chúng chưa từng xuất hiện trong EVIDENCE_INDEX.md. Chúng CÓ trong git
+  # (dưới `Dict/`, xem dict_dir() về chuyện hoa/thường), nên có lịch sử phiên bản;
+  # cái thiếu là mối nối giữa MỘT LẦN CHẠY cụ thể và BẢN từ điển nó đã dùng. Băm ở
+  # đây khép mối nối đó, cùng cơ chế với nom-embed/best.pt và index.csv.
   local files=("$LABELS_RAW" "$LABELS_REMED" "$LABELS_FINAL" "$FINAL_DIR/labels.csv" \
-               "nom-embed/best.pt" "pipeline/align_engine/data/index.csv")
+               "nom-embed/best.pt" "pipeline/align_engine/data/index.csv" \
+               "dict/QuocNgu_SinoNom.csv" "dict/SinoNom_Similar.csv")
   local sha_cmd=""
   if command -v shasum >/dev/null 2>&1; then sha_cmd="shasum -a 256"
   elif command -v sha256sum >/dev/null 2>&1; then sha_cmd="sha256sum"; fi

@@ -151,18 +151,37 @@ def _pair_old(cluster: dict, syllables: list[str], binary) -> list[dict]:
 # 95%). Mức nới không cứu được đuôi nét nào — `--pad` lúc cắt đã lo việc đó — nó chỉ
 # đổi lấy −3,81 điểm mực CỦA CHÍNH CHỮ (tinh khiết 0,9453 → 0,9072).
 #
-# F = 0 nghĩa là hộp bằng ĐÚNG MỘT Ô BƯỚC LẶP = đúng phần của một chữ trong cột. Cực
-# đại của F1 (tinh khiết × không-bị-cắt) nằm ở F ≈ −0,05, nhưng chênh chỉ 0,0027 và F
-# âm là hộp NHỎ hơn ô — rủi ro khi ước lượng bước lặp sai. Nên chọn 0: gần cực đại,
-# và có nghĩa hình học bảo vệ được.
+# 🔴 ĐÃ THỬ F = 0 VÀ HOÀN NGUYÊN VỀ 0,10 (2026-08-25). Ghi lại để không ai thử lại.
 #
-# Chốt 2026-08-25 sau khi người dùng đối chiếu 72 ô cắt hai cách bằng MẮT — hai thước
-# đo không nhãn cho kết quả ngược nhau (`flag_ok` chuộng 0,10; tinh khiết mực chuộng
-# 0), nên phép phân định cuối cùng là thị giác người, không phải chỉ số.
+# Lập luận "hộp = đúng một ô bước lặp" nghe hợp lý và ĐÃ CHẠY THẬT, nhưng sai vì BỎ SÓT
+# MỘT RÀNG BUỘC. Đo sau khi chạy, trên 15.457 ô mà F=0 thật sự chạm tới:
 #
-# Đọc từ `config/pipeline.yaml: step2.box_overlap_frac`; build_dataset gán vào đây
-# lúc khởi động. Đổi giá trị = cắt lại toàn bộ crop.
-BOX_OVERLAP_FRAC = 0.0
+#   1. XÉN VÀO THÂN CHỮ. Mực CỦA CHÍNH CHỮ (tách bằng liên thông, không phải tổng mực)
+#      mất trung vị 11,5%; 17,3% số ô mất HƠN 20% mực thân chữ (≈2.675 ô bộ giao nộp).
+#      Đối chứng trên hộp không đổi: 0,00% — nên hoàn toàn quy được cho F.
+#
+#   2. KHUNG HÌNH VỠ LÀM HAI. Production chạy `--reseg detector`, nên F chỉ quyết ~26%
+#      số hộp; 74% còn lại là hộp CenterNet, KHÔNG chịu chi phối của hằng số này và cao
+#      1,2308 × pitch. Ở F=0,10 hộp midpoint cao 1,2000 — hai nguồn khớp nhau trong
+#      2,5%. Ở F=0 chúng lệch 18,8%, và phần bị thu nhỏ chính là các ô KHÓ (bộ dò bất
+#      đồng với tâm OCR), nên khung hình trở thành biến gây nhiễu TƯƠNG QUAN VỚI ĐỘ KHÓ.
+#      Giá trị làm midpoint khớp CenterNet là (1,2308−1)/2 = 0,1154 — tức 0,10 gốc gần
+#      như CHÍNH LÀ giá trị đúng, và nó đúng vì ràng buộc liên-backend này.
+#
+# VÌ SAO PHÉP ĐO T4.e KHÔNG BẮT ĐƯỢC: (a) chỉ số "bị cắt" đo SAU `carve_neighbor_ink`,
+# mà carve xoá trắng 98,6% tín hiệu mực-chạm-mép, nên nó ĐÃ BÃO HOÀ và không phân biệt
+# được F — kết luận "chênh 0,0014, không vượt KTC 95%" là chỉ số chết chứ không phải
+# bằng chứng; (b) phép quét dựng lại TOÀN BỘ hộp từ bước lặp, ngầm giả định 100% hộp là
+# midpoint, nên vừa thổi phồng lợi ích (+3,81 điểm, đo lại sau khi chạy chỉ +1,23) vừa
+# giấu mất ràng buộc ở mục 2.
+#
+# BÀI HỌC: mực láng giềng thừa thì mắt người bỏ qua được; nét đã mất thì không lấy lại
+# được. Với mục tiêu chấm tay, hai loại hỏng KHÔNG cân xứng — đừng tối ưu một chỉ số
+# gộp chúng làm một.
+#
+# Đọc từ `config/pipeline.yaml: step2.box_overlap_frac`; build_dataset gán vào đây lúc
+# khởi động.
+BOX_OVERLAP_FRAC = 0.10
 
 
 def _reseg_column(cluster) -> list | None:

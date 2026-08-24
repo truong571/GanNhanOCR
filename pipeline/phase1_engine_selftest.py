@@ -291,13 +291,13 @@ def test_crop_geometry_wired():
     from pipeline.align_engine import align_production as AP
     print("[hình học cắt ảnh — cấu hình nối vào mã]")
 
-    check("BOX_OVERLAP_FRAC mặc định = 0 (T4.e)", AP.BOX_OVERLAP_FRAC == 0.0,
+    check("BOX_OVERLAP_FRAC = 0,10 (đã thử 0 và HOÀN NGUYÊN)", AP.BOX_OVERLAP_FRAC == 0.10,
           f"đang là {AP.BOX_OVERLAP_FRAC}")
 
     cfg = yaml.safe_load((REPO / "config" / "pipeline.yaml").read_text(encoding="utf-8"))
     s2 = cfg.get("step2") or {}
     check("config có box_overlap_frac", "box_overlap_frac" in s2)
-    check("config box_overlap_frac = 0", float(s2.get("box_overlap_frac", -1)) == 0.0)
+    check("config box_overlap_frac = 0,10", float(s2.get("box_overlap_frac", -1)) == 0.10)
     # T4.a: dòng này từng CHẾT (mã dùng 0.12 trong khi cấu hình khai 0.18)
     check("config crop_pad_frac = 0,12 — khớp giá trị THẬT đã đo",
           abs(float(s2.get("crop_pad_frac", -1)) - 0.12) < 1e-9,

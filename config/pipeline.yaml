@@ -77,9 +77,10 @@ step2:
   crop_pad_frac: 0.12
 
   # Biên nới DỌC của hộp ký tự, theo BƯỚC LẶP của cột: hộp cao = pitch × (1 + 2F).
-  # 0 = hộp bằng ĐÚNG MỘT Ô BƯỚC LẶP. Xem align_production.BOX_OVERLAP_FRAC cho
-  # toàn bộ phép đo T4.e. Đổi giá trị này = CẮT LẠI TOÀN BỘ CROP.
-  box_overlap_frac: 0.0
+  # Xem align_production.BOX_OVERLAP_FRAC. Đổi giá trị này = CẮT LẠI TOÀN BỘ CROP.
+  #
+  # 🔴 ĐÃ THỬ 0 VÀ HOÀN NGUYÊN (2026-08-25). Lý do đầy đủ ở BOX_OVERLAP_FRAC.
+  box_overlap_frac: 0.10
 
 # Step 3 (legacy DINOv2 labeling path) — RETIRED: superseded by pipeline/align_engine Step 2
 # (build_dataset.py --use-s3, S3 = trained Nôm encoder). DINOv2 is DISABLED here

@@ -292,16 +292,27 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 <!-- HIEN_HANH:START -->
 ## BẢN HIỆN HÀNH (tự sinh — ghi đè mỗi lần chạy, ĐỪNG sửa tay)
 
-- sinh lúc: `2026-08-23T09:17:03Z`
-- commit  : `203f67e85a`
+- sinh lúc: `2026-08-24T01:16:48Z`
+- commit  : `264cfb9bc7`
 - sách    : STT2+STT4+STT11 | reseg=detector
 
 | file | sha256 |
 |---|---|
-| `dataset_out/labels.csv` | `7e0a2f3901c84a82a293ff5703c80f24406fd88847252d9a6f4643c1e4eac786` |
-| `dataset_out/labels_remediated.csv` | `532f7c7de777fa524b9d045c221bc7d5ea2f974692645b19bbf291fb2b558b31` |
-| `dataset_out/labels_final.csv` | `3208cdab6272e154279a4f25ac573489c5912b6bceca45c7dd66e1ec60c2792a` |
-| `dataset/labels.csv` | `dbad35e92c76f84882757f74cd50a8670224d2f0d741691ce5f38469459c472a` |
+| `dataset_out/labels.csv` | `9f7c0e3560d93076ccb6a1bcd9dcbd1ad8e36723ae512358da439e768331f7d5` |
+| `dataset_out/labels_remediated.csv` | `110eea3a5f295217fba9c7dcfc4aab87e5197006ac295139c4b6197feb044336` |
+| `dataset_out/labels_final.csv` | `1fc93dfc763391aaad53b296c61684ac40235ce90157d7f88fd0cd72958bb428` |
+| `dataset/labels.csv` | `d6fe4676cd4ee7db3e5c3b2b759e7ed50d1d4cd85fe60472c31d812e162b10f8` |
 
 Kiểm lại: `bash scripts/check_evidence.sh`
 <!-- HIEN_HANH:END -->
+
+## Lần chạy 2026-08-24T01:16:48Z
+
+sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `9f7c0e3560d93076ccb6a1bcd9dcbd1ad8e36723ae512358da439e768331f7d5` |
+| `dataset_out/labels_remediated.csv` | `110eea3a5f295217fba9c7dcfc4aab87e5197006ac295139c4b6197feb044336` |
+| `dataset_out/labels_final.csv` | `1fc93dfc763391aaad53b296c61684ac40235ce90157d7f88fd0cd72958bb428` |
+| `dataset/labels.csv` | `d6fe4676cd4ee7db3e5c3b2b759e7ed50d1d4cd85fe60472c31d812e162b10f8` |

@@ -8,8 +8,9 @@ NGUYÊN TẮC
 1. KHÔNG đụng `dataset_out/`. Mọi thứ ghi vào `lab/`.
 2. TẤT ĐỊNH: cùng cấu hình -> cùng dòng số, byte y hệt. Không dùng thời gian/ngẫu nhiên
    không seed vào phần SỐ (cột `ts` chỉ để tra cứu, không tham gia so sánh).
-3. Mỗi cấu hình có một `run_id` = 12 ký tự đầu sha256 của cấu hình đã chuẩn hoá. Đổi một
-   tham số -> đổi run_id -> thành một dòng mới, không ghi đè nhầm.
+3. `run_id` = sha256(cấu hình đã chuẩn hoá + VÂN TAY BỘ NHÃN). Phải gồm cả vân tay dữ
+   liệu: chỉ băm cấu hình thì chạy cùng cấu hình trên dữ liệu TRƯỚC và SAU một thí
+   nghiệm sẽ cho cùng run_id và dòng sau ĐÈ dòng trước.
 
 CẤU HÌNH (YAML) — mọi khoá đều tuỳ chọn, thiếu thì lấy mặc định:
 
@@ -57,10 +58,27 @@ def _merge(base: dict, over: dict) -> dict:
     return out
 
 
-def config_id(cfg: dict) -> str:
-    """Vân tay của cấu hình — BỎ QUA `name` vì nó chỉ là nhãn người đọc."""
+def labels_sha(path: Path | str) -> str:
+    """sha256 (12 ký tự) của bộ nhãn đầu vào."""
+    p = Path(path)
+    if not p.exists():
+        return "nofile"
+    h = hashlib.sha256()
+    with open(p, "rb") as fh:
+        for c in iter(lambda: fh.read(1 << 20), b""):
+            h.update(c)
+    return h.hexdigest()[:12]
+
+
+def config_id(cfg: dict, data_sha: str = "") -> str:
+    """Vân tay của (cấu hình + TRẠNG THÁI DỮ LIỆU). Bỏ qua `name` — chỉ là nhãn người đọc.
+
+    Phải gồm cả vân tay bộ nhãn: nếu chỉ băm cấu hình thì chạy cùng một cấu hình trên
+    dữ liệu TRƯỚC và SAU một thí nghiệm sẽ cho cùng `run_id` và dòng sau ĐÈ dòng trước —
+    đúng lỗi đã xảy ra ngày 2026-08-24, làm mất mốc baseline trước T1.
+    """
     payload = {k: v for k, v in cfg.items() if k != "name"}
-    blob = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str)
+    blob = json.dumps(payload, sort_keys=True, ensure_ascii=False, default=str) + "|" + data_sha
     return hashlib.sha256(blob.encode()).hexdigest()[:12]
 
 
@@ -70,9 +88,10 @@ def run(cfg: dict) -> dict:
     from pipeline.lab import metrics, perturb
 
     cfg = _merge(DEFAULTS, cfg)
-    rid = config_id(cfg)
     labels = REPO / cfg["labels"]
-    row: dict = {"run_id": rid, "name": cfg["name"],
+    dsha = labels_sha(labels)
+    rid = config_id(cfg, dsha)
+    row: dict = {"run_id": rid, "name": cfg["name"], "labels_sha": dsha,
                  "ts": _dt.datetime.now(_dt.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
                  "config": json.dumps({k: v for k, v in cfg.items() if k != "name"},
                                       sort_keys=True, ensure_ascii=False)}

@@ -391,3 +391,29 @@ def simple_levenshtein(s1: str, s2: str) -> int:
             ))
         prev_row = curr_row
     return prev_row[-1]
+
+
+# --------------------------------------------------------------------------- #
+# Bỏ dấu ở hai mức — dùng chung cho chuẩn hoá âm tiết (engine) và fix_tone (tool).
+# Đặt ở đây thay vì trong pipeline/tools để engine KHÔNG phải import ngược từ tool.
+# --------------------------------------------------------------------------- #
+def strip_tone(s: str) -> str:
+    """Bỏ dấu THANH, GIỮ dấu tạo chữ (ă â ê ô ơ ư đ).
+
+    Bỏ sạch mọi dấu thì "vừa" và "vua" thành một, và phép sửa sẽ nối hai từ khác hẳn
+    nhau. Giữ dấu tạo chữ nên chỉ sáu thanh bị gộp — đúng cái VietOCR đọc sai.
+    """
+    keep = "\u031b\u0306\u0302"
+    return unicodedata.normalize("NFC", "".join(
+        c for c in unicodedata.normalize("NFD", str(s))
+        if not ("\u0300" <= c <= "\u0323" and c not in keep)))
+
+
+def strip_all(s: str) -> str:
+    """Bỏ MỌI dấu phụ, kể cả dấu tạo chữ, và đ -> d.
+
+    Rộng hơn `strip_tone` nên CHỈ được thử khi `strip_tone` không ra ứng viên nào.
+    Bắt lớp lỗi VietOCR rụng hẳn dấu: "ay" -> "ấy", "muon" -> "muôn", "den" -> "đến".
+    """
+    return "".join(c for c in unicodedata.normalize("NFD", str(s))
+                   if not unicodedata.combining(c)).replace("đ", "d").replace("Đ", "D")

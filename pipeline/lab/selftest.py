@@ -169,6 +169,12 @@ def test_runner() -> None:
     check("config_id BỎ QUA `name` (chỉ là nhãn người đọc)", a == b)
     check("config_id đổi khi tham số đổi", a != c)
     check("config_id ổn định giữa các lần gọi", a == R.config_id({"crops": True}))
+    # Phải gồm cả vân tay DỮ LIỆU: cùng cấu hình trên bộ nhãn khác nhau = hai dòng
+    # khác nhau, nếu không dòng sau sẽ ĐÈ dòng trước và mất mốc so sánh.
+    check("config_id đổi khi DỮ LIỆU đổi",
+          R.config_id({"crops": True}, "aaa") != R.config_id({"crops": True}, "bbb"))
+    check("labels_sha trên tệp không có -> 'nofile'",
+          R.labels_sha("/khong/co/that.csv") == "nofile")
 
     m = R._merge({"a": 1, "p": {"x": 1, "y": 2}}, {"p": {"y": 9}})
     check("_merge trộn lồng nhau, giữ khoá không nhắc tới",

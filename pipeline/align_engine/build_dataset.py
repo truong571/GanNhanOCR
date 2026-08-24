@@ -356,6 +356,9 @@ def main():
                 "column": r["column"], "ocr_char": r["ocr_char"], "syllable": r["syllable"],
                 "label": r["label"], "unicode": r["unicode"], "label_level": r["label_level"],
                 "tier": r["tier"], "rule": r["rule"],
+                # backend tách ký tự THỰC DÙNG — không có cột này thì một lần rơi về
+                # midpoint sẽ không để lại dấu vết nào trong bộ nhãn (KHỐI 1.3).
+                "seg_backend": r.get("seg_backend", ""),
                 "ink_pct": q["ink"] if q else "", "crop_w": q["w"] if q else "",
                 "crop_h": q["h"] if q else "", "image_md5": q["md5"] if q else "",
                 "seg_flag": q["seg"] if q else "",
@@ -367,7 +370,8 @@ def main():
     # ---------- write manifest + summary ----------
     fields = ["image", "book", "page", "column", "ocr_char", "syllable", "label",
               "unicode", "label_level", "tier", "rule", "s3_cosine", "ink_pct",
-              "crop_w", "crop_h", "image_md5", "seg_flag", "split", "split_group", "bbox"]
+              "crop_w", "crop_h", "image_md5", "seg_flag", "split", "split_group", "bbox",
+              "seg_backend"]
     with open(out / "labels.csv", "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader(); w.writerows(labels)

@@ -118,12 +118,57 @@ def test_sem_score() -> None:
     check("ngưỡng xác nhận cao hơn ngưỡng khả năng", S.TAU_CONFIRM > S.TAU_LIKELY)
 
 
+def test_syllable_normalize() -> None:
+    """Chuẩn hoá TRƯỚC align — dùng đọc âm của MỌI chữ trong cột (cặp ghép chưa có)."""
+    print("[align_engine.syllable_normalize]")
+    from pipeline.align_engine import syllable_normalize as SN
+
+    qn = {"trẩy": ["礼"], "ấy": ["衣"], "đến": ["旦"], "lạ": ["異"], "là": ["羅"],
+          "hề": ["係"], "hệ": ["係"]}
+    R = SN.build_readings(qn)
+    keys = set(qn)
+    ch = lambda *cs: [{"ocr_char": c} for c in cs]
+
+    out, log = SN.normalize_column(ch("礼"), ["trấy"], keys, R)
+    check("tone_unique: 'trấy' -> 'trẩy'", out == ["trẩy"], str(out))
+    check("nhật ký ghi luật", log and log[0]["rule"] == "tone_unique", str(log))
+
+    out, _ = SN.normalize_column(ch("衣"), ["ay"], keys, R)
+    check("diacritic_unique: 'ay' -> 'ấy'", out == ["ấy"], str(out))
+    out, _ = SN.normalize_column(ch("旦"), ["den"], keys, R)
+    check("diacritic_unique qua đ/d: 'den' -> 'đến'", out == ["đến"], str(out))
+
+    out, _ = SN.normalize_column(ch("異", "羅"), ["là"], keys, R)
+    check("CHỐT 1 — âm là từ có thật thì KHÔNG đụng", out == ["là"], str(out))
+
+    out, log = SN.normalize_column(ch("係"), ["hê"], keys, R)
+    check("CHỐT 3 — nhập nhằng thì để nguyên", out == ["hê"], str(out))
+    check("nhập nhằng được ghi log", any(e["action"] == "ambiguous_kept" for e in log), str(log))
+
+    out, _ = SN.normalize_column(ch("礼"), ["3"], keys, R)
+    check("rác marker không bị đụng (việc của parser)", out == ["3"], str(out))
+
+    out, _ = SN.normalize_column(ch("礼"), ["xyz"], keys, R)
+    check("không có ứng viên -> giữ nguyên", out == ["xyz"], str(out))
+
+    out, _ = SN.normalize_column([], ["trấy"], keys, R)
+    check("cột không có chữ -> giữ nguyên", out == ["trấy"], str(out))
+
+    o1, _ = SN.normalize_column(ch("礼"), ["trấy"], keys, R)
+    o2, l2 = SN.normalize_column(ch("礼"), o1, keys, R)
+    check("luỹ đẳng (chạy lại không đổi thêm)",
+          o2 == o1 and not [e for e in l2 if e["action"] == "fixed"], str(l2))
+    check("build_readings có cache (cùng đối tượng -> cùng kết quả)",
+          SN.build_readings(qn) is R)
+
+
 def main() -> int:
     print("=" * 64)
     print("TOOLS SELFTEST")
     print("=" * 64)
     test_fix_tone()
     test_sem_score()
+    test_syllable_normalize()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

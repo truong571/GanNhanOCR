@@ -1,21 +1,21 @@
 {
-  "n_rows": 82269,
+  "n_rows": 82266,
   "readmitted_to_gold": 0,
   "confusion_demoted_after_unwind": 0,
   "confusion_demoted_by_pair": {},
-  "silver_renamed": 10890,
-  "review_reason_renamed": 10934,
+  "silver_renamed": 10781,
+  "review_reason_renamed": 10946,
   "tier_before": {
-    "GOLD": 50015,
+    "GOLD": 50120,
     "REVIEW": 14603,
-    "SILVER": 10890,
-    "SYLLABLE": 6761
+    "SILVER": 10781,
+    "SYLLABLE": 6762
   },
   "tier_after": {
-    "GOLD": 50015,
+    "GOLD": 50120,
     "REVIEW": 14603,
-    "SILVER_uncalibrated": 10890,
-    "SYLLABLE": 6761
+    "SILVER_uncalibrated": 10781,
+    "SYLLABLE": 6762
   },
   "evidence": {
     "arcface_retrain_error_auc": 0.577,
@@ -28,7 +28,9 @@
       0.459,
       0.672
     ],
-    "n_human_verdicts": 826,
+    "n_verdicts": 826,
+    "provenance": "UNVERIFIED_machine_graded__withdrawn_2026-08-22",
+    "how_to_state_it": "CHƯA CHỨNG MINH ĐƯỢC, không phải ĐÃ BÁC BỎ: lớp âm 24 ca -> AUC nhỏ nhất phát hiện được 0,607; đo trên GOLD nơi S3 không gán nhãn; 74,7% crop rò rỉ vào TRAIN.",
     "rule_precision_similar": "40/41 = 97.6% CI95 [87.1, 99.9]",
     "rule_precision_direct": "737/752 = 98.0% CI95 [96.7, 98.9]",
     "note": "Bước này KHÔNG sửa nhãn nào. Nó gỡ quyền quyết định của một tín hiệu có CI chứa 0,5, và tách phần chưa ai đo ra khỏi bộ công bố."

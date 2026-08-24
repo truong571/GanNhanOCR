@@ -31,6 +31,7 @@ from core.image.char_segmenter import segment_characters_in_column
 from core.image.image_processing import load_and_binarize
 
 from pipeline.align_engine.anchor_align import realign_column, matched_pairs
+from pipeline.align_engine.syllable_normalize import build_readings, normalize_column
 from pipeline.align_engine.consensus import decide_label
 from pipeline.align_engine.bbox_fix import frame_offset, correct_columns
 
@@ -444,11 +445,19 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
 
     pairs: list[dict] = []
     n_gap_total = 0
+    n_norm_total = 0
+    _readings = build_readings(qn_to_nom)
     for nom_idx, line_id in iter_pairs:
         cluster = cols[nom_idx]
         syllables = qn_lines[line_id]
         if not syllables:
             continue
+        # CHUẨN HOÁ TRƯỚC KHI CĂN CHỈNH — vá dấu phụ VietOCR rụng, dùng đọc âm của
+        # chính các chữ trong cột này. Đặt SAU build thì +0 ô vào bộ giao nộp; đặt ở
+        # đây thì các ô được vá đủ điều kiện s1_inter_s2_direct = GOLD.
+        syllables, _norm_log = normalize_column(cluster.get("chars"), syllables,
+                                                qn_dict_set, _readings)
+        n_norm_total += sum(1 for e in _norm_log if e.get("action") == "fixed")
         matched = (len(cluster["chars"]) == len(syllables))
         if mode == "old":
             col_pairs = _pair_old(cluster, syllables, binary)
@@ -476,4 +485,5 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                          anchored=bool(nbr))
             pairs.extend(col_pairs)
     return {"page": page_name, "page_ok": page_ok, "pairs": pairs,
-            "n_review_gap": n_gap_total, "seg_backend": seg_backend}
+            "n_review_gap": n_gap_total, "seg_backend": seg_backend,
+            "n_syllable_normalized": n_norm_total}

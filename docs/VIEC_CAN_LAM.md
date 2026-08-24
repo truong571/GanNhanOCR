@@ -239,13 +239,53 @@ cấu hình của T1 là thứ yếu: đòn bẩy thật nằm ở **chỗ đặ
 phân loại: **0,946% → 0,636%** (152 ô sửa + 103 ô rác gắn cờ), và chỉ đạt được nếu chuẩn
 hoá chạy TRƯỚC build.
 
-### Còn lại (cần quyết định)
+### ĐÃ THỰC HIỆN 2026-08-24 — chuẩn hoá TRƯỚC align + build lại
 
-- [ ] **T1.x** Nối chuẩn hoá vào bước 2, chạy lại **build** để hiện thực +115 ô GOLD.
-  Tốn: một lần build đủ 445 trang (detector + S3) và đổi mọi số hạ nguồn.
-- [ ] **T1.y** Vá rò rỉ marker trong `parser_v5` (103 ô) — lỗi bóc marker, không phải lỗi âm.
+`pipeline/align_engine/syllable_normalize.py` (mới) chạy ngay trước `realign_column`,
+dùng đọc âm của **mọi chữ trong cột** (cặp ghép chưa có — đó là thứ NW sắp tính). Giữ
+nguyên ba chốt an toàn của `fix_tone`. `strip_tone`/`strip_all` chuyển xuống
+`core/text/text_utils.py` để engine không import ngược từ `tools/`.
 
----
+| chỉ số | trước T1 | sau T1 |
+|---|---|---|
+| **Bộ giao nộp** | 56.776 | **56.882** (+106) |
+| GOLD | 50.015 | **50.120** (+105) |
+| SYLLABLE | 6.761 | 6.762 |
+| Lớp ký tự trong bộ giao nộp | 1.582 | **1.585** |
+| **Âm ngoài từ điển** | 778 = **0,946%** | 643 = **0,782%** |
+| Hình học crop `ok` | 92,974% | 92,98% |
+| `anchor_retention` | 0,9773 | 0,9773 |
+
+Dự đoán +100 ô GOLD từ phép đo cấp-cột, thực tế **+105**. `check_evidence.sh` 4/4 khớp.
+
+⚠️ Không đạt mốc 0,636% đã nêu: mốc đó giả định loại luôn 103 ô rác marker, mà chúng
+**đã ở REVIEW** nên loại thêm không đổi gì. Số thật là **0,782%**.
+
+### T1.y (rác marker) — BỎ, có căn cứ đo được
+
+| kiểm chứng | kết quả |
+|---|---|
+| 103 ô rác nằm ở tier nào | REVIEW cả 103 |
+| Ô âm-không-hợp-lệ (195) lọt vào bộ giao nộp | **0** |
+| `is_plausible_qn_syllable` chặn được | 195/195 |
+
+Chẩn đoán "rò rỉ marker" **sai tên**: thực tế là 4 cơ chế — 63 ô nhiễu OCR thuần
+(`0000000000`, `100,0,`) · 22 ô không truy được nguồn · **16 ô VietOCR đọc I→1 / Ô→0
+trong từ mượn** (`1-na-xu`, `0-sa-ka`) · **2 ô** chú thích thật (`Phô-li-ca-phô?3`).
+Trong 11 ô từ mượn đầu-số, sửa xong chỉ **4 ô** đủ điều kiện GOLD. Thêm một luật để lấy
+4 ô là thêm một luật phải bảo vệ trước hội đồng — không đáng.
+
+### Hai lỗi tự bắt được khi làm T1
+
+1. **`seg_backend` không vào CSV** — thêm vào `records` nhưng chỗ ghi tệp dùng danh sách
+   `labels` với `fields` cố định. Log in "20 cột" thay vì 21. Nghiệm thu rẻ bằng
+   `--limit 3 --no-crops` (vài giây thay vì 20 phút), rồi **build lại** để tệp trên đĩa
+   khớp đúng mã đã commit — không tự miễn trừ khỏi chính quy tắc tái lập đang đi vá.
+2. **`run_id` của bàn thí nghiệm chỉ băm cấu hình**, nên chạy cùng cấu hình trên dữ liệu
+   trước/sau T1 cho cùng id và dòng sau **đè** dòng trước — đã làm mất mốc baseline
+   trước T1. Nay `run_id` gồm cả vân tay bộ nhãn (`labels_sha`).
+
+Ngoài ra một assertion phụ thuộc dữ liệu phải cập nhật: `similar_bridge` 4.098 → **4.100**.
 
 ### Ba cảnh báo bắt buộc
 

@@ -334,6 +334,14 @@ step_build() {
   [[ -f "$LABELS_RAW" ]] || die "bước build không sinh $LABELS_RAW"
 }
 
+  # --- CHẤM CHIỀU CROP BẰNG MÁY, KHÔNG BẰNG MẮT NGƯỜI ------------------------
+  # Mẻ chấm 2026-08-04 hỏng ở chiều CROP (κ = 0,14) chứ không ở chiều NHÃN. Người
+  # không nhất quán khi vừa phải đọc chữ vừa phán xét ảnh cắt; máy đo hình học thì
+  # nhất quán tuyệt đối. Ba cột này tách bạch hai việc đó — đặc tả T4.4 đặt hàng
+  # nhưng chưa từng được làm. Chạy ngay sau build nên luôn khớp crop vừa cắt; các
+  # bước 4-7 giữ nguyên cột lạ (remediate dùng pandas, export dùng reader.fieldnames).
+  X "$PY" -m pipeline.tools.enrich_crop_quality --labels "$LABELS_RAW" --src-root dataset_out
+
 # ---- CHỐT CHẶN sha256 --------------------------------------------------------
 # Ghi vân tay của mọi tạo phẩm nhãn sau mỗi bước quan trọng. Đây là chốt chặn cho
 # lỗi B8: mẻ audit người phải rút từ ĐÚNG bản labels_final.csv được export, và cách

@@ -299,9 +299,9 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 <!-- HIEN_HANH:START -->
 ## BẢN HIỆN HÀNH (tự sinh — ghi đè mỗi lần chạy, ĐỪNG sửa tay)
 
-- sinh lúc: `2026-08-24T14:25:43Z`
-- commit  : `92abe38bc2`
-- cây làm việc: 🔴 BẨN (9 tệp đã sửa chưa commit) — commit ở trên KHÔNG
+- sinh lúc: `2026-08-24T15:47:41Z`
+- commit  : `d2d442f8ba`
+- cây làm việc: 🔴 BẨN (11 tệp đã sửa chưa commit) — commit ở trên KHÔNG
   định danh được mã đã chạy. Muốn tái lập thì phải commit trước khi chạy.
      M dataset_out/CHECKSUMS.txt
      M dataset_out/confusion_fix_report.json
@@ -311,21 +311,23 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
      M dataset_out/remediation_report.json
      M dataset_out/s3_unwind_report.json
      M dataset_out/summary.json
+     M docs/BANG_SO_LIEU_CHINH_THUC.md
      M docs/EVIDENCE_INDEX.md
+     M run_pipeline.sh
 - sách    : STT2+STT4+STT11 | reseg=detector
 
 | file | sha256 |
 |---|---|
-| `dataset_out/labels.csv` | `ff56c6818315f69646364fad76fdf19350777673b942813e527e02fae950cb57` |
-| `dataset_out/labels_remediated.csv` | `2a2c461c0f8199bea2f27553372003f73937c0a01b9b61d2fa911d6c411573ff` |
-| `dataset_out/labels_final.csv` | `3112c5221acf06d39ba07354ebb9c97747997be03520d798754d7e220d1b5af0` |
-| `dataset/labels.csv` | `258944f50f7496bac1862aa4e8b904aa9ec73ec12ef8e9b5ffda9a23a57371ea` |
+| `dataset_out/labels.csv` | `1ae3a383189e94916e57c40bdc39d9a4dd482771bd0d09ca4d9862e590604d9a` |
+| `dataset_out/labels_remediated.csv` | `76dfb3ecc7d07c08a53ade399816adc3b68571031c63f4ea131a1645d299674b` |
+| `dataset_out/labels_final.csv` | `73b9c7fb25ecb8120688577372d7f77cd9374ca484829fba431d08dc468e54fb` |
+| `dataset/labels.csv` | `050327f869f817dd846a265d3267fd76b7d69b7ff59ca37bb2d4de830cd6c147` |
 | `nom-embed/best.pt` | `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0` |
 | `pipeline/align_engine/data/index.csv` | `cca7d2a078b22c83831f8a5fd3e8d3d468a09319266a89606f889a1668020097` |
 | `Dict/QuocNgu_SinoNom.csv` | `e65b98748e13e41f66e1f5527e4b07e7f89ba24522090a4050decab95f1c87d8` |
 | `Dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
 | `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
-| `config/pipeline.yaml` | `a7bd2bd79875c5e4ea72ce4a53a48c5b13d41d5b09f39d6fe2b83b80e2349e2f` |
+| `config/pipeline.yaml` | `ac7038d9c0b16d28b8c64b25e0904ffb50be85fb9cf97651f57f455e9468d1f0` |
 
 **Checkpoint S3**: `mdnt571/nom-embed` @ HuggingFace, revision `7ff74f57c4be`
 - `best.pt` LFS oid = `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0`
@@ -451,3 +453,37 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 | `Dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
 | `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
 | `config/pipeline.yaml` | `a7bd2bd79875c5e4ea72ce4a53a48c5b13d41d5b09f39d6fe2b83b80e2349e2f` |
+
+## Lần chạy 2026-08-24T15:42:19Z
+
+sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `4c309758c6c5b628b344abc8da67bf1ce35769273151e698285aeb903397e844` |
+| `dataset_out/labels_remediated.csv` | `1bc34138c5ba6e523bc028ee898b54f12225762087ab92b76792d587d821bab6` |
+| `dataset_out/labels_final.csv` | `f7ec09577a72e74db50a84f9ddaf32bc1cbee0bb83519ac3d1db31bad5ec9be6` |
+| `dataset/labels.csv` | `20b15db39cc2e0ad3914f9a767a137ccd5fff9ee98d63e20f7765e22e2373cc9` |
+| `nom-embed/best.pt` | `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0` |
+| `pipeline/align_engine/data/index.csv` | `cca7d2a078b22c83831f8a5fd3e8d3d468a09319266a89606f889a1668020097` |
+| `Dict/QuocNgu_SinoNom.csv` | `e65b98748e13e41f66e1f5527e4b07e7f89ba24522090a4050decab95f1c87d8` |
+| `Dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
+| `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
+| `config/pipeline.yaml` | `ac7038d9c0b16d28b8c64b25e0904ffb50be85fb9cf97651f57f455e9468d1f0` |
+
+## Lần chạy 2026-08-24T15:47:41Z
+
+sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `1ae3a383189e94916e57c40bdc39d9a4dd482771bd0d09ca4d9862e590604d9a` |
+| `dataset_out/labels_remediated.csv` | `76dfb3ecc7d07c08a53ade399816adc3b68571031c63f4ea131a1645d299674b` |
+| `dataset_out/labels_final.csv` | `73b9c7fb25ecb8120688577372d7f77cd9374ca484829fba431d08dc468e54fb` |
+| `dataset/labels.csv` | `050327f869f817dd846a265d3267fd76b7d69b7ff59ca37bb2d4de830cd6c147` |
+| `nom-embed/best.pt` | `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0` |
+| `pipeline/align_engine/data/index.csv` | `cca7d2a078b22c83831f8a5fd3e8d3d468a09319266a89606f889a1668020097` |
+| `Dict/QuocNgu_SinoNom.csv` | `e65b98748e13e41f66e1f5527e4b07e7f89ba24522090a4050decab95f1c87d8` |
+| `Dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
+| `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
+| `config/pipeline.yaml` | `ac7038d9c0b16d28b8c64b25e0904ffb50be85fb9cf97651f57f455e9468d1f0` |

@@ -332,8 +332,6 @@ step_build() {
   banner 3 build "align_engine.build_dataset: banded-DP align + consensus tier + crops (cả 3 sách trong config)"
   X "$PY" -m pipeline.align_engine.build_dataset --config "$CONFIG" --use-s3 --reseg "$RESEG"
   [[ -f "$LABELS_RAW" ]] || die "bước build không sinh $LABELS_RAW"
-}
-
   # --- CHẤM CHIỀU CROP BẰNG MÁY, KHÔNG BẰNG MẮT NGƯỜI ------------------------
   # Mẻ chấm 2026-08-04 hỏng ở chiều CROP (κ = 0,14) chứ không ở chiều NHÃN. Người
   # không nhất quán khi vừa phải đọc chữ vừa phán xét ảnh cắt; máy đo hình học thì
@@ -341,6 +339,8 @@ step_build() {
   # nhưng chưa từng được làm. Chạy ngay sau build nên luôn khớp crop vừa cắt; các
   # bước 4-7 giữ nguyên cột lạ (remediate dùng pandas, export dùng reader.fieldnames).
   X "$PY" -m pipeline.tools.enrich_crop_quality --labels "$LABELS_RAW" --src-root dataset_out
+}
+
 
 # ---- CHỐT CHẶN sha256 --------------------------------------------------------
 # Ghi vân tay của mọi tạo phẩm nhãn sau mỗi bước quan trọng. Đây là chốt chặn cho

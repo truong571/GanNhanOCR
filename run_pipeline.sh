@@ -458,6 +458,13 @@ evidence() {
       else h='(chưa có)'; fi
       printf '| `%s` | `%s` |\n' "$f" "$h"
     done
+    printf '\n**Checkpoint S3**: `mdnt571/nom-embed` @ HuggingFace, revision `7ff74f57c4be`\n'
+    printf -- '- `best.pt` LFS oid = `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0`\n'
+    printf -- '- `last.pt` LFS oid = `c05dd1723c751059`… (xem repo HF)\n'
+    printf -- '- git báo `nom-embed` "modified" là ARTEFACT: huggingface_hub tải tệp THẬT ghi đè\n'
+    printf -- '  con trỏ LFS 134 byte, nên git so 134 byte với 140 MB. `oid` trong con trỏ KHỚP\n'
+    printf -- '  sha256 tệp trên đĩa VÀ khớp bản trên HF -> chuỗi xuất xứ NGUYÊN VẸN.\n'
+    printf -- '  ĐỪNG `git checkout` các tệp này: sẽ thay tệp thật bằng con trỏ và làm sập S3.\n'
     printf '\nKiểm lại: `bash scripts/check_evidence.sh`\n'
     printf '%s\n' "$blk_end"
   } >"$tmp"

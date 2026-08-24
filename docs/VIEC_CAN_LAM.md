@@ -76,11 +76,31 @@ KHỐI 0 ✅       →  KHỐI 1 (vá lỗi)  →  KHỐI 3 ✅  →  KHỐI 4 (
 
 ## Phát hiện thêm trong lúc làm KHỐI 0
 
-- [ ] **0.4 `nom-embed` submodule đang bẩn** — `best.pt` và `last.pt` **đã đổi nhưng chưa commit
-  trong submodule**. Con trỏ submodule ở repo cha vẫn là `7ff74f5`, nên **checkpoint S3 trên đĩa
-  KHÁC với thứ mà lịch sử git ghi lại**. Đây là một lỗ hổng tái lập: không ai dựng lại được đúng
-  mô hình đã sinh ra `s3_cosine` trong bộ nhãn. Cần quyết định: commit trong submodule, hay đẩy
-  checkpoint lên HuggingFace và ghi hash vào `EVIDENCE_INDEX.md`.
+- [x] **0.4 `nom-embed` submodule "bẩn"** — ✅ **ĐÓNG 2026-08-24: BÁO ĐỘNG GIẢ, tôi đọc sai.**
+  Đo thật trên HuggingFace API: `mdnt571/nom-embed` @ revision **`7ff74f57c4be`** — *đúng con trỏ
+  submodule mà repo cha ghi* — và **sha256 bản công bố KHỚP TỪNG BYTE bản trên đĩa**:
+
+  | tệp | LFS oid trên HF | sha256 trên đĩa | |
+  |---|---|---|---|
+  | `best.pt` | `eee2f3e706b08622…` | `eee2f3e706b08622…` | ✅ |
+  | `last.pt` | `c05dd1723c751059…` | `c05dd1723c751059…` | ✅ |
+
+  **Vì sao git báo bẩn:** git HEAD lưu **con trỏ LFS 134 byte**; `huggingface_hub` tải tệp THẬT
+  (140.727.509 byte) ghi đè lên con trỏ, nên git so 134 byte với 140 MB → `M best.pt`. Nhưng
+  `oid sha256:` **trong** con trỏ chính là băm tệp trên đĩa. **Chuỗi tái lập chưa từng bị đứt** —
+  checkpoint sinh ra cột `s3_cosine` là công khai, cố định, và đã được con trỏ submodule ghim.
+
+  🔴 **ĐỪNG `git checkout nom-embed/best.pt`** — sẽ thay tệp 140 MB bằng con trỏ 134 byte và làm
+  sập S3. Cảnh báo này nay in ra trong khối bằng chứng mỗi lần chạy pipeline.
+
+- [x] **0.5 `font_diffusion` LỆCH THẬT** (tìm ra khi kiểm 0.4) — repo cha ghi `61cbf1ba4ac9`, đĩa
+  ở **`fc1874150f8c`**, cây làm việc sạch: submodule đã được cập nhật mà **con trỏ chưa commit**.
+  Đây đúng là lớp lỗi mà 0.4 bị *nghi oan*. Không ảnh hưởng bộ giao nộp (`font_diffusion` chỉ
+  *sinh* glyph, và 89.898 glyph đã sinh sẵn ở `gannhanocr-fd/`, `skip_local_fd_gen: true`), nhưng
+  vẫn commit con trỏ để lịch sử khớp đĩa.
+
+  **Bài học:** hai submodule cùng báo "bẩn", một cái vô hại một cái thật. *"Git báo modified"
+  không phải bằng chứng dữ liệu lệch — phải băm nội dung ra mà so.*
 
 # KHỐI 1 — VÁ 9 LỖI CHẶN ✅ HOÀN THÀNH 2026-08-23
 
@@ -469,7 +489,8 @@ Kiểm lại từng khẳng định đã tuyên bố hoàn thành. **Ba lỗ h�
 |---|---|---|
 | 0.1 sao lưu | khớp đĩa | ✅ 0 dòng lỗi |
 | 0.3 chốt cache | đã cài | ✅ chạy trong mọi build |
-| **0.4 submodule** | *(còn hở)* | ⚠️ **vá một phần** — xem dưới |
+| **0.4 `nom-embed` bẩn** | *"lỗ hổng tái lập"* | 🔴 **TÔI ĐỌC SAI** — khớp HF từng byte |
+| **0.5 `font_diffusion`** | *(chưa ai thấy)* | ⚠️ **lệch THẬT** — con trỏ ≠ đĩa, đã commit |
 | 1.1 㝵 ở GOLD | 0 | ✅ 0 |
 | 1.4 bằng chứng | 4/4 khớp | ✅ nay **6/6** |
 | 1.6 công cụ từ điển | chạy được | ✅ 6/6 |
@@ -502,13 +523,14 @@ trên đĩa nên preflight cũ báo xanh — "tệp tồn tại" không có ngh�
 `stt*`, 1.571 lớp**, 300/300 mẫu có ảnh thật. Ảnh hưởng **nằm ngoài bộ giao nộp** (S3 chỉ
 quyết SILVER; GOLD = S1∩S2 trả về trước mọi lần đọc S3) và có hiệu lực ở lần build kế tiếp.
 
-## Lỗ hổng 3 — checkpoint S3 không truy nguyên được (0.4, vá một phần)
+## Lỗ hổng 3 — ĐÃ BÁC BỎ: checkpoint S3 **vẫn** truy nguyên được (0.4)
 
-`nom-embed/best.pt` và `last.pt` đổi nhưng **chưa commit trong submodule**; con trỏ ở repo
-cha vẫn `7ff74f57c4be` nên **không nhận diện được mô hình thật đã sinh ra cột `s3_cosine`**.
-Commit bên trong submodule là quyết định của bạn (repo riêng, checkpoint 140 MB), nên tôi
-làm phần an toàn: **băm thẳng tệp vào chuỗi bằng chứng mỗi lần chạy**
-(`best.pt` = `eee2f3e706b08622…`). Chuỗi bằng chứng nay gồm **6 tệp** thay vì 4.
+Tôi ghi ở trên rằng checkpoint S3 "không truy nguyên được". **Sai — xem 0.4.** Đo trên HF API:
+bản công bố tại `mdnt571/nom-embed` @ `7ff74f57c4be` khớp **từng byte** bản trên đĩa; git báo bẩn
+chỉ vì so con trỏ LFS 134 byte với tệp thật 140 MB. Không có lỗ hổng tái lập ở đây.
+
+Cái lệch **thật** nằm ở submodule *khác*: `font_diffusion` (0.5) — con trỏ repo cha `61cbf1ba4ac9`
+≠ HEAD trên đĩa `fc1874150f8c`. Đã commit con trỏ.
 
 ## Bài học đã đóng thành lệnh
 

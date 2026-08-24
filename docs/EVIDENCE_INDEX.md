@@ -299,26 +299,33 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 <!-- HIEN_HANH:START -->
 ## BẢN HIỆN HÀNH (tự sinh — ghi đè mỗi lần chạy, ĐỪNG sửa tay)
 
-- sinh lúc: `2026-08-24T13:55:50Z`
-- commit  : `50d2669581`
-- cây làm việc: 🔴 BẨN (2 tệp đã sửa chưa commit) — commit ở trên KHÔNG
+- sinh lúc: `2026-08-24T14:25:43Z`
+- commit  : `92abe38bc2`
+- cây làm việc: 🔴 BẨN (9 tệp đã sửa chưa commit) — commit ở trên KHÔNG
   định danh được mã đã chạy. Muốn tái lập thì phải commit trước khi chạy.
+     M dataset_out/CHECKSUMS.txt
+     M dataset_out/confusion_fix_report.json
+     M dataset_out/labels.csv
+     M dataset_out/labels_final.csv
+     M dataset_out/labels_remediated.csv
+     M dataset_out/remediation_report.json
+     M dataset_out/s3_unwind_report.json
+     M dataset_out/summary.json
      M docs/EVIDENCE_INDEX.md
-     M run_pipeline.sh
 - sách    : STT2+STT4+STT11 | reseg=detector
 
 | file | sha256 |
 |---|---|
-| `dataset_out/labels.csv` | `461ab90f3d4c0af57cc714e9b8633c45c6b82cf596e7fe8cfd6cf55a3127a976` |
-| `dataset_out/labels_remediated.csv` | `2a78d6196a149205521a881da8f212c90b3065a236100b8d191daef1a8787e63` |
-| `dataset_out/labels_final.csv` | `9727b4624d3e02943a8eca2a5725c4a486db1bf06b86364f1bbcd7ae6fe23368` |
-| `dataset/labels.csv` | `236cbc4fa57f25b32270b89f95914ab62184011ffedf9ccb7c88d53c0b7ae0fc` |
+| `dataset_out/labels.csv` | `ff56c6818315f69646364fad76fdf19350777673b942813e527e02fae950cb57` |
+| `dataset_out/labels_remediated.csv` | `2a2c461c0f8199bea2f27553372003f73937c0a01b9b61d2fa911d6c411573ff` |
+| `dataset_out/labels_final.csv` | `3112c5221acf06d39ba07354ebb9c97747997be03520d798754d7e220d1b5af0` |
+| `dataset/labels.csv` | `258944f50f7496bac1862aa4e8b904aa9ec73ec12ef8e9b5ffda9a23a57371ea` |
 | `nom-embed/best.pt` | `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0` |
 | `pipeline/align_engine/data/index.csv` | `cca7d2a078b22c83831f8a5fd3e8d3d468a09319266a89606f889a1668020097` |
 | `Dict/QuocNgu_SinoNom.csv` | `e65b98748e13e41f66e1f5527e4b07e7f89ba24522090a4050decab95f1c87d8` |
 | `Dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
 | `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
-| `config/pipeline.yaml` | `a1225ed806cf6740c81f88524e2b40893c161586f8f51f9996b302430628547d` |
+| `config/pipeline.yaml` | `a7bd2bd79875c5e4ea72ce4a53a48c5b13d41d5b09f39d6fe2b83b80e2349e2f` |
 
 **Checkpoint S3**: `mdnt571/nom-embed` @ HuggingFace, revision `7ff74f57c4be`
 - `best.pt` LFS oid = `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0`
@@ -427,3 +434,20 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 | `Dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
 | `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
 | `config/pipeline.yaml` | `a1225ed806cf6740c81f88524e2b40893c161586f8f51f9996b302430628547d` |
+
+## Lần chạy 2026-08-24T14:25:42Z
+
+sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `ff56c6818315f69646364fad76fdf19350777673b942813e527e02fae950cb57` |
+| `dataset_out/labels_remediated.csv` | `2a2c461c0f8199bea2f27553372003f73937c0a01b9b61d2fa911d6c411573ff` |
+| `dataset_out/labels_final.csv` | `3112c5221acf06d39ba07354ebb9c97747997be03520d798754d7e220d1b5af0` |
+| `dataset/labels.csv` | `258944f50f7496bac1862aa4e8b904aa9ec73ec12ef8e9b5ffda9a23a57371ea` |
+| `nom-embed/best.pt` | `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0` |
+| `pipeline/align_engine/data/index.csv` | `cca7d2a078b22c83831f8a5fd3e8d3d468a09319266a89606f889a1668020097` |
+| `Dict/QuocNgu_SinoNom.csv` | `e65b98748e13e41f66e1f5527e4b07e7f89ba24522090a4050decab95f1c87d8` |
+| `Dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
+| `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
+| `config/pipeline.yaml` | `a7bd2bd79875c5e4ea72ce4a53a48c5b13d41d5b09f39d6fe2b83b80e2349e2f` |

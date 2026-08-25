@@ -46,6 +46,10 @@ _HIDDEN_FIELDS = (
     "s3_cosine", "s3_val", "stratum", "stratum_N", "suspicion", "design_weight",
     "risk_reason",
     "split", "image", "image_md5", "bbox",
+    # cờ chất lượng ảnh: vào manifest để bước phân tích tách được "nhãn sai" khỏi
+    # "ảnh không đọc nổi". Nó CŨNG hiện ra HTML (xem `canh_bao` bên dưới) — hiện được
+    # vì nó KHÔNG lộ tier, nên không phá tính mù của mẻ.
+    "crop_quality_flag",
     # tầng của mẻ hai-tầng — người chấm KHÔNG được thấy, nếu không mất tính mù
     "audit_batch", "risk_stratum",
     # mẻ kiểm tra lặp: verdict CŨ phải vào manifest để so, nhưng lộ ra HTML thì cả mẻ
@@ -324,6 +328,13 @@ def build_audit(
             "label": label,
             "syl": syl,
             "cands": cand_str,
+            # CẢNH BÁO ẢNH HỎNG — người chấm PHẢI thấy. Mẻ 2026-08-04 hỏng ở chiều
+            # CROP (κ = 0,14) chứ không ở chiều NHÃN, vì người bị buộc vừa đọc chữ vừa
+            # phán xét ảnh cắt. Máy đã đo hình học rồi; báo cho người biết để họ BỎ QUA
+            # chiều ảnh thay vì chấm nhầm thành "nhãn sai".
+            "canh_bao": {"blank": "ẢNH TRẮNG — không đọc được, đừng chấm là nhãn sai",
+                         "truncated": "ẢNH BỊ CẮT MẤT NÉT — đừng chấm là nhãn sai",
+                         }.get(_txt(r.get("crop_quality_flag")), ""),
         })
 
         manifest = {"item_id": item_id}
@@ -447,6 +458,8 @@ def _render_html(items: list[dict], title: str, all_ids: list[str] | None = None
   .lab {{ font-size:56px; line-height:1; margin:6px 0; }}
   .meta {{ color:#555; font-size:14px; margin:4px 0 12px; }}
   .cands {{ color:#888; font-size:13px; }}
+  .canhbao {{ background:#B03A2E; color:#fff; font-size:13px; font-weight:600;
+              padding:4px 8px; border-radius:3px; margin:4px 0; }}
   .choices {{ display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }}
   .choices button {{ font-size:14px; }}
   .c1 {{ border-color:#2e6e4c; }} .c1.sel {{ background:#2e6e4c; color:#fff; }}
@@ -522,6 +535,7 @@ function render() {{
         : '<div class="lab">'+(it.syl||'?')+'</div>' +
           '<div class="meta">nhãn ở ô này là <b>ÂM TIẾT</b>, không có chữ Nôm đề xuất — '+
           'hỏi: chữ trong ô có đọc là âm này không?</div>') +
+      (it.canh_bao? '<div class="canhbao">⚠ '+it.canh_bao+'</div>':'') +
       (it.cands? '<div class="cands">ứng viên: '+it.cands+'</div>':'') +
       // Nút phải dựng TỪ CHOICES. Trước 2026-08-10 chỗ này hardcode 4 nút, nên mẻ
       // mode="label_only" vẫn hiện "3 · sai ảnh" (bấm vào lại ghi 'unsure') và

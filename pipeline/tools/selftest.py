@@ -162,6 +162,108 @@ def test_syllable_normalize() -> None:
           SN.build_readings(qn) is R)
 
 
+def test_dict_candidates() -> None:
+    """Bảng ứng viên từ điển PHẢI có đủ cột phân xử.
+
+    Bản đầu (2026-08-25) bỏ mất `similar_hit` và `char_in_dict` — đúng hai cột dùng để
+    phân biệt "TỪ ĐIỂN THIẾU" với "OCR NHẦM TỰ DẠNG" — khiến người duyệt không có căn
+    cứ nào để phán. Đây là test chặn việc đó tái diễn.
+    """
+    from pathlib import Path as _P
+    import csv as _csv
+    REPO = _P(__file__).resolve().parents[2]
+    print("[ứng viên từ điển — đủ cột phân xử]")
+    f = REPO / "docs" / "UNG_VIEN_MO_RONG_TU_DIEN.csv"
+    if not f.exists():
+        print("  [bỏ qua] chưa sinh bảng"); return
+    head = next(_csv.reader(open(f, encoding="utf-8")))
+    for c in ("similar_hit", "char_in_dict", "gold_count", "nghieng_ve"):
+        check(f"có cột {c}", c in head)
+    check("KHÔNG dùng cột ảnh mẫu (ô REVIEW không có crop)", "anh_mau_1" not in head)
+    check("có toạ độ để mở ảnh trang gốc", "vi_tri_1" in head)
+    rows = list(_csv.DictReader(open(f, encoding="utf-8")))
+    check("có dòng", len(rows) > 0)
+    # bất biến: hễ similar_hit KHÔNG rỗng thì phải xếp vào nhóm nghi OCR nhầm
+    sai = [r for r in rows if r["similar_hit"].strip() and r["nghieng_ve"] != "B_OCR_NHAM"]
+    check("similar_hit không rỗng => luôn xếp B_OCR_NHAM", not sai,
+          f"{len(sai)} dòng lệch")
+    check("cột người duyệt để TRỐNG", all(not r["NGUOI_DUYET"].strip() for r in rows))
+
+
+def test_variant_table() -> None:
+    """Bảng dị thể chỉ ĐỀ XUẤT, KHÔNG được sửa bộ nhãn."""
+    from pathlib import Path as _P
+    import csv as _csv
+    REPO = _P(__file__).resolve().parents[2]
+    print("[dị thể — máy đề xuất, người quyết]")
+    src = (REPO / "pipeline" / "tools" / "variant_table.py").read_text(encoding="utf-8")
+    check("KHÔNG ghi vào bộ nhãn", "labels.csv\", \"w\"" not in src and "to_csv" not in src)
+    check("đòi HAI điều kiện: cùng âm VÀ nhìn giống", "oneway" in src and "mutual" in src)
+    check("bỏ cặp KHÔNG nhìn giống (hai chữ khác nhau thật)", "if not oneway:" in src)
+    f = REPO / "docs" / "UNG_VIEN_CHUAN_HOA_DI_THE.csv"
+    if not f.exists():
+        print("  [bỏ qua] chưa sinh bảng"); return
+    rows = list(_csv.DictReader(open(f, encoding="utf-8")))
+    check("mã trội luôn nhiều ô hơn mã phụ",
+          all(int(r["so_o_troi"]) >= int(r["so_o_phu"]) for r in rows))
+    check("cột người duyệt để TRỐNG", all(not r["NGUOI_DUYET"].strip() for r in rows))
+
+
+def test_dataset_docs() -> None:
+    """Tài liệu bộ giao nộp: số ĐỌC TỪ nhãn, và KHÔNG bịa lai lịch thư tịch."""
+    from pathlib import Path as _P
+    REPO = _P(__file__).resolve().parents[2]
+    print("[tài liệu bộ giao nộp]")
+    ds = REPO / "dataset"
+    if not (ds / "labels.csv").exists():
+        print("  [bỏ qua] chưa có bộ giao nộp"); return
+    for n in ("README.md", "DATASHEET.md", "NGUON_THU_TICH.md", "LICENSE.md"):
+        check(f"có {n}", (ds / n).exists())
+    rd = (ds / "README.md").read_text(encoding="utf-8")
+    import csv as _csv
+    rows = list(_csv.DictReader(open(ds / "labels.csv", encoding="utf-8")))
+    nchar = sum(1 for r in rows if (r.get("label") or "").strip())
+    check(f"README nêu đúng số nhãn ký tự ({nchar:,})", f"{nchar:,}" in rd)
+    check("README CẢNH BÁO đừng gộp hai loại nhãn", "Đừng phát biểu" in rd)
+    ng = (ds / "NGUON_THU_TICH.md").read_text(encoding="utf-8")
+    check("lai lịch để TRỐNG chứ không bịa", "⬜ CHƯA ĐIỀN" in ng)
+    check("nói rõ vì sao để trống", "cố ý để trống" in ng.lower() or "bịa" in ng)
+
+
+def test_batch_by_rule() -> None:
+    """Mẻ chấm PHẢI tách GOLD thành direct/similar — hai lớp rủi ro khác nhau."""
+    from pathlib import Path as _P
+    import json as _json, collections as _c
+    REPO = _P(__file__).resolve().parents[2]
+    print("[mẻ chấm — tách theo LUẬT]")
+    src = (REPO / "pipeline" / "ground_truth" / "make_combined_batch.py").read_text(encoding="utf-8")
+    check("có cờ --by-rule", "--by-rule" in src)
+    check("tách được s1_inter_s2_similar", "s1_inter_s2_similar" in src)
+    m = REPO / "dataset_out" / "ground_truth" / "audit_combined" / "manifest.jsonl"
+    if not m.exists():
+        print("  [bỏ qua] chưa dựng mẻ"); return
+    rows = [_json.loads(l) for l in open(m, encoding="utf-8")]
+    st = {str(r.get("stratum", "")).split("|")[0] for r in rows}
+    for want in ("GOLD/direct", "GOLD/similar", "SYLLABLE"):
+        check(f"có tầng {want}", want in st)
+    # BẤT BIẾN ĐÚNG: ô MẪU phải có trọng số; ô LẶP ẨN phải KHÔNG có.
+    # Ô lặp dùng đo κ nội tại (người chấm có tự nhất quán không), KHÔNG phải quan sát
+    # độc lập — gán trọng số cho nó là ĐẾM TRÙNG dân số và thổi ước lượng.
+    mau = [r for r in rows if not r.get("repeat_of")]
+    lap = [r for r in rows if r.get("repeat_of")]
+    check(f"{len(mau)} ô MẪU đều có design_weight (Horvitz-Thompson)",
+          all(r.get("design_weight") for r in mau))
+    check(f"{len(lap)} ô LẶP ẨN đều KHÔNG có design_weight (tránh đếm trùng)",
+          all(not r.get("design_weight") for r in lap))
+    # cảnh báo ảnh hỏng phải tới được manifest
+    check("manifest mang crop_quality_flag", "crop_quality_flag" in rows[0])
+    h = (m.parent / "audit.html").read_text(encoding="utf-8")
+    nbad = sum(1 for r in rows if r.get("crop_quality_flag") in ("blank", "truncated"))
+    if nbad:
+        check(f"{nbad} ô ảnh hỏng CÓ cảnh báo hiện ra trong HTML",
+              "ẢNH TRẮNG" in h or "ẢNH BỊ CẮT" in h)
+
+
 def main() -> int:
     print("=" * 64)
     print("TOOLS SELFTEST")
@@ -169,6 +271,10 @@ def main() -> int:
     test_fix_tone()
     test_sem_score()
     test_syllable_normalize()
+    test_dict_candidates()
+    test_variant_table()
+    test_dataset_docs()
+    test_batch_by_rule()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

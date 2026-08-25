@@ -70,7 +70,9 @@ def split_lech(labels: Path = LABELS, index: Path = INDEX) -> tuple[int, int]:
     with open(labels, encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
             now.setdefault((r.get("book", ""), r.get("page", "")), r.get("split", ""))
-    pat = re.compile(r"/([a-z]+\d+)_(page_\d+)")
+    # `_p####` là hậu tố tách trang trùng số (step1_extract) — phải nuốt cả nó, nếu không
+    # `page_0010_p0028` bị cắt thành `page_0010` và quy sai về trang khác.
+    pat = re.compile(r"/([a-z]+\d+)_(page_\d+(?:_p\d+)?)")
     lech = tong = 0
     with open(index, encoding="utf-8") as fh:
         for r in csv.DictReader(fh):

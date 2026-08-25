@@ -24,7 +24,11 @@ def _load(path: str) -> pd.DataFrame:
     # thành NaN, nên 3 ô mất hẳn âm khi đi qua bước này (2 trong đó là GOLD trong bộ
     # giao nộp) và 8 mục từ điển biến mất mỗi lần đọc bằng pandas. `na_values=[""]`
     # giữ ô RỖNG vẫn là NaN (s3_cosine cần thế) nhưng cứu mọi chuỗi có nội dung.
-    return pd.read_csv(path, dtype={"image_md5": str}, keep_default_na=False, na_values=[""])
+    # CỘT CỜ VÀ CỘT KÍCH THƯỚC PHẢI ĐỌC LÀ CHUỖI. Chúng có ô rỗng (tầng SYLLABLE không
+    # có label_in_train; hàng REVIEW không có crop_w/h), nên pandas ép cả cột về float64
+    # rồi ghi ra '1.0' thay vì '1'. Hậu quả: mọi phép lọc `label_in_train == "1"` trả về
+    # RỖNG mà không báo lỗi — đúng lớp lỗi câm đã cắn dự án này nhiều lần.
+    return pd.read_csv(path, dtype={"image_md5": str, "label_in_train": str, "crop_w": str, "crop_h": str}, keep_default_na=False, na_values=[""])
 
 
 def cmd_census(args) -> None:

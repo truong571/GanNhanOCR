@@ -382,6 +382,39 @@ def test_two_outputs_and_verdicts() -> None:
           "human_audit" in cb and "KHÔNG tái tạo được" in cb)
 
 
+def test_co_khong_bi_ep_kieu() -> None:
+    """HỒI QUY: cột CỜ không được biến thành số thực khi đi qua pandas.
+
+    Lỗi thật 2026-08-25: `label_in_train` build ghi ra '1', nhưng cột có ô rỗng (tầng
+    SYLLABLE không có giá trị) nên pandas ép cả cột về float64 và ghi ra '1.0'. Hậu quả:
+    mọi phép lọc `label_in_train == "1"` trả về RỖNG mà KHÔNG báo lỗi. `crop_w`/`crop_h`
+    cũng dính ('138' -> '138.0').
+
+    Đây là lớp lỗi CÂM: không traceback, không cảnh báo, chỉ ra kết quả sai.
+    """
+    from pathlib import Path as _P
+    import csv as _csv
+    REPO = _P(__file__).resolve().parents[2]
+    print("[cột cờ không bị ép kiểu]")
+    for f in ("pipeline/remediation/cli.py", "pipeline/remediation/confusion_fix.py"):
+        src = (REPO / f).read_text(encoding="utf-8")
+        check(f"{_P(f).name} đọc label_in_train là chuỗi", '"label_in_train": str' in src)
+        check(f"{_P(f).name} đọc crop_w/h là chuỗi",
+              '"crop_w": str' in src and '"crop_h": str' in src)
+    for d in ("dataset", "re-dataset"):
+        p2 = REPO / d / "labels.csv"
+        if not p2.exists():
+            continue
+        rows = list(_csv.DictReader(open(p2, encoding="utf-8")))
+        vals = {r.get("label_in_train", "") for r in rows}
+        check(f"{d}/: label_in_train chỉ có '', '0', '1' — KHÔNG có '1.0'",
+              vals <= {"", "0", "1"}, f"thấy {sorted(vals)}")
+        cw = {r.get("crop_w", "") for r in rows if r.get("crop_w")}
+        check(f"{d}/: crop_w không có đuôi '.0'",
+              not any("." in v for v in cw), f"ví dụ {sorted(cw)[:3]}")
+        break
+
+
 def test_nan_syllable_not_eaten() -> None:
     """HỒI QUY: `nan` là một ÂM TIẾNG VIỆT (難), không phải giá trị thiếu.
 
@@ -463,6 +496,7 @@ def main() -> int:
     test_real()
     test_s3_unwind()
     test_two_outputs_and_verdicts()
+    test_co_khong_bi_ep_kieu()
     test_nan_syllable_not_eaten()
     test_confusion_fix_join()
     print("=" * 64)

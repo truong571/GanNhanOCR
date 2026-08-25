@@ -91,7 +91,7 @@ def measure_gold_precision(final: pd.DataFrame) -> dict | None:
 
 
 def run(in_csv: Path, out_csv: Path, fixes_yaml: Path, measure: bool) -> dict:
-    df = pd.read_csv(in_csv, dtype={"image_md5": str}, keep_default_na=False, na_values=[""])
+    df = pd.read_csv(in_csv, dtype={"image_md5": str, "label_in_train": str, "crop_w": str, "crop_h": str}, keep_default_na=False, na_values=[""])
     cfg = yaml.safe_load(fixes_yaml.read_text()) if fixes_yaml.exists() else {}
     fixes = (cfg or {}).get("fixes", [])
     before = df["tier"].value_counts().to_dict()

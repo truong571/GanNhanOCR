@@ -38,9 +38,9 @@ labels.csv --[4 remediate]--> labels_remediated.csv --[5 confusion_fix]--> label
 <!-- AUTO:NGUON_GOC:START -->
 | Tệp | dòng | sha256 (16 đầu) | Lệnh tái sinh |
 |---|---|---|---|
-| `dataset_out/labels.csv` | 82.246 | `1ae3a383189e9491` | `python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --use-s3 --reseg detector` |
-| `dataset_out/labels_remediated.csv` | 82.246 | `0278b6bee659a154` | `python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62` |
-| `dataset_out/labels_final.csv` | 82.246 | `87ac87a990cacc41` | `python -m pipeline.remediation.confusion_fix … rồi python -m pipeline.remediation.s3_unwind … --apply` |
+| `dataset_out/labels.csv` | 82.246 | `a89b8f9e078bc40b` | `python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --use-s3 --reseg detector` |
+| `dataset_out/labels_remediated.csv` | 82.246 | `b4d913bffbe0a546` | `python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62` |
+| `dataset_out/labels_final.csv` | 82.246 | `cb74db2b995ce0db` | `python -m pipeline.remediation.confusion_fix … rồi python -m pipeline.remediation.s3_unwind … --apply` |
 | `dataset/labels.csv` | (chưa có) | — | `python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset` |
 <!-- AUTO:NGUON_GOC:END -->
 
@@ -97,8 +97,8 @@ Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('datase
 | **Trang cho đủ 9 cột có nhãn** | **443/445** |
 | Lớp ký tự phân biệt (mọi tier có nhãn) | 1.601 |
 | **Lớp trong bộ giao nộp** | **1.583** |
-| Split bộ giao nộp | test 4.881 · train 47.601 · val 4.585 |
-| **Selftest** | **640 passed, 0 failed** |
+| Split bộ giao nộp | test 6.155 · train 45.066 · val 5.846 |
+| **Selftest** | **646 passed, 0 failed** |
 <!-- AUTO:PHAM_VI:END -->
 
 ### 2.4 Vá lỗi (bước 4–6)

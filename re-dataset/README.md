@@ -25,18 +25,21 @@
 | `tier` / `rule` | luật nào quyết nhãn này — xem DATASHEET |
 | `usable_image` | `0` = ảnh trắng hoặc bị cắt mất nét (424 ô). Nhãn có thể vẫn đúng; đừng chấm chiều ảnh ở các ô này |
 | `crop_quality_flag` | `ok` / `bleed` (dính mực chữ bên cạnh) / `truncated` / `blank` |
-| `split` / `split_group` | 🔴 **CÓ RÒ RỈ** — xem dưới |
+| `split` / `split_group` | **rời nhau theo TRANG** |
+| `label_in_train` | `0` = lớp chữ này **không có mặt trong `train`**. Đánh giá phải lọc theo cột này |
 
+## Chia tách — rời nhau theo TRANG
 
-## 🔴 Chia tách CÓ RÒ RỈ theo trang
+Đo trên chính `labels.csv`: **0/444 trang** nằm ở hai phía.
 
-Đo trên chính `labels.csv`: **360/444 trang** có ô nằm ở
-**hai phía khác nhau**. Hai cột cạnh nhau trên cùng một trang dùng chung ván khắc,
-chung mực, chung lần quét, nên mô hình huấn luyện trên `train` học được *diện mạo
-trang* rồi được chấm lại trên chính trang đó.
+Chọn mức trang chứ không phải cột vì hai cột cạnh nhau trên cùng một trang dùng
+chung ván khắc, chung mực, chung lần quét — chia theo cột thì mô hình học được
+*diện mạo trang* rồi được chấm lại trên chính trang đó.
 
-**Mọi chỉ số đo bằng `split` sẵn có là CẬN TRÊN**, không phải hiệu năng thật trên
-trang chưa từng thấy. Muốn đánh giá trung thực thì tự chia lại theo `book` + `page`.
+**Hệ quả phải biết:** 128 ô có lớp chữ **không xuất hiện trong
+`train`** — hệ quả của việc không bóp méo chia tách. Cột **`label_in_train`**
+đánh dấu chúng. Khi đánh giá, **lọc `label_in_train == 1`**; nếu không, những
+lớp đó bị tính sai 100% dù mô hình chưa từng có cơ hội học.
 
 ## 🔴 Trạng thái kiểm định
 

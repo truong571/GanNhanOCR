@@ -302,8 +302,10 @@ print(len((yaml.safe_load(open('$CONFUSION_FIXES')) or {}).get('fixes', [])))" 2
       # nhãn hiện hành dùng `stt*`, giao nhau = 0 nên crop-proto rỗng trên thực tế
       # mà preflight cũ vẫn báo xanh.
       local n_old n_new
-      n_old=$(grep -c '/yen[0-9]*_' "$idx_csv" 2>/dev/null || echo 0)
-      n_new=$(grep -c '/stt[0-9]*_' "$idx_csv" 2>/dev/null || echo 0)
+      # `grep -c` KHÔNG khớp gì thì vẫn IN "0" rồi thoát mã 1, nên `|| echo 0` in thêm
+      # một "0" nữa: biến thành "0\n0" và (( )) sặc cú pháp. Gán rồi mới chữa mã thoát.
+      n_old=$(grep -c '/yen[0-9]*_' "$idx_csv" 2>/dev/null) || n_old=0
+      n_new=$(grep -c '/stt[0-9]*_' "$idx_csv" 2>/dev/null) || n_new=0
       if (( n_old > 0 && n_new == 0 )); then
         warn "crop-proto LỆCH THẾ HỆ: $idx_csv có $n_old dòng trỏ sách 'yen*' và 0 dòng 'stt*',
       trong khi bộ nhãn hiện hành dùng 'stt*' -> giao nhau = 0 -> crop-protos RỖNG

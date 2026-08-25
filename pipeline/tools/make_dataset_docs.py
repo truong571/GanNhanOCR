@@ -57,6 +57,9 @@ def stats(labels: Path) -> dict:
     # ĐO tỷ lệ chữ ngoài khối CJK cơ bản. Trước 2026-08-25 con số này là chuỗi ghim cứng
     # "1,63%" nằm lọt giữa một f-string mà mọi số quanh nó đều động — đo lại được 2,25%.
     _ngoai = sum(1 for r in char if not ("\u4e00" <= r["label"] <= "\u9fff"))
+    _lech = sum(1 for r in rows if r.get("page_cot_lech") == "1")
+    _trang_lech = len({(r.get("book"), r.get("page")) for r in rows
+                       if r.get("page_cot_lech") == "1"})
     co_cot_moi = "label_in_train" in (rows[0] if rows else {})
     return {
         "dong": len(rows), "nhan_ky_tu": len(char), "chu_giai_am": len(syl),
@@ -67,6 +70,7 @@ def stats(labels: Path) -> dict:
         "am_qn": len({(r.get("syllable") or "").lower() for r in rows if r.get("syllable")}),
         "anh_hong": q.get("blank", 0) + q.get("truncated", 0),
         "flag": {k: v for k, v in q.items() if k},
+        "cot_lech": _lech, "trang_cot_lech": _trang_lech,
         "ngoai_cjk": _ngoai,
         "ngoai_cjk_pct": (100 * _ngoai / len(char)) if char else 0.0,
         "n_leak": n_leak, "n_trang_split": len(_pg), "unseen": unseen,
@@ -142,6 +146,7 @@ def readme(s: dict) -> str:
 | `crop_quality_flag` | `ok` / `bleed` (dính mực chữ bên cạnh) / `truncated` / `blank` |
 | `split` / `split_group` | {"**rời nhau theo TRANG**" if s['n_leak']==0 else "🔴 **CÓ RÒ RỈ** — xem dưới"} |
 {"| `label_in_train` | `0` = lớp chữ này **không có mặt trong `train`**. Đánh giá phải lọc theo cột này |" if s['co_cot_moi'] else ""}
+{f"| `page_cot_lech` | `1` = trang này không đủ 9 cột ({s['cot_lech']} ô / {s['trang_cot_lech']} trang). Ghép cột Nôm↔Quốc ngữ có thể đã trượt |" if s['cot_lech'] else ""}
 
 {_khoi_chia_tach(s)}
 
@@ -231,8 +236,12 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
    **chưa áp dụng**.
 5. **{s['anh_hong']} ô có ảnh hỏng** (`usable_image=0`) vẫn nằm trong bộ — nhãn có thể
    đúng, ảnh thì không dùng được.
-6. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.
-7. **Chia tách: {s['n_leak']}/{s['n_trang_split']} trang nằm ở hai phía.** {s['unseen']:,} ô có
+6. **{s['cot_lech']} ô nằm trên {s['trang_cot_lech']} trang không đủ 9 cột** (`page_cot_lech=1`).
+   Bố cục ván khắc luôn 9 cột, nên thiếu cột nghĩa là phép ghép cột Nôm↔Quốc ngữ trên
+   trang đó có thể đã trượt một nhịp. Cờ chỉ nêu sự việc, không kết luận nhãn sai.
+
+7. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.
+8. **Chia tách: {s['n_leak']}/{s['n_trang_split']} trang nằm ở hai phía.** {s['unseen']:,} ô có
    lớp chữ không mặt trong `train` — hệ quả của việc chia tách trung thực theo trang.
    Lọc bằng `label_in_train` khi đánh giá (cột này RỖNG ở tầng SYLLABLE, xem README).
 

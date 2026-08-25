@@ -138,6 +138,8 @@ def test_suspicion(labels: pd.DataFrame) -> pd.DataFrame:
     # Lịch sử: 3856 -> 3850 -> 4098 (gộp SinoNom_Similar_Đạt_v0, 2026-08-19)
     #          -> 4100 (T1 2026-08-24: chuẩn hoá dấu phụ TRƯỚC align)
     #          -> 4102 (T2 2026-08-24: sửa dò cột min_len + fallback bóc marker)
+    #          -> 4127 (2026-08-25: cứu 3 trang bị ghi đè vì trùng số trang in;
+    #                   ngữ liệu 445 -> 448 trang, mọi con số theo đó nhích lên)
     # HAI PHÉP KIỂM, hai mục đích khác nhau:
     #   (a) BĂNG rộng — bắt SỤP THẬT (luật similar hỏng, từ điển tự dạng không nạp
     #       được). Phép này BỀN, không phải sửa khi dữ liệu nhích.
@@ -145,8 +147,8 @@ def test_suspicion(labels: pd.DataFrame) -> pd.DataFrame:
     #       đây là VIỆC BẢO TRÌ, không phải lỗi mã: đối chiếu với bộ nhãn rồi cập nhật.
     check("similar_bridge trong băng lành mạnh 3500-4700 (bắt sụp thật)",
           3500 <= sim <= 4700, f"got {sim}")
-    check("similar_bridge == 4102 — MỐC dữ liệu, cập nhật khi bộ nhãn đổi "
-          "(hist 3856->3850->4098->T1 4100->T2)", sim == 4102, f"got {sim}")
+    check("similar_bridge == 4127 — MỐC dữ liệu, cập nhật khi bộ nhãn đổi "
+          "(hist 3856->3850->4098->T1 4100->T2 4102->448 trang)", sim == 4127, f"got {sim}")
     # dup_defect union: BẤT BIẾN == 0 = union(dup_bbox=0, cross_col=0). Lịch sử 2321 -> 8 -> 0.
     # Dedup upstream đã đóng lớp trùng (REVIEW không có image, loại khỏi tập usable).
     dup_union = int(ranked["dup_defect"].sum())

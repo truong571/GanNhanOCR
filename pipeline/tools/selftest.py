@@ -392,6 +392,74 @@ def test_step1_khong_mat_trang() -> None:
     check("trang sau mang hậu tố truy được về trang PDF", ten[1] == "page_0010_p0028")
 
 
+def test_co_trang_lech_cot() -> None:
+    """Trang không đủ 9 cột phải được GẮN CỜ, và cờ phải đếm trên TOÀN BỘ hàng.
+
+    Bố cục ván khắc luôn 9 cột. Lần chạy 2026-08-25 lộ ra 3 trang thiếu cột, trong đó
+    stt4/page_0110 có OCR Nôm ĐỦ 9 cột nhưng chỉ 8 cột sống tới bước ghép — nên phép kiểm
+    "9 cột" chạy sau extract (đếm cột OCR Nôm) cho nó đi qua. Cờ ở bước xuất là chỗ duy
+    nhất nhìn được cả hai phía.
+
+    BẪY: nếu đếm cột trên hàng ĐÃ LỌC (bộ giao nộp bỏ REVIEW/SILVER) thì một trang lành
+    có nguyên một cột rơi vào REVIEW sẽ bị đếm hụt và mang tiếng oan. Phải đếm trên all_rows.
+    """
+    import csv as _csv, collections as _cl
+    print("[cờ trang lệch cột]")
+    ds = REPO / "dataset"
+    if not (ds / "labels.csv").exists():
+        ds = REPO / "re-dataset"
+    full = REPO / "dataset_out" / "labels_final.csv"
+    if not (ds / "labels.csv").exists() or not full.exists():
+        print("  [bỏ qua] chưa có bộ giao nộp"); return
+    rows = list(_csv.DictReader(open(ds / "labels.csv", encoding="utf-8")))
+    check("bộ giao nộp có cột page_cot_lech", "page_cot_lech" in (rows[0] if rows else {}))
+    if "page_cot_lech" not in (rows[0] if rows else {}):
+        return
+    check("giá trị chỉ '0'/'1'", {r["page_cot_lech"] for r in rows} <= {"0", "1"})
+
+    cot_full: dict = {}
+    for r in _csv.DictReader(open(full, encoding="utf-8")):
+        cot_full.setdefault((r["book"], r["page"]), set()).add(r["column"])
+    that_lech = {k for k, v in cot_full.items() if len(v) != 9}
+    co_co = {(r["book"], r["page"]) for r in rows if r["page_cot_lech"] == "1"}
+    check("cờ khớp CHÍNH XÁC tập trang thiếu cột (đếm trên toàn bộ hàng)",
+          co_co == (that_lech & {(r["book"], r["page"]) for r in rows}),
+          f"cờ {sorted(co_co)} vs thật {sorted(that_lech)}")
+
+    # BẪY đếm trên hàng đã lọc: dựng một trang lành có 9 cột nhưng chỉ 8 cột lọt bộ xuất
+    all_rows = [{"book": "b", "page": "p", "column": str(i), "tier": "GOLD"} for i in range(1, 9)]
+    all_rows.append({"book": "b", "page": "p", "column": "9", "tier": "REVIEW"})
+    loc = [r for r in all_rows if r["tier"] == "GOLD"]
+    dung = len({r["column"] for r in all_rows}) != 9
+    sai = len({r["column"] for r in loc}) != 9
+    check("đếm trên all_rows -> KHÔNG gắn cờ oan", dung is False)
+    check("đếm trên hàng đã lọc -> gắn cờ OAN (bẫy đã tránh)", sai is True)
+
+    for f, ten in ((ds / "README.md", "README"), (ds / "DATASHEET.md", "DATASHEET")):
+        check(f"{ten} có nêu page_cot_lech",
+              "page_cot_lech" in f.read_text(encoding="utf-8"))
+
+
+def test_run_pipeline_grep_dem() -> None:
+    """`grep -c` không khớp gì vẫn IN "0" rồi thoát mã 1 -> `|| echo 0` in thêm một "0".
+
+    Biến thành "0\n0", và (( )) sặc: chính lỗi in ra ở preflight lần chạy 2026-08-25.
+    """
+    print("[preflight đếm bằng grep -c]")
+    src = (REPO / "run_pipeline.sh").read_text(encoding="utf-8")
+    check("không còn `grep -c ... || echo 0`",
+          "|| echo 0)" not in src.replace("|| echo 0 )", "|| echo 0)"))
+    check("dùng gán rồi mới chữa mã thoát", "|| n_old=0" in src and "|| n_new=0" in src)
+    import subprocess
+    r = subprocess.run(["bash", "-n", str(REPO / "run_pipeline.sh")], capture_output=True)
+    check("run_pipeline.sh qua `bash -n`", r.returncode == 0, r.stderr.decode()[:200])
+    # tái hiện lỗi gốc để chứng minh test không rỗng
+    bad = subprocess.run(
+        ["bash", "-c", 'n=$(grep -c zzz /dev/null || echo 0); [ "$n" = "0" ]'],
+        capture_output=True)
+    check("tái hiện được: `grep -c || echo 0` KHÔNG cho '0'", bad.returncode != 0)
+
+
 def test_batch_by_rule() -> None:
     """Mẻ chấm PHẢI tách GOLD thành direct/similar — hai lớp rủi ro khác nhau."""
     from pathlib import Path as _P
@@ -440,6 +508,8 @@ def main() -> int:
     test_proto_index_ro_ri_split()
     test_publish_doc_csv_phong_ve()
     test_step1_khong_mat_trang()
+    test_co_trang_lech_cot()
+    test_run_pipeline_grep_dem()
     test_batch_by_rule()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")

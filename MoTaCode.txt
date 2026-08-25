@@ -323,3 +323,2199 @@ E. THƯ MỤC NẶNG KHÔNG THAM GIA RUNTIME:
    · evaluation/ chỉ còn _kinhhannom_debug (12 KB) — README align_engine vẫn trỏ
    vào evaluation/ver_new/ đã không còn tồn tại.
 ================================================================================
+
+
+
+
+
+
+(.venv) truongmdn@MacBook-Pro GanNhanOCR % bash run_pipeline.sh
+================================================================
+  GanNhanOCR — sinh bộ dataset (setup -> extract -> build -> remediate -> confusion -> export)
+================================================================
+
+--- PREFLIGHT ---------------------------------------------------
+[OK] venv: /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python 3.14.6
+[OK] thư viện: đủ và đúng phiên bản ghim (27/27 gói)
+[OK] .env đã nạp (chỉ các key hợp lệ bash)
+[OK] module có mặt (fitz cv2 numpy pandas yaml PIL vietocr scipy torch)
+[OK] config: config/pipeline.yaml
+[OK] confusion fixes: config/confusion_fixes.yaml (1 fix)
+[OK] từ điển: Dict/QuocNgu_SinoNom.csv (104177 dòng)
+[OK] từ điển: Dict/SinoNom_Similar.csv (33396 dòng)
+[OK] checkpoint S3: nom-embed/best.pt
+[OK] kho glyph FD: gannhanocr-fd (ví dụ U+61CE.png)
+[OK] crop-proto: pipeline/align_engine/data/index.csv -> dataset_out/gold/stt11_page_0010_c01_001.png (có thật, 39585 dòng)
+run_pipeline.sh: line 307: ((: 0
+0: syntax error in expression (error token is "0")
+--- HẾT PREFLIGHT: 0 cảnh báo ------------------------------
+
+Chọn sách cần OCR (bước extract):
+  1) STT2   — SachThanhTruyen2
+  2) STT4   — SachThanhTruyen4
+  3) STT11  — SachThanhTruyen11
+  4) Cả 3 sách (STT2 + STT4 + STT11)
+Nhập lựa chọn [1-4]: 4
+
+Cache OCR (prepared/<sách>/detected/*_ocr_cache.json):
+  1) Dùng cache cũ           — mặc định, KHUYẾN NGHỊ (nhanh, 0 đồng, tái lập được)
+  2) Xoá cache & OCR lại mới — gọi API ngoài, TỐN TIỀN, KHÔNG tái lập
+Nhập lựa chọn [1-2] (Enter = 1): 2
+
+Sắp XOÁ cache OCR cho: STT2+STT4+STT11
+  prepared/SachThanhTruyen2/detected/*_ocr_cache.json  (thư mục sách ~87M)
+  prepared/SachThanhTruyen4/detected/*_ocr_cache.json  (thư mục sách ~82M)
+  prepared/SachThanhTruyen11/detected/*_ocr_cache.json  (thư mục sách ~65M)
+Cache OCR là PRIMARY DATA của luận văn:
+  · còn cache -> bước extract TÁI LẬP ĐƯỢC, 0 đồng
+  · xoá cache -> gọi lại API ngoài: TỐN TIỀN + KHÔNG tái lập
+Gõ đúng chữ XOA để xác nhận (Enter/khác = huỷ, quay về dùng cache cũ): XOA
+
+Sẽ chạy: setup -> extract(STT2+STT4+STT11) -> build(cả 3 sách) -> remediate -> confusion -> gỡ S3 -> export
+  cache OCR : XOÁ & OCR lại mới
+  export sẽ XOÁ SẠCH thư mục đích rồi ghi lại bản mới nhất:
+    chưa có phán quyết người -> re-dataset/  (bộ ĐEM CHẤM)
+    đã có phán quyết         -> dataset/      (bộ CUỐI CÙNG)
+Enter để bắt đầu, Ctrl-C để huỷ... 
+
+================================================================
+>>> BƯỚC 1/7 · setup — kiểm cấu hình, đường dẫn, tài nguyên (pipeline.step0_setup)
+================================================================
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.step0_setup config/pipeline.yaml
+============================================================
+Step 0: Setup & Validation
+============================================================
+  Books: 3
+    - SachThanhTruyen2
+    - SachThanhTruyen4
+    - SachThanhTruyen11
+  Data dir:   prepared
+  Output dir: dataset
+  Directories created.
+  Validation passed.
+
+
+================================================================
+>>> BƯỚC 2/7 · extract — PDF -> khung -> OCR (cache) -> 9 cột/trang | sách: STT2+STT4+STT11
+================================================================
+[CẢNH BÁO] cache OCR đã bị xoá cho: STT2+STT4+STT11 — lần extract này SẼ GỌI API NGOÀI.
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.step1_extract config/pipeline.yaml SachThanhTruyen2
+
+============================================================
+Step 1: Extract — SachThanhTruyen2
+  PDF: Data/STT2.pdf (320 pages)
+  Output: prepared/SachThanhTruyen2/
+============================================================
+  [cache] page_0012.png exists, skip render
+    [OCR] page_0012.png (pad=12)...
+[OCR] Auto-login OK (token valid 60 min)
+    [OCR] -> 9 cột, 165 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0012_qn_tmp.png: cache HIT (17 lines)
+  page_0012: 9 cols, 168 syllables, 165 OCR chars qn_conf=0.89 (low=1/17)
+  [cache] page_0014.png exists, skip render
+    [OCR] page_0014.png (pad=12)...
+    [OCR] -> 9 cột, 205 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0014_qn_tmp.png: cache HIT (18 lines)
+  page_0014: 9 cols, 205 syllables, 205 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0016.png exists, skip render
+    [OCR] page_0016.png (pad=12)...
+    [OCR] -> 9 cột, 198 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0016_qn_tmp.png: cache HIT (20 lines)
+  page_0016: 9 cols, 200 syllables, 198 OCR chars qn_conf=0.82 (low=5/20)
+  [cache] page_0018.png exists, skip render
+    [OCR] page_0018.png (pad=12)...
+    [OCR] -> 9 cột, 200 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0018_qn_tmp.png: cache HIT (18 lines)
+  page_0018: 9 cols, 200 syllables, 200 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0020.png exists, skip render
+    [OCR] page_0020.png (pad=12)...
+    [OCR] -> 9 cột, 186 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0020_qn_tmp.png: cache HIT (18 lines)
+  page_0020: 9 cols, 190 syllables, 186 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0022.png exists, skip render
+    [OCR] page_0022.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0022_qn_tmp.png: cache HIT (19 lines)
+  page_0022: 9 cols, 197 syllables, 190 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0024.png exists, skip render
+    [OCR] page_0024.png (pad=12)...
+    [OCR] -> 9 cột, 206 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0024_qn_tmp.png: cache HIT (19 lines)
+  page_0024: 9 cols, 208 syllables, 206 OCR chars qn_conf=0.81 (low=5/19)
+  [cache] page_0026.png exists, skip render
+    [OCR] page_0026.png (pad=12)...
+    [OCR] -> 9 cột, 167 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0026_qn_tmp.png: cache HIT (17 lines)
+  page_0026: 9 cols, 172 syllables, 167 OCR chars qn_conf=0.87 (low=2/17)
+  [cache] page_0028.png exists, skip render
+    [OCR] page_0028.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0028_qn_tmp.png: cache HIT (19 lines)
+  page_0028: 9 cols, 206 syllables, 201 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0030.png exists, skip render
+    [OCR] page_0030.png (pad=12)...
+    [OCR] -> 9 cột, 204 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0030_qn_tmp.png: cache HIT (19 lines)
+  page_0030: 9 cols, 201 syllables, 204 OCR chars qn_conf=0.85 (low=3/19)
+  [cache] page_0032.png exists, skip render
+    [OCR] page_0032.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0032_qn_tmp.png: cache HIT (19 lines)
+  page_0032: 9 cols, 198 syllables, 201 OCR chars qn_conf=0.85 (low=3/19)
+  [cache] page_0034.png exists, skip render
+    [OCR] page_0034.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0034_qn_tmp.png: cache HIT (18 lines)
+  page_0034: 9 cols, 191 syllables, 190 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0036.png exists, skip render
+    [OCR] page_0036.png (pad=12)...
+    [OCR] -> 9 cột, 177 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0036_qn_tmp.png: cache HIT (18 lines)
+  page_0036: 9 cols, 177 syllables, 177 OCR chars qn_conf=0.83 (low=3/18)
+  [cache] page_0038.png exists, skip render
+    [OCR] page_0038.png (pad=12)...
+    [OCR] -> 9 cột, 187 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0038_qn_tmp.png: cache HIT (18 lines)
+  page_0038: 9 cols, 186 syllables, 187 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0040.png exists, skip render
+    [OCR] page_0040.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0040_qn_tmp.png: cache HIT (18 lines)
+  page_0040: 9 cols, 196 syllables, 196 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0042.png exists, skip render
+    [OCR] page_0042.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0042_qn_tmp.png: cache HIT (18 lines)
+  page_0042: 9 cols, 195 syllables, 194 OCR chars qn_conf=0.86 (low=3/18)
+  [cache] page_0044.png exists, skip render
+    [OCR] page_0044.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0044_qn_tmp.png: cache HIT (19 lines)
+  page_0044: 9 cols, 194 syllables, 194 OCR chars qn_conf=0.91 (low=0/19)
+  [cache] page_0046.png exists, skip render
+    [OCR] page_0046.png (pad=12)...
+    [OCR] -> 9 cột, 189 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0046_qn_tmp.png: cache HIT (18 lines)
+  page_0046: 9 cols, 188 syllables, 189 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0048.png exists, skip render
+    [OCR] page_0048.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0048_qn_tmp.png: cache HIT (20 lines)
+  page_0048: 9 cols, 194 syllables, 190 OCR chars qn_conf=0.84 (low=4/20)
+  [cache] page_0050.png exists, skip render
+    [OCR] page_0050.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0050_qn_tmp.png: cache HIT (20 lines)
+  page_0050: 9 cols, 199 syllables, 199 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0052.png exists, skip render
+    [OCR] page_0052.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0052_qn_tmp.png: cache HIT (19 lines)
+  page_0052: 9 cols, 203 syllables, 199 OCR chars qn_conf=0.82 (low=4/19)
+  [cache] page_0054.png exists, skip render
+    [OCR] page_0054.png (pad=12)...
+    [OCR] -> 9 cột, 181 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0054_qn_tmp.png: cache HIT (18 lines)
+  page_0054: 9 cols, 179 syllables, 181 OCR chars qn_conf=0.88 (low=1/18)
+  [cache] page_0056.png exists, skip render
+    [OCR] page_0056.png (pad=12)...
+    [OCR] -> 9 cột, 206 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0056_qn_tmp.png: cache HIT (19 lines)
+  page_0056: 9 cols, 208 syllables, 206 OCR chars qn_conf=0.85 (low=3/19)
+  [cache] page_0058.png exists, skip render
+    [OCR] page_0058.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0058_qn_tmp.png: cache HIT (18 lines)
+  page_0058: 9 cols, 199 syllables, 196 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0060.png exists, skip render
+    [OCR] page_0060.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0060_qn_tmp.png: cache HIT (18 lines)
+  page_0060: 9 cols, 199 syllables, 197 OCR chars qn_conf=0.87 (low=2/18)
+  [cache] page_0062.png exists, skip render
+    [OCR] page_0062.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0062_qn_tmp.png: cache HIT (18 lines)
+  page_0062: 9 cols, 188 syllables, 190 OCR chars qn_conf=0.84 (low=4/18)
+  [cache] page_0064.png exists, skip render
+    [OCR] page_0064.png (pad=12)...
+    [OCR] -> 9 cột, 182 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0064_qn_tmp.png: cache HIT (19 lines)
+  page_0064: 9 cols, 184 syllables, 182 OCR chars qn_conf=0.84 (low=4/19)
+  [cache] page_0066.png exists, skip render
+    [OCR] page_0066.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0066_qn_tmp.png: cache HIT (18 lines)
+  page_0066: 9 cols, 190 syllables, 190 OCR chars qn_conf=0.87 (low=2/18)
+  [cache] page_0068.png exists, skip render
+    [OCR] page_0068.png (pad=12)...
+    [OCR] -> 9 cột, 191 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0068_qn_tmp.png: cache HIT (18 lines)
+  page_0068: 9 cols, 190 syllables, 191 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0070.png exists, skip render
+    [OCR] page_0070.png (pad=12)...
+    [OCR] -> 9 cột, 169 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0070_qn_tmp.png: cache HIT (18 lines)
+  page_0070: 9 cols, 170 syllables, 169 OCR chars qn_conf=0.84 (low=4/18)
+  [cache] page_0072.png exists, skip render
+    [OCR] page_0072.png (pad=12)...
+    [OCR] -> 9 cột, 180 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0072_qn_tmp.png: cache HIT (18 lines)
+  page_0072: 9 cols, 180 syllables, 180 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0074.png exists, skip render
+    [OCR] page_0074.png (pad=12)...
+    [OCR] -> 9 cột, 191 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0074_qn_tmp.png: cache HIT (18 lines)
+  page_0074: 9 cols, 190 syllables, 191 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0076.png exists, skip render
+    [OCR] page_0076.png (pad=12)...
+    [OCR] -> 9 cột, 189 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0076_qn_tmp.png: cache HIT (18 lines)
+  page_0076: 9 cols, 189 syllables, 189 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0078.png exists, skip render
+    [OCR] page_0078.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0078_qn_tmp.png: cache HIT (18 lines)
+  page_0078: 9 cols, 194 syllables, 194 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0080.png exists, skip render
+    [OCR] page_0080.png (pad=12)...
+    [OCR] -> 9 cột, 180 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0080_qn_tmp.png: cache HIT (18 lines)
+  page_0080: 9 cols, 186 syllables, 180 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0082.png exists, skip render
+    [OCR] page_0082.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0082_qn_tmp.png: cache HIT (19 lines)
+  page_0082: 9 cols, 205 syllables, 197 OCR chars qn_conf=0.80 (low=6/19)
+  [cache] page_0084.png exists, skip render
+    [OCR] page_0084.png (pad=12)...
+    [OCR] -> 9 cột, 165 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0084_qn_tmp.png: cache HIT (17 lines)
+  page_0084: 9 cols, 169 syllables, 165 OCR chars qn_conf=0.90 (low=1/17)
+  [cache] page_0086.png exists, skip render
+    [OCR] page_0086.png (pad=12)...
+    [OCR] -> 9 cột, 205 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0086_qn_tmp.png: cache HIT (19 lines)
+  page_0086: 9 cols, 205 syllables, 205 OCR chars qn_conf=0.91 (low=1/19)
+  [cache] page_0088.png exists, skip render
+    [OCR] page_0088.png (pad=12)...
+    [OCR] -> 9 cột, 179 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0088_qn_tmp.png: cache HIT (21 lines)
+  page_0088: 9 cols, 184 syllables, 179 OCR chars qn_conf=0.86 (low=3/21)
+  [cache] page_0090.png exists, skip render
+    [OCR] page_0090.png (pad=12)...
+    [OCR] -> 9 cột, 195 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0090_qn_tmp.png: cache HIT (20 lines)
+  page_0090: 9 cols, 197 syllables, 195 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0092.png exists, skip render
+    [OCR] page_0092.png (pad=12)...
+    [OCR] -> 9 cột, 210 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0092_qn_tmp.png: cache HIT (21 lines)
+  page_0092: 9 cols, 212 syllables, 210 OCR chars qn_conf=0.86 (low=3/21)
+  [cache] page_0094.png exists, skip render
+    [OCR] page_0094.png (pad=12)...
+    [OCR] -> 9 cột, 203 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0094_qn_tmp.png: cache HIT (19 lines)
+  page_0094: 9 cols, 205 syllables, 203 OCR chars qn_conf=0.86 (low=3/19)
+  [cache] page_0096.png exists, skip render
+    [OCR] page_0096.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0096_qn_tmp.png: cache HIT (18 lines)
+  page_0096: 9 cols, 198 syllables, 196 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0098.png exists, skip render
+    [OCR] page_0098.png (pad=12)...
+    [OCR] -> 9 cột, 176 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0098_qn_tmp.png: cache HIT (19 lines)
+  page_0098: 9 cols, 180 syllables, 176 OCR chars qn_conf=0.88 (low=1/19)
+  [cache] page_0100.png exists, skip render
+    [OCR] page_0100.png (pad=12)...
+    [OCR] -> 9 cột, 172 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0100_qn_tmp.png: cache HIT (17 lines)
+  page_0100: 9 cols, 173 syllables, 172 OCR chars qn_conf=0.88 (low=2/17)
+  [cache] page_0102.png exists, skip render
+    [OCR] page_0102.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0102_qn_tmp.png: cache HIT (19 lines)
+  page_0102: 9 cols, 191 syllables, 190 OCR chars qn_conf=0.93 (low=0/19)
+  [cache] page_0104.png exists, skip render
+    [OCR] page_0104.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0104_qn_tmp.png: cache HIT (20 lines)
+  page_0104: 9 cols, 194 syllables, 190 OCR chars qn_conf=0.92 (low=0/20)
+  [cache] page_0106.png exists, skip render
+    [OCR] page_0106.png (pad=12)...
+    [OCR] -> 9 cột, 179 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0106_qn_tmp.png: cache HIT (18 lines)
+  page_0106: 9 cols, 180 syllables, 179 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0108.png exists, skip render
+    [OCR] page_0108.png (pad=12)...
+    [OCR] -> 9 cột, 167 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0108_qn_tmp.png: cache HIT (17 lines)
+  page_0108: 9 cols, 167 syllables, 167 OCR chars qn_conf=0.89 (low=1/17)
+  [cache] page_0110.png exists, skip render
+    [OCR] page_0110.png (pad=12)...
+    [OCR] -> 9 cột, 184 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0110_qn_tmp.png: cache HIT (18 lines)
+  page_0110: 9 cols, 185 syllables, 184 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0112.png exists, skip render
+    [OCR] page_0112.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0112_qn_tmp.png: cache HIT (19 lines)
+  page_0112: 9 cols, 195 syllables, 192 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0114.png exists, skip render
+    [OCR] page_0114.png (pad=12)...
+    [OCR] -> 9 cột, 179 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0114_qn_tmp.png: cache HIT (17 lines)
+  page_0114: 9 cols, 180 syllables, 179 OCR chars qn_conf=0.93 (low=0/17)
+  [cache] page_0116.png exists, skip render
+    [OCR] page_0116.png (pad=12)...
+    [OCR] -> 9 cột, 182 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0116_qn_tmp.png: cache HIT (18 lines)
+  page_0116: 9 cols, 185 syllables, 182 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0118.png exists, skip render
+    [OCR] page_0118.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0118_qn_tmp.png: cache HIT (19 lines)
+  page_0118: 9 cols, 200 syllables, 197 OCR chars qn_conf=0.81 (low=5/19)
+  [cache] page_0120.png exists, skip render
+    [OCR] page_0120.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0120_qn_tmp.png: cache HIT (20 lines)
+  page_0120: 9 cols, 194 syllables, 192 OCR chars qn_conf=0.91 (low=1/20)
+  [cache] page_0122.png exists, skip render
+    [OCR] page_0122.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0122_qn_tmp.png: cache HIT (18 lines)
+  page_0122: 9 cols, 195 syllables, 194 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0124.png exists, skip render
+    [OCR] page_0124.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0124_qn_tmp.png: cache HIT (20 lines)
+  page_0124: 9 cols, 195 syllables, 192 OCR chars qn_conf=0.92 (low=0/20)
+  [cache] page_0126.png exists, skip render
+    [OCR] page_0126.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0126_qn_tmp.png: cache HIT (18 lines)
+  page_0126: 9 cols, 199 syllables, 196 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0128.png exists, skip render
+    [OCR] page_0128.png (pad=12)...
+    [OCR] -> 9 cột, 193 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0128_qn_tmp.png: cache HIT (19 lines)
+  page_0128: 9 cols, 193 syllables, 193 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0130.png exists, skip render
+    [OCR] page_0130.png (pad=12)...
+    [OCR] -> 9 cột, 198 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0130_qn_tmp.png: cache HIT (20 lines)
+  page_0130: 9 cols, 200 syllables, 198 OCR chars qn_conf=0.86 (low=3/20)
+  [cache] page_0132.png exists, skip render
+    [OCR] page_0132.png (pad=12)...
+    [OCR] -> 9 cột, 183 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0132_qn_tmp.png: cache HIT (18 lines)
+  page_0132: 9 cols, 184 syllables, 183 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0134.png exists, skip render
+    [OCR] page_0134.png (pad=12)...
+    [OCR] -> 9 cột, 193 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0134_qn_tmp.png: cache HIT (19 lines)
+  page_0134: 9 cols, 192 syllables, 193 OCR chars qn_conf=0.93 (low=0/19)
+  [cache] page_0136.png exists, skip render
+    [OCR] page_0136.png (pad=12)...
+    [OCR] -> 9 cột, 171 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0136_qn_tmp.png: cache HIT (17 lines)
+  page_0136: 9 cols, 172 syllables, 171 OCR chars qn_conf=0.90 (low=1/17)
+  [cache] page_0138.png exists, skip render
+    [OCR] page_0138.png (pad=12)...
+    [OCR] -> 9 cột, 198 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0138_qn_tmp.png: cache HIT (19 lines)
+  page_0138: 9 cols, 195 syllables, 198 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0140.png exists, skip render
+    [OCR] page_0140.png (pad=12)...
+    [OCR] -> 9 cột, 174 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0140_qn_tmp.png: cache HIT (19 lines)
+  page_0140: 9 cols, 171 syllables, 174 OCR chars qn_conf=0.89 (low=1/19)
+  [cache] page_0142.png exists, skip render
+    [OCR] page_0142.png (pad=12)...
+    [OCR] -> 9 cột, 174 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0142_qn_tmp.png: cache HIT (18 lines)
+  page_0142: 9 cols, 175 syllables, 174 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0142_p0132.png exists, skip render
+    [OCR] page_0142_p0132.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0142_p0132_qn_tmp.png: cache HIT (18 lines)
+  page_0142_p0132: 9 cols, 193 syllables, 192 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0146.png exists, skip render
+    [OCR] page_0146.png (pad=12)...
+    [OCR] -> 9 cột, 167 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0146_qn_tmp.png: cache HIT (18 lines)
+  page_0146: 9 cols, 167 syllables, 167 OCR chars qn_conf=0.89 (low=1/18)
+  [cache] page_0148.png exists, skip render
+    [OCR] page_0148.png (pad=12)...
+    [OCR] -> 9 cột, 191 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0148_qn_tmp.png: cache HIT (20 lines)
+  page_0148: 9 cols, 190 syllables, 191 OCR chars qn_conf=0.88 (low=2/20)
+  [cache] page_0150.png exists, skip render
+    [OCR] page_0150.png (pad=12)...
+    [OCR] -> 9 cột, 187 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0150_qn_tmp.png: cache HIT (18 lines)
+  page_0150: 9 cols, 188 syllables, 187 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0152.png exists, skip render
+    [OCR] page_0152.png (pad=12)...
+    [OCR] -> 9 cột, 187 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0152_qn_tmp.png: cache HIT (18 lines)
+  page_0152: 9 cols, 185 syllables, 187 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0154.png exists, skip render
+    [OCR] page_0154.png (pad=12)...
+    [OCR] -> 9 cột, 180 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0154_qn_tmp.png: cache HIT (18 lines)
+  page_0154: 9 cols, 182 syllables, 180 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0156.png exists, skip render
+    [OCR] page_0156.png (pad=12)...
+    [OCR] -> 9 cột, 179 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0156_qn_tmp.png: cache HIT (18 lines)
+  page_0156: 9 cols, 180 syllables, 179 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0158.png exists, skip render
+    [OCR] page_0158.png (pad=12)...
+    [OCR] -> 9 cột, 181 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0158_qn_tmp.png: cache HIT (18 lines)
+  page_0158: 9 cols, 182 syllables, 181 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0160.png exists, skip render
+    [OCR] page_0160.png (pad=12)...
+    [OCR] -> 9 cột, 160 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0160_qn_tmp.png: cache HIT (18 lines)
+  page_0160: 9 cols, 160 syllables, 160 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0162.png exists, skip render
+    [OCR] page_0162.png (pad=12)...
+    [OCR] -> 9 cột, 149 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0162_qn_tmp.png: cache HIT (17 lines)
+  page_0162: 9 cols, 149 syllables, 149 OCR chars qn_conf=0.90 (low=1/17)
+  [cache] page_0164.png exists, skip render
+    [OCR] page_0164.png (pad=12)...
+    [OCR] -> 9 cột, 158 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0164_qn_tmp.png: cache HIT (18 lines)
+  page_0164: 9 cols, 158 syllables, 158 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0166.png exists, skip render
+    [OCR] page_0166.png (pad=12)...
+    [OCR] -> 9 cột, 166 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0166_qn_tmp.png: cache HIT (19 lines)
+  page_0166: 9 cols, 168 syllables, 166 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0168.png exists, skip render
+    [OCR] page_0168.png (pad=12)...
+    [OCR] -> 9 cột, 166 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0168_qn_tmp.png: cache HIT (19 lines)
+  page_0168: 9 cols, 167 syllables, 166 OCR chars qn_conf=0.87 (low=2/19)
+  [cache] page_0170.png exists, skip render
+    [OCR] page_0170.png (pad=12)...
+    [OCR] -> 9 cột, 170 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0170_qn_tmp.png: cache HIT (18 lines)
+  page_0170: 9 cols, 171 syllables, 170 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0172.png exists, skip render
+    [OCR] page_0172.png (pad=12)...
+    [OCR] -> 9 cột, 171 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0172_qn_tmp.png: cache HIT (18 lines)
+  page_0172: 9 cols, 171 syllables, 171 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0174.png exists, skip render
+    [OCR] page_0174.png (pad=12)...
+    [OCR] -> 9 cột, 178 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0174_qn_tmp.png: cache HIT (18 lines)
+  page_0174: 9 cols, 174 syllables, 178 OCR chars qn_conf=0.91 (low=1/18)
+  [cache] page_0176.png exists, skip render
+    [OCR] page_0176.png (pad=12)...
+    [OCR] -> 9 cột, 170 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0176_qn_tmp.png: cache HIT (18 lines)
+  page_0176: 9 cols, 169 syllables, 170 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0178.png exists, skip render
+    [OCR] page_0178.png (pad=12)...
+    [OCR] -> 9 cột, 168 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0178_qn_tmp.png: cache HIT (19 lines)
+  page_0178: 9 cols, 170 syllables, 168 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0180.png exists, skip render
+    [OCR] page_0180.png (pad=12)...
+    [OCR] -> 9 cột, 171 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0180_qn_tmp.png: cache HIT (18 lines)
+  page_0180: 9 cols, 172 syllables, 171 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0182.png exists, skip render
+    [OCR] page_0182.png (pad=12)...
+    [OCR] -> 9 cột, 167 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0182_qn_tmp.png: cache HIT (19 lines)
+  page_0182: 9 cols, 168 syllables, 167 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0184.png exists, skip render
+    [OCR] page_0184.png (pad=12)...
+    [OCR] -> 9 cột, 164 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0184_qn_tmp.png: cache HIT (19 lines)
+  page_0184: 9 cols, 164 syllables, 164 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0186.png exists, skip render
+    [OCR] page_0186.png (pad=12)...
+    [OCR] -> 9 cột, 168 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0186_qn_tmp.png: cache HIT (19 lines)
+  page_0186: 9 cols, 167 syllables, 168 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0188.png exists, skip render
+    [OCR] page_0188.png (pad=12)...
+    [OCR] -> 9 cột, 169 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0188_qn_tmp.png: cache HIT (19 lines)
+  page_0188: 9 cols, 170 syllables, 169 OCR chars qn_conf=0.84 (low=4/19)
+  [cache] page_0190.png exists, skip render
+    [OCR] page_0190.png (pad=12)...
+    [OCR] -> 9 cột, 167 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0190_qn_tmp.png: cache HIT (19 lines)
+  page_0190: 9 cols, 165 syllables, 167 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0192.png exists, skip render
+    [OCR] page_0192.png (pad=12)...
+    [OCR] -> 9 cột, 170 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0192_qn_tmp.png: cache HIT (19 lines)
+  page_0192: 9 cols, 169 syllables, 170 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0194.png exists, skip render
+    [OCR] page_0194.png (pad=12)...
+    [OCR] -> 9 cột, 162 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0194_qn_tmp.png: cache HIT (18 lines)
+  page_0194: 9 cols, 166 syllables, 162 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0196.png exists, skip render
+    [OCR] page_0196.png (pad=12)...
+    [OCR] -> 9 cột, 150 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0196_qn_tmp.png: cache HIT (18 lines)
+  page_0196: 9 cols, 150 syllables, 150 OCR chars qn_conf=0.87 (low=2/18)
+  [cache] page_0198.png exists, skip render
+    [OCR] page_0198.png (pad=12)...
+    [OCR] -> 9 cột, 169 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0198_qn_tmp.png: cache HIT (19 lines)
+  page_0198: 9 cols, 168 syllables, 169 OCR chars qn_conf=0.91 (low=0/19)
+  [cache] page_0200.png exists, skip render
+    [OCR] page_0200.png (pad=12)...
+    [OCR] -> 9 cột, 176 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0200_qn_tmp.png: cache HIT (19 lines)
+  page_0200: 9 cols, 178 syllables, 176 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0202.png exists, skip render
+    [OCR] page_0202.png (pad=12)...
+    [OCR] -> 9 cột, 169 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0202_qn_tmp.png: cache HIT (18 lines)
+  page_0202: 9 cols, 172 syllables, 169 OCR chars qn_conf=0.86 (low=3/18)
+  [cache] page_0204.png exists, skip render
+    [OCR] page_0204.png (pad=12)...
+    [OCR] -> 9 cột, 159 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0204_qn_tmp.png: cache HIT (19 lines)
+  page_0204: 9 cols, 160 syllables, 159 OCR chars qn_conf=0.87 (low=2/19)
+  [cache] page_0206.png exists, skip render
+    [OCR] page_0206.png (pad=12)...
+    [OCR] -> 9 cột, 175 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0206_qn_tmp.png: cache HIT (18 lines)
+  page_0206: 9 cols, 176 syllables, 175 OCR chars qn_conf=0.86 (low=3/18)
+  [cache] page_0208.png exists, skip render
+    [OCR] page_0208.png (pad=12)...
+    [OCR] -> 9 cột, 166 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0208_qn_tmp.png: cache HIT (19 lines)
+  page_0208: 9 cols, 164 syllables, 166 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0210.png exists, skip render
+    [OCR] page_0210.png (pad=12)...
+    [OCR] -> 9 cột, 171 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0210_qn_tmp.png: cache HIT (19 lines)
+  page_0210: 9 cols, 163 syllables, 171 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0212.png exists, skip render
+    [OCR] page_0212.png (pad=12)...
+    [OCR] -> 9 cột, 157 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0212_qn_tmp.png: cache HIT (16 lines)
+  page_0212: 9 cols, 159 syllables, 157 OCR chars qn_conf=0.93 (low=0/16)
+  [cache] page_0214.png exists, skip render
+    [OCR] page_0214.png (pad=12)...
+    [OCR] -> 9 cột, 187 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0214_qn_tmp.png: cache HIT (18 lines)
+  page_0214: 9 cols, 186 syllables, 187 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0216.png exists, skip render
+    [OCR] page_0216.png (pad=12)...
+    [OCR] -> 9 cột, 177 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0216_qn_tmp.png: cache HIT (18 lines)
+  page_0216: 9 cols, 179 syllables, 177 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0218.png exists, skip render
+    [OCR] page_0218.png (pad=12)...
+    [OCR] -> 9 cột, 149 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0218_qn_tmp.png: cache HIT (17 lines)
+  page_0218: 9 cols, 150 syllables, 149 OCR chars qn_conf=0.92 (low=0/17)
+  [cache] page_0220.png exists, skip render
+    [OCR] page_0220.png (pad=12)...
+    [OCR] -> 9 cột, 175 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0220_qn_tmp.png: cache HIT (18 lines)
+  page_0220: 9 cols, 177 syllables, 175 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0222.png exists, skip render
+    [OCR] page_0222.png (pad=12)...
+    [OCR] -> 9 cột, 175 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0222_qn_tmp.png: cache HIT (18 lines)
+  page_0222: 9 cols, 174 syllables, 175 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0224.png exists, skip render
+    [OCR] page_0224.png (pad=12)...
+    [OCR] -> 9 cột, 167 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0224_qn_tmp.png: cache HIT (18 lines)
+  page_0224: 9 cols, 167 syllables, 167 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0226.png exists, skip render
+    [OCR] page_0226.png (pad=12)...
+    [OCR] -> 9 cột, 178 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0226_qn_tmp.png: cache HIT (19 lines)
+  page_0226: 9 cols, 184 syllables, 178 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0228.png exists, skip render
+    [OCR] page_0228.png (pad=12)...
+    [OCR] -> 9 cột, 167 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0228_qn_tmp.png: cache HIT (18 lines)
+  page_0228: 9 cols, 169 syllables, 167 OCR chars qn_conf=0.88 (low=1/18)
+  [cache] page_0230.png exists, skip render
+    [OCR] page_0230.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0230_qn_tmp.png: cache HIT (18 lines)
+  page_0230: 9 cols, 194 syllables, 194 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0232.png exists, skip render
+    [OCR] page_0232.png (pad=12)...
+    [OCR] -> 9 cột, 180 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0232_qn_tmp.png: cache HIT (18 lines)
+  page_0232: 9 cols, 179 syllables, 180 OCR chars qn_conf=0.91 (low=1/18)
+  [cache] page_0234.png exists, skip render
+    [OCR] page_0234.png (pad=12)...
+    [OCR] -> 9 cột, 176 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0234_qn_tmp.png: cache HIT (18 lines)
+  page_0234: 9 cols, 176 syllables, 176 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0236.png exists, skip render
+    [OCR] page_0236.png (pad=12)...
+    [OCR] -> 9 cột, 172 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0236_qn_tmp.png: cache HIT (18 lines)
+  page_0236: 9 cols, 174 syllables, 172 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0238.png exists, skip render
+    [OCR] page_0238.png (pad=12)...
+    [OCR] -> 9 cột, 173 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0238_qn_tmp.png: cache HIT (18 lines)
+  page_0238: 9 cols, 174 syllables, 173 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0240.png exists, skip render
+    [OCR] page_0240.png (pad=12)...
+    [OCR] -> 9 cột, 168 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0240_qn_tmp.png: cache HIT (18 lines)
+  page_0240: 9 cols, 169 syllables, 168 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0242.png exists, skip render
+    [OCR] page_0242.png (pad=12)...
+    [OCR] -> 9 cột, 164 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0242_qn_tmp.png: cache HIT (18 lines)
+  page_0242: 9 cols, 164 syllables, 164 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0244.png exists, skip render
+    [OCR] page_0244.png (pad=12)...
+    [OCR] -> 9 cột, 180 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0244_qn_tmp.png: cache HIT (18 lines)
+  page_0244: 9 cols, 182 syllables, 180 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0246.png exists, skip render
+    [OCR] page_0246.png (pad=12)...
+    [OCR] -> 9 cột, 181 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0246_qn_tmp.png: cache HIT (18 lines)
+  page_0246: 9 cols, 187 syllables, 181 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0248.png exists, skip render
+    [OCR] page_0248.png (pad=12)...
+    [OCR] -> 9 cột, 158 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0248_qn_tmp.png: cache HIT (17 lines)
+  page_0248: 9 cols, 158 syllables, 158 OCR chars qn_conf=0.89 (low=1/17)
+  [cache] page_0250.png exists, skip render
+    [OCR] page_0250.png (pad=12)...
+    [OCR] -> 9 cột, 170 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0250_qn_tmp.png: cache HIT (18 lines)
+  page_0250: 9 cols, 170 syllables, 170 OCR chars qn_conf=0.89 (low=1/18)
+  [cache] page_0252.png exists, skip render
+    [OCR] page_0252.png (pad=12)...
+    [OCR] -> 9 cột, 151 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0252_qn_tmp.png: cache HIT (17 lines)
+  page_0252: 9 cols, 153 syllables, 151 OCR chars qn_conf=0.90 (low=1/17)
+  [cache] page_0254.png exists, skip render
+    [OCR] page_0254.png (pad=12)...
+    [OCR] -> 9 cột, 162 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0254_qn_tmp.png: cache HIT (18 lines)
+  page_0254: 9 cols, 163 syllables, 162 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0256.png exists, skip render
+    [OCR] page_0256.png (pad=12)...
+    [OCR] -> 9 cột, 167 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0256_qn_tmp.png: cache HIT (18 lines)
+  page_0256: 9 cols, 168 syllables, 167 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0258.png exists, skip render
+    [OCR] page_0258.png (pad=12)...
+    [OCR] -> 9 cột, 170 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0258_qn_tmp.png: cache HIT (18 lines)
+  page_0258: 9 cols, 171 syllables, 170 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0260.png exists, skip render
+    [OCR] page_0260.png (pad=12)...
+    [OCR] -> 9 cột, 171 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0260_qn_tmp.png: cache HIT (18 lines)
+  page_0260: 9 cols, 173 syllables, 171 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0262.png exists, skip render
+    [OCR] page_0262.png (pad=12)...
+    [OCR] -> 9 cột, 176 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0262_qn_tmp.png: cache HIT (19 lines)
+  page_0262: 9 cols, 178 syllables, 176 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0264.png exists, skip render
+    [OCR] page_0264.png (pad=12)...
+    [OCR] -> 9 cột, 177 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0264_qn_tmp.png: cache HIT (18 lines)
+  page_0264: 9 cols, 177 syllables, 177 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0266.png exists, skip render
+    [OCR] page_0266.png (pad=12)...
+    [OCR] -> 9 cột, 173 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0266_qn_tmp.png: cache HIT (18 lines)
+  page_0266: 9 cols, 173 syllables, 173 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0268.png exists, skip render
+    [OCR] page_0268.png (pad=12)...
+    [OCR] -> 9 cột, 178 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0268_qn_tmp.png: cache HIT (18 lines)
+  page_0268: 9 cols, 175 syllables, 178 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0270.png exists, skip render
+    [OCR] page_0270.png (pad=12)...
+    [OCR] -> 9 cột, 200 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0270_qn_tmp.png: cache HIT (18 lines)
+  page_0270: 9 cols, 201 syllables, 200 OCR chars qn_conf=0.91 (low=1/18)
+  [cache] page_0272.png exists, skip render
+    [OCR] page_0272.png (pad=12)...
+    [OCR] -> 9 cột, 179 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0272_qn_tmp.png: cache HIT (18 lines)
+  page_0272: 9 cols, 179 syllables, 179 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0274.png exists, skip render
+    [OCR] page_0274.png (pad=12)...
+    [OCR] -> 9 cột, 183 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0274_qn_tmp.png: cache HIT (18 lines)
+  page_0274: 9 cols, 184 syllables, 183 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0276.png exists, skip render
+    [OCR] page_0276.png (pad=12)...
+    [OCR] -> 9 cột, 171 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0276_qn_tmp.png: cache HIT (18 lines)
+  page_0276: 9 cols, 172 syllables, 171 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0278.png exists, skip render
+    [OCR] page_0278.png (pad=12)...
+    [OCR] -> 9 cột, 183 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0278_qn_tmp.png: cache HIT (19 lines)
+  page_0278: 9 cols, 183 syllables, 183 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0280.png exists, skip render
+    [OCR] page_0280.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0280_qn_tmp.png: cache HIT (19 lines)
+  page_0280: 9 cols, 199 syllables, 197 OCR chars qn_conf=0.93 (low=0/19)
+  [cache] page_0282.png exists, skip render
+    [OCR] page_0282.png (pad=12)...
+    [OCR] -> 9 cột, 180 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0282_qn_tmp.png: cache HIT (19 lines)
+  page_0282: 9 cols, 181 syllables, 180 OCR chars qn_conf=0.91 (low=1/19)
+  [cache] page_0284.png exists, skip render
+    [OCR] page_0284.png (pad=12)...
+    [OCR] -> 9 cột, 168 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0284_qn_tmp.png: cache HIT (19 lines)
+  page_0284: 9 cols, 169 syllables, 168 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0286.png exists, skip render
+    [OCR] page_0286.png (pad=12)...
+    [OCR] -> 9 cột, 175 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0286_qn_tmp.png: cache HIT (18 lines)
+  page_0286: 9 cols, 176 syllables, 175 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0288.png exists, skip render
+    [OCR] page_0288.png (pad=12)...
+    [OCR] -> 9 cột, 181 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0288_qn_tmp.png: cache HIT (19 lines)
+  page_0288: 9 cols, 181 syllables, 181 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0290.png exists, skip render
+    [OCR] page_0290.png (pad=12)...
+    [OCR] -> 9 cột, 168 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0290_qn_tmp.png: cache HIT (19 lines)
+  page_0290: 9 cols, 168 syllables, 168 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0292.png exists, skip render
+    [OCR] page_0292.png (pad=12)...
+    [OCR] -> 9 cột, 167 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0292_qn_tmp.png: cache HIT (19 lines)
+  page_0292: 9 cols, 169 syllables, 167 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0294.png exists, skip render
+    [OCR] page_0294.png (pad=12)...
+    [OCR] -> 9 cột, 183 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0294_qn_tmp.png: cache HIT (18 lines)
+  page_0294: 9 cols, 184 syllables, 183 OCR chars qn_conf=0.87 (low=2/18)
+  [cache] page_0296.png exists, skip render
+    [OCR] page_0296.png (pad=12)...
+    [OCR] -> 9 cột, 163 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0296_qn_tmp.png: cache HIT (18 lines)
+  page_0296: 9 cols, 162 syllables, 163 OCR chars qn_conf=0.86 (low=3/18)
+  [cache] page_0298.png exists, skip render
+    [OCR] page_0298.png (pad=12)...
+    [OCR] -> 9 cột, 171 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0298_qn_tmp.png: cache HIT (19 lines)
+  page_0298: 9 cols, 173 syllables, 171 OCR chars qn_conf=0.87 (low=2/19)
+  [cache] page_0300.png exists, skip render
+    [OCR] page_0300.png (pad=12)...
+    [OCR] -> 9 cột, 173 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0300_qn_tmp.png: cache HIT (19 lines)
+  page_0300: 9 cols, 174 syllables, 173 OCR chars qn_conf=0.84 (low=4/19)
+  [cache] page_0302.png exists, skip render
+    [OCR] page_0302.png (pad=12)...
+    [OCR] -> 9 cột, 174 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0302_qn_tmp.png: cache HIT (19 lines)
+  page_0302: 9 cols, 173 syllables, 174 OCR chars qn_conf=0.93 (low=0/19)
+  [cache] page_0304.png exists, skip render
+    [OCR] page_0304.png (pad=12)...
+    [OCR] -> 9 cột, 182 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0304_qn_tmp.png: cache HIT (18 lines)
+  page_0304: 9 cols, 182 syllables, 182 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0306.png exists, skip render
+    [OCR] page_0306.png (pad=12)...
+    [OCR] -> 9 cột, 173 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0306_qn_tmp.png: cache HIT (20 lines)
+  page_0306: 9 cols, 178 syllables, 173 OCR chars qn_conf=0.89 (low=2/20)
+  [cache] page_0308.png exists, skip render
+    [OCR] page_0308.png (pad=12)...
+    [OCR] 8 cột != 9 -> retry pad=30
+    [OCR] -> 9 cột, 161 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0308_qn_tmp.png: cache HIT (17 lines)
+  page_0308: 9 cols, 160 syllables, 161 OCR chars qn_conf=0.92 (low=0/17)
+  [cache] page_0310.png exists, skip render
+    [OCR] page_0310.png (pad=12)...
+    [OCR] -> 9 cột, 152 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0310_qn_tmp.png: cache HIT (16 lines)
+  page_0310: 9 cols, 154 syllables, 152 OCR chars qn_conf=0.92 (low=0/16)
+  [cache] page_0312.png exists, skip render
+    [OCR] page_0312.png (pad=12)...
+    [OCR] -> 9 cột, 191 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0312_qn_tmp.png: cache HIT (19 lines)
+  page_0312: 9 cols, 193 syllables, 191 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0314.png exists, skip render
+    [OCR] page_0314.png (pad=12)...
+    [OCR] -> 9 cột, 183 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0314_qn_tmp.png: cache HIT (19 lines)
+  page_0314: 9 cols, 184 syllables, 183 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0316.png exists, skip render
+    [OCR] page_0316.png (pad=12)...
+    [OCR] -> 9 cột, 152 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0316_qn_tmp.png: cache HIT (16 lines)
+  page_0316: 9 cols, 153 syllables, 152 OCR chars qn_conf=0.92 (low=0/16)
+  [cache] page_0318.png exists, skip render
+    [OCR] page_0318.png (pad=12)...
+    [OCR] -> 9 cột, 176 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0318_qn_tmp.png: cache HIT (18 lines)
+  page_0318: 9 cols, 177 syllables, 176 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0320.png exists, skip render
+    [OCR] page_0320.png (pad=12)...
+    [OCR] -> 9 cột, 172 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0320_qn_tmp.png: cache HIT (18 lines)
+  page_0320: 9 cols, 174 syllables, 172 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0322.png exists, skip render
+    [OCR] page_0322.png (pad=12)...
+    [OCR] -> 9 cột, 174 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0322_qn_tmp.png: cache HIT (18 lines)
+  page_0322: 9 cols, 175 syllables, 174 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0324.png exists, skip render
+    [OCR] page_0324.png (pad=12)...
+    [OCR] -> 9 cột, 177 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0324_qn_tmp.png: cache HIT (18 lines)
+  page_0324: 9 cols, 178 syllables, 177 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0326.png exists, skip render
+    [OCR] page_0326.png (pad=12)...
+    [OCR] -> 9 cột, 177 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0326_qn_tmp.png: cache HIT (18 lines)
+  page_0326: 9 cols, 176 syllables, 177 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0328.png exists, skip render
+    [OCR] page_0328.png (pad=12)...
+    [OCR] -> 9 cột, 174 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0328_qn_tmp.png: cache HIT (19 lines)
+  page_0328: 9 cols, 175 syllables, 174 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0330.png exists, skip render
+    [OCR] page_0330.png (pad=12)...
+    [OCR] -> 9 cột, 166 chữ
+  [QN_OCR] prepared/SachThanhTruyen2/transcriptions/page_0330_qn_tmp.png: cache HIT (17 lines)
+  page_0330: 9 cols, 167 syllables, 166 OCR chars qn_conf=0.92 (low=0/17)
+
+  🔴 1 trang trùng SỐ TRANG IN — đã tách tên để KHÔNG mất:
+     page_0142  (trang PDF 132)  ->  page_0142_p0132
+
+  Total: 160 pages (160 tên trang duy nhất), 28837 syllables
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.step1_extract config/pipeline.yaml SachThanhTruyen4
+
+============================================================
+Step 1: Extract — SachThanhTruyen4
+  PDF: Data/STT4.pdf (294 pages)
+  Output: prepared/SachThanhTruyen4/
+============================================================
+  [cache] page_0012.png exists, skip render
+    [OCR] page_0012.png (pad=12)...
+[OCR] Auto-login OK (token valid 60 min)
+    [OCR] -> 9 cột, 189 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0012_qn_tmp.png: cache HIT (18 lines)
+  page_0012: 9 cols, 190 syllables, 189 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0014.png exists, skip render
+    [OCR] page_0014.png (pad=12)...
+    [OCR] -> 9 cột, 204 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0014_qn_tmp.png: cache HIT (20 lines)
+  page_0014: 9 cols, 206 syllables, 204 OCR chars qn_conf=0.92 (low=0/20)
+  [cache] page_0016.png exists, skip render
+    [OCR] page_0016.png (pad=12)...
+    [OCR] -> 9 cột, 204 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0016_qn_tmp.png: cache HIT (18 lines)
+  page_0016: 9 cols, 205 syllables, 204 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0018.png exists, skip render
+    [OCR] page_0018.png (pad=12)...
+    [OCR] -> 9 cột, 166 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0018_qn_tmp.png: cache HIT (16 lines)
+  page_0018: 9 cols, 164 syllables, 166 OCR chars qn_conf=0.90 (low=1/16)
+  [cache] page_0020.png exists, skip render
+    [OCR] page_0020.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0020_qn_tmp.png: cache HIT (18 lines)
+  page_0020: 9 cols, 198 syllables, 199 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0022.png exists, skip render
+    [OCR] page_0022.png (pad=12)...
+    [OCR] -> 9 cột, 208 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0022_qn_tmp.png: cache HIT (18 lines)
+  page_0022: 9 cols, 207 syllables, 208 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0024.png exists, skip render
+    [OCR] page_0024.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0024_qn_tmp.png: cache HIT (19 lines)
+  page_0024: 9 cols, 197 syllables, 196 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0026.png exists, skip render
+    [OCR] page_0026.png (pad=12)...
+    [OCR] -> 9 cột, 195 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0026_qn_tmp.png: cache HIT (19 lines)
+  page_0026: 9 cols, 194 syllables, 195 OCR chars qn_conf=0.89 (low=2/19)
+  [cache] page_0028.png exists, skip render
+    [OCR] page_0028.png (pad=12)...
+    [OCR] -> 9 cột, 163 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0028_qn_tmp.png: cache HIT (16 lines)
+  page_0028: 9 cols, 163 syllables, 163 OCR chars qn_conf=0.92 (low=0/16)
+  [cache] page_0030.png exists, skip render
+    [OCR] page_0030.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0030_qn_tmp.png: cache HIT (19 lines)
+  page_0030: 9 cols, 204 syllables, 201 OCR chars qn_conf=0.86 (low=3/19)
+  [cache] page_0032.png exists, skip render
+    [OCR] page_0032.png (pad=12)...
+    [OCR] -> 9 cột, 179 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0032_qn_tmp.png: cache HIT (18 lines)
+  page_0032: 9 cols, 180 syllables, 179 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0034.png exists, skip render
+    [OCR] page_0034.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0034_qn_tmp.png: cache HIT (18 lines)
+  page_0034: 9 cols, 200 syllables, 197 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0036.png exists, skip render
+    [OCR] page_0036.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0036_qn_tmp.png: cache HIT (18 lines)
+  page_0036: 9 cols, 194 syllables, 196 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0038.png exists, skip render
+    [OCR] page_0038.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0038_qn_tmp.png: cache HIT (18 lines)
+  page_0038: 9 cols, 201 syllables, 201 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0040.png exists, skip render
+    [OCR] page_0040.png (pad=12)...
+    [OCR] -> 9 cột, 195 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0040_qn_tmp.png: cache HIT (18 lines)
+  page_0040: 9 cols, 197 syllables, 195 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0042.png exists, skip render
+    [OCR] page_0042.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0042_qn_tmp.png: cache HIT (18 lines)
+  page_0042: 9 cols, 195 syllables, 194 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0044.png exists, skip render
+    [OCR] page_0044.png (pad=12)...
+    [OCR] -> 9 cột, 203 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0044_qn_tmp.png: cache HIT (18 lines)
+  page_0044: 9 cols, 203 syllables, 203 OCR chars qn_conf=0.86 (low=3/18)
+  [cache] page_0046.png exists, skip render
+    [OCR] page_0046.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0046_qn_tmp.png: cache HIT (18 lines)
+  page_0046: 9 cols, 197 syllables, 197 OCR chars qn_conf=0.86 (low=3/18)
+  [cache] page_0048.png exists, skip render
+    [OCR] page_0048.png (pad=12)...
+    [OCR] -> 9 cột, 186 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0048_qn_tmp.png: cache HIT (18 lines)
+  page_0048: 9 cols, 190 syllables, 186 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0050.png exists, skip render
+    [OCR] page_0050.png (pad=12)...
+    [OCR] -> 9 cột, 178 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0050_qn_tmp.png: cache HIT (18 lines)
+  page_0050: 9 cols, 171 syllables, 178 OCR chars qn_conf=0.84 (low=4/18)
+  [cache] page_0052.png exists, skip render
+    [OCR] page_0052.png (pad=12)...
+
+
+
+ [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0182_qn_tmp.png: cache HIT (20 lines)
+  page_0182: 9 cols, 213 syllables, 212 OCR chars qn_conf=0.92 (low=0/20)
+  [cache] page_0184.png exists, skip render
+    [OCR] page_0184.png (pad=12)...
+    [OCR] -> 9 cột, 210 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0184_qn_tmp.png: cache HIT (18 lines)
+  page_0184: 9 cols, 209 syllables, 210 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0186.png exists, skip render
+    [OCR] page_0186.png (pad=12)...
+    [OCR] -> 9 cột, 178 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0186_qn_tmp.png: cache HIT (17 lines)
+  page_0186: 9 cols, 178 syllables, 178 OCR chars qn_conf=0.87 (low=2/17)
+  [cache] page_0188.png exists, skip render
+    [OCR] page_0188.png (pad=12)...
+    [OCR] -> 9 cột, 198 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0188_qn_tmp.png: cache HIT (20 lines)
+  page_0188: 9 cols, 198 syllables, 198 OCR chars qn_conf=0.92 (low=0/20)
+  [cache] page_0190.png exists, skip render
+    [OCR] page_0190.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0190_qn_tmp.png: cache HIT (19 lines)
+  page_0190: 9 cols, 194 syllables, 197 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0192.png exists, skip render
+    [OCR] page_0192.png (pad=12)...
+    [OCR] -> 9 cột, 165 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0192_qn_tmp.png: cache HIT (18 lines)
+  page_0192: 9 cols, 165 syllables, 165 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0194.png exists, skip render
+    [OCR] page_0194.png (pad=12)...
+    [OCR] -> 9 cột, 179 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0194_qn_tmp.png: cache HIT (18 lines)
+  page_0194: 9 cols, 180 syllables, 179 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0196.png exists, skip render
+    [OCR] page_0196.png (pad=12)...
+    [OCR] -> 9 cột, 184 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0196_qn_tmp.png: cache HIT (18 lines)
+  page_0196: 9 cols, 185 syllables, 184 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0198.png exists, skip render
+    [OCR] page_0198.png (pad=12)...
+    [OCR] 8 cột != 9 -> retry pad=30
+    [OCR] -> 9 cột, 172 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0198_qn_tmp.png: cache HIT (18 lines)
+  page_0198: 9 cols, 172 syllables, 172 OCR chars qn_conf=0.91 (low=0/18)
+  [cache] page_0200.png exists, skip render
+    [OCR] page_0200.png (pad=12)...
+    [OCR] -> 9 cột, 180 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0200_qn_tmp.png: cache HIT (16 lines)
+  page_0200: 9 cols, 181 syllables, 180 OCR chars qn_conf=0.92 (low=0/16)
+  [cache] page_0202.png exists, skip render
+    [OCR] page_0202.png (pad=12)...
+    [OCR] -> 9 cột, 181 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0202_qn_tmp.png: cache HIT (17 lines)
+  page_0202: 9 cols, 179 syllables, 181 OCR chars qn_conf=0.93 (low=0/17)
+  [cache] page_0204.png exists, skip render
+    [OCR] page_0204.png (pad=12)...
+    [OCR] -> 9 cột, 205 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0204_qn_tmp.png: cache HIT (18 lines)
+  page_0204: 9 cols, 206 syllables, 205 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0206.png exists, skip render
+    [OCR] page_0206.png (pad=12)...
+    [OCR] -> 9 cột, 179 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0206_qn_tmp.png: cache HIT (17 lines)
+  page_0206: 9 cols, 179 syllables, 179 OCR chars qn_conf=0.90 (low=1/17)
+  [cache] page_0208.png exists, skip render
+    [OCR] page_0208.png (pad=12)...
+    [OCR] -> 9 cột, 183 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0208_qn_tmp.png: cache HIT (18 lines)
+  page_0208: 9 cols, 184 syllables, 183 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0210.png exists, skip render
+    [OCR] page_0210.png (pad=12)...
+    [OCR] -> 9 cột, 195 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0210_qn_tmp.png: cache HIT (18 lines)
+  page_0210: 9 cols, 194 syllables, 195 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0212.png exists, skip render
+    [OCR] page_0212.png (pad=12)...
+    [OCR] -> 9 cột, 179 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0212_qn_tmp.png: cache HIT (16 lines)
+  page_0212: 9 cols, 179 syllables, 179 OCR chars qn_conf=0.93 (low=0/16)
+  [cache] page_0214.png exists, skip render
+    [OCR] page_0214.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0214_qn_tmp.png: cache HIT (18 lines)
+  page_0214: 9 cols, 194 syllables, 194 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0216.png exists, skip render
+    [OCR] page_0216.png (pad=12)...
+    [OCR] -> 9 cột, 188 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0216_qn_tmp.png: cache HIT (18 lines)
+  page_0216: 9 cols, 190 syllables, 188 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0218.png exists, skip render
+    [OCR] page_0218.png (pad=12)...
+    [OCR] -> 9 cột, 178 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0218_qn_tmp.png: cache HIT (19 lines)
+  page_0218: 9 cols, 180 syllables, 178 OCR chars qn_conf=0.91 (low=1/19)
+  [cache] page_0220.png exists, skip render
+    [OCR] page_0220.png (pad=12)...
+    [OCR] -> 9 cột, 187 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0220_qn_tmp.png: cache HIT (18 lines)
+  page_0220: 9 cols, 185 syllables, 187 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0222.png exists, skip render
+    [OCR] page_0222.png (pad=12)...
+    [OCR] -> 9 cột, 186 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0222_qn_tmp.png: cache HIT (18 lines)
+  page_0222: 9 cols, 187 syllables, 186 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0224.png exists, skip render
+    [OCR] page_0224.png (pad=12)...
+    [OCR] -> 9 cột, 189 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0224_qn_tmp.png: cache HIT (18 lines)
+  page_0224: 9 cols, 188 syllables, 189 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0226.png exists, skip render
+    [OCR] page_0226.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0226_qn_tmp.png: cache HIT (18 lines)
+  page_0226: 9 cols, 194 syllables, 194 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0228.png exists, skip render
+    [OCR] page_0228.png (pad=12)...
+    [OCR] -> 9 cột, 191 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0228_qn_tmp.png: cache HIT (19 lines)
+  page_0228: 9 cols, 193 syllables, 191 OCR chars qn_conf=0.91 (low=0/19)
+  [cache] page_0230.png exists, skip render
+    [OCR] page_0230.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0230_qn_tmp.png: cache HIT (18 lines)
+  page_0230: 9 cols, 192 syllables, 190 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0232.png exists, skip render
+    [OCR] page_0232.png (pad=12)...
+    [OCR] -> 9 cột, 191 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0232_qn_tmp.png: cache HIT (18 lines)
+  page_0232: 9 cols, 193 syllables, 191 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0234.png exists, skip render
+    [OCR] page_0234.png (pad=12)...
+    [OCR] -> 9 cột, 182 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0234_qn_tmp.png: cache HIT (17 lines)
+  page_0234: 9 cols, 183 syllables, 182 OCR chars qn_conf=0.92 (low=0/17)
+  [cache] page_0236.png exists, skip render
+    [OCR] page_0236.png (pad=12)...
+    [OCR] -> 9 cột, 189 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0236_qn_tmp.png: cache HIT (18 lines)
+  page_0236: 9 cols, 190 syllables, 189 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0238.png exists, skip render
+    [OCR] page_0238.png (pad=12)...
+    [OCR] -> 9 cột, 195 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0238_qn_tmp.png: cache HIT (18 lines)
+  page_0238: 9 cols, 196 syllables, 195 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0240.png exists, skip render
+    [OCR] page_0240.png (pad=12)...
+    [OCR] -> 9 cột, 204 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0240_qn_tmp.png: cache HIT (17 lines)
+  page_0240: 9 cols, 193 syllables, 204 OCR chars qn_conf=0.88 (low=2/17)
+  [cache] page_0242.png exists, skip render
+    [OCR] page_0242.png (pad=12)...
+    [OCR] -> 9 cột, 185 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0242_qn_tmp.png: cache HIT (17 lines)
+  page_0242: 9 cols, 186 syllables, 185 OCR chars qn_conf=0.88 (low=2/17)
+  [cache] page_0244.png exists, skip render
+    [OCR] page_0244.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0244_qn_tmp.png: cache HIT (18 lines)
+  page_0244: 9 cols, 200 syllables, 199 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0246.png exists, skip render
+    [OCR] page_0246.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0246_qn_tmp.png: cache HIT (18 lines)
+  page_0246: 9 cols, 191 syllables, 192 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0248.png exists, skip render
+    [OCR] page_0248.png (pad=12)...
+    [OCR] -> 9 cột, 193 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0248_qn_tmp.png: cache HIT (20 lines)
+  page_0248: 9 cols, 195 syllables, 193 OCR chars qn_conf=0.91 (low=1/20)
+  [cache] page_0250.png exists, skip render
+    [OCR] page_0250.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0250_qn_tmp.png: cache HIT (17 lines)
+  page_0250: 9 cols, 198 syllables, 194 OCR chars qn_conf=0.90 (low=1/17)
+  [cache] page_0252.png exists, skip render
+    [OCR] page_0252.png (pad=12)...
+    [OCR] -> 9 cột, 188 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0252_qn_tmp.png: cache HIT (17 lines)
+  page_0252: 9 cols, 187 syllables, 188 OCR chars qn_conf=0.90 (low=1/17)
+  [cache] page_0254.png exists, skip render
+    [OCR] page_0254.png (pad=12)...
+    [OCR] -> 9 cột, 193 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0254_qn_tmp.png: cache HIT (17 lines)
+  page_0254: 9 cols, 193 syllables, 193 OCR chars qn_conf=0.92 (low=0/17)
+  [cache] page_0256.png exists, skip render
+    [OCR] page_0256.png (pad=12)...
+    [OCR] -> 9 cột, 189 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0256_qn_tmp.png: cache HIT (17 lines)
+  page_0256: 9 cols, 190 syllables, 189 OCR chars qn_conf=0.90 (low=1/17)
+  [cache] page_0258.png exists, skip render
+    [OCR] page_0258.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0258_qn_tmp.png: cache HIT (19 lines)
+  page_0258: 9 cols, 194 syllables, 194 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0260.png exists, skip render
+    [OCR] page_0260.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0260_qn_tmp.png: cache HIT (19 lines)
+  page_0260: 9 cols, 205 syllables, 201 OCR chars qn_conf=0.93 (low=0/19)
+  [cache] page_0262.png exists, skip render
+    [OCR] page_0262.png (pad=12)...
+    [OCR] -> 9 cột, 177 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0262_qn_tmp.png: cache HIT (17 lines)
+  page_0262: 9 cols, 163 syllables, 177 OCR chars qn_conf=0.90 (low=1/17)
+  [cache] page_0264.png exists, skip render
+    [OCR] page_0264.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0264_qn_tmp.png: cache HIT (18 lines)
+  page_0264: 9 cols, 197 syllables, 197 OCR chars qn_conf=0.86 (low=3/18)
+  [cache] page_0266.png exists, skip render
+    [OCR] page_0266.png (pad=12)...
+    [OCR] -> 9 cột, 173 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0266_qn_tmp.png: cache HIT (17 lines)
+  page_0266: 9 cols, 174 syllables, 173 OCR chars qn_conf=0.90 (low=1/17)
+  [cache] page_0268.png exists, skip render
+    [OCR] page_0268.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0268_qn_tmp.png: cache HIT (18 lines)
+  page_0268: 9 cols, 199 syllables, 197 OCR chars qn_conf=0.91 (low=0/18)
+  [cache] page_0270.png exists, skip render
+    [OCR] page_0270.png (pad=12)...
+    [OCR] -> 9 cột, 202 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0270_qn_tmp.png: cache HIT (19 lines)
+  page_0270: 9 cols, 205 syllables, 202 OCR chars qn_conf=0.91 (low=1/19)
+  [cache] page_0272.png exists, skip render
+    [OCR] page_0272.png (pad=12)...
+    [OCR] -> 9 cột, 198 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0272_qn_tmp.png: cache HIT (19 lines)
+  page_0272: 9 cols, 199 syllables, 198 OCR chars qn_conf=0.91 (low=1/19)
+  [cache] page_0274.png exists, skip render
+    [OCR] page_0274.png (pad=12)...
+    [OCR] -> 9 cột, 182 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0274_qn_tmp.png: cache HIT (17 lines)
+  page_0274: 9 cols, 181 syllables, 182 OCR chars qn_conf=0.87 (low=2/17)
+  [cache] page_0276.png exists, skip render
+    [OCR] page_0276.png (pad=12)...
+    [OCR] -> 9 cột, 183 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0276_qn_tmp.png: cache HIT (17 lines)
+  page_0276: 9 cols, 185 syllables, 183 OCR chars qn_conf=0.92 (low=0/17)
+  [cache] page_0278.png exists, skip render
+    [OCR] page_0278.png (pad=12)...
+    [OCR] -> 9 cột, 210 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0278_qn_tmp.png: cache HIT (18 lines)
+  page_0278: 9 cols, 210 syllables, 210 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0280.png exists, skip render
+    [OCR] page_0280.png (pad=12)...
+    [OCR] -> 9 cột, 203 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0280_qn_tmp.png: cache HIT (19 lines)
+  page_0280: 9 cols, 204 syllables, 203 OCR chars qn_conf=0.86 (low=2/19)
+  [cache] page_0282.png exists, skip render
+    [OCR] page_0282.png (pad=12)...
+    [OCR] -> 9 cột, 206 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0282_qn_tmp.png: cache HIT (19 lines)
+  page_0282: 9 cols, 209 syllables, 206 OCR chars qn_conf=0.93 (low=0/19)
+  [cache] page_0284.png exists, skip render
+    [OCR] page_0284.png (pad=12)...
+    [OCR] -> 9 cột, 202 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0284_qn_tmp.png: cache HIT (18 lines)
+  page_0284: 9 cols, 202 syllables, 202 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0286.png exists, skip render
+    [OCR] page_0286.png (pad=12)...
+    [OCR] -> 9 cột, 209 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0286_qn_tmp.png: cache HIT (19 lines)
+  page_0286: 9 cols, 207 syllables, 209 OCR chars qn_conf=0.91 (low=1/19)
+  [cache] page_0288.png exists, skip render
+    [OCR] page_0288.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0288_qn_tmp.png: cache HIT (19 lines)
+  page_0288: 9 cols, 200 syllables, 199 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0290.png exists, skip render
+    [OCR] page_0290.png (pad=12)...
+    [OCR] -> 9 cột, 206 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0290_qn_tmp.png: cache HIT (20 lines)
+  page_0290: 9 cols, 207 syllables, 206 OCR chars qn_conf=0.88 (low=2/20)
+  [cache] page_0292.png exists, skip render
+    [OCR] page_0292.png (pad=12)...
+    [OCR] -> 9 cột, 210 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0292_qn_tmp.png: cache HIT (21 lines)
+  page_0292: 9 cols, 212 syllables, 210 OCR chars qn_conf=0.92 (low=0/21)
+  [cache] page_0294.png exists, skip render
+    [OCR] page_0294.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0294_qn_tmp.png: cache HIT (18 lines)
+  page_0294: 9 cols, 197 syllables, 197 OCR chars qn_conf=0.91 (low=1/18)
+  [cache] page_0296.png exists, skip render
+    [OCR] page_0296.png (pad=12)...
+    [OCR] -> 9 cột, 191 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0296_qn_tmp.png: cache HIT (18 lines)
+  page_0296: 9 cols, 191 syllables, 191 OCR chars qn_conf=0.85 (low=3/18)
+  [cache] page_0298.png exists, skip render
+    [OCR] page_0298.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0298_qn_tmp.png: cache HIT (20 lines)
+  page_0298: 9 cols, 203 syllables, 190 OCR chars qn_conf=0.89 (low=2/20)
+  [cache] page_0300.png exists, skip render
+    [OCR] page_0300.png (pad=12)...
+    [OCR] -> 9 cột, 195 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0300_qn_tmp.png: cache HIT (21 lines)
+  page_0300: 9 cols, 214 syllables, 195 OCR chars qn_conf=0.87 (low=3/21)
+  [cache] page_0302.png exists, skip render
+    [OCR] page_0302.png (pad=12)...
+    [OCR] -> 9 cột, 188 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0302_qn_tmp.png: cache HIT (19 lines)
+  page_0302: 9 cols, 189 syllables, 188 OCR chars qn_conf=0.89 (low=1/19)
+  [cache] page_0304.png exists, skip render
+    [OCR] page_0304.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen4/transcriptions/page_0304_qn_tmp.png: cache HIT (19 lines)
+  page_0304: 9 cols, 199 syllables, 196 OCR chars qn_conf=0.91 (low=0/19)
+
+  Total: 145 pages (145 tên trang duy nhất), 27943 syllables
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.step1_extract config/pipeline.yaml SachThanhTruyen11
+
+============================================================
+Step 1: Extract — SachThanhTruyen11
+  PDF: Data/STT11.pdf (290 pages)
+  Output: prepared/SachThanhTruyen11/
+============================================================
+  [cache] page_0010.png exists, skip render
+    [OCR] page_0010.png (pad=12)...
+[OCR] Auto-login OK (token valid 60 min)
+    [OCR] -> 9 cột, 176 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0010_qn_tmp.png: cache HIT (17 lines)
+  page_0010: 9 cols, 178 syllables, 176 OCR chars qn_conf=0.86 (low=3/17)
+  [cache] page_0012.png exists, skip render
+    [OCR] page_0012.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0012_qn_tmp.png: cache HIT (19 lines)
+  page_0012: 9 cols, 197 syllables, 192 OCR chars qn_conf=0.84 (low=4/19)
+  [cache] page_0014.png exists, skip render
+    [OCR] page_0014.png (pad=12)...
+    [OCR] -> 9 cột, 193 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0014_qn_tmp.png: cache HIT (19 lines)
+  page_0014: 9 cols, 198 syllables, 193 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0016.png exists, skip render
+    [OCR] page_0016.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0016_qn_tmp.png: cache HIT (20 lines)
+  page_0016: 9 cols, 201 syllables, 201 OCR chars qn_conf=0.91 (low=1/20)
+  [cache] page_0018.png exists, skip render
+    [OCR] page_0018.png (pad=12)...
+    [OCR] -> 9 cột, 175 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0018_qn_tmp.png: cache HIT (18 lines)
+  page_0018: 9 cols, 172 syllables, 175 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0020.png exists, skip render
+    [OCR] page_0020.png (pad=12)...
+    [OCR] -> 9 cột, 202 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0020_qn_tmp.png: cache HIT (18 lines)
+  page_0020: 9 cols, 201 syllables, 202 OCR chars qn_conf=0.92 (low=0/18)
+  [cache] page_0022.png exists, skip render
+    [OCR] page_0022.png (pad=12)...
+    [OCR] -> 9 cột, 212 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0022_qn_tmp.png: cache HIT (19 lines)
+  page_0022: 9 cols, 211 syllables, 212 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0024.png exists, skip render
+    [OCR] page_0024.png (pad=12)...
+    [OCR] -> 9 cột, 207 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0024_qn_tmp.png: cache HIT (20 lines)
+  page_0024: 9 cols, 205 syllables, 207 OCR chars qn_conf=0.88 (low=2/20)
+  [cache] page_0026.png exists, skip render
+    [OCR] page_0026.png (pad=12)...
+    [OCR] -> 9 cột, 205 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0026_qn_tmp.png: cache HIT (18 lines)
+  page_0026: 9 cols, 208 syllables, 205 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0028.png exists, skip render
+    [OCR] page_0028.png (pad=12)...
+    [OCR] -> 9 cột, 202 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0028_qn_tmp.png: cache HIT (18 lines)
+  page_0028: 9 cols, 202 syllables, 202 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0030.png exists, skip render
+    [OCR] page_0030.png (pad=12)...
+    [OCR] -> 9 cột, 170 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0030_qn_tmp.png: cache HIT (16 lines)
+  page_0030: 9 cols, 168 syllables, 170 OCR chars qn_conf=0.90 (low=1/16)
+  [cache] page_0032.png exists, skip render
+    [OCR] page_0032.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0032_qn_tmp.png: cache HIT (18 lines)
+  page_0032: 9 cols, 196 syllables, 194 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0034.png exists, skip render
+    [OCR] page_0034.png (pad=12)...
+    [OCR] -> 9 cột, 200 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0034_qn_tmp.png: cache HIT (20 lines)
+  page_0034: 9 cols, 202 syllables, 200 OCR chars qn_conf=0.87 (low=3/20)
+  [cache] page_0036.png exists, skip render
+    [OCR] page_0036.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0036_qn_tmp.png: cache HIT (19 lines)
+  page_0036: 9 cols, 193 syllables, 197 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0010_p0028.png exists, skip render
+    [OCR] page_0010_p0028.png (pad=12)...
+    [OCR] 8 cột != 9 -> retry pad=30
+    [OCR] -> 8 cột, 207 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0010_p0028_qn_tmp.png: cache HIT (22 lines)
+  page_0010_p0028: 9 cols, 212 syllables, 207 OCR chars qn_conf=0.90 (low=1/22)
+  [cache] page_0040.png exists, skip render
+    [OCR] page_0040.png (pad=12)...
+    [OCR] -> 9 cột, 209 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0040_qn_tmp.png: cache HIT (22 lines)
+  page_0040: 9 cols, 210 syllables, 209 OCR chars qn_conf=0.90 (low=1/22)
+  [cache] page_0042.png exists, skip render
+    [OCR] page_0042.png (pad=12)...
+    [OCR] -> 9 cột, 178 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0042_qn_tmp.png: cache HIT (19 lines)
+  page_0042: 9 cols, 173 syllables, 178 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0044.png exists, skip render
+    [OCR] page_0044.png (pad=12)...
+    [OCR] -> 9 cột, 179 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0044_qn_tmp.png: cache HIT (20 lines)
+  page_0044: 9 cols, 176 syllables, 179 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0046.png exists, skip render
+    [OCR] page_0046.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0046_qn_tmp.png: cache HIT (18 lines)
+  page_0046: 9 cols, 192 syllables, 190 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0048.png exists, skip render
+    [OCR] page_0048.png (pad=12)...
+    [OCR] -> 9 cột, 191 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0048_qn_tmp.png: cache HIT (19 lines)
+  page_0048: 9 cols, 192 syllables, 191 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0050.png exists, skip render
+    [OCR] page_0050.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0050_qn_tmp.png: cache HIT (19 lines)
+  page_0050: 9 cols, 200 syllables, 201 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0052.png exists, skip render
+    [OCR] page_0052.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0052_qn_tmp.png: cache HIT (20 lines)
+  page_0052: 9 cols, 205 syllables, 199 OCR chars qn_conf=0.89 (low=2/20)
+  [cache] page_0054.png exists, skip render
+    [OCR] page_0054.png (pad=12)...
+    [OCR] -> 9 cột, 200 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0054_qn_tmp.png: cache HIT (20 lines)
+  page_0054: 9 cols, 196 syllables, 200 OCR chars qn_conf=0.88 (low=2/20)
+  [cache] page_0056.png exists, skip render
+    [OCR] page_0056.png (pad=12)...
+    [OCR] -> 9 cột, 189 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0056_qn_tmp.png: cache HIT (19 lines)
+  page_0056: 9 cols, 191 syllables, 189 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0058.png exists, skip render
+    [OCR] page_0058.png (pad=12)...
+    [OCR] -> 9 cột, 202 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0058_qn_tmp.png: cache HIT (20 lines)
+  page_0058: 9 cols, 199 syllables, 202 OCR chars qn_conf=0.85 (low=3/20)
+  [cache] page_0060.png exists, skip render
+    [OCR] page_0060.png (pad=12)...
+    [OCR] -> 9 cột, 188 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0060_qn_tmp.png: cache HIT (21 lines)
+  page_0060: 9 cols, 193 syllables, 188 OCR chars qn_conf=0.82 (low=5/21)
+  [cache] page_0062.png exists, skip render
+    [OCR] page_0062.png (pad=12)...
+    [OCR] -> 9 cột, 183 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0062_qn_tmp.png: cache HIT (21 lines)
+  page_0062: 9 cols, 186 syllables, 183 OCR chars qn_conf=0.89 (low=1/21)
+  [cache] page_0064.png exists, skip render
+    [OCR] page_0064.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0064_qn_tmp.png: cache HIT (18 lines)
+  page_0064: 9 cols, 193 syllables, 192 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0066.png exists, skip render
+    [OCR] page_0066.png (pad=12)...
+    [OCR] -> 9 cột, 198 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0066_qn_tmp.png: cache HIT (20 lines)
+  page_0066: 9 cols, 197 syllables, 198 OCR chars qn_conf=0.89 (low=1/20)
+  [cache] page_0068.png exists, skip render
+    [OCR] page_0068.png (pad=12)...
+    [OCR] -> 9 cột, 200 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0068_qn_tmp.png: cache HIT (21 lines)
+  page_0068: 9 cols, 200 syllables, 200 OCR chars qn_conf=0.85 (low=3/21)
+  [cache] page_0070.png exists, skip render
+    [OCR] page_0070.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0070_qn_tmp.png: cache HIT (22 lines)
+  page_0070: 9 cols, 189 syllables, 197 OCR chars qn_conf=0.84 (low=2/22)
+  [cache] page_0072.png exists, skip render
+    [OCR] page_0072.png (pad=12)...
+    [OCR] -> 9 cột, 173 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0072_qn_tmp.png: cache HIT (20 lines)
+  page_0072: 9 cols, 180 syllables, 173 OCR chars qn_conf=0.82 (low=4/20)
+  [cache] page_0074.png exists, skip render
+    [OCR] page_0074.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0074_qn_tmp.png: cache HIT (19 lines)
+  page_0074: 9 cols, 196 syllables, 194 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0076.png exists, skip render
+    [OCR] page_0076.png (pad=12)...
+    [OCR] -> 9 cột, 176 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0076_qn_tmp.png: cache HIT (20 lines)
+  page_0076: 9 cols, 176 syllables, 176 OCR chars qn_conf=0.84 (low=2/20)
+  [cache] page_0078.png exists, skip render
+    [OCR] page_0078.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0078_qn_tmp.png: cache HIT (20 lines)
+  page_0078: 9 cols, 203 syllables, 196 OCR chars qn_conf=0.86 (low=3/20)
+  [cache] page_0080.png exists, skip render
+    [OCR] page_0080.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0080_qn_tmp.png: cache HIT (19 lines)
+  page_0080: 9 cols, 193 syllables, 194 OCR chars qn_conf=0.87 (low=2/19)
+  [cache] page_0086.png exists, skip render
+    [OCR] page_0086.png (pad=12)...
+    [OCR] -> 9 cột, 187 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0086_qn_tmp.png: cache HIT (18 lines)
+  page_0086: 9 cols, 181 syllables, 187 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0088.png exists, skip render
+    [OCR] page_0088.png (pad=12)...
+    [OCR] -> 9 cột, 220 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0088_qn_tmp.png: cache HIT (22 lines)
+  page_0088: 9 cols, 220 syllables, 220 OCR chars qn_conf=0.82 (low=5/22)
+  [cache] page_0090.png exists, skip render
+    [OCR] page_0090.png (pad=12)...
+    [OCR] -> 9 cột, 203 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0090_qn_tmp.png: cache HIT (21 lines)
+  page_0090: 9 cols, 202 syllables, 203 OCR chars qn_conf=0.86 (low=3/21)
+  [cache] page_0092.png exists, skip render
+    [OCR] page_0092.png (pad=12)...
+    [OCR] -> 9 cột, 178 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0092_qn_tmp.png: cache HIT (17 lines)
+  page_0092: 9 cols, 178 syllables, 178 OCR chars qn_conf=0.88 (low=2/17)
+  [cache] page_0094.png exists, skip render
+    [OCR] page_0094.png (pad=12)...
+    [OCR] -> 9 cột, 181 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0094_qn_tmp.png: cache HIT (20 lines)
+  page_0094: 9 cols, 182 syllables, 181 OCR chars qn_conf=0.81 (low=5/20)
+  [cache] page_0096.png exists, skip render
+    [OCR] page_0096.png (pad=12)...
+    [OCR] -> 9 cột, 195 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0096_qn_tmp.png: cache HIT (19 lines)
+  page_0096: 9 cols, 197 syllables, 195 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0098.png exists, skip render
+    [OCR] page_0098.png (pad=12)...
+    [OCR] -> 9 cột, 171 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0098_qn_tmp.png: cache HIT (20 lines)
+  page_0098: 9 cols, 173 syllables, 171 OCR chars qn_conf=0.83 (low=4/20)
+  [cache] page_0100.png exists, skip render
+    [OCR] page_0100.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0100_qn_tmp.png: cache HIT (20 lines)
+  page_0100: 9 cols, 195 syllables, 192 OCR chars qn_conf=0.83 (low=4/20)
+  [cache] page_0102.png exists, skip render
+    [OCR] page_0102.png (pad=12)...
+    [OCR] -> 9 cột, 195 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0102_qn_tmp.png: cache HIT (19 lines)
+  page_0102: 9 cols, 197 syllables, 195 OCR chars qn_conf=0.84 (low=3/19)
+  [cache] page_0104.png exists, skip render
+    [OCR] page_0104.png (pad=12)...
+    [OCR] -> 9 cột, 191 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0104_qn_tmp.png: cache HIT (20 lines)
+  page_0104: 9 cols, 182 syllables, 191 OCR chars qn_conf=0.79 (low=6/20)
+  [cache] page_0106.png exists, skip render
+    [OCR] page_0106.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0106_qn_tmp.png: cache HIT (21 lines)
+  page_0106: 9 cols, 196 syllables, 196 OCR chars qn_conf=0.80 (low=6/21)
+  [cache] page_0108.png exists, skip render
+    [OCR] page_0108.png (pad=12)...
+    [OCR] -> 9 cột, 193 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0108_qn_tmp.png: cache HIT (21 lines)
+  page_0108: 9 cols, 193 syllables, 193 OCR chars qn_conf=0.89 (low=1/21)
+  [cache] page_0110.png exists, skip render
+    [OCR] page_0110.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0110_qn_tmp.png: cache HIT (19 lines)
+  page_0110: 9 cols, 196 syllables, 194 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0112.png exists, skip render
+    [OCR] page_0112.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0112_qn_tmp.png: cache HIT (19 lines)
+  page_0112: 9 cols, 199 syllables, 194 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0114.png exists, skip render
+    [OCR] page_0114.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0114_qn_tmp.png: cache HIT (19 lines)
+  page_0114: 9 cols, 192 syllables, 190 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0116.png exists, skip render
+    [OCR] page_0116.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0116_qn_tmp.png: cache HIT (19 lines)
+  page_0116: 9 cols, 194 syllables, 192 OCR chars qn_conf=0.88 (low=1/19)
+  [cache] page_0118.png exists, skip render
+    [OCR] page_0118.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0118_qn_tmp.png: cache HIT (18 lines)
+  page_0118: 9 cols, 194 syllables, 194 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0120.png exists, skip render
+    [OCR] page_0120.png (pad=12)...
+    [OCR] -> 9 cột, 203 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0120_qn_tmp.png: cache HIT (23 lines)
+  page_0120: 9 cols, 228 syllables, 203 OCR chars qn_conf=0.89 (low=1/23)
+  [cache] page_0122.png exists, skip render
+    [OCR] page_0122.png (pad=12)...
+    [OCR] -> 9 cột, 177 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0122_qn_tmp.png: cache HIT (18 lines)
+  page_0122: 9 cols, 176 syllables, 177 OCR chars qn_conf=0.89 (low=1/18)
+  [cache] page_0124.png exists, skip render
+    [OCR] page_0124.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0124_qn_tmp.png: cache HIT (18 lines)
+  page_0124: 9 cols, 200 syllables, 201 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0126.png exists, skip render
+    [OCR] page_0126.png (pad=12)...
+    [OCR] -> 9 cột, 177 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0126_qn_tmp.png: cache HIT (19 lines)
+  page_0126: 9 cols, 177 syllables, 177 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0128.png exists, skip render
+    [OCR] page_0128.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0128_qn_tmp.png: cache HIT (20 lines)
+  page_0128: 9 cols, 203 syllables, 201 OCR chars qn_conf=0.92 (low=0/20)
+  [cache] page_0130.png exists, skip render
+    [OCR] page_0130.png (pad=12)...
+    [OCR] -> 9 cột, 187 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0130_qn_tmp.png: cache HIT (17 lines)
+  page_0130: 9 cols, 192 syllables, 187 OCR chars qn_conf=0.85 (low=3/17)
+  [cache] page_0132.png exists, skip render
+    [OCR] page_0132.png (pad=12)...
+    [OCR] -> 9 cột, 185 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0132_qn_tmp.png: cache HIT (20 lines)
+  page_0132: 9 cols, 188 syllables, 185 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0134.png exists, skip render
+    [OCR] page_0134.png (pad=12)...
+    [OCR] -> 9 cột, 206 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0134_qn_tmp.png: cache HIT (20 lines)
+  page_0134: 9 cols, 209 syllables, 206 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0136.png exists, skip render
+    [OCR] page_0136.png (pad=12)...
+    [OCR] -> 9 cột, 206 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0136_qn_tmp.png: cache HIT (18 lines)
+  page_0136: 9 cols, 208 syllables, 206 OCR chars qn_conf=0.93 (low=0/18)
+  [cache] page_0138.png exists, skip render
+    [OCR] page_0138.png (pad=12)...
+    [OCR] -> 9 cột, 204 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0138_qn_tmp.png: cache HIT (20 lines)
+  page_0138: 9 cols, 205 syllables, 204 OCR chars qn_conf=0.88 (low=2/20)
+  [cache] page_0140.png exists, skip render
+    [OCR] page_0140.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0140_qn_tmp.png: cache HIT (19 lines)
+  page_0140: 9 cols, 188 syllables, 190 OCR chars qn_conf=0.86 (low=3/19)
+  [cache] page_0142.png exists, skip render
+    [OCR] page_0142.png (pad=12)...
+    [OCR] -> 9 cột, 198 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0142_qn_tmp.png: cache HIT (19 lines)
+  page_0142: 9 cols, 200 syllables, 198 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0144.png exists, skip render
+    [OCR] page_0144.png (pad=12)...
+    [OCR] -> 9 cột, 187 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0144_qn_tmp.png: cache HIT (21 lines)
+  page_0144: 9 cols, 190 syllables, 187 OCR chars qn_conf=0.87 (low=3/21)
+  [cache] page_0146.png exists, skip render
+    [OCR] page_0146.png (pad=12)...
+    [OCR] -> 9 cột, 205 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0146_qn_tmp.png: cache HIT (21 lines)
+  page_0146: 9 cols, 205 syllables, 205 OCR chars qn_conf=0.92 (low=0/21)
+  [cache] page_0148.png exists, skip render
+    [OCR] page_0148.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0148_qn_tmp.png: cache HIT (21 lines)
+  page_0148: 9 cols, 196 syllables, 196 OCR chars qn_conf=0.92 (low=0/21)
+  [cache] page_0150.png exists, skip render
+    [OCR] page_0150.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0150_qn_tmp.png: cache HIT (20 lines)
+  page_0150: 9 cols, 200 syllables, 199 OCR chars qn_conf=0.88 (low=2/20)
+  [cache] page_0152.png exists, skip render
+    [OCR] page_0152.png (pad=12)...
+    [OCR] -> 9 cột, 195 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0152_qn_tmp.png: cache HIT (19 lines)
+  page_0152: 9 cols, 196 syllables, 195 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0154.png exists, skip render
+    [OCR] page_0154.png (pad=12)...
+    [OCR] -> 9 cột, 204 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0154_qn_tmp.png: cache HIT (20 lines)
+  page_0154: 9 cols, 204 syllables, 204 OCR chars qn_conf=0.88 (low=2/20)
+  [cache] page_0156.png exists, skip render
+    [OCR] page_0156.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0156_qn_tmp.png: cache HIT (20 lines)
+  page_0156: 9 cols, 202 syllables, 201 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0158.png exists, skip render
+    [OCR] page_0158.png (pad=12)...
+    [OCR] -> 9 cột, 206 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0158_qn_tmp.png: cache HIT (23 lines)
+  page_0158: 9 cols, 208 syllables, 206 OCR chars qn_conf=0.85 (low=3/23)
+  [cache] page_0160.png exists, skip render
+    [OCR] page_0160.png (pad=12)...
+    [OCR] -> 9 cột, 182 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0160_qn_tmp.png: cache HIT (20 lines)
+  page_0160: 9 cols, 185 syllables, 182 OCR chars qn_conf=0.92 (low=0/20)
+  [cache] page_0162.png exists, skip render
+    [OCR] page_0162.png (pad=12)...
+    [OCR] -> 9 cột, 186 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0162_qn_tmp.png: cache HIT (20 lines)
+  page_0162: 9 cols, 188 syllables, 186 OCR chars qn_conf=0.91 (low=1/20)
+  [cache] page_0164.png exists, skip render
+    [OCR] page_0164.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0164_qn_tmp.png: cache HIT (18 lines)
+  page_0164: 9 cols, 197 syllables, 194 OCR chars qn_conf=0.86 (low=3/18)
+  [cache] page_0166.png exists, skip render
+    [OCR] page_0166.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0166_qn_tmp.png: cache HIT (19 lines)
+  page_0166: 9 cols, 202 syllables, 199 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0168.png exists, skip render
+    [OCR] page_0168.png (pad=12)...
+    [OCR] -> 9 cột, 202 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0168_qn_tmp.png: cache HIT (20 lines)
+  page_0168: 9 cols, 204 syllables, 202 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0170.png exists, skip render
+    [OCR] page_0170.png (pad=12)...
+    [OCR] -> 9 cột, 163 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0170_qn_tmp.png: cache HIT (16 lines)
+  page_0170: 9 cols, 163 syllables, 163 OCR chars qn_conf=0.90 (low=1/16)
+  [cache] page_0172.png exists, skip render
+    [OCR] page_0172.png (pad=12)...
+    [OCR] -> 9 cột, 174 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0172_qn_tmp.png: cache HIT (17 lines)
+  page_0172: 9 cols, 171 syllables, 174 OCR chars qn_conf=0.86 (low=2/17)
+  [cache] page_0174.png exists, skip render
+    [OCR] page_0174.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0174_qn_tmp.png: cache HIT (19 lines)
+  page_0174: 9 cols, 198 syllables, 201 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0176.png exists, skip render
+    [OCR] page_0176.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0176_qn_tmp.png: cache HIT (22 lines)
+  page_0176: 9 cols, 198 syllables, 197 OCR chars qn_conf=0.88 (low=2/22)
+  [cache] page_0178.png exists, skip render
+    [OCR] page_0178.png (pad=12)...
+    [OCR] -> 9 cột, 193 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0178_qn_tmp.png: cache HIT (19 lines)
+  page_0178: 9 cols, 196 syllables, 193 OCR chars qn_conf=0.93 (low=0/19)
+  [cache] page_0180.png exists, skip render
+    [OCR] page_0180.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0180_qn_tmp.png: cache HIT (21 lines)
+  page_0180: 9 cols, 198 syllables, 197 OCR chars qn_conf=0.86 (low=3/21)
+  [cache] page_0182.png exists, skip render
+    [OCR] page_0182.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0182_qn_tmp.png: cache HIT (19 lines)
+  page_0182: 9 cols, 190 syllables, 190 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0184.png exists, skip render
+    [OCR] page_0184.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0184_qn_tmp.png: cache HIT (20 lines)
+  page_0184: 9 cols, 192 syllables, 190 OCR chars qn_conf=0.88 (low=2/20)
+  [cache] page_0186.png exists, skip render
+    [OCR] page_0186.png (pad=12)...
+    [OCR] -> 9 cột, 188 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0186_qn_tmp.png: cache HIT (19 lines)
+  page_0186: 9 cols, 192 syllables, 188 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0188.png exists, skip render
+    [OCR] page_0188.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0188_qn_tmp.png: cache HIT (20 lines)
+  page_0188: 9 cols, 200 syllables, 196 OCR chars qn_conf=0.88 (low=2/20)
+  [cache] page_0190.png exists, skip render
+    [OCR] page_0190.png (pad=12)...
+    [OCR] -> 9 cột, 193 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0190_qn_tmp.png: cache HIT (19 lines)
+  page_0190: 9 cols, 195 syllables, 193 OCR chars qn_conf=0.93 (low=0/19)
+  [cache] page_0192.png exists, skip render
+    [OCR] page_0192.png (pad=12)...
+    [OCR] -> 9 cột, 198 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0192_qn_tmp.png: cache HIT (19 lines)
+  page_0192: 9 cols, 198 syllables, 198 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0194.png exists, skip render
+    [OCR] page_0194.png (pad=12)...
+    [OCR] -> 9 cột, 186 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0194_qn_tmp.png: cache HIT (19 lines)
+  page_0194: 9 cols, 190 syllables, 186 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0196.png exists, skip render
+    [OCR] page_0196.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0196_qn_tmp.png: cache HIT (20 lines)
+  page_0196: 9 cols, 195 syllables, 190 OCR chars qn_conf=0.89 (low=2/20)
+  [cache] page_0198.png exists, skip render
+    [OCR] page_0198.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0198_qn_tmp.png: cache HIT (21 lines)
+  page_0198: 9 cols, 199 syllables, 196 OCR chars qn_conf=0.87 (low=2/21)
+  [cache] page_0200.png exists, skip render
+    [OCR] page_0200.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0200_qn_tmp.png: cache HIT (20 lines)
+  page_0200: 9 cols, 194 syllables, 196 OCR chars qn_conf=0.91 (low=1/20)
+  [cache] page_0202.png exists, skip render
+    [OCR] page_0202.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0202_qn_tmp.png: cache HIT (20 lines)
+  page_0202: 9 cols, 195 syllables, 190 OCR chars qn_conf=0.88 (low=2/20)
+  [cache] page_0204.png exists, skip render
+    [OCR] page_0204.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0204_qn_tmp.png: cache HIT (20 lines)
+  page_0204: 9 cols, 199 syllables, 199 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0206.png exists, skip render
+    [OCR] page_0206.png (pad=12)...
+    [OCR] -> 9 cột, 195 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0206_qn_tmp.png: cache HIT (19 lines)
+  page_0206: 9 cols, 197 syllables, 195 OCR chars qn_conf=0.86 (low=3/19)
+  [cache] page_0208.png exists, skip render
+    [OCR] page_0208.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0208_qn_tmp.png: cache HIT (23 lines)
+  page_0208: 9 cols, 202 syllables, 201 OCR chars qn_conf=0.90 (low=1/23)
+  [cache] page_0210.png exists, skip render
+    [OCR] page_0210.png (pad=12)...
+    [OCR] -> 9 cột, 173 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0210_qn_tmp.png: cache HIT (17 lines)
+  page_0210: 9 cols, 168 syllables, 173 OCR chars qn_conf=0.91 (low=1/17)
+  [cache] page_0212.png exists, skip render
+    [OCR] page_0212.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0212_qn_tmp.png: cache HIT (19 lines)
+  page_0212: 9 cols, 190 syllables, 190 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0214.png exists, skip render
+    [OCR] page_0214.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0214_qn_tmp.png: cache HIT (19 lines)
+  page_0214: 9 cols, 195 syllables, 194 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0216.png exists, skip render
+    [OCR] page_0216.png (pad=12)...
+    [OCR] -> 9 cột, 200 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0216_qn_tmp.png: cache HIT (20 lines)
+  page_0216: 9 cols, 203 syllables, 200 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0218.png exists, skip render
+    [OCR] page_0218.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0218_qn_tmp.png: cache HIT (20 lines)
+  page_0218: 9 cols, 195 syllables, 201 OCR chars qn_conf=0.86 (low=3/20)
+  [cache] page_0220.png exists, skip render
+    [OCR] page_0220.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0220_qn_tmp.png: cache HIT (19 lines)
+  page_0220: 9 cols, 202 syllables, 201 OCR chars qn_conf=0.86 (low=3/19)
+  [cache] page_0222.png exists, skip render
+    [OCR] page_0222.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0222_qn_tmp.png: cache HIT (20 lines)
+  page_0222: 9 cols, 193 syllables, 192 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0224.png exists, skip render
+    [OCR] page_0224.png (pad=12)...
+    [OCR] -> 9 cột, 189 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0224_qn_tmp.png: cache HIT (19 lines)
+  page_0224: 9 cols, 191 syllables, 189 OCR chars qn_conf=0.91 (low=1/19)
+  [cache] page_0226.png exists, skip render
+    [OCR] page_0226.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0226_qn_tmp.png: cache HIT (22 lines)
+  page_0226: 9 cols, 207 syllables, 201 OCR chars qn_conf=0.89 (low=2/22)
+  [cache] page_0228.png exists, skip render
+    [OCR] page_0228.png (pad=12)...
+    [OCR] -> 9 cột, 200 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0228_qn_tmp.png: cache HIT (21 lines)
+  page_0228: 9 cols, 198 syllables, 200 OCR chars qn_conf=0.90 (low=1/21)
+  [cache] page_0010_p0220.png exists, skip render
+    [OCR] page_0010_p0220.png (pad=12)...
+    [OCR] -> 9 cột, 197 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0010_p0220_qn_tmp.png: cache HIT (22 lines)
+  page_0010_p0220: 9 cols, 198 syllables, 197 OCR chars qn_conf=0.86 (low=3/22)
+  [cache] page_0232.png exists, skip render
+    [OCR] page_0232.png (pad=12)...
+    [OCR] -> 9 cột, 195 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0232_qn_tmp.png: cache HIT (19 lines)
+  page_0232: 9 cols, 216 syllables, 195 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0234.png exists, skip render
+    [OCR] page_0234.png (pad=12)...
+    [OCR] -> 9 cột, 182 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0234_qn_tmp.png: cache HIT (19 lines)
+  page_0234: 9 cols, 183 syllables, 182 OCR chars qn_conf=0.89 (low=2/19)
+  [cache] page_0236.png exists, skip render
+    [OCR] page_0236.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0236_qn_tmp.png: cache HIT (19 lines)
+  page_0236: 9 cols, 202 syllables, 199 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0238.png exists, skip render
+    [OCR] page_0238.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0238_qn_tmp.png: cache HIT (20 lines)
+  page_0238: 9 cols, 193 syllables, 190 OCR chars qn_conf=0.92 (low=0/20)
+  [cache] page_0240.png exists, skip render
+    [OCR] page_0240.png (pad=12)...
+    [OCR] -> 9 cột, 207 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0240_qn_tmp.png: cache HIT (24 lines)
+  page_0240: 9 cols, 214 syllables, 207 OCR chars qn_conf=0.86 (low=3/24)
+  [cache] page_0242.png exists, skip render
+    [OCR] page_0242.png (pad=12)...
+    [OCR] -> 9 cột, 178 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0242_qn_tmp.png: cache HIT (18 lines)
+  page_0242: 9 cols, 181 syllables, 178 OCR chars qn_conf=0.91 (low=0/18)
+  [cache] page_0244.png exists, skip render
+    [OCR] page_0244.png (pad=12)...
+    [OCR] -> 9 cột, 201 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0244_qn_tmp.png: cache HIT (21 lines)
+  page_0244: 9 cols, 198 syllables, 201 OCR chars qn_conf=0.89 (low=2/21)
+  [cache] page_0246.png exists, skip render
+    [OCR] page_0246.png (pad=12)...
+    [OCR] -> 9 cột, 205 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0246_qn_tmp.png: cache HIT (19 lines)
+  page_0246: 9 cols, 205 syllables, 205 OCR chars qn_conf=0.93 (low=0/19)
+  [cache] page_0248.png exists, skip render
+    [OCR] page_0248.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0248_qn_tmp.png: cache HIT (22 lines)
+  page_0248: 9 cols, 211 syllables, 199 OCR chars qn_conf=0.89 (low=1/22)
+  [cache] page_0250.png exists, skip render
+    [OCR] page_0250.png (pad=12)...
+    [OCR] -> 9 cột, 210 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0250_qn_tmp.png: cache HIT (20 lines)
+  page_0250: 9 cols, 211 syllables, 210 OCR chars qn_conf=0.89 (low=2/20)
+  [cache] page_0252.png exists, skip render
+    [OCR] page_0252.png (pad=12)...
+    [OCR] -> 9 cột, 205 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0252_qn_tmp.png: cache HIT (21 lines)
+  page_0252: 9 cols, 206 syllables, 205 OCR chars qn_conf=0.88 (low=2/21)
+  [cache] page_0254.png exists, skip render
+    [OCR] page_0254.png (pad=12)...
+    [OCR] -> 9 cột, 204 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0254_qn_tmp.png: cache HIT (22 lines)
+  page_0254: 9 cols, 204 syllables, 204 OCR chars qn_conf=0.84 (low=3/22)
+  [cache] page_0256.png exists, skip render
+    [OCR] page_0256.png (pad=12)...
+    [OCR] -> 9 cột, 203 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0256_qn_tmp.png: cache HIT (21 lines)
+  page_0256: 9 cols, 205 syllables, 203 OCR chars qn_conf=0.88 (low=2/21)
+  [cache] page_0258.png exists, skip render
+    [OCR] page_0258.png (pad=12)...
+    [OCR] -> 9 cột, 202 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0258_qn_tmp.png: cache HIT (23 lines)
+  page_0258: 9 cols, 209 syllables, 202 OCR chars qn_conf=0.90 (low=1/23)
+  [cache] page_0260.png exists, skip render
+    [OCR] page_0260.png (pad=12)...
+    [OCR] -> 9 cột, 198 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0260_qn_tmp.png: cache HIT (20 lines)
+  page_0260: 9 cols, 203 syllables, 198 OCR chars qn_conf=0.88 (low=2/20)
+  [cache] page_0262.png exists, skip render
+    [OCR] page_0262.png (pad=12)...
+    [OCR] -> 9 cột, 183 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0262_qn_tmp.png: cache HIT (21 lines)
+  page_0262: 9 cols, 188 syllables, 183 OCR chars qn_conf=0.88 (low=2/21)
+  [cache] page_0264.png exists, skip render
+    [OCR] page_0264.png (pad=12)...
+    [OCR] -> 9 cột, 204 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0264_qn_tmp.png: cache HIT (20 lines)
+  page_0264: 9 cols, 207 syllables, 204 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0266.png exists, skip render
+    [OCR] page_0266.png (pad=12)...
+    [OCR] -> 9 cột, 161 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0266_qn_tmp.png: cache HIT (17 lines)
+  page_0266: 9 cols, 163 syllables, 161 OCR chars qn_conf=0.88 (low=1/17)
+  [cache] page_0268.png exists, skip render
+    [OCR] page_0268.png (pad=12)...
+    [OCR] -> 9 cột, 199 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0268_qn_tmp.png: cache HIT (20 lines)
+  page_0268: 9 cols, 201 syllables, 199 OCR chars qn_conf=0.90 (low=1/20)
+  [cache] page_0270.png exists, skip render
+    [OCR] page_0270.png (pad=12)...
+    [OCR] -> 9 cột, 200 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0270_qn_tmp.png: cache HIT (19 lines)
+  page_0270: 9 cols, 198 syllables, 200 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0272.png exists, skip render
+    [OCR] page_0272.png (pad=12)...
+    [OCR] -> 9 cột, 184 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0272_qn_tmp.png: cache HIT (20 lines)
+  page_0272: 9 cols, 187 syllables, 184 OCR chars qn_conf=0.86 (low=3/20)
+  [cache] page_0274.png exists, skip render
+    [OCR] page_0274.png (pad=12)...
+    [OCR] -> 9 cột, 202 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0274_qn_tmp.png: cache HIT (21 lines)
+  page_0274: 9 cols, 203 syllables, 202 OCR chars qn_conf=0.82 (low=5/21)
+  [cache] page_0276.png exists, skip render
+    [OCR] page_0276.png (pad=12)...
+    [OCR] -> 9 cột, 189 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0276_qn_tmp.png: cache HIT (19 lines)
+  page_0276: 9 cols, 193 syllables, 189 OCR chars qn_conf=0.92 (low=0/19)
+  [cache] page_0278.png exists, skip render
+    [OCR] page_0278.png (pad=12)...
+    [OCR] -> 9 cột, 175 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0278_qn_tmp.png: cache HIT (19 lines)
+  page_0278: 9 cols, 175 syllables, 175 OCR chars qn_conf=0.84 (low=4/19)
+  [cache] page_0280.png exists, skip render
+    [OCR] page_0280.png (pad=12)...
+    [OCR] -> 9 cột, 191 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0280_qn_tmp.png: cache HIT (19 lines)
+  page_0280: 9 cols, 195 syllables, 191 OCR chars qn_conf=0.88 (low=2/19)
+  [cache] page_0282.png exists, skip render
+    [OCR] page_0282.png (pad=12)...
+    [OCR] -> 9 cột, 198 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0282_qn_tmp.png: cache HIT (20 lines)
+  page_0282: 9 cols, 200 syllables, 198 OCR chars qn_conf=0.86 (low=3/20)
+  [cache] page_0284.png exists, skip render
+    [OCR] page_0284.png (pad=12)...
+    [OCR] -> 9 cột, 168 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0284_qn_tmp.png: cache HIT (18 lines)
+  page_0284: 9 cols, 174 syllables, 168 OCR chars qn_conf=0.88 (low=2/18)
+  [cache] page_0286.png exists, skip render
+    [OCR] page_0286.png (pad=12)...
+    [OCR] -> 9 cột, 190 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0286_qn_tmp.png: cache HIT (19 lines)
+  page_0286: 9 cols, 195 syllables, 190 OCR chars qn_conf=0.90 (low=1/19)
+  [cache] page_0288.png exists, skip render
+    [OCR] page_0288.png (pad=12)...
+    [OCR] -> 9 cột, 196 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0288_qn_tmp.png: cache HIT (21 lines)
+  page_0288: 9 cols, 199 syllables, 196 OCR chars qn_conf=0.85 (low=4/21)
+  [cache] page_0290.png exists, skip render
+    [OCR] page_0290.png (pad=12)...
+    [OCR] -> 9 cột, 194 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0290_qn_tmp.png: cache HIT (21 lines)
+  page_0290: 9 cols, 196 syllables, 194 OCR chars qn_conf=0.87 (low=3/21)
+  [cache] page_0292.png exists, skip render
+    [OCR] page_0292.png (pad=12)...
+    [OCR] -> 9 cột, 188 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0292_qn_tmp.png: cache HIT (19 lines)
+  page_0292: 9 cols, 188 syllables, 188 OCR chars qn_conf=0.87 (low=2/19)
+  [cache] page_0294.png exists, skip render
+    [OCR] page_0294.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0294_qn_tmp.png: cache HIT (18 lines)
+  page_0294: 9 cols, 193 syllables, 192 OCR chars qn_conf=0.90 (low=1/18)
+  [cache] page_0296.png exists, skip render
+    [OCR] page_0296.png (pad=12)...
+    [OCR] -> 9 cột, 184 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0296_qn_tmp.png: cache HIT (19 lines)
+  page_0296: 9 cols, 185 syllables, 184 OCR chars qn_conf=0.87 (low=2/19)
+  [cache] page_0298.png exists, skip render
+    [OCR] page_0298.png (pad=12)...
+    [OCR] -> 9 cột, 192 chữ
+  [QN_OCR] prepared/SachThanhTruyen11/transcriptions/page_0298_qn_tmp.png: cache HIT (19 lines)
+  page_0298: 9 cols, 193 syllables, 192 OCR chars qn_conf=0.91 (low=0/19)
+
+  🔴 2 trang trùng SỐ TRANG IN — đã tách tên để KHÔNG mất:
+     page_0010  (trang PDF 28)  ->  page_0010_p0028
+     page_0010  (trang PDF 220)  ->  page_0010_p0220
+
+  Total: 143 pages (143 tên trang duy nhất), 27882 syllables
+
+[i] kiểm số cột OCR sau extract (mong đợi ĐÚNG 9 cột/trang)
+SachThanhTruyen2: 160 trang | OK(=9) 160 | THIẾU(<9) 0 | DƯ(>9) 0 | ERR 0
+TỔNG: 160 trang | OK 160 (100%) | THIẾU 0 | DƯ 0 | ERR 0
+SachThanhTruyen4: 145 trang | OK(=9) 145 | THIẾU(<9) 0 | DƯ(>9) 0 | ERR 0
+TỔNG: 145 trang | OK 145 (100%) | THIẾU 0 | DƯ 0 | ERR 0
+SachThanhTruyen11: 143 trang | OK(=9) 142 | THIẾU(<9) 1 | DƯ(>9) 0 | ERR 0
+   THIẾU page_0010_p0028: 8 cột
+TỔNG: 143 trang | OK 142 (99%) | THIẾU 1 | DƯ 0 | ERR 0
+
+================================================================
+>>> BƯỚC 3/7 · build — align_engine.build_dataset: banded-DP align + consensus tier + crops (cả 3 sách trong config)
+================================================================
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --use-s3 --reseg detector
+  [hình học] đệm cắt = 0.12 | biên nới dọc F = 0.1 -> hộp cao 1.20 × bước lặp
+Loading S3 (trained Nôm embedder + FD) ...
+  S3 = trained Nôm embedder on mps | FD glyphs 89898 | crop-protos 1449 classes | calibrated@P≥0.90 (τ=0.50,δ=0.00)
+  [reseg] mode = detector
+  [reseg detector] CenterNet v1 (img 1024, seam) — N = #âm tiết.
+  [reseg] backend thực dùng = detector_centernet_v1
+[align] SachThanhTruyen2: 160 pages ...
+[align] SachThanhTruyen4: 145 pages ...
+[align] SachThanhTruyen11: 143 pages ...
+  [split] rời nhau theo TRANG | ô có lớp chữ KHÔNG có trong train: 151 (đánh giá phải lọc bằng label_in_train)
+================================================================
+ DATASET -> /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/dataset_out
+================================================================
+ pages 448 | pairs 82780 | char classes 1608
+   GOLD     : 51889
+   SILVER   : 11137
+   SYLLABLE : 6930
+   REVIEW   : 12824
+ SYLLABLE promoted from REVIEW: 6930
+ USABLE char-level (GOLD+SILVER): 63026  | +syllable: 69956
+ manifest: /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/dataset_out/labels.csv  (22 cột)
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.tools.enrich_crop_quality --labels dataset_out/labels.csv --src-root dataset_out
+  [chất lượng crop] 69,956 ảnh đã đo
+    ok            64,911  92.79%
+    bleed          4,523   6.47%
+    truncated        482   0.69%
+    blank             40   0.06%
+  sha256 -> dataset_out/CHECKSUMS.txt (build)
+
+================================================================
+>>> BƯỚC 4/7 · remediate — kiểm kê trùng lặp + cách ly/hạ tier -> dataset_out/labels_remediated.csv
+================================================================
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out census
+[census] AE-1 dup-bbox: 0 rows / 0 grp; F1 cross-col: 0 rows / 0 grp; UNION: 0 rows / 0 md5-grp; conflicting: 0 grp; provably-wrong floor: 0 rows (by tier: {})
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62
+[apply] quarantined 0 (conflict 0, dup 0, kept 0); demoted 0 similar-bridge; split-leak (original 0 md5 -> final 0); usable 69956->69956
+[apply] tier before: {'GOLD': 51889, 'REVIEW': 12824, 'SILVER': 11137, 'SYLLABLE': 6930}
+[apply] tier after : {'GOLD': 51889, 'REVIEW': 12824, 'SILVER': 11137, 'SYLLABLE': 6930}
+[apply] -> dataset_out/labels_remediated.csv
+[apply] -> dataset_out/remediation_report.json
+  sha256 -> dataset_out/CHECKSUMS.txt (remediate)
+
+================================================================
+>>> BƯỚC 5/7 · confusion — hạ tier confusion hệ thống đã chứng minh -> dataset_out/labels_final.csv (bản công bố)
+================================================================
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.remediation.confusion_fix --in dataset_out/labels_remediated.csv --out dataset_out/labels_final.csv --fixes config/confusion_fixes.yaml --measure
+============================================================
+ CONFUSION-FIX: 1 fix, demote tổng 2011 crop
+   người→㝵 demote 2011 → REVIEW {'stt2': 750, 'stt4': 647, 'stt11': 614}
+ tier before: {'GOLD': 51889, 'REVIEW': 12824, 'SILVER': 11137, 'SYLLABLE': 6930}
+ tier after : {'GOLD': 50427, 'REVIEW': 14835, 'SILVER': 10588, 'SYLLABLE': 6930}
+ precision GOLD: CHƯA ĐO ĐƯỢC — chưa có verdict NGƯỜI (re-dataset/dataset/verdicts.csv + NGUOI_CHAM.md).
+   null trong report là câu trả lời ĐÚNG, không phải lỗi.
+ -> dataset_out/labels_final.csv
+  sha256 -> dataset_out/CHECKSUMS.txt (confusion)
+
+================================================================
+>>> BƯỚC 6/7 · gỡ S3 — gỡ tín hiệu thị giác khỏi mọi quyết định tier -> dataset_out/labels_final.csv
+================================================================
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.remediation.s3_unwind --in dataset_out/labels_final.csv --out dataset_out/labels_final.csv --report dataset_out/s3_unwind_report.json --apply
+[s3-unwind] 82,780 dòng
+[s3-unwind] trả về GOLD          : 0 ô (gắn cờ readmitted_from_s3_demotion)
+[s3-unwind] SILVER -> SILVER_uncalibrated: 10,588 ô (rơi khỏi bộ giao nộp, KHÔNG xoá)
+[s3-unwind] đổi lý do REVIEW     : 11,135 ô (below_visual_threshold -> no_s1_inter_s2)
+           SILVER                  10,588 ->       0  (-10,588)
+           SILVER_uncalibrated          0 ->  10,588  (+10,588)
+[s3-unwind] -> dataset_out/labels_final.csv
+[s3-unwind] -> dataset_out/s3_unwind_report.json
+  sha256 -> dataset_out/CHECKSUMS.txt (s3unwind)
+
+  chưa có dataset_out/human_audit/audit_combined/verdicts*.jsonl
+  -> xuất ra re-dataset/ để đem chấm tay, KHÔNG phải bộ cuối cùng
+
+================================================================
+>>> BƯỚC 7/7 · export — xuất bộ ĐEM CHẤM (CHƯA kiểm chứng) -> re-dataset/ (tự chứa)
+================================================================
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out re-dataset
+[export] LOẠI khỏi bộ giao nộp: REVIEW                  14,835 dòng
+[export] LOẠI khỏi bộ giao nộp: SILVER_uncalibrated     10,588 dòng
+[export] re-dataset/labels.csv — 50,427 nhãn CẤP KÝ TỰ + 6,930 chú giải CẤP ÂM TIẾT = 57,357 dòng (GOLD 50427, SILVER 0, SYLLABLE 6930)
+[export] ⚠️ con số đem so với bộ dữ liệu Hán Nôm khác là 50,427, KHÔNG phải 57,357
+[export] label_in_train: 164 ô có lớp chữ KHÔNG có trong train của chính bộ này (tính lại tại bước xuất, sửa 18 ô so với Bước 3)
+[export] usable_image=0 (ảnh trắng/cụt, ĐỪNG chấm chiều ảnh): 433 ô
+[export] ảnh: 57357 đã copy, 0 thiếu trên đĩa
+[export] ⚠️ re-dataset/ CHƯA có tài liệu đi kèm. Chạy tiếp:
+    python -m pipeline.tools.make_dataset_docs --dataset re-dataset
+    $ /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.tools.make_dataset_docs --dataset re-dataset
+[docs] 50,427 nhãn ký tự + 6,930 chú giải âm
+[docs] đã ghi README.md · DATASHEET.md · NGUON_THU_TICH.md · LICENSE.md -> re-dataset/
+[docs] ⚠️ còn 21 mục ⬜ CHƯA ĐIỀN — chỉ người giữ bản quét điền được
+  sha256 -> dataset_out/CHECKSUMS.txt (export)
+
+--- BẰNG CHỨNG (sha256) -> docs/EVIDENCE_INDEX.md ---------------------
+    dataset_out/labels.csv                     256519f3e2c8f91c875ced6e5cffabf84a0366a538a1a3174b0772b8ee4857da
+    dataset_out/labels_remediated.csv          9c6371ef2c0c4a26a3744e073e781e65f7fbda459b7c7d790dd16b9129e24462
+    dataset_out/labels_final.csv               e897fe697dd33deb9d5ea45523eb798c4d7c6a25876e7d279f1971584704b3e4
+    re-dataset/labels.csv                      cf180600f308399214dced97c0e0a48bba38aa714153a39096798a1d2121f56a
+    nom-embed/best.pt                          eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0
+    pipeline/align_engine/data/index.csv       48899fa32efb99bd43f8b34c8b05311e5a351e20ca12377eb951baf25bbb8044
+    Dict/QuocNgu_SinoNom.csv                   e65b98748e13e41f66e1f5527e4b07e7f89ba24522090a4050decab95f1c87d8
+    Dict/SinoNom_Similar.csv                   2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3
+    train_crop/detector_r34.best.pt            2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694
+    config/pipeline.yaml                       ac7038d9c0b16d28b8c64b25e0904ffb50be85fb9cf97651f57f455e9468d1f0
+[OK] bảng sha256 đã ghi vào docs/EVIDENCE_INDEX.md (nhật ký)
+[OK] khối BẢN HIỆN HÀNH đã cập nhật trong docs/EVIDENCE_INDEX.md
+
+================================================================
+  Xong — bộ ĐEM CHẤM (CHƯA kiểm chứng, tự chứa):
+  re-dataset/labels.csv  (kèm ảnh crop copy hẳn, README + DATASHEET)
+
+  ĐÂY LÀ BỘ ĐEM CHẤM, CHƯA PHẢI BỘ CUỐI CÙNG.
+
+  Giao CẢ thư mục re-dataset/ cho đội chấm — nó TỰ ĐỦ.
+  Cột nào nghĩa gì: re-dataset/README.md · giới hạn: DATASHEET.md
+
+  Nhận về, đặt ĐÚNG hai tệp vào re-dataset/ :
+     verdicts.csv     cột image,verdict,nguoi_cham,ghi_chu
+                      verdict chỉ 3 giá trị: dung · sai · khong_doc_duoc
+     NGUOI_CHAM.md    khai ai chấm — THIẾU thì pipeline TỪ CHỐI nạp
+
+  Rồi CHẠY LẠI script này -> bộ CUỐI vào dataset/ + docs/BANG_PRECISION.md
+
+  (Chỉ muốn chấm MẪU ~960 ô để có khoảng tin cậy thay vì chấm cả 57 nghìn:
+   /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.ground_truth.make_combined_batch --by-rule \
+     --n-gold 380 --n-similar 260 --n-silver 0 --n-syllable 260 --n-repeat 60 --seed 2026)
+
+  Bản làm việc trung gian (đủ mọi tier kể cả REVIEW/QUARANTINE, không bị đụng):
+  dataset_out/labels_remediated.csv   (trước confusion-fix)
+  dataset_out/labels_final.csv   (BẢN CÔNG BỐ — nguồn của bộ xuất và của mẻ audit người)
+  dataset_out/{gold,silver,syllable}/
+  cảnh báo    : 1
+
+  Nếu có dùng mẻ MẪU (đường phụ): nhãn vừa đổi -> mẻ dựng từ bản cũ đã hết hiệu lực.
+  Dựng lại: rm -rf dataset_out/human_audit/audit_combined && \
+            /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/.venv/bin/python -m pipeline.ground_truth.make_combined_batch --seed 2026
+
+  TẠM BỎ QUA (theo yêu cầu): audit người · fuse · publish của bản 8-bước cũ
+  Bản đầy đủ 8 bước còn trong lịch sử git: git log -- run_pipeline.sh
+================================================================

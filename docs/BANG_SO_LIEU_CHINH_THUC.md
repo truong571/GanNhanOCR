@@ -1,7 +1,7 @@
 # BẢNG SỐ LIỆU CHÍNH THỨC
 
 <!-- AUTO:HEADER:START -->
-**Bộ nhãn sinh ngày**: 2026-08-25 · **Commit chạm bộ nhãn gần nhất**: `5462713955` · **Bộ nhãn**: `dataset_out/labels_final.csv` (82.246 dòng)
+**Bộ nhãn sinh ngày**: 2026-08-25 · **Commit chạm bộ nhãn gần nhất**: `5462713955` · **Bộ nhãn**: `dataset_out/labels_final.csv` (82.780 dòng)
 <!-- AUTO:HEADER:END -->
 
 > **QUY TẮC BẤT DI BẤT DỊCH**: mọi con số trong luận văn (mọi chương, mọi bảng, mọi slide) **chỉ
@@ -38,9 +38,9 @@ labels.csv --[4 remediate]--> labels_remediated.csv --[5 confusion_fix]--> label
 <!-- AUTO:NGUON_GOC:START -->
 | Tệp | dòng | sha256 (16 đầu) | Lệnh tái sinh |
 |---|---|---|---|
-| `dataset_out/labels.csv` | 82.246 | `a89b8f9e078bc40b` | `python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --use-s3 --reseg detector` |
-| `dataset_out/labels_remediated.csv` | 82.246 | `b4d913bffbe0a546` | `python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62` |
-| `dataset_out/labels_final.csv` | 82.246 | `cb74db2b995ce0db` | `python -m pipeline.remediation.confusion_fix … rồi python -m pipeline.remediation.s3_unwind … --apply` |
+| `dataset_out/labels.csv` | 82.780 | `256519f3e2c8f91c` | `python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --use-s3 --reseg detector` |
+| `dataset_out/labels_remediated.csv` | 82.780 | `9c6371ef2c0c4a26` | `python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62` |
+| `dataset_out/labels_final.csv` | 82.780 | `e897fe697dd33deb` | `python -m pipeline.remediation.confusion_fix … rồi python -m pipeline.remediation.s3_unwind … --apply` |
 | `dataset/labels.csv` | (chưa có) | — | `python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset` |
 <!-- AUTO:NGUON_GOC:END -->
 
@@ -56,16 +56,16 @@ Vân tay từng bước: `dataset_out/CHECKSUMS.txt`.
 <!-- AUTO:PHAN_HANG:START -->
 | Tier | Số ô | % | Vào bộ giao nộp? | Nguồn kiểm định |
 |---|---|---|---|---|
-| **GOLD** | **50.156** | 61.0% | ✅ | ⚪ CHƯA ĐO |
-| SILVER_uncalibrated | 10.547 | 12.8% | ❌ ngoài `USABLE_TIERS` | ⚪ CHƯA ĐO (verdict **máy**, không dùng làm bằng chứng) |
-| SYLLABLE | 6.911 | 8.4% | ✅ (nhãn cấp **âm tiết**) | ⚪ CHƯA ĐO |
-| REVIEW | 14.632 | 17.8% | ❌ | — (không phải nhãn) |
+| **GOLD** | **50.427** | 60.9% | ✅ | ⚪ CHƯA ĐO |
+| SILVER_uncalibrated | 10.588 | 12.8% | ❌ ngoài `USABLE_TIERS` | ⚪ CHƯA ĐO (verdict **máy**, không dùng làm bằng chứng) |
+| SYLLABLE | 6.930 | 8.4% | ✅ (nhãn cấp **âm tiết**) | ⚪ CHƯA ĐO |
+| REVIEW | 14.835 | 17.9% | ❌ | — (không phải nhãn) |
 
-**Bộ giao nộp = 50.156 nhãn CẤP KÝ TỰ + 6.911 chú giải CẤP ÂM TIẾT** = 57.067 dòng · 57.067 ảnh đã copy, **0 thiếu**.
+**Bộ giao nộp = 50.427 nhãn CẤP KÝ TỰ + 6.930 chú giải CẤP ÂM TIẾT** = 57.357 dòng · 57.357 ảnh đã copy, **0 thiếu**.
 
 > Nguồn: `re-dataset/labels.csv` — **bộ ĐEM CHẤM (CHƯA kiểm chứng)**.
 
-> ⚠️ **KHÔNG phát biểu là “57.067 nhãn”.** 6.911/6.911 dòng tầng SYLLABLE có cột `label` **rỗng** — chúng chỉ ghi ÂM Quốc ngữ, không gán chữ Nôm. Con số dùng khi so với các bộ dữ liệu Hán Nôm khác là **50.156**.
+> ⚠️ **KHÔNG phát biểu là “57.357 nhãn”.** 6.930/6.930 dòng tầng SYLLABLE có cột `label` **rỗng** — chúng chỉ ghi ÂM Quốc ngữ, không gán chữ Nôm. Con số dùng khi so với các bộ dữ liệu Hán Nôm khác là **50.427**.
 <!-- AUTO:PHAN_HANG:END -->
 
 Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('dataset_out/labels_final.csv')));print(len(r),collections.Counter(x['tier'] for x in r))"`
@@ -75,15 +75,15 @@ Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('datase
 <!-- AUTO:LUAT:START -->
 | Rule | Số ô | Tier |
 |---|---|---|
-| `s1_inter_s2_direct` | 46.327 | GOLD |
-| `no_s1_inter_s2` | 11.007 | REVIEW |
-| `s2_inter_s3_corrected` | 9.997 | SILVER_uncalibrated |
-| `nghia_consensus` | 6.911 | SYLLABLE |
-| `s1_inter_s2_similar` | 3.829 | GOLD |
-| `confusion_fix:systematic_confusion_nguoi_3775` | 1.988 | REVIEW |
-| `diverged_column` | 1.599 | REVIEW |
-| `s3_head_bank_consensus` | 293 | SILVER_uncalibrated |
-| `s1_inter_s3_out_of_dict` | 257 | SILVER_uncalibrated |
+| `s1_inter_s2_direct` | 46.579 | GOLD |
+| `no_s1_inter_s2` | 11.135 | REVIEW |
+| `s2_inter_s3_corrected` | 10.029 | SILVER_uncalibrated |
+| `nghia_consensus` | 6.930 | SYLLABLE |
+| `s1_inter_s2_similar` | 3.848 | GOLD |
+| `confusion_fix:systematic_confusion_nguoi_3775` | 2.011 | REVIEW |
+| `diverged_column` | 1.651 | REVIEW |
+| `s3_head_bank_consensus` | 300 | SILVER_uncalibrated |
+| `s1_inter_s3_out_of_dict` | 259 | SILVER_uncalibrated |
 | `unconfirmed_no_s3` | 38 | REVIEW |
 <!-- AUTO:LUAT:END -->
 
@@ -93,12 +93,12 @@ Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('datase
 | Chỉ số | Giá trị |
 |---|---|
 | Sách | 3 (stt11, stt2, stt4) |
-| Trang | 445 |
-| **Trang cho đủ 9 cột có nhãn** | **443/445** |
-| Lớp ký tự phân biệt (mọi tier có nhãn) | 1.601 |
-| **Lớp trong bộ giao nộp** | **1.583** |
-| Split bộ giao nộp | test 6.155 · train 45.066 · val 5.846 |
-| **Selftest** | **674 passed, 0 failed** |
+| Trang | 448 |
+| **Trang cho đủ 9 cột có nhãn** | **445/448** |
+| Lớp ký tự phân biệt (mọi tier có nhãn) | 1.608 |
+| **Lớp trong bộ giao nộp** | **1.590** |
+| Split bộ giao nộp | test 6.295 · train 45.173 · val 5.889 |
+| **Selftest** | **685 passed, 0 failed** |
 <!-- AUTO:PHAM_VI:END -->
 
 ### 2.4 Vá lỗi (bước 4–6)
@@ -109,7 +109,7 @@ Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('datase
 | Quarantine (bbox trùng, nhãn mâu thuẫn) | **0** | lớp lỗi đã đóng ở gốc engine |
 | Đổi split do trùng md5 | **0** | rò rỉ vốn đã bằng 0 trước bước 4 |
 | Demote theo S3 (`--s3-demote`) | **0** | **TẮT MẶC ĐỊNH** từ 2026-08-19 (tiêu chí dựa trên S3, chưa chứng minh được) |
-| Demote lớp confusion 㝵/"người" | **1.988** | chốt chặn ở `s3_unwind` (KHỐI 1.1) |
+| Demote lớp confusion 㝵/"người" | **2.011** | chốt chặn ở `s3_unwind` (KHỐI 1.1) |
 | Trả về GOLD sau `s3_unwind` | **0** | 0 = không còn ô nào mang hậu tố `demoted_lowcos_s3` |
 <!-- AUTO:VA_LOI:END -->
 
@@ -132,9 +132,9 @@ Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('datase
 | Chỉ số phụ thuộc dữ liệu | Giá trị |
 |---|---|
 | Âm QN hợp lệ (`is_plausible_qn_syllable`) | **99.74%** |
-| **Âm QN có trong từ điển** | **99.196%** (661 ô ngoài) |
-| Trang cho đủ 9 cột có nhãn | **443/445** |
-| Mâu thuẫn tự thân (cùng md5, khác nhãn) | **1** / 62.690 crop |
+| **Âm QN có trong từ điển** | **99.195%** (666 ô ngoài) |
+| Trang cho đủ 9 cột có nhãn | **445/448** |
+| Mâu thuẫn tự thân (cùng md5, khác nhãn) | **1** / 63.025 crop |
 <!-- AUTO:DO_KHAC:END -->
 
 ---

@@ -5,10 +5,10 @@ Gán nhãn tự động ở mức ký tự cho văn bản chữ Nôm khắc gỗ
 Quốc ngữ song song in kèm** làm giám sát yếu — thay cho việc gán tay từng chữ.
 
 ## Thành phần
-- **50,156** ô có nhãn cấp ký tự · **6,911** ô chỉ có chú giải âm
-- **1,583** lớp chữ phân biệt · **1,344** âm Quốc ngữ phân biệt
-- **444** trang · **3,985** cột · **3** cuốn: stt11, stt2, stt4
-- chất lượng ảnh: `blank` 40 (0.07%) · `bleed` 3,581 (6.28%) · `ok` 53,062 (92.98%) · `truncated` 384 (0.67%)
+- **50,427** ô có nhãn cấp ký tự · **6,930** ô chỉ có chú giải âm
+- **1,590** lớp chữ phân biệt · **1,346** âm Quốc ngữ phân biệt
+- **447** trang · **4,011** cột · **3** cuốn: stt11, stt2, stt4
+- chất lượng ảnh: `blank` 40 (0.07%) · `bleed` 3,593 (6.26%) · `ok` 53,331 (92.98%) · `truncated` 393 (0.69%)
 
 ## Quy trình thu thập
 Ảnh trang → dò cột → OCR chữ Nôm (dịch vụ HCMUS) + OCR Quốc ngữ (VietOCR, chạy cục bộ) →
@@ -21,17 +21,21 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
    (nguồn phán quyết là máy chấm, không phải người).
 2. **Ba cuốn cùng MỘT thể loại** (truyện thánh Công giáo). Ngoại suy sang Nôm văn học
    hay hành chính **chưa được kiểm chứng**.
-3. **Chữ Nôm tự tạo có thể bị hụt**: chỉ **2,25%** (1,129 ô)
+3. **Chữ Nôm tự tạo có thể bị hụt**: chỉ **2,25%** (1,134 ô)
    nằm ngoài khối CJK cơ bản, so với
    **4,21%** ở ngữ liệu NomNaOCR. Chưa rõ do pipeline bóc mất bộ thủ hay do Nôm Công
    giáo thế kỷ XIX vốn chuộng dạng giản.
 4. **Chưa chuẩn hoá dị thể.** Cùng một chữ có thể xuất hiện dưới nhiều mã
    (`徳`/`德`, `别`/`別`). Ứng viên đã lọc ở `docs/UNG_VIEN_CHUAN_HOA_DI_THE.csv`,
    **chưa áp dụng**.
-5. **424 ô có ảnh hỏng** (`usable_image=0`) vẫn nằm trong bộ — nhãn có thể
+5. **433 ô có ảnh hỏng** (`usable_image=0`) vẫn nằm trong bộ — nhãn có thể
    đúng, ảnh thì không dùng được.
-6. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.
-7. **Chia tách: 0/444 trang nằm ở hai phía.** 159 ô có
+6. **191 ô nằm trên 3 trang không đủ 9 cột** (`page_cot_lech=1`).
+   Bố cục ván khắc luôn 9 cột, nên thiếu cột nghĩa là phép ghép cột Nôm↔Quốc ngữ trên
+   trang đó có thể đã trượt một nhịp. Cờ chỉ nêu sự việc, không kết luận nhãn sai.
+
+7. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.
+8. **Chia tách: 0/447 trang nằm ở hai phía.** 164 ô có
    lớp chữ không mặt trong `train` — hệ quả của việc chia tách trung thực theo trang.
    Lọc bằng `label_in_train` khi đánh giá (cột này RỖNG ở tầng SYLLABLE, xem README).
 
@@ -39,4 +43,4 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
 Dùng được: huấn luyện mô hình, thăm dò, làm điểm khởi đầu để chấm tay.
 **Chưa dùng được**: trích dẫn như dữ liệu đã kiểm chứng, hoặc làm chuẩn đánh giá.
 
-*Sinh tự động từ `labels.csv` ngày 2026-08-25 · commit `5462713955`*
+*Sinh tự động từ `labels.csv` ngày 2026-08-25 · commit `6d383cf52f`*

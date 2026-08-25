@@ -338,6 +338,25 @@ def test_two_outputs_and_verdicts() -> None:
     check("LOẠI ô lặp ẩn khỏi ước lượng dân số", "repeat_of" in av)
     check("verdict unsure KHÔNG tính là lỗi", '"unsure"' in av and "MẪU SỐ" in av)
 
+    # HỒI QUY: khối gắn cờ từng nằm SAU w.writerows() -> CSV ra cột RỖNG trong khi log
+    # vẫn báo "424 ô". Kiểm THỨ TỰ trong mã, và kiểm GIÁ TRỊ THẬT trên đĩa.
+    ex = (REPO / "pipeline" / "export_final_dataset.py").read_text(encoding="utf-8")
+    check("gắn cờ usable_image TRƯỚC khi ghi CSV",
+          ex.index('r["usable_image"] =') < ex.index("w.writerows(rows)"))
+    import csv as _csv
+    for _d in ("dataset", "re-dataset"):
+        f = REPO / _d / "labels.csv"
+        if not f.exists():
+            continue
+        rows = list(_csv.DictReader(open(f, encoding="utf-8")))
+        bad = [r for r in rows if r.get("crop_quality_flag") in ("blank", "truncated")]
+        sai = [r for r in bad if r.get("usable_image") != "0"]
+        check(f"{_d}/: {len(bad)} ô ảnh hỏng đều có usable_image=0 THẬT trên đĩa",
+              not sai, f"{len(sai)} ô sai")
+        check(f"{_d}/: cột usable_image KHÔNG rỗng",
+              any((r.get("usable_image") or "").strip() for r in rows))
+        break
+
     check("TỪ CHỐI verdict không có khai xuất xứ", 'PROV = "NGUOI_CHAM.md"' in av)
     check("từ chối cả khi khai còn bỏ trống", '"⬜" in txt' in av)
     check("ghi rõ vì sao bắt khai", "KHÔNG hề tự khai là máy" in av)

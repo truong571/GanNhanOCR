@@ -69,4 +69,4 @@ bash run_pipeline.sh
 Pipeline tự phát hiện `verdicts.csv`, nạp phán quyết, và xuất bộ **cuối cùng** ra
 `dataset/` kèm `docs/BANG_PRECISION.md`.
 
-*Sinh tự động ngày 2026-08-25 · commit `9ff1431879`*
+*Sinh tự động ngày 2026-08-25 · commit `90320fd1fd`*

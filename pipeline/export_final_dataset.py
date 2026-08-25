@@ -61,6 +61,13 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
         shutil.copy2(src, dst)
         n_copied += 1
 
+    # GẮN CỜ ẢNH DÙNG ĐƯỢC — PHẢI ĐẶT TRƯỚC KHI GHI.
+    # Lỗi thật 2026-08-25: khối này từng nằm SAU w.writerows(), nên CSV ra cột RỖNG
+    # trong khi log vẫn báo "424 ô" — log TRẤN AN SAI, còn đội chấm thì không nhận được
+    # cảnh báo nào. Đó là cả mục đích của cột này.
+    for r in rows:
+        r["usable_image"] = "0" if r.get("crop_quality_flag") in ("blank", "truncated") else "1"
+
     with open(out_root / "labels.csv", "w", encoding="utf-8", newline="") as f:
         if "usable_image" not in fieldnames:
             fieldnames = list(fieldnames) + ["usable_image"]
@@ -77,8 +84,6 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
     # ảnh hỏng, và loại đi sẽ đổi số + phá chuỗi băm. Thay vào đó gắn cờ để (a) người
     # chấm biết bỏ qua chiều ẢNH thay vì chấm nhầm thành "nhãn sai", (b) người huấn
     # luyện mô hình lọc được.
-    for r in rows:
-        r["usable_image"] = "0" if r.get("crop_quality_flag") in ("blank", "truncated") else "1"
     _nbad = sum(1 for r in rows if r["usable_image"] == "0")
     _nchar = sum(1 for r in rows if (r.get("label") or "").strip())
     _nsyl = len(rows) - _nchar
@@ -90,6 +95,12 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
           f"KHÔNG phải {len(rows):,}")
     print(f"[export] usable_image=0 (ảnh trắng/cụt, ĐỪNG chấm chiều ảnh): {_nbad:,} ô")
     print(f"[export] ảnh: {n_copied} đã copy, {n_missing} thiếu trên đĩa")
+    # export XOÁ SẠCH thư mục đích rồi ghi lại, nên tài liệu đi kèm biến mất theo.
+    # run_pipeline gọi make_dataset_docs ngay sau đây; chạy TAY thì dễ quên, và bộ giao
+    # cho đội chấm sẽ thiếu HUONG_DAN_CHAM.md — họ không biết phải nộp lại cái gì.
+    if not (out_root / "HUONG_DAN_CHAM.md").exists():
+        print(f"[export] ⚠️ {out_root}/ CHƯA có tài liệu đi kèm. Chạy tiếp:\n"
+              f"    python -m pipeline.tools.make_dataset_docs --dataset {out_root}")
     if n_missing:
         print(f"[export] CẢNH BÁO: {n_missing} ảnh có trong {labels_path.name} "
               f"nhưng KHÔNG có file thật trong {src_root}/ — kiểm tra lại bước build.",

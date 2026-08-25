@@ -162,6 +162,30 @@ def test_syllable_normalize() -> None:
           SN.build_readings(qn) is R)
 
 
+def test_check_deps() -> None:
+    """Kiểm thư viện chạy MỖI LẦN, và tôn trọng ba cạm bẫy của môi trường 3.14."""
+    from pathlib import Path as _P
+    REPO = _P(__file__).resolve().parents[2]
+    print("[kiểm thư viện]")
+    from pipeline.tools import check_deps as CD
+    req = CD.parse_req()
+    check(f"đọc được requirements.txt ({len(req)} gói)", len(req) >= 20)
+    names = {n.lower() for n, _, _ in req}
+    check("dùng pygame-ce, KHÔNG dùng pygame (3.14 không có wheel)",
+          "pygame-ce" in names and "pygame" not in names)
+    check("vietocr nằm trong nhóm phải cài --no-deps", "vietocr" in CD.NO_DEPS)
+    a = CD.audit()
+    check("mọi gói khai báo đều được phân loại",
+          len(a["ok"]) + len(a["thieu"]) + len(a["lech"]) == len(req))
+    src = (REPO / "pipeline" / "tools" / "check_deps.py").read_text(encoding="utf-8")
+    check("--fix cài --no-deps RIÊNG chứ không gộp", '"--no-deps"' in src)
+    check("--fix kiểm LẠI sau khi cài", "b = audit()" in src)
+    rp = (REPO / "run_pipeline.sh").read_text(encoding="utf-8")
+    check("run_pipeline gọi check_deps ở preflight", "pipeline.tools.check_deps" in rp)
+    check("thiếu gói thì TỰ VÁ chứ không chỉ báo", "check_deps --fix" in rp)
+    check("có đường thoát SKIP_DEPS", "SKIP_DEPS" in rp)
+
+
 def test_dict_candidates() -> None:
     """Bảng ứng viên từ điển PHẢI có đủ cột phân xử.
 
@@ -271,6 +295,7 @@ def main() -> int:
     test_fix_tone()
     test_sem_score()
     test_syllable_normalize()
+    test_check_deps()
     test_dict_candidates()
     test_variant_table()
     test_dataset_docs()

@@ -184,8 +184,29 @@ preflight() {
     ok "venv: $("$PY" -c 'import sys;print(sys.executable, sys.version.split()[0])')"
   else
     die "Không thấy Python ở: $PY
-      Tạo venv : python3.13 -m venv .venv && .venv/bin/pip install -r requirements.txt
+      Tạo venv : python3.14 -m venv .venv && .venv/bin/pip install -r requirements.txt
       Hoặc     : PYTHON_BIN=/path/to/python ./run_pipeline.sh"
+  fi
+
+  # --- THƯ VIỆN: kiểm MỖI LẦN CHẠY, và tự vá ---------------------------------
+  # Thiếu một gói giữa chừng thì pipeline chết ở phút thứ 20, SAU KHI đã xoá
+  # dataset_out/. Kiểm ở đây tốn 1 giây và chặn được cả lần chạy hỏng.
+  # Đặt SKIP_DEPS=1 để bỏ qua (ví dụ khi đang chạy ngoại tuyến).
+  if [[ "${SKIP_DEPS:-0}" != "1" ]]; then
+    if "$PY" -m pipeline.tools.check_deps >/dev/null 2>&1; then
+      ok "thư viện: đủ và đúng phiên bản ghim ($("$PY" -m pipeline.tools.check_deps 2>&1 | grep -oE '[0-9]+/[0-9]+' | head -1) gói)"
+    else
+      warn "thư viện THIẾU hoặc LỆCH phiên bản — đang vá tự động:"
+      "$PY" -m pipeline.tools.check_deps 2>&1 | sed 's/^/    /'
+      # check_deps tôn trọng ba cạm bẫy của môi trường 3.14: pygame-ce thay pygame,
+      # vietocr phải --no-deps, safetensors ghim bản rc có wheel.
+      "$PY" -m pipeline.tools.check_deps --fix --python "$PY" 2>&1 | sed 's/^/    /'
+      "$PY" -m pipeline.tools.check_deps >/dev/null 2>&1 \
+        || die "thư viện vẫn chưa đủ sau khi vá — xem log ở trên, sửa tay rồi chạy lại"
+      ok "thư viện: đã vá xong"
+    fi
+  else
+    warn "BỎ QUA kiểm thư viện (SKIP_DEPS=1)"
   fi
 
   if [[ -f .env ]]; then

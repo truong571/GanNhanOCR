@@ -94,7 +94,18 @@ def build_blocks() -> dict[str, str]:
         b = "**" if t in USABLE and t == "GOLD" else ""
         out.append(f"| {b}{t}{b} | {b}{_n(n)}{b} | {100*n/max(tot,1):.1f}% | {inn} | {src} |")
     out.append("")
-    out.append(f"**Bộ giao nộp = GOLD + SYLLABLE = {_n(len(pub))} ô** · {_n(len(pub))} ảnh đã copy, **0 thiếu**.")
+    # PHÁT BIỂU CHO ĐÚNG BẢN CHẤT (sửa 2026-08-25 sau phản biện hội đồng).
+    # Gộp GOLD + SYLLABLE thành một con số là THỔI SỐ: 6.911 dòng SYLLABLE có cột
+    # `label` RỖNG (label_level='syllable') — chúng KHÔNG gán chữ Nôm nào, chỉ mang âm
+    # Quốc ngữ. Sản phẩm gán nhãn CẤP KÝ TỰ chỉ là phần GOLD.
+    n_char = sum(1 for r in pub if (r.get("label") or "").strip())
+    n_syl = len(pub) - n_char
+    out.append(
+        f"**Bộ giao nộp = {_n(n_char)} nhãn CẤP KÝ TỰ + {_n(n_syl)} chú giải CẤP ÂM TIẾT** "
+        f"= {_n(len(pub))} dòng · {_n(len(pub))} ảnh đã copy, **0 thiếu**.\n\n"
+        f"> ⚠️ **KHÔNG phát biểu là “{_n(len(pub))} nhãn”.** {_n(n_syl)}/{_n(n_syl)} dòng tầng "
+        f"SYLLABLE có cột `label` **rỗng** — chúng chỉ ghi ÂM Quốc ngữ, không gán chữ Nôm. "
+        f"Con số dùng khi so với các bộ dữ liệu Hán Nôm khác là **{_n(n_char)}**.")
     phan_hang = "\n".join(out)
 
     # --- LUAT --------------------------------------------------------------

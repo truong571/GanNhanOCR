@@ -62,14 +62,33 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
         n_copied += 1
 
     with open(out_root / "labels.csv", "w", encoding="utf-8", newline="") as f:
+        if "usable_image" not in fieldnames:
+            fieldnames = list(fieldnames) + ["usable_image"]
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
         w.writerows(rows)
 
     tiers = Counter(r["tier"] for r in rows)
-    print(f"[export] {out_root}/labels.csv — {len(rows)} dòng usable "
+    # TÁCH BẠCH HAI LOẠI NHÃN (2026-08-25, sau phản biện hội đồng). Gộp GOLD+SYLLABLE
+    # thành một con số là THỔI SỐ: tầng SYLLABLE có cột `label` RỖNG — nó chỉ ghi ÂM
+    # Quốc ngữ, KHÔNG gán chữ Nôm nào. Sản phẩm gán nhãn CẤP KÝ TỰ chỉ là phần GOLD.
+    # GẮN CỜ ẢNH DÙNG ĐƯỢC (2026-08-25). Đo được 424 ô có ảnh hỏng (34+330 GOLD, 6+54
+    # SYLLABLE) vẫn nằm trong bộ giao nộp. KHÔNG loại chúng: nhãn có thể vẫn ĐÚNG dù
+    # ảnh hỏng, và loại đi sẽ đổi số + phá chuỗi băm. Thay vào đó gắn cờ để (a) người
+    # chấm biết bỏ qua chiều ẢNH thay vì chấm nhầm thành "nhãn sai", (b) người huấn
+    # luyện mô hình lọc được.
+    for r in rows:
+        r["usable_image"] = "0" if r.get("crop_quality_flag") in ("blank", "truncated") else "1"
+    _nbad = sum(1 for r in rows if r["usable_image"] == "0")
+    _nchar = sum(1 for r in rows if (r.get("label") or "").strip())
+    _nsyl = len(rows) - _nchar
+    print(f"[export] {out_root}/labels.csv — {_nchar:,} nhãn CẤP KÝ TỰ "
+          f"+ {_nsyl:,} chú giải CẤP ÂM TIẾT = {len(rows):,} dòng "
           f"(GOLD {tiers.get('GOLD', 0)}, SILVER {tiers.get('SILVER', 0)}, "
           f"SYLLABLE {tiers.get('SYLLABLE', 0)})")
+    print(f"[export] ⚠️ con số đem so với bộ dữ liệu Hán Nôm khác là {_nchar:,}, "
+          f"KHÔNG phải {len(rows):,}")
+    print(f"[export] usable_image=0 (ảnh trắng/cụt, ĐỪNG chấm chiều ảnh): {_nbad:,} ô")
     print(f"[export] ảnh: {n_copied} đã copy, {n_missing} thiếu trên đĩa")
     if n_missing:
         print(f"[export] CẢNH BÁO: {n_missing} ảnh có trong {labels_path.name} "

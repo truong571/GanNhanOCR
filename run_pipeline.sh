@@ -492,6 +492,8 @@ step_export() {
   # không kiểm lại được ô nhãn nào. Mọi con số trong DATASHEET đọc TỪ labels.csv nên
   # không thể lệch với dữ liệu. Các mục chỉ người biết được để `⬜ CHƯA ĐIỀN`.
   X "$PY" -m pipeline.tools.make_dataset_docs --dataset "$FINAL_OUT"
+  # bản .xlsx đọc bằng Excel của chính labels.csv (ngoài git — đầu ra dựng lại được)
+  X "$PY" -m pipeline.tools.make_xlsx --labels "$FINAL_OUT/labels.csv"
 }
 
 # ====================== FREEZE / EVIDENCE ====================================

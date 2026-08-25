@@ -460,6 +460,56 @@ def test_run_pipeline_grep_dem() -> None:
     check("tái hiện được: `grep -c || echo 0` KHÔNG cho '0'", bad.returncode != 0)
 
 
+def test_xlsx_khong_bi_excel_an_kieu() -> None:
+    """Bản .xlsx phải là ẢNH CHỤP TRUNG THỰC của labels.csv, không để Excel suy kiểu.
+
+    Kho này đã nhiều lần chảy máu vì ép kiểu: label_in_train '1' -> 1.0, âm Quốc ngữ THẬT
+    "nan" -> NaN, crop_w '138' -> 138.0. Excel suy kiểu còn hăng hơn pandas, nên mặc định
+    ở đây là CHUỖI; chỉ vài cột đo được mới ghi kiểu số.
+    """
+    import csv as _csv
+    from pipeline.tools import make_xlsx as mx
+    print("[xlsx trung thực với csv]")
+    ds = REPO / "dataset"
+    if not (ds / "labels.csv").exists():
+        ds = REPO / "re-dataset"
+    src, dst = ds / "labels.csv", ds / "labels.xlsx"
+    if not src.exists() or not dst.exists():
+        print("  [bỏ qua] chưa có bộ giao nộp / chưa dựng xlsx"); return
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        print("  [bỏ qua] thiếu openpyxl"); return
+    rows = list(_csv.DictReader(open(src, encoding="utf-8")))
+    ws = load_workbook(dst, read_only=True)["labels"]
+    it = ws.iter_rows(values_only=True)
+    hdr = list(next(it))
+    xl = list(it)
+    check(f"số dòng khớp ({len(rows):,})", len(xl) == len(rows), f"xlsx {len(xl):,}")
+    check("cột khớp đúng thứ tự", hdr == list(rows[0].keys()))
+    i = {c: k for k, c in enumerate(hdr)}
+    lech = 0
+    for a, b in zip(rows, xl):
+        for c in hdr:
+            if c in mx.COT_SO:
+                continue
+            # ô rỗng trong xlsx đọc ra None — phải quy về "" TRƯỚC khi so, nếu không
+            # chính phép kiểm lại báo động giả trên mọi ô trống (đã dính: 194.875 ô).
+            v = b[i[c]]
+            if ("" if v is None else str(v)) != a[c]:
+                lech += 1
+    check("0 ô lệch trên mọi cột CHUỖI", lech == 0, f"{lech} ô")
+    lit = {str(r[i["label_in_train"]]) for r in xl if r[i["label_in_train"]] is not None}
+    check("label_in_train KHÔNG bị hoá số ('1.0')", lit <= {"0", "1"}, str(sorted(lit))[:50])
+    cw = {str(r[i["crop_w"]]) for r in xl if r[i["crop_w"]]}
+    check("crop_w không có đuôi '.0'", not any("." in v for v in cw), str(sorted(cw)[:3]))
+    nan = [r for r in rows if str(r["syllable"]).lower() == "nan"]
+    if nan:
+        gnan = [r for r in xl if str(r[i["syllable"]]).lower() == "nan"]
+        check(f"âm Quốc ngữ 'nan' còn nguyên ({len(nan)} ô)", len(gnan) == len(nan),
+              f"xlsx còn {len(gnan)}")
+
+
 def test_batch_by_rule() -> None:
     """Mẻ chấm PHẢI tách GOLD thành direct/similar — hai lớp rủi ro khác nhau."""
     from pathlib import Path as _P
@@ -510,6 +560,7 @@ def main() -> int:
     test_step1_khong_mat_trang()
     test_co_trang_lech_cot()
     test_run_pipeline_grep_dem()
+    test_xlsx_khong_bi_excel_an_kieu()
     test_batch_by_rule()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")

@@ -1,5 +1,5 @@
 """Đánh giá AUC bắt-lỗi THẬT của checkpoint ArcFace mới bằng 846 verdict NGƯỜI
-đã có sẵn (dataset_out/ground_truth/verdicts_reanchored.csv) — KHÔNG cần audit
+đã có sẵn (dataset_out/human_audit/verdicts_reanchored.csv) — KHÔNG cần audit
 lại. Đối chiếu trực tiếp với con số CŨ đã đo bằng người (bank_cos AUC = 0.566-
 0.572, docs/BANG_SO_LIEU_CHINH_THUC.md) — không dùng proxy auto-label.
 
@@ -53,7 +53,7 @@ def _auc(scores: list[float], is_pos: list[bool]) -> float:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--ckpt", default=str(REPO / "ArcFace/checkpoints/best.pt"))
-    ap.add_argument("--verdicts", default=str(REPO / "dataset_out/ground_truth/verdicts_reanchored.csv"))
+    ap.add_argument("--verdicts", default=str(REPO / "dataset_out/human_audit/verdicts_reanchored.csv"))
     ap.add_argument("--src-root", default=str(REPO / "dataset_out"))
     args = ap.parse_args()
 

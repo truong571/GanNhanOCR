@@ -323,6 +323,57 @@ def test_crop_purity():
           CP.PADS[0] == 0.0 and max(CP.PADS) >= 0.45)
 
 
+def test_t7_cau_noi_hai_chieu() -> None:
+    """T7 — cầu nối tự dạng hai chiều.
+
+    Hai lớp lỗi ĐÃ XẢY RA trong lúc dựng lab này, cả hai đều câm:
+    1. `thu_thap()` ghim cứng `hai_chieu=True` nên cờ `--mot-chieu` vô hiệu — tức ĐỐI CHỨNG
+       của chính lab không chạy, và ta sẽ không bao giờ biết.
+    2. Tính tỷ lệ xác nhận ở mức Ô thay vì mức ÁNH XẠ. Ô không độc lập (lỗi OCR có tính
+       hệ thống: 600 ô chỉ là 183 ánh xạ, 84 ô xác nhận chỉ thuộc 18 ánh xạ). Đếm ở mức ô
+       là đếm cùng một bằng chứng nhiều chục lần: p đi từ 0,059 xuống 0,00014 và kết luận
+       lật từ GIỮ sang NỚI. Sai đơn vị phân tích thì mọi thứ sau đó sai theo.
+    """
+    from pipeline.lab import t7_bridge_2way as t7
+    print("[T7 cầu nối hai chiều]")
+    check("cờ BRIDGE_TWO_WAY mặc định TẮT", t7.BRIDGE_TWO_WAY is False)
+
+    xuoi = {"A": ["B", "C"], "D": ["A"]}
+    nguoc = {"B": ["A"], "C": ["A"], "A": ["D"]}
+    check("một chiều: chỉ lấy top-K của chính chữ đó",
+          t7.cau_noi("A", ["B", "D"], xuoi, nguoc, False) == ["B"])
+    check("hai chiều: cộng thêm chiều ngược",
+          t7.cau_noi("A", ["B", "D"], xuoi, nguoc, True) == ["B", "D"])
+    check("chiều ngược luôn xếp SAU (cau_noi[0] giữ nguyên nghĩa cũ)",
+          t7.cau_noi("A", ["B", "D"], xuoi, nguoc, True)[0] == "B")
+    check("chữ không có cầu nào -> rỗng",
+          t7.cau_noi("Z", ["B"], xuoi, nguoc, True) == [])
+
+    # HỒI QUY 1: tham số phải được dùng, không được ghim cứng
+    src = (REPO / "pipeline" / "lab" / "t7_bridge_2way.py").read_text(encoding="utf-8")
+    check("thu_thap KHÔNG ghim cứng hai_chieu=True",
+          "hai_chieu=hai_chieu" in src and "cau_noi(oc, R, xuoi, nguoc, hai_chieu=True)" not in src)
+
+    # HỒI QUY 2: gom theo ánh xạ phải cho n NHỎ HƠN số ô, và không đếm trùng
+    class _S:
+        def score(self, chu, am):
+            return 0.9 if chu == "X" else 0.0
+    pop = [{"ocr_char": "O", "_cau": "X", "syllable": "a", "_am": "a"} for _ in range(50)]
+    pop += [{"ocr_char": "P", "_cau": "Y", "syllable": "b", "_am": "b"} for _ in range(3)]
+    g = t7.gom_theo_anh_xa(pop, "_cau", "_am", _S())
+    check("53 ô -> 2 ánh xạ", g["n_anh_xa"] == 2, str(g))
+    check("1/2 ánh xạ được xác nhận (KHÔNG phải 50/53 ô)",
+          (g["n_xac_nhan"], g["n_cham_duoc"]) == (1, 2), str(g))
+    check("tỷ lệ theo ánh xạ = 50%, không phải 94%", abs(g["ty_le"] - 0.5) < 1e-9)
+
+    check("có hằng số ngưỡng chốt trước",
+          all(hasattr(t7, k) for k in
+              ("N_MIN", "CONTROL_MIN_RATIO", "CONFIRM_MAX_DROP", "YIELD_MIN", "P_MAX")))
+    check("docstring giữ nguyên phán quyết KHÔNG QUA của cổng đăng ký ban đầu",
+          "G2 NHƯ TRÊN ĐÃ CHẠY VÀ KHÔNG QUA" in src)
+    check("docstring có cảnh báo hậu nghiệm", "CẢNH BÁO HẬU NGHIỆM" in src)
+
+
 def main() -> int:
     print("=" * 64)
     print("LAB SELFTEST")
@@ -333,6 +384,7 @@ def main() -> int:
     test_synth()
     test_crop_grid()
     test_crop_purity()
+    test_t7_cau_noi_hai_chieu()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

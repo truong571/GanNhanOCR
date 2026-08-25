@@ -63,31 +63,56 @@ def normalize_image_key(path: str) -> str:
     return _BOOK_ALIAS.sub(lambda m: f"{m.group(1)}stt{m.group(2)}_", str(path))
 
 
-def measure_gold_precision(final: pd.DataFrame) -> dict | None:
-    """Precision GOLD sau fix, neo trên verdicts_reanchored.csv (join theo image).
+# Đội chấm ngoài trả verdict về đây, kèm khai xuất xứ. Cùng giao ước với apply_verdicts.py.
+NGUON_VERDICT = ("re-dataset", "dataset")
+PROV_FILE = "NGUOI_CHAM.md"
 
-    ⚠️ XUẤT XỨ CHƯA XÁC MINH ĐƯỢC (2026-08-22). Bộ 846 phán quyết trong tệp này dùng
-    ĐÚNG mẫu của một mẻ MÁY chấm (`audit_gold/audit_gold.jsonl`, trùng 846/846 item_id)
-    nhưng giá trị verdict chỉ khớp 47/846, và verdict thô gốc đã mất
-    (`docs/EVIDENCE_INDEX.md:18`). Mọi con số ra từ đây phải gắn nhãn CHƯA ĐO cho tới
-    khi có mẻ chấm người mới — xem docs/KE_HOACH_TONG_THE_2026-08-22.md §0.
+# Tệp ĐỜI CŨ đã bị vô hiệu: 846 phán quyết trong đó là MÁY chấm (trùng 846/846 item_id với
+# audit_gold/audit_gold.jsonl), verdict thô gốc đã mất. Đã xoá khỏi đĩa ở d867bcc289 nhưng
+# VẪN CÒN trong lịch sử git — ai `git checkout` một bản cũ là nó sống lại. Thấy là TỪ CHỐI.
+VERDICT_DOI_CU = REPO / "dataset_out" / "human_audit" / "verdicts_reanchored.csv"
+
+
+def _tim_verdict_nguoi() -> tuple[Path, Path] | None:
+    """Chỉ nhận verdict khi CÓ CẢ khai xuất xứ đi kèm — thiếu là coi như không có."""
+    for d in NGUON_VERDICT:
+        v, prov = REPO / d / "verdicts.csv", REPO / d / PROV_FILE
+        if v.exists() and prov.exists():
+            return v, prov
+    return None
+
+
+def measure_gold_precision(final: pd.DataFrame) -> dict | None:
+    """Precision GOLD, neo trên verdict NGƯỜI (<bộ>/verdicts.csv + NGUOI_CHAM.md).
+
+    Trả None khi CHƯA có verdict người — và đó là câu trả lời ĐÚNG, không phải hỏng hóc.
+
+    Dự án này đã một lần nhầm phán quyết MÁY thành phán quyết NGƯỜI rồi phải huỷ sạch số
+    liệu dựng trên đó (precision GOLD 97,98%, Fisher p=5,4e-8, κ=0,13 — vô giá trị hết).
+    Nên ở đây thà KHÔNG có số còn hơn có một số không truy được xuất xứ: hàm này không
+    bao giờ tự bịa nguồn thay, và từ chối thẳng tệp đời cũ nếu nó quay lại.
     """
-    vp = REPO / "dataset_out" / "human_audit" / "verdicts_reanchored.csv"
-    if not vp.exists():
+    if VERDICT_DOI_CU.exists():
+        print(f" 🔴 THẤY LẠI {VERDICT_DOI_CU.relative_to(REPO)} — tệp này là MÁY chấm, đã bị")
+        print("    vô hiệu. TỪ CHỐI đo precision từ nó. Xoá nó, hoặc dùng verdict người mới.")
         return None
-    v = pd.read_csv(vp, dtype=str, keep_default_na=False, na_values=[""])
-    v = v[v["status"] == "matched"]
+    tim = _tim_verdict_nguoi()
+    if tim is None:
+        return None
+    vfile, prov = tim
+    from pipeline.remediation.apply_verdicts import doc_verdict_phang   # nạp muộn: tránh vòng
+    vmap = doc_verdict_phang(vfile)
     tier_by_img = {normalize_image_key(k): t for k, t in zip(final["image"], final["tier"])}
-    joined = v["image_new"].map(normalize_image_key).map(tier_by_img)
-    v = v.assign(tier_now=joined)
-    g = v[(v["tier_now"] == "GOLD") & (v["verdict"] != "unsure")]
+    khop = {k: v for k, v in ((normalize_image_key(k), v) for k, v in vmap.items())
+            if k in tier_by_img}
+    g = {k: v for k, v in khop.items() if tier_by_img[k] == "GOLD" and v != "unsure"}
     n = len(g)
-    correct = int((g["verdict"] == "correct").sum())
+    correct = sum(1 for v in g.values() if v == "correct")
     return {"gold_audited": n, "correct": correct,
             "precision": round(correct / n, 4) if n else None,
             "wrong": n - correct,
-            "joined": int(joined.notna().sum()), "verdicts": int(len(v)),
-            "provenance": "UNVERIFIED_machine_graded__see_KE_HOACH_TONG_THE_2026-08-22_§0"}
+            "joined": len(khop), "verdicts": len(vmap),
+            "provenance": f"{vfile.relative_to(REPO)} + {prov.name}"}
 
 
 def run(in_csv: Path, out_csv: Path, fixes_yaml: Path, measure: bool) -> dict:
@@ -117,20 +142,21 @@ def run(in_csv: Path, out_csv: Path, fixes_yaml: Path, measure: bool) -> dict:
               f"{x['by_book']}")
     print(f" tier before: {before}")
     print(f" tier after : {after}")
-    if measure and report.get("precision_gold_after"):
-        b, a = report["precision_gold_before"], report["precision_gold_after"]
-        if b.get("precision") is not None and a.get("precision") is not None:
+    if measure:
+        # LUÔN nói một câu. Trước đây nhánh này gác bằng `report.get(...)` nên khi CHƯA có
+        # verdict thì cả khối bị bỏ qua: report ăn thêm hai trường null mà màn hình im lặng.
+        b, a = report.get("precision_gold_before"), report.get("precision_gold_after")
+        if a and b and a.get("precision") is not None and b.get("precision") is not None:
             print(f" precision GOLD: {b['precision']:.4f} (n={b['gold_audited']}, sai {b['wrong']}) "
                   f"→ {a['precision']:.4f} (n={a['gold_audited']}, sai {a['wrong']})")
-            print(f" join khớp {a['joined']}/{a['verdicts']} verdict")
-            print(" ⚠️  XUẤT XỨ CHƯA XÁC MINH — bộ verdict này dùng đúng mẫu của một mẻ")
-            print("    MÁY chấm và verdict thô gốc đã mất. KHÔNG trích số này vào luận")
-            print("    văn cho tới khi có mẻ chấm người mới (KE_HOACH_TONG_THE §0).")
+            print(f" join khớp {a['joined']}/{a['verdicts']} verdict | xuất xứ: {a['provenance']}")
+        elif a:
+            print(f" precision GOLD: có {a['verdicts']} verdict, join khớp {a['joined']}, "
+                  f"nhưng 0 ô GOLD chấm được → chưa đo.")
         else:
-            # precision = None khi CHƯA có verdict NGƯỜI cho GOLD (không có audit để đo).
-            # Trước đây format None -> TypeError làm CHẾT bước confusion sau khi đã ghi
-            # labels_final.csv, kéo pipeline dừng trước publish.
-            print(" precision GOLD: chưa đo được (chưa có verdict NGƯỜI cho GOLD).")
+            print(" precision GOLD: CHƯA ĐO ĐƯỢC — chưa có verdict NGƯỜI "
+                  f"({'/'.join(NGUON_VERDICT)}/verdicts.csv + {PROV_FILE}).")
+            print("   null trong report là câu trả lời ĐÚNG, không phải lỗi.")
     print(f" -> {out_csv}")
     return report
 

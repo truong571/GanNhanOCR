@@ -6,6 +6,7 @@ and then runs the whole remediation on the real labels.csv, asserting the invari
 """
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import numpy as np
@@ -476,15 +477,68 @@ def test_confusion_fix_join() -> None:
           n("abc_yen9_x.png") == "abc_yen9_x.png")
     check("luỹ đẳng khi gọi 2 lần", n(n("gold/yen11_a.png")) == n("gold/yen11_a.png"))
 
-    vp = REPO / "dataset_out" / "human_audit" / "verdicts_reanchored.csv"
-    if vp.exists() and (REPO / "dataset_out" / "labels_final.csv").exists():
-        final = pd.read_csv(REPO / "dataset_out" / "labels_final.csv", dtype=str, low_memory=False)
-        r = cfix_mod.measure_gold_precision(final)
-        check("thật: join khớp phần lớn verdict (không còn 0)",
-              r["joined"] > 0.9 * r["verdicts"], f"{r['joined']}/{r['verdicts']}")
-        check("thật: precision GOLD tính ra được (không null)", r["precision"] is not None)
-        check("thật: có gắn cờ xuất xứ chưa xác minh",
-              r.get("provenance", "").startswith("UNVERIFIED"), str(r.get("provenance")))
+
+def test_measure_chi_nhan_verdict_nguoi() -> None:
+    """`--measure` chỉ được đo khi có verdict NGƯỜI, và phải NÓI RA khi không đo được.
+
+    Hai khiếm khuyết thật vá 2026-08-25:
+    1. BẪY XUẤT XỨ — hàm neo vào `verdicts_reanchored.csv`, tệp MÁY chấm đã bị vô hiệu.
+       Nó đã bị xoá khỏi đĩa nhưng VẪN nằm trong lịch sử git: một lần `git checkout` bản cũ
+       là precision máy-chấm lặng lẽ chảy vào report.json trở lại. Đúng cái sai đã một lần
+       huỷ sạch số liệu của đề tài.
+    2. NUỐT THÔNG BÁO — khối in gác bằng `if measure and report.get(...)`, nên khi chưa có
+       verdict thì report ăn thêm hai trường null mà màn hình không hé một chữ.
+    """
+    import contextlib, io
+    print("[--measure chỉ nhận verdict người]")
+    final = pd.DataFrame({"image": ["gold/stt2_a.png", "gold/stt2_b.png", "silver/stt2_c.png"],
+                          "tier": ["GOLD", "GOLD", "SILVER"]})
+    goc_nguon, goc_cu = cfix_mod.NGUON_VERDICT, cfix_mod.VERDICT_DOI_CU
+    try:
+        if True:
+            sb = cfix_mod.REPO / "_tmp_verdict_test"
+            shutil.rmtree(sb, ignore_errors=True)   # rác của lần chạy hỏng trước làm test nói dối
+            sb.mkdir()
+            try:
+                cfix_mod.NGUON_VERDICT = ("_tmp_verdict_test",)
+                cfix_mod.VERDICT_DOI_CU = sb / "khong_ton_tai.csv"
+                check("chưa có tệp nào -> None, KHÔNG bịa số",
+                      cfix_mod.measure_gold_precision(final) is None)
+                (sb / "verdicts.csv").write_text(
+                    "image,verdict\ngold/stt2_a.png,dung\ngold/stt2_b.png,sai\n"
+                    "silver/stt2_c.png,dung\n", encoding="utf-8")
+                check("có verdicts.csv nhưng THIẾU NGUOI_CHAM.md -> None",
+                      cfix_mod.measure_gold_precision(final) is None)
+
+                (sb / "NGUOI_CHAM.md").write_text("# ai chấm\n- Test\n", encoding="utf-8")
+                r = cfix_mod.measure_gold_precision(final)
+                check("đủ hai tệp -> đo được", r is not None)
+                check("chỉ tính ô GOLD (2/3, bỏ SILVER)", r["gold_audited"] == 2,
+                      f"n={r['gold_audited']}")
+                check("precision = 1 đúng / 2 = 0,5", r["precision"] == 0.5, str(r["precision"]))
+                check("xuất xứ trỏ tệp thật, KHÔNG còn 'UNVERIFIED'",
+                      "NGUOI_CHAM.md" in r["provenance"] and "UNVERIFIED" not in r["provenance"],
+                      r["provenance"])
+
+                # BẪY: tệp máy-chấm đời cũ quay lại -> phải TỪ CHỐI dù verdict người có sẵn
+                cu = cfix_mod.REPO / "_tmp_verdict_test" / "gia_verdicts_reanchored.csv"
+                cu.write_text("image_new,verdict,status\n", encoding="utf-8")
+                cfix_mod.VERDICT_DOI_CU = cu
+                buf = io.StringIO()
+                with contextlib.redirect_stdout(buf):
+                    r2 = cfix_mod.measure_gold_precision(final)
+                check("tệp MÁY chấm đời cũ quay lại -> TỪ CHỐI đo", r2 is None)
+                check("và có kêu lên chứ không im", "MÁY chấm" in buf.getvalue())
+            finally:
+                shutil.rmtree(sb, ignore_errors=True)
+    finally:
+        cfix_mod.NGUON_VERDICT, cfix_mod.VERDICT_DOI_CU = goc_nguon, goc_cu
+
+    # nuốt thông báo: --measure luôn phải in một câu về precision
+    src = (REPO / "pipeline" / "remediation" / "confusion_fix.py").read_text(encoding="utf-8")
+    check("khối in KHÔNG còn gác bằng report.get(...)",
+          'if measure and report.get("precision_gold_after")' not in src)
+    check("có nhánh nói rõ CHƯA ĐO ĐƯỢC", "CHƯA ĐO ĐƯỢC" in src)
 
 
 def main() -> int:
@@ -499,6 +553,7 @@ def main() -> int:
     test_co_khong_bi_ep_kieu()
     test_nan_syllable_not_eaten()
     test_confusion_fix_join()
+    test_measure_chi_nhan_verdict_nguoi()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

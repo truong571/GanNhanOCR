@@ -494,6 +494,12 @@ evidence() {
       else h='(chưa có)'; fi
       printf '| `%s` | `%s` |\n' "$f" "$h"
     done
+    printf '\n**Bộ dò ký tự**: `mdnt571/nom-char-det` @ HuggingFace,\n'
+    printf -- '  tệp `detector_r34.PROD_e38_img1024.best.pt`, oid `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694`\n'
+    printf -- '  ⚠️ CÙNG REPO có `detector_r34.best.pt` là MỘT MÔ HÌNH KHÁC (epoch 41, img 1280,\n'
+    printf -- '  F1 0,8298 so với bản sản xuất epoch 38, img 1024, F1 0,8436) — 259/259 tensor khác\n'
+    printf -- '  nhau. infer_centernet.py:198 lấy độ phân giải TỪ checkpoint nên thay nhầm sẽ\n'
+    printf -- '  letterbox ở 1280 và cho hộp khác MÀ KHÔNG BÁO LỖI. Luôn dùng tệp tên PROD.\n'
     printf '\n**Checkpoint S3**: `mdnt571/nom-embed` @ HuggingFace, revision `7ff74f57c4be`\n'
     printf -- '- `best.pt` LFS oid = `eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0`\n'
     printf -- '- `last.pt` LFS oid = `c05dd1723c751059`… (xem repo HF)\n'

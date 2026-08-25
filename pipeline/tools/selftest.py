@@ -259,17 +259,26 @@ def test_dataset_docs() -> None:
     check("lai lịch để TRỐNG chứ không bịa", "⬜ CHƯA ĐIỀN" in ng)
     # HỒI QUY: README từng khẳng định "chia tách theo TRANG, không trang nào ở hai phía"
     # trong khi ĐO ĐƯỢC 360/444 trang có cột ở nhiều phía. Tài liệu nói dối về dữ liệu.
-    check("README KHÔNG khẳng định sai là chia tách theo TRANG",
-          "chia tách theo TRANG, không có trang nào" not in rd)
-    check("README cảnh báo split neo ở mức CỘT", "neo ở mức" in rd and "CỘT" in rd)
+    # README phải mô tả ĐÚNG trạng thái ĐO ĐƯỢC, không phải ý định của mã.
+    import csv as _c0, collections as _c1
+    _rows = list(_c0.DictReader(open(ds / "labels.csv", encoding="utf-8")))
+    _pg = _c1.defaultdict(set)
+    for _r in _rows:
+        _pg[(_r.get("book"), _r.get("page"))].add(_r.get("split", ""))
+    _leak = sum(1 for v in _pg.values() if len(v) > 1)
+    if _leak == 0:
+        check("0 rò rỉ -> README nói RỜI NHAU THEO TRANG", "rời nhau theo TRANG" in rd)
+    else:
+        check(f"{_leak} trang rò rỉ -> README phải CẢNH BÁO", "CÓ RÒ RỈ" in rd)
+        check("README nói rõ chỉ số là CẬN TRÊN", "CẬN TRÊN" in rd)
+    if any("label_in_train" in r for r in _rows[:1]):
+        check("có cột label_in_train -> README phải nêu", "label_in_train" in rd)
     import csv as _csv, collections as _c
     rows = list(_csv.DictReader(open(ds / "labels.csv", encoding="utf-8")))
     pg = _c.defaultdict(set)
     for r in rows:
         pg[(r["book"], r["page"])].add(r.get("split", ""))
-    n_leak = sum(1 for v in pg.values() if len(v) > 1)
-    check(f"nếu CÓ rò rỉ theo trang ({n_leak}) thì README phải nói",
-          n_leak == 0 or "CẬN TRÊN" in rd)
+
     check("nói rõ vì sao để trống", "cố ý để trống" in ng.lower() or "bịa" in ng)
 
 

@@ -30,8 +30,8 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
 5. **424 ô có ảnh hỏng** (`usable_image=0`) vẫn nằm trong bộ — nhãn có thể
    đúng, ảnh thì không dùng được.
 6. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.
-7. **Chia tách neo ở mức CỘT, không phải TRANG** — 360/444 trang có cột ở nhiều phía, nên
-   chỉ số đo bằng `split` sẵn có là **cận trên**. Xem README.
+7. **Một số lớp chữ hiếm không có mặt trong `train`.** Hệ quả của việc chia tách trung
+   thực theo trang. Lọc bằng cột `label_in_train` khi đánh giá.
 7. **Chia tách neo ở mức CỘT, không phải TRANG** — 360/444 trang có cột ở nhiều phía.
    Chỉ số đo bằng `split` sẵn có là **cận trên**. Xem README.
 

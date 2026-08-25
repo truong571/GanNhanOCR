@@ -45,6 +45,16 @@ def stats(labels: Path) -> dict:
     char = [r for r in rows if (r.get("label") or "").strip()]
     syl = [r for r in rows if not (r.get("label") or "").strip()]
     q = collections.Counter(r.get("crop_quality_flag", "") for r in rows)
+    # ĐO chia tách từ CHÍNH DỮ LIỆU, không khẳng định theo thiết kế. Tài liệu từng nói
+    # "rời nhau theo TRANG" trong khi đo được 360/444 trang nằm ở hai phía — vì nó chép
+    # lại ý định của mã thay vì đọc tệp. Bộ sinh tài liệu KHÔNG được phép nói điều nó
+    # chưa đo.
+    _pg = collections.defaultdict(set)
+    for r in rows:
+        _pg[(r.get("book"), r.get("page"))].add(r.get("split", ""))
+    n_leak = sum(1 for v in _pg.values() if len(v) > 1)
+    unseen = sum(1 for r in rows if r.get("label_in_train") == "0")
+    co_cot_moi = "label_in_train" in (rows[0] if rows else {})
     return {
         "dong": len(rows), "nhan_ky_tu": len(char), "chu_giai_am": len(syl),
         "lop_chu": len({r["label"] for r in char}),
@@ -54,10 +64,36 @@ def stats(labels: Path) -> dict:
         "am_qn": len({(r.get("syllable") or "").lower() for r in rows if r.get("syllable")}),
         "anh_hong": q.get("blank", 0) + q.get("truncated", 0),
         "flag": {k: v for k, v in q.items() if k},
+        "n_leak": n_leak, "n_trang_split": len(_pg), "unseen": unseen,
+        "co_cot_moi": co_cot_moi,
         "commit": subprocess.run(["git", "log", "-1", "--format=%h", "--", str(labels)],
                                  cwd=REPO, capture_output=True, text=True).stdout.strip() or "?",
         "ngay": datetime.date.fromtimestamp(labels.stat().st_mtime).isoformat(),
     }
+
+
+def _khoi_chia_tach(s: dict) -> str:
+    """Mô tả chia tách theo SỐ ĐO, không theo ý định của mã."""
+    if s["n_leak"] == 0:
+        t = ["## Chia tách — rời nhau theo TRANG", "",
+             f"Đo trên chính `labels.csv`: **0/{s['n_trang_split']} trang** nằm ở hai phía.", "",
+             "Chọn mức trang chứ không phải cột vì hai cột cạnh nhau trên cùng một trang dùng",
+             "chung ván khắc, chung mực, chung lần quét — chia theo cột thì mô hình học được",
+             "*diện mạo trang* rồi được chấm lại trên chính trang đó."]
+        if s["co_cot_moi"]:
+            t += ["", f"**Hệ quả phải biết:** {s['unseen']:,} ô có lớp chữ **không xuất hiện trong",
+                  "`train`** — hệ quả của việc không bóp méo chia tách. Cột **`label_in_train`**",
+                  "đánh dấu chúng. Khi đánh giá, **lọc `label_in_train == 1`**; nếu không, những",
+                  "lớp đó bị tính sai 100% dù mô hình chưa từng có cơ hội học."]
+        return "\n".join(t)
+    return "\n".join([
+        "## 🔴 Chia tách CÓ RÒ RỈ theo trang", "",
+        f"Đo trên chính `labels.csv`: **{s['n_leak']}/{s['n_trang_split']} trang** có ô nằm ở",
+        "**hai phía khác nhau**. Hai cột cạnh nhau trên cùng một trang dùng chung ván khắc,",
+        "chung mực, chung lần quét, nên mô hình huấn luyện trên `train` học được *diện mạo",
+        "trang* rồi được chấm lại trên chính trang đó.", "",
+        "**Mọi chỉ số đo bằng `split` sẵn có là CẬN TRÊN**, không phải hiệu năng thật trên",
+        "trang chưa từng thấy. Muốn đánh giá trung thực thì tự chia lại theo `book` + `page`."])
 
 
 def readme(s: dict) -> str:
@@ -88,20 +124,10 @@ def readme(s: dict) -> str:
 | `tier` / `rule` | luật nào quyết nhãn này — xem DATASHEET |
 | `usable_image` | `0` = ảnh trắng hoặc bị cắt mất nét ({s['anh_hong']} ô). Nhãn có thể vẫn đúng; đừng chấm chiều ảnh ở các ô này |
 | `crop_quality_flag` | `ok` / `bleed` (dính mực chữ bên cạnh) / `truncated` / `blank` |
-| `split` / `split_group` | neo ở mức **CỘT** (`sách|trang|cột`) — xem cảnh báo dưới |
+| `split` / `split_group` | {"**rời nhau theo TRANG**" if s['n_leak']==0 else "🔴 **CÓ RÒ RỈ** — xem dưới"} |
+{"| `label_in_train` | `0` = lớp chữ này **không có mặt trong `train`**. Đánh giá phải lọc theo cột này |" if s['co_cot_moi'] else ""}
 
-## 🔴 Chia tách KHÔNG rời nhau theo TRANG
-
-`split` neo ở mức **cột**, không phải trang. Đo được: **0/3.985 cột** nằm ở hai phía —
-sạch theo đơn vị của chính nó — **nhưng 360/444 trang** có cột rơi vào các phía khác nhau.
-
-Hai cột cạnh nhau trên cùng một trang dùng chung ván khắc, chung mực, chung lần quét, nên
-mô hình huấn luyện trên `train` có thể học **diện mạo trang** rồi được chấm lại trên chính
-trang đó. **Mọi chỉ số đo bằng `split` sẵn có là CẬN TRÊN**, không phải hiệu năng thật trên
-trang chưa từng thấy.
-
-Muốn đánh giá trung thực thì tự chia lại theo `book` + `page`. Cái giá đo được: test
-4.881 → 3.868 ô, và số lớp chữ có ở test mà không có ở train tăng 9 → 31.
+{_khoi_chia_tach(s)}
 
 ## 🔴 Trạng thái kiểm định
 
@@ -189,8 +215,8 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
 5. **{s['anh_hong']} ô có ảnh hỏng** (`usable_image=0`) vẫn nằm trong bộ — nhãn có thể
    đúng, ảnh thì không dùng được.
 6. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.
-7. **Chia tách neo ở mức CỘT, không phải TRANG** — 360/444 trang có cột ở nhiều phía, nên
-   chỉ số đo bằng `split` sẵn có là **cận trên**. Xem README.
+7. **Một số lớp chữ hiếm không có mặt trong `train`.** Hệ quả của việc chia tách trung
+   thực theo trang. Lọc bằng cột `label_in_train` khi đánh giá.
 7. **Chia tách neo ở mức CỘT, không phải TRANG** — 360/444 trang có cột ở nhiều phía.
    Chỉ số đo bằng `split` sẵn có là **cận trên**. Xem README.
 

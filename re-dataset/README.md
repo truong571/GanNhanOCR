@@ -25,20 +25,18 @@
 | `tier` / `rule` | luật nào quyết nhãn này — xem DATASHEET |
 | `usable_image` | `0` = ảnh trắng hoặc bị cắt mất nét (424 ô). Nhãn có thể vẫn đúng; đừng chấm chiều ảnh ở các ô này |
 | `crop_quality_flag` | `ok` / `bleed` (dính mực chữ bên cạnh) / `truncated` / `blank` |
-| `split` / `split_group` | neo ở mức **CỘT** (`sách|trang|cột`) — xem cảnh báo dưới |
+| `split` / `split_group` | 🔴 **CÓ RÒ RỈ** — xem dưới |
 
-## 🔴 Chia tách KHÔNG rời nhau theo TRANG
 
-`split` neo ở mức **cột**, không phải trang. Đo được: **0/3.985 cột** nằm ở hai phía —
-sạch theo đơn vị của chính nó — **nhưng 360/444 trang** có cột rơi vào các phía khác nhau.
+## 🔴 Chia tách CÓ RÒ RỈ theo trang
 
-Hai cột cạnh nhau trên cùng một trang dùng chung ván khắc, chung mực, chung lần quét, nên
-mô hình huấn luyện trên `train` có thể học **diện mạo trang** rồi được chấm lại trên chính
-trang đó. **Mọi chỉ số đo bằng `split` sẵn có là CẬN TRÊN**, không phải hiệu năng thật trên
-trang chưa từng thấy.
+Đo trên chính `labels.csv`: **360/444 trang** có ô nằm ở
+**hai phía khác nhau**. Hai cột cạnh nhau trên cùng một trang dùng chung ván khắc,
+chung mực, chung lần quét, nên mô hình huấn luyện trên `train` học được *diện mạo
+trang* rồi được chấm lại trên chính trang đó.
 
-Muốn đánh giá trung thực thì tự chia lại theo `book` + `page`. Cái giá đo được: test
-4.881 → 3.868 ô, và số lớp chữ có ở test mà không có ở train tăng 9 → 31.
+**Mọi chỉ số đo bằng `split` sẵn có là CẬN TRÊN**, không phải hiệu năng thật trên
+trang chưa từng thấy. Muốn đánh giá trung thực thì tự chia lại theo `book` + `page`.
 
 ## 🔴 Trạng thái kiểm định
 

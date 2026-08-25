@@ -314,20 +314,39 @@ def main():
         else:
             r["label_level"], r["unicode"] = "", ""
 
-    # ---------- SPLIT: leakage-safe by group=(book,page,column) [#4] ----------
+    # ---------- SPLIT: RỜI NHAU THEO TRANG ------------------------------------
+    # Trước 2026-08-25 nhóm theo (sách, trang, CỘT). Đo được: 0/3.985 cột nằm ở hai
+    # phía — sạch theo đơn vị của chính nó — NHƯNG 360/444 TRANG có cột rơi vào các
+    # phía khác nhau. Hai cột cạnh nhau trên cùng một trang dùng chung ván khắc, chung
+    # mực, chung lần quét, nên mô hình học DIỆN MẠO TRANG rồi được chấm lại trên chính
+    # trang đó -> mọi chỉ số là CẬN TRÊN, không phải hiệu năng trên trang chưa từng thấy.
+    # Đây là câu phản biện chắc chắn bị hỏi, nên chia theo TRANG.
     def split_of(group: str) -> str:
         h = int(hashlib.md5(group.encode()).hexdigest(), 16) % 100
         return "train" if h < 80 else ("val" if h < 90 else "test")
     for r in records:
-        r["split_group"] = f"{r['book']}|{r['page']}|c{r['column']}"
-    # singleton char classes -> force their WHOLE GROUP into train, so val/test
-    # per-class metrics are well-defined AND a column never spans two splits.
+        r["split_group"] = f"{r['book']}|{r['page']}"
+        r["split"] = split_of(r["split_group"])
+
+    # VÌ SAO BỎ LUẬT "ép nhóm chứa lớp singleton vào train":
+    # ở mức CỘT nó chỉ chạm 375/4.003 cột (9,4%). Ở mức TRANG, 261/445 trang (58,7%)
+    # chứa ít nhất một lớp chỉ-xuất-hiện-một-lần -> giữ luật này sẽ ép 59,1% số ô vào
+    # train và phá nát chia tách. Bóp méo chia tách để chỉ số đẹp là đánh đổi SAI.
+    #
+    # Thay vào đó: chia TRUNG THỰC, rồi ghi giới hạn thành DỮ LIỆU. Cột `label_in_train`
+    # cho biết lớp chữ của ô này có mặt trong train hay không; ai đánh giá thì lọc theo
+    # nó, thay vì để chỉ số im lặng vô định.
     ccnt = Counter(r["label"] for r in records if r["label_level"] == "char" and r["label"])
-    singleton_groups = {r["split_group"] for r in records
-                        if r["label_level"] == "char" and r["label"] and ccnt[r["label"]] == 1}
+    train_classes = {r["label"] for r in records
+                     if r["split"] == "train" and r["label_level"] == "char" and r["label"]}
     for r in records:
-        g = r["split_group"]
-        r["split"] = "train" if g in singleton_groups else split_of(g)
+        if r["label_level"] == "char" and r["label"]:
+            r["label_in_train"] = "1" if r["label"] in train_classes else "0"
+        else:
+            r["label_in_train"] = ""
+    _n_unseen = sum(1 for r in records if r.get("label_in_train") == "0")
+    print(f"  [split] rời nhau theo TRANG | ô có lớp chữ KHÔNG có trong train: "
+          f"{_n_unseen:,} (đánh giá phải lọc bằng label_in_train)", flush=True)
 
     # ---------- PASS 2: materialize crops + quality columns [#3,#5] ----------
     crop_tiers = {"GOLD", "SILVER", "SYLLABLE"} | ({"REVIEW"} if args.crop_review else set())
@@ -374,6 +393,7 @@ def main():
                 # backend tách ký tự THỰC DÙNG — không có cột này thì một lần rơi về
                 # midpoint sẽ không để lại dấu vết nào trong bộ nhãn (KHỐI 1.3).
                 "seg_backend": r.get("seg_backend", ""),
+                "label_in_train": r.get("label_in_train", ""),
                 "ink_pct": q["ink"] if q else "", "crop_w": q["w"] if q else "",
                 "crop_h": q["h"] if q else "", "image_md5": q["md5"] if q else "",
                 "seg_flag": q["seg"] if q else "",
@@ -385,7 +405,8 @@ def main():
     # ---------- write manifest + summary ----------
     fields = ["image", "book", "page", "column", "ocr_char", "syllable", "label",
               "unicode", "label_level", "tier", "rule", "s3_cosine", "ink_pct",
-              "crop_w", "crop_h", "image_md5", "seg_flag", "split", "split_group", "bbox",
+              "crop_w", "crop_h", "image_md5", "seg_flag", "split", "split_group",
+              "label_in_train", "bbox",
               "seg_backend"]
     with open(out / "labels.csv", "w", encoding="utf-8", newline="") as f:
         # T6.b — SẮP DÒNG THEO KHOÁ CANON TRƯỚC KHI GHI.

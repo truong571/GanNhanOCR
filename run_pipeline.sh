@@ -437,7 +437,11 @@ step_s3unwind() {
 # labels_remediated.csv đầy đủ mọi tier (kể cả REVIEW/QUARANTINE) để tra cứu sau.
 step_export() {
   # --- CÓ PHÁN QUYẾT NGƯỜI CHƯA? ----------------------------------------------
-  local _v; _v=$(ls "$AUDIT_DIR"/verdicts*.jsonl 2>/dev/null | head -1 || true)
+  # Hai đường nạp phán quyết, dò cả hai:
+  #   (A) re-dataset/verdicts.csv  — ĐỘI NGOÀI chấm trên chính bộ đem chấm. Đường CHÍNH.
+  #   (B) human_audit/.../verdicts*.jsonl — mẻ mẫu, dùng khi chỉ chấm mẫu để ước lượng.
+  local _v; _v=$(ls "$REDATASET_DIR/verdicts.csv" 2>/dev/null | head -1 || true)
+  [[ -n "$_v" ]] || _v=$(ls "$AUDIT_DIR"/verdicts*.jsonl 2>/dev/null | head -1 || true)
   local OUT_DIR NHAN
   if [[ -n "$_v" ]]; then
     OUT_DIR="$FINAL_DIR"; NHAN="CUỐI CÙNG (đã nạp phán quyết người)"
@@ -445,7 +449,8 @@ step_export() {
     # Bước này TỪ CHỐI chạy tiếp nếu κ liên-người < 0,60 — khi hai người không cùng
     # tiêu chí thì con số precision là tiêu chí của MỘT NGƯỜI, không phải chất lượng dữ liệu.
     X "$PY" -m pipeline.remediation.apply_verdicts \
-        --in "$LABELS_FINAL" --out "$LABELS_FINAL" --batch "$AUDIT_DIR"
+        --in "$LABELS_FINAL" --out "$LABELS_FINAL" \
+        --batch "$AUDIT_DIR" --redataset "$REDATASET_DIR"
   else
     OUT_DIR="$REDATASET_DIR"; NHAN="ĐEM CHẤM (CHƯA kiểm chứng)"
     log ""

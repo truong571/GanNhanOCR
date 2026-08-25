@@ -345,6 +345,18 @@ def test_two_outputs_and_verdicts() -> None:
     check("quy trình có MẪU khai xuất xứ", "NGUOI_CHAM.md" in qt)
     check("mẫu hỏi người thứ hai có phải tác giả không", "KHÔNG phải tác giả" in qt)
 
+    # --- đường (A): ĐỘI NGOÀI chấm trên re-dataset/ ---------------------------
+    check("nhận verdicts.csv phẳng theo cột `image`", 'VERDICT_CSV = "verdicts.csv"' in av)
+    check("chỉ nhận 3 giá trị tiếng Việt", '"dung", "sai", "khong_doc_duoc"' in av)
+    check("verdict sai định dạng là LỖI, không bỏ qua im lặng",
+          "dòng sai định dạng" in av)
+    check("`image` lạ => LỖI (đội chấm dùng bản CŨ)", "bản re-dataset CŨ" in av)
+    # HỒI QUY: bảng precision từng báo 100% cho chính luật gây lỗi, vì ô bị hạ đã mất
+    # dấu vết luật gốc. Lỗi phải được quy về ĐÚNG luật sinh ra nó.
+    check("GIỮ luật gốc trước khi hạ", 'df.loc[demote, "rule_goc"]' in av)
+    check("bảng quy lỗi về LUẬT GỐC", 'r.get("rule_goc")' in av)
+    check("chưa chấm hết thì KHÔNG suy rộng", "KHÔNG suy rộng" in av)
+
     cb = (REPO / "scripts" / "clean_build.sh").read_text(encoding="utf-8")
     check("clean_build dọn cả re-dataset", "re-dataset" in cb)
     check("clean_build KHÔNG xoá human_audit của người",

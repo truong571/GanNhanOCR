@@ -132,9 +132,29 @@ printf '  %snguyên vẹn%s\n' "$GRN" "$RST"
 FROZEN=$(mktemp -t run_pipeline.XXXXXX.sh)
 cp run_pipeline.sh "$FROZEN"
 trap 'rm -f "$FROZEN"' EXIT
-printf '\n%s--- CHẠY PIPELINE (7 bước, dùng cache OCR, 0 đồng) ---%s\n' "$BLD" "$RST"
+# ---- VÌ SAO PHẢI CHẠY HAI LƯỢT ------------------------------------------------
+# `index.csv` (chỉ mục nguyên mẫu S3) trỏ vào `dataset_out/gold/*.png`. Bước dọn ở
+# trên vừa XOÁ chính những tệp đó, nên LƯỢT 1 khởi động với crop-protos = 0 và S3
+# phải quyết bằng kho glyph tổng hợp thay vì crop thật.
+#
+# Đo 2026-08-25 (lượt 1 sau khi dọn, so với bản dựng khi crop đã có sẵn):
+#     SILVER_uncalibrated  10.547 -> 8.044   (-2.503)
+#     SYLLABLE              6.991 -> 7.963   (+972)
+#     GOLD                 50.156 -> 50.156  (không đổi — GOLD = S1∩S2, không đọc S3)
+# Preflight của pipeline có cảnh báo đúng nguyên nhân ("crop-proto TRỎ HỤT ->
+# SILVER tụt ~32% ÂM THẦM") nhưng vẫn chạy tiếp, nên nếu chỉ chạy MỘT lượt thì bộ
+# nhãn thu được KHÔNG phải bộ nhãn của một lần dựng bình thường.
+#
+# LƯỢT 1 dựng lại crop; LƯỢT 2 mới có nguyên mẫu thật để S3 dùng. Chỉ kết quả của
+# LƯỢT 2 mới đem dùng được.
+printf '\n%s--- LƯỢT 1/2: dựng lại crop (S3 chưa có nguyên mẫu thật) ---%s\n' "$BLD" "$RST"
 printf '4\n\n\n' | GANNHANOCR_ROOT="$PWD" bash "$FROZEN"
 rc=$?
+if (( rc == 0 )); then
+  printf '\n%s--- LƯỢT 2/2: chạy lại với nguyên mẫu S3 THẬT (đây mới là bộ dùng được) ---%s\n' "$BLD" "$RST"
+  printf '4\n\n\n' | GANNHANOCR_ROOT="$PWD" bash "$FROZEN"
+  rc=$?
+fi
 
 (( rc == 0 )) || { printf '%sPipeline hỏng (mã %s).%s\n' "$RED" "$rc" "$RST"; exit "$rc"; }
 

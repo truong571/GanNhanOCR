@@ -311,6 +311,39 @@ def test_s3_unwind() -> None:
         check("thật: nhãn bất biến", ro["label"].fillna("").equals(real["label"].fillna("")))
 
 
+def test_two_outputs_and_verdicts() -> None:
+    """HAI ĐẦU RA + đường nạp phán quyết — mắt xích cuối của dự án.
+
+    re-dataset/ = bộ ĐEM CHẤM (chưa kiểm chứng) · dataset/ = bộ CUỐI (đã nạp phán quyết).
+    Tách hai thư mục để KHÔNG BAO GIỜ nhầm bộ chưa kiểm chứng thành bộ cuối cùng.
+    """
+    from pathlib import Path as _P
+    REPO = _P(__file__).resolve().parents[2]
+    print("[hai đầu ra + nạp phán quyết]")
+    rp = (REPO / "run_pipeline.sh").read_text(encoding="utf-8")
+    check("có biến REDATASET_DIR", 'REDATASET_DIR="re-dataset"' in rp)
+    check("bước 7 tự chọn theo verdicts*.jsonl", 'verdicts*.jsonl' in rp)
+    check("gọi apply_verdicts khi CÓ phán quyết",
+          "pipeline.remediation.apply_verdicts" in rp)
+    check("evidence băm ĐẦU RA THẬT chứ không ghim cứng",
+          '${FINAL_OUT:-$FINAL_DIR}' in rp or '"$_out/labels.csv"' in rp)
+    check("chốt chặn export dùng đầu ra thật",
+          'checkpoint export "${FINAL_OUT:-$FINAL_DIR}/labels.csv"' in rp)
+
+    av = (REPO / "pipeline" / "remediation" / "apply_verdicts.py").read_text(encoding="utf-8")
+    check("ngưỡng κ liên-người = 0,60", "KAPPA_MIN = 0.60" in av)
+    check("κ thấp thì TỪ CHỐI công bố", "allow_low_kappa" in av and "return 1" in av)
+    check("wrong_label -> HẠ xuống REVIEW", '"tier"] = "REVIEW"' in av)
+    check("KHÔNG bịa nhãn thay thế", "Bịa ra một nhãn" in av or "không bịa" in av.lower())
+    check("LOẠI ô lặp ẩn khỏi ước lượng dân số", "repeat_of" in av)
+    check("verdict unsure KHÔNG tính là lỗi", '"unsure"' in av and "MẪU SỐ" in av)
+
+    cb = (REPO / "scripts" / "clean_build.sh").read_text(encoding="utf-8")
+    check("clean_build dọn cả re-dataset", "re-dataset" in cb)
+    check("clean_build KHÔNG xoá verdicts của người",
+          "ground_truth" in cb and "KHÔNG tái tạo được" in cb)
+
+
 def test_nan_syllable_not_eaten() -> None:
     """HỒI QUY: `nan` là một ÂM TIẾNG VIỆT (難), không phải giá trị thiếu.
 
@@ -391,6 +424,7 @@ def main() -> int:
     test_remediate_synthetic()
     test_real()
     test_s3_unwind()
+    test_two_outputs_and_verdicts()
     test_nan_syllable_not_eaten()
     test_confusion_fix_join()
     print("=" * 64)

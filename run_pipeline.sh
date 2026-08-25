@@ -55,7 +55,14 @@ LABELS_RAW="dataset_out/labels.csv"
 LABELS_REMED="dataset_out/labels_remediated.csv"
 LABELS_FINAL="dataset_out/labels_final.csv"   # BẢN CÔNG BỐ — nguồn của export + audit
 CONFUSION_FIXES="${CONFUSION_FIXES:-config/confusion_fixes.yaml}"
+# ---- HAI ĐẦU RA, TÙY CÓ PHÁN QUYẾT NGƯỜI HAY CHƯA --------------------------
+#   re-dataset/  bộ ĐEM CHẤM  — chưa có phán quyết người, chưa kiểm chứng
+#   dataset/     bộ CUỐI CÙNG — đã nạp phán quyết, có bảng precision
+# Tách hai thư mục để KHÔNG BAO GIỜ nhầm bộ chưa kiểm chứng thành bộ cuối. Bước 7 tự
+# chọn dựa trên việc verdicts*.jsonl đã có hay chưa — không cần cờ tay, không quên được.
+REDATASET_DIR="re-dataset"
 FINAL_DIR="dataset"
+AUDIT_DIR="dataset_out/ground_truth/audit_combined"
 EVIDENCE="docs/EVIDENCE_INDEX.md"
 CHECKSUMS="dataset_out/CHECKSUMS.txt"
 
@@ -408,17 +415,35 @@ step_s3unwind() {
 # không cộng dồn qua các lần chạy trước. dataset_out/ KHÔNG bị đụng — vẫn còn
 # labels_remediated.csv đầy đủ mọi tier (kể cả REVIEW/QUARANTINE) để tra cứu sau.
 step_export() {
-  banner 7 export "xuất bộ dataset CUỐI CÙNG (GOLD+SYLLABLE; SILVER_uncalibrated bị loại) -> $FINAL_DIR/ (tự chứa)"
+  # --- CÓ PHÁN QUYẾT NGƯỜI CHƯA? ----------------------------------------------
+  local _v; _v=$(ls "$AUDIT_DIR"/verdicts*.jsonl 2>/dev/null | head -1 || true)
+  local OUT_DIR NHAN
+  if [[ -n "$_v" ]]; then
+    OUT_DIR="$FINAL_DIR"; NHAN="CUỐI CÙNG (đã nạp phán quyết người)"
+    banner "7a" "nạp phán quyết" "áp verdict của người + ước lượng precision theo tầng"
+    # Bước này TỪ CHỐI chạy tiếp nếu κ liên-người < 0,60 — khi hai người không cùng
+    # tiêu chí thì con số precision là tiêu chí của MỘT NGƯỜI, không phải chất lượng dữ liệu.
+    X "$PY" -m pipeline.remediation.apply_verdicts \
+        --in "$LABELS_FINAL" --out "$LABELS_FINAL" --batch "$AUDIT_DIR"
+  else
+    OUT_DIR="$REDATASET_DIR"; NHAN="ĐEM CHẤM (CHƯA kiểm chứng)"
+    log ""
+    log "  ${YEL}chưa có $AUDIT_DIR/verdicts*.jsonl${RST}"
+    log "  ${YEL}-> xuất ra $REDATASET_DIR/ để đem chấm tay, KHÔNG phải bộ cuối cùng${RST}"
+  fi
+
+  banner 7 export "xuất bộ $NHAN -> $OUT_DIR/ (tự chứa)"
   X "$PY" pipeline/export_final_dataset.py \
-      --labels "$LABELS_FINAL" --src-root dataset_out --out "$FINAL_DIR"
-  [[ -f "$FINAL_DIR/labels.csv" ]] || die "bước export không sinh $FINAL_DIR/labels.csv"
+      --labels "$LABELS_FINAL" --src-root dataset_out --out "$OUT_DIR"
+  [[ -f "$OUT_DIR/labels.csv" ]] || die "bước export không sinh $OUT_DIR/labels.csv"
+  FINAL_OUT="$OUT_DIR"
 
   # --- TÀI LIỆU ĐI KÈM BỘ GIAO NỘP -----------------------------------------
   # Với ngành Hán Nôm, một bộ dữ liệu KHÔNG có lai lịch thư tịch là KHÔNG TRÍCH DẪN
   # ĐƯỢC: người đọc không biết ba cuốn này là bản in nào, lưu ở đâu, ký hiệu gì, nên
   # không kiểm lại được ô nhãn nào. Mọi con số trong DATASHEET đọc TỪ labels.csv nên
   # không thể lệch với dữ liệu. Các mục chỉ người biết được để `⬜ CHƯA ĐIỀN`.
-  X "$PY" -m pipeline.tools.make_dataset_docs --dataset "$FINAL_DIR"
+  X "$PY" -m pipeline.tools.make_dataset_docs --dataset "$FINAL_OUT"
 }
 
 # ====================== FREEZE / EVIDENCE ====================================
@@ -439,7 +464,10 @@ evidence() {
   # (dưới `Dict/`, xem dict_dir() về chuyện hoa/thường), nên có lịch sử phiên bản;
   # cái thiếu là mối nối giữa MỘT LẦN CHẠY cụ thể và BẢN từ điển nó đã dùng. Băm ở
   # đây khép mối nối đó, cùng cơ chế với nom-embed/best.pt và index.csv.
-  local files=("$LABELS_RAW" "$LABELS_REMED" "$LABELS_FINAL" "$FINAL_DIR/labels.csv" \
+  # Băm ĐẦU RA THẬT của lần chạy này: re-dataset/ khi chưa có phán quyết, dataset/ khi
+  # đã có. Ghim cứng "$FINAL_DIR" sẽ băm một thư mục có thể còn chưa tồn tại.
+  local _out="${FINAL_OUT:-$FINAL_DIR}"
+  local files=("$LABELS_RAW" "$LABELS_REMED" "$LABELS_FINAL" "$_out/labels.csv" \
                "nom-embed/best.pt" "pipeline/align_engine/data/index.csv" \
                "$DICT_DIR/QuocNgu_SinoNom.csv" "$DICT_DIR/SinoNom_Similar.csv" \
                "train_crop/detector_r34.best.pt" "config/pipeline.yaml")
@@ -546,7 +574,9 @@ fi
 log ""
 log "${BLD}Sẽ chạy:${RST} setup -> extract($BOOKS_LABEL) -> build(cả 3 sách) -> remediate -> confusion -> gỡ S3 -> export"
 log "  cache OCR : $([[ $FRESH_OCR == 1 ]] && echo 'XOÁ & OCR lại mới' || echo 'dùng cache cũ')"
-log "  ${YEL}export sẽ XOÁ SẠCH $FINAL_DIR/ hiện có rồi ghi lại bản mới nhất${RST}"
+log "  ${YEL}export sẽ XOÁ SẠCH thư mục đích rồi ghi lại bản mới nhất:${RST}"
+log "  ${YEL}  chưa có phán quyết người -> $REDATASET_DIR/  (bộ ĐEM CHẤM)${RST}"
+log "  ${YEL}  đã có phán quyết         -> $FINAL_DIR/      (bộ CUỐI CÙNG)${RST}"
 read -r -p "Enter để bắt đầu, Ctrl-C để huỷ... " _
 
 step_setup
@@ -560,17 +590,23 @@ checkpoint confusion "$LABELS_FINAL"
 step_s3unwind
 checkpoint s3unwind "$LABELS_FINAL"
 step_export
-checkpoint export "$FINAL_DIR/labels.csv"
+checkpoint export "${FINAL_OUT:-$FINAL_DIR}/labels.csv"
 evidence
 
 log ""
 log "${BLD}================================================================${RST}"
 log "${GRN}${BLD}  Xong — bộ dataset CUỐI CÙNG (tự chứa, đã ghi đè bản cũ):${RST}"
-log "  $FINAL_DIR/labels.csv  (chỉ GOLD+SILVER+SYLLABLE, kèm ảnh crop copy hẳn)"
+log "  ${FINAL_OUT:-$FINAL_DIR}/labels.csv  (kèm ảnh crop copy hẳn, README + DATASHEET)"
+if [[ "${FINAL_OUT:-}" == "$REDATASET_DIR" ]]; then
+  log ""
+  log "  ${YEL}${BLD}ĐÂY LÀ BỘ ĐEM CHẤM, CHƯA PHẢI BỘ CUỐI CÙNG.${RST}"
+  log "  Bước tiếp: mở $AUDIT_DIR/audit.html, chấm xong bấm Xuất verdicts.jsonl"
+  log "  lưu vào chính thư mục đó, rồi CHẠY LẠI script này -> kết quả vào $FINAL_DIR/"
+fi
 log ""
 log "  Bản làm việc trung gian (đủ mọi tier kể cả REVIEW/QUARANTINE, không bị đụng):"
 log "  $LABELS_REMED   (trước confusion-fix)"
-log "  $LABELS_FINAL   (BẢN CÔNG BỐ — nguồn của $FINAL_DIR/ và của mẻ audit người)"
+log "  $LABELS_FINAL   (BẢN CÔNG BỐ — nguồn của bộ xuất và của mẻ audit người)"
 log "  dataset_out/{gold,silver,syllable}/"
 log "  cảnh báo    : $N_WARN"
 log ""

@@ -1,3 +1,9 @@
+bash scripts/clean_build.sh --yes 2>&1 | tee build.log
+
+cd /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR
+bash scripts/clean_build.sh --yes 2>&1 | tee build.log
+
+
 ================================================================================
 ⚠️  ẢNH CHỤP CÓ NGÀY — SỐ LIỆU TRONG TỆP NÀY ĐÃ CŨ (ghi 2026-08-24)
 ================================================================================

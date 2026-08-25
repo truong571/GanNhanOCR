@@ -621,13 +621,29 @@ evidence
 
 log ""
 log "${BLD}================================================================${RST}"
-log "${GRN}${BLD}  Xong — bộ dataset CUỐI CÙNG (tự chứa, đã ghi đè bản cũ):${RST}"
+if [[ "${FINAL_OUT:-}" == "$REDATASET_DIR" ]]; then
+  log "${YEL}${BLD}  Xong — bộ ĐEM CHẤM (CHƯA kiểm chứng, tự chứa):${RST}"
+else
+  log "${GRN}${BLD}  Xong — bộ CUỐI CÙNG (đã nạp phán quyết người, tự chứa):${RST}"
+fi
 log "  ${FINAL_OUT:-$FINAL_DIR}/labels.csv  (kèm ảnh crop copy hẳn, README + DATASHEET)"
 if [[ "${FINAL_OUT:-}" == "$REDATASET_DIR" ]]; then
   log ""
   log "  ${YEL}${BLD}ĐÂY LÀ BỘ ĐEM CHẤM, CHƯA PHẢI BỘ CUỐI CÙNG.${RST}"
-  log "  Bước tiếp: mở $AUDIT_DIR/audit.html, chấm xong bấm Xuất verdicts.jsonl"
-  log "  lưu vào chính thư mục đó, rồi CHẠY LẠI script này -> kết quả vào $FINAL_DIR/"
+  log ""
+  log "  Giao CẢ thư mục ${BLD}$REDATASET_DIR/${RST} cho đội chấm — nó TỰ ĐỦ."
+  log "  Đặc tả cho họ: $REDATASET_DIR/HUONG_DAN_CHAM.md (đội tự làm giao diện)."
+  log ""
+  log "  Nhận về, đặt ĐÚNG hai tệp vào $REDATASET_DIR/ :"
+  log "     verdicts.csv     cột image,verdict,nguoi_cham,ghi_chu"
+  log "                      verdict chỉ 3 giá trị: dung · sai · khong_doc_duoc"
+  log "     NGUOI_CHAM.md    khai ai chấm — THIẾU thì pipeline TỪ CHỐI nạp"
+  log ""
+  log "  Rồi CHẠY LẠI script này -> bộ CUỐI vào $FINAL_DIR/ + docs/BANG_PRECISION.md"
+  log ""
+  log "  (Chỉ muốn chấm MẪU ~960 ô để có khoảng tin cậy thay vì chấm cả 57 nghìn:"
+  log "   $PY -m pipeline.ground_truth.make_combined_batch --by-rule \\"
+  log "     --n-gold 380 --n-similar 260 --n-silver 0 --n-syllable 260 --n-repeat 60 --seed 2026)"
 fi
 log ""
 log "  Bản làm việc trung gian (đủ mọi tier kể cả REVIEW/QUARANTINE, không bị đụng):"
@@ -636,7 +652,7 @@ log "  $LABELS_FINAL   (BẢN CÔNG BỐ — nguồn của bộ xuất và của
 log "  dataset_out/{gold,silver,syllable}/"
 log "  cảnh báo    : $N_WARN"
 log ""
-log "  ${YEL}Nhãn vừa đổi -> mẻ audit người dựng từ bản cũ đã hết hiệu lực.${RST}"
+log "  ${YEL}Nếu có dùng mẻ MẪU (đường phụ): nhãn vừa đổi -> mẻ dựng từ bản cũ đã hết hiệu lực.${RST}"
 log "  Dựng lại: rm -rf dataset_out/human_audit/audit_combined && \\"
 log "            $PY -m pipeline.ground_truth.make_combined_batch --seed 2026"
 log ""

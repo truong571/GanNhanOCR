@@ -10,7 +10,7 @@
 ## 🔴 TUYÊN BỐ HUỶ SỐ (2026-08-22)
 
 **Đề tài hiện có 0 (không) phán quyết người dùng được.** Toàn bộ phần "chấm tay" trước đây thực chất
-do **máy chấm**. Bằng chứng: `dataset_out/ground_truth/verdicts_reanchored.csv` (846 phán quyết —
+do **máy chấm**. Bằng chứng: `dataset_out/human_audit/verdicts_reanchored.csv` (846 phán quyết —
 nguồn của MỌI số precision cũ) trùng **846/846 `item_id`** với `audit_gold/audit_gold.jsonl` (tệp máy
 chấm) nhưng chỉ khớp giá trị **47/846**; verdict thô gốc `verdicts_001–006.jsonl` **đã mất**
 (`docs/EVIDENCE_INDEX.md:18` tự khai). Chi tiết: `docs/KE_HOACH_TONG_THE_2026-08-22.md` §0.

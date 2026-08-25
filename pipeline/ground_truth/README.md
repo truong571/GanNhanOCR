@@ -74,14 +74,14 @@ $PY -m pipeline.ground_truth sample --n 846 --design srs
 $PY -m pipeline.ground_truth sample --n 1150 --design stratified
 
 # 4. Dựng công cụ audit mù (chia batch 150 item/file cho nhẹ trình duyệt)
-$PY -m pipeline.ground_truth grid --sample dataset_out/ground_truth/sample_stratified.csv
+$PY -m pipeline.ground_truth grid --sample dataset_out/human_audit/sample_stratified.csv
 
 # 5. (Người mở audit_*.html, gán nhãn, bấm "Xuất verdicts.jsonl")
 
 # 6. Ước lượng
 $PY -m pipeline.ground_truth estimate \
     --verdicts verdicts.jsonl \
-    --manifest dataset_out/ground_truth/manifest.jsonl \
+    --manifest dataset_out/human_audit/manifest.jsonl \
     --p0 0.97 --design stratified
 ```
 
@@ -168,4 +168,4 @@ ngược của `suspicion` khi không có tín hiệu S3.
 
 `numpy`, `scipy`, `pandas`, `Pillow`, `PyYAML` (đọc `config/pipeline.yaml`); từ điển tuỳ
 chọn qua `core.text.dictionary.load_qn_to_nom`. Đầu ra mặc định:
-`dataset_out/ground_truth/`.
+`dataset_out/human_audit/`.

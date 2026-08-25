@@ -88,11 +88,11 @@ fi
 
 # ---- 2. Liệt kê thứ sẽ xoá --------------------------------------------------
 # `re-dataset` (bộ ĐEM CHẤM) và `dataset` (bộ CUỐI) đều là đầu ra tái sinh được.
-# CỐ Ý KHÔNG xoá dataset_out/ground_truth/: nếu đã chấm tay thì verdicts.jsonl nằm
+# CỐ Ý KHÔNG xoá dataset_out/human_audit/: nếu đã chấm tay thì verdicts.jsonl nằm
 # trong đó, và nó KHÔNG tái tạo được — xoá là mất trắng công chấm của con người.
 TARGETS=(dataset_out/gold dataset_out/silver dataset_out/syllable dataset re-dataset
          pipeline/align_engine/s3_proto_cache.pkl lab/columns.pkl)
-_v=$(ls dataset_out/ground_truth/audit_combined/verdicts*.jsonl 2>/dev/null | head -1 || true)
+_v=$(ls dataset_out/human_audit/audit_combined/verdicts*.jsonl 2>/dev/null | head -1 || true)
 if [[ -n "$_v" ]]; then
   printf '\n%s--- CÓ PHÁN QUYẾT NGƯỜI, ĐƯỢC GIỮ NGUYÊN ---%s\n' "$GRN" "$RST"
   printf '  %s (%s dòng) — KHÔNG tái tạo được, script này không đụng tới\n' \

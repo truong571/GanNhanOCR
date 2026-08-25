@@ -1,6 +1,6 @@
 # Quy trình chấm tay — mẻ 2026-08-25
 
-> Mẻ đã dựng: `dataset_out/ground_truth/audit_combined/` — **960 ô = 900 mẫu + 60 ô lặp ẩn**.
+> Mẻ đã dựng: `dataset_out/human_audit/audit_combined/` — **960 ô = 900 mẫu + 60 ô lặp ẩn**.
 > Sinh lại y hệt: `python -m pipeline.ground_truth.make_combined_batch --by-rule --n-gold 380 --n-similar 260 --n-silver 0 --n-syllable 260 --n-repeat 60 --seed 2026`
 
 ## Vì sao mẻ này khác mọi mẻ trước
@@ -87,7 +87,7 @@ tệp này, hoặc tệp này còn mục `⬜`.
 > dụng. Hậu quả: precision 97,98%, Fisher p = 5,4e-8, κ = 0,13 **phải huỷ toàn bộ**.
 > Bài học: **không suy ra xuất xứ từ dữ liệu — bắt khai ra.**
 
-Chép mẫu dưới đây vào `dataset_out/ground_truth/audit_combined/NGUOI_CHAM.md` và điền:
+Chép mẫu dưới đây vào `dataset_out/human_audit/audit_combined/NGUOI_CHAM.md` và điền:
 
 ```markdown
 # Xuất xứ phán quyết — mẻ audit_combined

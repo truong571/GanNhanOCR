@@ -49,7 +49,7 @@ from . import audit_grid, stats
 from .cli import _load_config, _paths
 
 REPO = Path(__file__).resolve().parents[2]
-GT_DIR = REPO / "dataset_out" / "ground_truth"
+GT_DIR = REPO / "dataset_out" / "human_audit"
 DEFAULT_SOURCE = GT_DIR / "audit_combined"
 DEFAULT_OUT = GT_DIR / "audit_interrater"
 

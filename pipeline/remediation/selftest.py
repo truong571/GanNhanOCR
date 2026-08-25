@@ -347,8 +347,8 @@ def test_two_outputs_and_verdicts() -> None:
 
     cb = (REPO / "scripts" / "clean_build.sh").read_text(encoding="utf-8")
     check("clean_build dọn cả re-dataset", "re-dataset" in cb)
-    check("clean_build KHÔNG xoá verdicts của người",
-          "ground_truth" in cb and "KHÔNG tái tạo được" in cb)
+    check("clean_build KHÔNG xoá human_audit của người",
+          "human_audit" in cb and "KHÔNG tái tạo được" in cb)
 
 
 def test_nan_syllable_not_eaten() -> None:
@@ -412,7 +412,7 @@ def test_confusion_fix_join() -> None:
           n("abc_yen9_x.png") == "abc_yen9_x.png")
     check("luỹ đẳng khi gọi 2 lần", n(n("gold/yen11_a.png")) == n("gold/yen11_a.png"))
 
-    vp = REPO / "dataset_out" / "ground_truth" / "verdicts_reanchored.csv"
+    vp = REPO / "dataset_out" / "human_audit" / "verdicts_reanchored.csv"
     if vp.exists() and (REPO / "dataset_out" / "labels_final.csv").exists():
         final = pd.read_csv(REPO / "dataset_out" / "labels_final.csv", dtype=str, low_memory=False)
         r = cfix_mod.measure_gold_precision(final)

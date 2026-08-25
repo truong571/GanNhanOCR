@@ -33,7 +33,7 @@ from . import audit_grid
 from .cli import _load_config, _paths
 
 REPO = Path(__file__).resolve().parents[2]
-GT_DIR = REPO / "dataset_out" / "ground_truth"
+GT_DIR = REPO / "dataset_out" / "human_audit"
 DEFAULT_SRC = GT_DIR / "audit_combined"
 TIERS = ("GOLD", "SILVER", "SYLLABLE", "REVIEW")
 

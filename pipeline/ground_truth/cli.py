@@ -22,7 +22,7 @@ from . import audit_grid, estimate as est_mod, s3_signals, sampling, stats, susp
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_LABELS = REPO / "dataset_out" / "labels.csv"
-DEFAULT_OUT = REPO / "dataset_out" / "ground_truth"
+DEFAULT_OUT = REPO / "dataset_out" / "human_audit"
 DEFAULT_CONFIG = REPO / "config" / "pipeline.yaml"
 
 

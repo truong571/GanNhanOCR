@@ -23,7 +23,7 @@
 > bao nhiêu ô, theo thiết kế mẫu nào, chấm theo quy tắc nào, và mỗi kết quả đi vào chương
 > nào của luận văn. Dùng trực tiếp làm một mục trong chương *Đánh giá chất lượng bộ dữ liệu*.
 
-> **👉 Mở file này để chấm** — `dataset_out/ground_truth/audit_combined/audit.html`
+> **👉 Mở file này để chấm** — `dataset_out/human_audit/audit_combined/audit.html`
 >
 > **860 ô** — GOLD 250 · SILVER 300 · SYLLABLE 250 · 60 ô lặp ẩn — trong **một file duy
 > nhất**, ba tier trộn chung và xáo trộn. Chấm xong bấm *Xuất verdicts.jsonl*, lưu vào cùng
@@ -166,8 +166,8 @@ khiếm khuyết dữ liệu. Đây là một phát hiện đáng viết vào lu
 Toàn bộ việc chấm tay còn lại nằm trong **một thư mục, một file**:
 
 ```
-dataset_out/ground_truth/audit_combined/audit.html      ← mở là chấm
-dataset_out/ground_truth/audit_combined/verdicts.jsonl  ← lưu kết quả về đây
+dataset_out/human_audit/audit_combined/audit.html      ← mở là chấm
+dataset_out/human_audit/audit_combined/verdicts.jsonl  ← lưu kết quả về đây
 ```
 
 | # | Hạng mục | Khung rút mẫu | n | Mục đích |
@@ -431,7 +431,7 @@ người khác.
 ### Bước 1 — Chấm (mẻ đã dựng sẵn, mở là chạy)
 
 ```bash
-open dataset_out/ground_truth/audit_combined/audit.html
+open dataset_out/human_audit/audit_combined/audit.html
 ```
 
 Một file duy nhất, **43 MB**, mọi ảnh nhúng sẵn — **không cần mạng**. Lần mở đầu mất
@@ -441,7 +441,7 @@ khoảng 10–20 giây; sau đó chỉ những thẻ trong tầm nhìn mới đ�
 - Tiến độ **tự lưu vào trình duyệt** (localStorage, khoá riêng cho mẻ này) — đóng tab rồi
   mở lại vẫn còn. Chấm nhiều buổi trên **cùng một trình duyệt, cùng một máy**.
 - Chấm xong toàn bộ 860 ô → bấm **Xuất verdicts.jsonl** → lưu vào
-  `dataset_out/ground_truth/audit_combined/verdicts.jsonl`.
+  `dataset_out/human_audit/audit_combined/verdicts.jsonl`.
 
 > Có thể xuất giữa chừng để phòng hờ (file chỉ chứa những ô đã chấm). `report_combined` sẽ
 > báo rõ còn bao nhiêu ô chưa chấm và cảnh báo rằng số liệu chỉ là tạm thời.
@@ -450,7 +450,7 @@ khoảng 10–20 giây; sau đó chỉ những thẻ trong tầm nhìn mới đ�
 
 ```bash
 .venv/bin/python -m pipeline.ground_truth.report_combined \
-    --dir dataset_out/ground_truth/audit_combined
+    --dir dataset_out/human_audit/audit_combined
 ```
 
 Sinh ra hai file ngay trong thư mục đó:
@@ -473,7 +473,7 @@ Ngưỡng chấp nhận mặc định: GOLD `p0 = 0,97` · SILVER `p0 = 0,85` ·
 # mở audit.html, chấm, xuất verdicts.jsonl vào lại thư mục đó)
 
 .venv/bin/python -m pipeline.ground_truth.report_combined \
-    --interrater dataset_out/ground_truth/audit_interrater
+    --interrater dataset_out/human_audit/audit_interrater
 ```
 
 → `KAPPA_LIEN_NGUOI.md` + `interrater.json`. Xem Phần C.4 để biết đọc con số thế nào.
@@ -482,7 +482,7 @@ Ngưỡng chấp nhận mặc định: GOLD `p0 = 0,97` · SILVER `p0 = 0,85` ·
 
 ```bash
 .venv/bin/python -m pipeline.ground_truth.make_demo_page      # đổi --seed nếu thẻ render xấu
-open dataset_out/ground_truth/demo_audit.html
+open dataset_out/human_audit/demo_audit.html
 ```
 
 **442 KB, 9 thẻ** (3 mỗi tier), mở tức thì. Khác công cụ chấm thật ở ba điểm có chủ đích:
@@ -582,8 +582,8 @@ verdict): ` ` (do `report_combined` điền)
 
 | Thành phần | Đường dẫn |
 |---|---|
-| **Mẻ chấm (mở file này)** | `dataset_out/ground_truth/audit_combined/audit.html` |
-| **Trang demo để chiếu hội đồng** | `dataset_out/ground_truth/demo_audit.html` (442 KB) |
+| **Mẻ chấm (mở file này)** | `dataset_out/human_audit/audit_combined/audit.html` |
+| **Trang demo để chiếu hội đồng** | `dataset_out/human_audit/demo_audit.html` (442 KB) |
 | **Dựng mẻ gộp** | `pipeline/ground_truth/make_combined_batch.py` |
 | **Dựng mẻ κ liên người** | `pipeline/ground_truth/make_interrater_batch.py` |
 | **Dựng trang demo** | `pipeline/ground_truth/make_demo_page.py` |

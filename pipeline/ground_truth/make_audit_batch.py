@@ -10,7 +10,7 @@ sampling.stratified_sample + audit_grid.build_audit (đã test) — chỉ overri
 
 Chạy:
   .venv/bin/python -m pipeline.ground_truth.make_audit_batch --tier SILVER --n 400
-  # rồi mở dataset_out/ground_truth/audit_SILVER/audit_*.html, chấm, lưu verdicts_*.jsonl vào đó
+  # rồi mở dataset_out/human_audit/audit_SILVER/audit_*.html, chấm, lưu verdicts_*.jsonl vào đó
   # sau đó: estimate (xem cuối file)
 """
 from __future__ import annotations
@@ -157,7 +157,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--config", default=str(REPO / "config" / "pipeline.yaml"))
     ap.add_argument("--batch-size", type=int, default=150)
     args = ap.parse_args(argv)
-    out = Path(args.out) if args.out else (REPO / "dataset_out" / "ground_truth" / f"audit_{args.tier}")
+    out = Path(args.out) if args.out else (REPO / "dataset_out" / "human_audit" / f"audit_{args.tier}")
     run(args.tier, args.n, Path(args.labels), out, args.seed,
         args.min_per_rule, Path(args.config), args.batch_size)
     return 0

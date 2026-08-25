@@ -34,7 +34,7 @@ CHỐT CHẶN
   tiêu chí, con số đo được là tiêu chí của một người chứ không phải chất lượng dữ liệu.
 
     python -m pipeline.remediation.apply_verdicts --in dataset_out/labels_final.csv \
-        --out dataset_out/labels_final.csv --batch dataset_out/ground_truth/audit_combined
+        --out dataset_out/labels_final.csv --batch dataset_out/human_audit/audit_combined
 """
 from __future__ import annotations
 
@@ -118,7 +118,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="pipeline.remediation.apply_verdicts")
     ap.add_argument("--in", dest="src", default=str(REPO / "dataset_out" / "labels_final.csv"))
     ap.add_argument("--out", dest="dst", default=str(REPO / "dataset_out" / "labels_final.csv"))
-    ap.add_argument("--batch", default=str(REPO / "dataset_out" / "ground_truth" / "audit_combined"))
+    ap.add_argument("--batch", default=str(REPO / "dataset_out" / "human_audit" / "audit_combined"))
     ap.add_argument("--report", default=str(REPO / "docs" / "BANG_PRECISION.md"))
     ap.add_argument("--conf", type=float, default=0.95)
     ap.add_argument("--allow-low-kappa", action="store_true",

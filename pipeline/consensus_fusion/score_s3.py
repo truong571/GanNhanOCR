@@ -5,7 +5,7 @@ Khác `maybe_s3` của engine (chỉ chạy ca phá-hòa, BỎ GOLD-direct nên 
 có thể BẮT nhãn GOLD sai (kim∩dict đồng thuận nhưng ảnh thực ra là chữ khác).
 
 Hai chế độ:
-  --validate : chấm 846 crop human-audit (dataset_out/ground_truth/verdicts_*.jsonl),
+  --validate : chấm 846 crop human-audit (dataset_out/human_audit/verdicts_*.jsonl),
                so AUC nhiều tín hiệu S3 vs verdict correct/wrong → CHỌN tín hiệu must-pass
                bằng đo trên nhãn thật, không tin memory (kiểm/bác claim "head +18pt").
   --all      : chấm mọi crop char (dedup theo image) trong labels_remediated.csv →
@@ -79,7 +79,7 @@ def score_crop(vs3, crop_path: str, label: str) -> dict:
 def _load_audited(include_ai: bool = False) -> list[dict]:
     """Crop đã được audit + verdict. Quét ĐỆ QUY (verdict nằm trong audit_*/); MẶC ĐỊNH chỉ
     lấy verdict NGƯỜI chấm — đo AUC của S3 trên nhãn máy là đo lại chính máy."""
-    gt = REPO / "dataset_out" / "ground_truth"
+    gt = REPO / "dataset_out" / "human_audit"
     man = {}
     for mf in sorted(glob.glob(str(gt / "**" / "manifest.jsonl"), recursive=True)):
         with open(mf, encoding="utf-8") as fh:

@@ -38,7 +38,7 @@ from .cli import _load_config, _paths
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_GAP = REPO / "dataset_out" / "dict_gap_syllable.csv"
-DEFAULT_OUT = REPO / "dataset_out" / "ground_truth" / "lookalike"
+DEFAULT_OUT = REPO / "dataset_out" / "human_audit" / "lookalike"
 
 
 def pick_samples(labels: pd.DataFrame, char: str, syl: str, n: int) -> pd.DataFrame:

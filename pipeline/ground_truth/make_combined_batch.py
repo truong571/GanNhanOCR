@@ -63,7 +63,7 @@ REPO = Path(__file__).resolve().parents[2]
 # bước sửa nhầm lẫn — và rút mẫu từ đó cho ra con số mô tả một bộ dữ liệu chưa từng phát
 # hành. Ở đây cố định vào labels_final.csv.
 DEFAULT_LABELS = REPO / "dataset_out" / "labels_final.csv"
-GT_DIR = REPO / "dataset_out" / "ground_truth"
+GT_DIR = REPO / "dataset_out" / "human_audit"
 DEFAULT_OUT = GT_DIR / "audit_combined"
 
 # n mặc định mỗi tier. GOLD/SYLLABLE nhỏ hơn vì precision kỳ vọng cao (CI hẹp sẵn);

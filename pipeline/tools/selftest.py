@@ -263,7 +263,7 @@ def test_batch_by_rule() -> None:
     src = (REPO / "pipeline" / "ground_truth" / "make_combined_batch.py").read_text(encoding="utf-8")
     check("có cờ --by-rule", "--by-rule" in src)
     check("tách được s1_inter_s2_similar", "s1_inter_s2_similar" in src)
-    m = REPO / "dataset_out" / "ground_truth" / "audit_combined" / "manifest.jsonl"
+    m = REPO / "dataset_out" / "human_audit" / "audit_combined" / "manifest.jsonl"
     if not m.exists():
         print("  [bỏ qua] chưa dựng mẻ"); return
     rows = [_json.loads(l) for l in open(m, encoding="utf-8")]

@@ -150,7 +150,7 @@ def run(config: str, tau: float, l2: float, include_ai: bool = False) -> dict:
     paths = cfg["paths"]
     out_root = REPO / cfg.get("output", {}).get("dir", "dataset_out")
     rem_path = out_root / "labels_remediated.csv"
-    gt_dir = out_root / "ground_truth"
+    gt_dir = out_root / "human_audit"
     fus_dir = out_root / "fusion"
     fus_dir.mkdir(parents=True, exist_ok=True)
 

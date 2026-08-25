@@ -41,7 +41,7 @@ from . import audit_grid, sampling, suspicion
 from .cli import _load_config, _paths
 
 REPO = Path(__file__).resolve().parents[2]
-GT_DIR = REPO / "dataset_out" / "ground_truth"
+GT_DIR = REPO / "dataset_out" / "human_audit"
 DEFAULT_OUT = GT_DIR / "audit_retest"
 DEFAULT_LABELS = REPO / "dataset_out" / "labels_remediated.csv"
 

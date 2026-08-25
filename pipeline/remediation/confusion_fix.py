@@ -72,7 +72,7 @@ def measure_gold_precision(final: pd.DataFrame) -> dict | None:
     (`docs/EVIDENCE_INDEX.md:18`). Mọi con số ra từ đây phải gắn nhãn CHƯA ĐO cho tới
     khi có mẻ chấm người mới — xem docs/KE_HOACH_TONG_THE_2026-08-22.md §0.
     """
-    vp = REPO / "dataset_out" / "ground_truth" / "verdicts_reanchored.csv"
+    vp = REPO / "dataset_out" / "human_audit" / "verdicts_reanchored.csv"
     if not vp.exists():
         return None
     v = pd.read_csv(vp, dtype=str, keep_default_na=False, na_values=[""])

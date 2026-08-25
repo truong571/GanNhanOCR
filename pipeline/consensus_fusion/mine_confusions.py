@@ -40,7 +40,7 @@ _WRONG = {"wrong_label", "wrong_image"}
 def _audit_verdict_by_image(include_ai: bool = False) -> dict[str, str]:
     """image -> verdict. Quét ĐỆ QUY (verdict nằm trong audit_*/), và MẶC ĐỊNH chỉ lấy
     verdict NGƯỜI chấm: đo tỉ lệ sai bằng nhãn máy là tự xác nhận vòng tròn."""
-    gt = REPO / "dataset_out" / "ground_truth"
+    gt = REPO / "dataset_out" / "human_audit"
     id2img = {}
     for man in sorted(glob.glob(str(gt / "**" / "manifest.jsonl"), recursive=True)):
         with open(man, encoding="utf-8") as fh:

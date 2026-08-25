@@ -7,7 +7,7 @@ base64 — ảnh đã nằm trong HTML) + ứng viên từ điển của âm, đ
 audit bằng công cụ khác.
 
 Chạy:
-  .venv/bin/python -m pipeline.ground_truth.batch_json --dir dataset_out/ground_truth/audit_SILVER
+  .venv/bin/python -m pipeline.ground_truth.batch_json --dir dataset_out/human_audit/audit_SILVER
   .venv/bin/python -m pipeline.ground_truth.batch_json --all      # cả 3 nhóm audit_*
 """
 from __future__ import annotations
@@ -75,7 +75,7 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     qn = _qn_dict()
     if args.all:
-        base = REPO / "dataset_out" / "ground_truth"
+        base = REPO / "dataset_out" / "human_audit"
         dirs = sorted(d for d in base.glob("audit_*") if d.is_dir())
         for d in dirs:
             export_dir(d, args.batch_size, qn)

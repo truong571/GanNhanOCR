@@ -26,11 +26,11 @@ Ba điều phải khai báo, không được giấu:
 | Commit | Nội dung | Ghi chú |
 |---|---|---|
 | `388694a456` | feat: audit-remediation pipeline (Giai đoạn 0–3) + engine fixes | Nền của 4 giai đoạn |
-| `f78dbc4da5` | **Chứa toàn bộ artifact bằng chứng** (`dataset_out/ground_truth/**` 54 file, `labels_final.csv`, `config/confusion_fixes.yaml`, `dataset_out/fusion/**`) | Message gốc là "update code" — vô nghĩa. Đây là commit phải trích khi nói về bằng chứng audit. |
+| `f78dbc4da5` | **Chứa toàn bộ artifact bằng chứng** (`dataset_out/human_audit/**` 54 file, `labels_final.csv`, `config/confusion_fixes.yaml`, `dataset_out/fusion/**`) | Message gốc là "update code" — vô nghĩa. Đây là commit phải trích khi nói về bằng chứng audit. |
 | `f47f431abd` | chore(cleanup): xoá mã chết + vá bug ghi đè `fused.csv` + chốt mốc selftest | Nhóm A kiểm kê 2026-07-20 |
 | tag `freeze-pre-thesis-2026-07-20` | Điểm đóng băng Giai đoạn 0 | Mọi bằng chứng tính đến ngày này |
 
-**Trạng thái remote** (cập nhật 2026-07-21): `main` = `feat/phases-0-3-audit-pipeline` = remote, đều đã push lên `github.com:truong571/GanNhanOCR.git`. Remote có đủ **54 file** `dataset_out/ground_truth/` + `labels_final.csv` và **3 tag**.
+**Trạng thái remote** (cập nhật 2026-07-21): `main` = `feat/phases-0-3-audit-pipeline` = remote, đều đã push lên `github.com:truong571/GanNhanOCR.git`. Remote có đủ **54 file** `dataset_out/human_audit/` + `labels_final.csv` và **3 tag**.
 
 ### 2-bis. Nội dung commit `f78dbc4da5` theo 4 nhóm
 
@@ -40,7 +40,7 @@ Commit này gộp **76 file** vào một lần với message `"update code"`. Kh
 |---|---|
 | (a) 7 file `.py` | `consensus_fusion/{fuse_stage,mine_confusions,score_s3}.py` · `ground_truth/{batch_json,make_audit_batch,reanchor_verdicts}.py` · `remediation/confusion_fix.py` |
 | (b) Cấu hình quyết định nhãn | `config/confusion_fixes.yaml` |
-| (c) Bằng chứng | `dataset_out/ground_truth/**` (54 file) · `labels_final.csv` · `confusion_fix_report.json` · `dataset_out/fusion/**` |
+| (c) Bằng chứng | `dataset_out/human_audit/**` (54 file) · `labels_final.csv` · `confusion_fix_report.json` · `dataset_out/fusion/**` |
 | (d) Tài liệu | `DE_XUAT_HOAN_THIEN_LUAN_VAN_2026-07-20.md` · `KIEM_KE_FILE_VA_LO_TRINH_2026-07-20.html` |
 
 ⚠️ Commit này **đồng thời gỡ `Data/SachThanhTruyen{2,4,11}.pdf` khỏi tracking** (Bin → 0 bytes) — một hành vi khác loại bị trộn chung vào commit "bằng chứng". Ba file PDF vẫn còn trên đĩa dưới tên mới `Data/STT{2,4,11}.pdf` và nằm trong gói `repro_assets_2026-07-20.tgz`.
@@ -86,8 +86,8 @@ Số hiện hành (commit `2eb51e66f6`): `labels_final.csv` **82.269** dòng —
 
 | Artifact | sha256 / số lượng | Ghi chú |
 |---|---|---|
-| `dataset_out/ground_truth/report.json` | `63188b4f80d4386d…da3d8cad8` | ⚠️ precision 0,7298 ở đây là mẫu **suspicion-ranked + stratified SILVER (AI chấm)** — KHÁC khung lấy mẫu với 97–98% GOLD (SRS). Không được trộn hai số. |
-| `dataset_out/ground_truth/verdicts_reanchored.csv` | `df5a6b1568be2daf…08c51882c` | 825/846 verdict người neo lại được (median IoU 1.0, 93% byte-identical) |
+| `dataset_out/human_audit/report.json` | `63188b4f80d4386d…da3d8cad8` | ⚠️ precision 0,7298 ở đây là mẫu **suspicion-ranked + stratified SILVER (AI chấm)** — KHÁC khung lấy mẫu với 97–98% GOLD (SRS). Không được trộn hai số. |
+| `dataset_out/human_audit/verdicts_reanchored.csv` | `df5a6b1568be2daf…08c51882c` | 825/846 verdict người neo lại được (median IoU 1.0, 93% byte-identical) |
 | `audit_gold/` | 8 file JSON + 6 HTML | Grid chấm mù mẻ GOLD |
 | `audit_SILVER/verdicts_ai.jsonl` | **750 dòng, 100% `source='ai_vision'`** | ⚠️ AI chấm — xem §1 |
 | `audit_SYLLABLE/` | **0 verdict** | Grid đã dựng, chưa ai chấm |
@@ -133,7 +133,7 @@ Vị trí: `~/ThS_archive/backup_2026-07-20/`
 - `shasum -c SHA256SUMS.txt` → OK cả 2 gói
 - Bung tarball ra thư mục tạm → 83 file; sha256 của `labels_final.csv`, `verdicts_reanchored.csv`, `confusion_fixes.yaml`, `FLOW…md` **khớp bản gốc**; 13/13 file audit HTML có mặt
 - `git bundle verify` → *"The bundle records a complete history"*
-- Clone thử từ bundle → khôi phục 101 commit, HEAD `f78dbc4da5`, có đủ 54 file `dataset_out/ground_truth`
+- Clone thử từ bundle → khôi phục 101 commit, HEAD `f78dbc4da5`, có đủ 54 file `dataset_out/human_audit`
 
 **Khôi phục khi cần:**
 ```bash
@@ -148,7 +148,7 @@ tar xzf ~/ThS_archive/backup_2026-07-20/repro_assets_2026-07-20.tgz -C <đích> 
 
 **Clone sạch LÀM ĐƯỢC:**
 - `git submodule init` đăng ký **đủ 4/4** submodule, exit 0 (trước khi vá `.gitmodules` thì FATAL)
-- Có đủ bằng chứng: 54 file `dataset_out/ground_truth/`, `labels_final.csv` (82.275 dòng), `confusion_fixes.yaml`, 3 tài liệu chiến lược, `requirements.lock.txt`
+- Có đủ bằng chứng: 54 file `dataset_out/human_audit/`, `labels_final.csv` (82.275 dòng), `confusion_fixes.yaml`, 3 tài liệu chiến lược, `requirements.lock.txt`
 - Chạy được 3/5 bộ selftest với **kết quả y hệt** repo gốc: `consensus_fusion` 44/0 · `remediation` 27/6 · `phase1_engine` 29/1
 
 **Clone sạch KHÔNG làm được** (khác biệt đo được so với repo gốc):
@@ -314,7 +314,7 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
      D dataset_out/fusion/labels_fused.csv
      D dataset_out/fusion/s3_validate.csv
      D dataset_out/fusion/summary.json
-     D dataset_out/ground_truth/audit_SILVER/Qwen_jsonl.txt
+     D dataset_out/human_audit/audit_SILVER/Qwen_jsonl.txt
 - sách    : STT2+STT4+STT11 | reseg=detector
 
 | file | sha256 |

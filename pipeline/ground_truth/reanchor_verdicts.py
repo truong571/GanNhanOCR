@@ -10,18 +10,18 @@ NHÃN CŨ. Nếu nhãn mới KHÁC nhãn đã audit → verdict không còn áp 
 KHÔNG mang mù verdict cũ sang.
 
 Đầu vào:
-  --old-manifest  dataset_out/ground_truth/audit_gold/manifest.jsonl  (item_id,book,page,bbox,label)
+  --old-manifest  dataset_out/human_audit/audit_gold/manifest.jsonl  (item_id,book,page,bbox,label)
   --verdicts      gộp mọi verdicts_*.jsonl                             (item_id,verdict)
   --new-labels    dataset_out/labels.csv (thế hệ HIỆN TẠI)            (book,page,bbox,label,image,tier)
 Đầu ra:
-  dataset_out/ground_truth/verdicts_reanchored.csv
+  dataset_out/human_audit/verdicts_reanchored.csv
     item_id, verdict, book, page, iou, image_old(none), image_new, label_old, label_new,
     label_match, tier_new, status  (matched | label_changed | orphan)
 
 Chạy:
   .venv/bin/python -m pipeline.ground_truth.reanchor_verdicts \
-      --old-manifest dataset_out/ground_truth/audit_gold/manifest.jsonl \
-      --verdicts dataset_out/ground_truth \
+      --old-manifest dataset_out/human_audit/audit_gold/manifest.jsonl \
+      --verdicts dataset_out/human_audit \
       --new-labels dataset_out/labels.csv
 """
 from __future__ import annotations
@@ -122,7 +122,7 @@ def run(old_manifest: Path, verdicts_path: Path, new_labels: Path) -> pd.DataFra
                      "status": "matched" if match else "label_changed"})
     df = pd.DataFrame(rows)
 
-    outp = REPO / "dataset_out" / "ground_truth" / "verdicts_reanchored.csv"
+    outp = REPO / "dataset_out" / "human_audit" / "verdicts_reanchored.csv"
     df.to_csv(outp, index=False)
 
     n = len(df)
@@ -148,8 +148,8 @@ def run(old_manifest: Path, verdicts_path: Path, new_labels: Path) -> pd.DataFra
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="pipeline.ground_truth.reanchor_verdicts")
     ap.add_argument("--old-manifest",
-                    default=str(REPO / "dataset_out/ground_truth/audit_gold/manifest.jsonl"))
-    ap.add_argument("--verdicts", default=str(REPO / "dataset_out/ground_truth"))
+                    default=str(REPO / "dataset_out/human_audit/audit_gold/manifest.jsonl"))
+    ap.add_argument("--verdicts", default=str(REPO / "dataset_out/human_audit"))
     ap.add_argument("--new-labels", default=str(REPO / "dataset_out/labels.csv"))
     args = ap.parse_args(argv)
     run(Path(args.old_manifest), Path(args.verdicts), Path(args.new_labels))

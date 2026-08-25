@@ -9,7 +9,7 @@
 
 ## 0.1 Bằng chứng: vì sao mọi số precision hiện tại đều phải huỷ
 
-Truy nguyên `dataset_out/ground_truth/verdicts_reanchored.csv` — tệp mà **mọi** con số precision
+Truy nguyên `dataset_out/human_audit/verdicts_reanchored.csv` — tệp mà **mọi** con số precision
 trong luận văn neo vào:
 
 | kiểm chứng | kết quả |

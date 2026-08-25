@@ -39,7 +39,7 @@ from .make_confusion_batch import audited_images
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_LABELS = REPO / "dataset_out" / "labels_remediated.csv"
-GT_DIR = REPO / "dataset_out" / "ground_truth"
+GT_DIR = REPO / "dataset_out" / "human_audit"
 DEFAULT_OUT = GT_DIR / "audit_label_only"
 
 

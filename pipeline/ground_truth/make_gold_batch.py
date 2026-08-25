@@ -2,7 +2,7 @@
 
 BỐI CẢNH
 --------
-Toàn bộ verdict đang có trong repo (846 hàng, `dataset_out/ground_truth/`) đều mang
+Toàn bộ verdict đang có trong repo (846 hàng, `dataset_out/human_audit/`) đều mang
 `source: "ai_vision"` — tức MÁY chấm MÁY. Dùng chúng để đặt ngưỡng cho chính tín hiệu máy
 là đúng lỗi tuần hoàn mà audit nội bộ đã cảnh báo. Mẻ này sinh ra tập verdict NGƯỜI đầu
 tiên của dự án.
@@ -31,7 +31,7 @@ Người chấm KHÔNG phân biệt được hai tầng: `audit_order` được 
 CHẠY
 ----
     .venv/bin/python -m pipeline.ground_truth.make_gold_batch
-    # -> dataset_out/ground_truth/audit_gold_human/audit_001.html + manifest.jsonl
+    # -> dataset_out/human_audit/audit_gold_human/audit_001.html + manifest.jsonl
     # chấm xong -> Download JSON -> lưu verdicts_001.jsonl NGAY trong thư mục đó
 """
 from __future__ import annotations
@@ -49,7 +49,7 @@ from .cli import _load_config, _paths
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_LABELS = REPO / "dataset_out" / "labels_remediated.csv"
-DEFAULT_OUT = REPO / "dataset_out" / "ground_truth" / "audit_gold_human"
+DEFAULT_OUT = REPO / "dataset_out" / "human_audit" / "audit_gold_human"
 
 BATCH_SRS = "srs"
 BATCH_ACTIVE = "active_lowmargin"

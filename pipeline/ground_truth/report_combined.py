@@ -14,7 +14,7 @@ dòng khác nhau của bảng trong luận văn). Module này:
 
 CHẠY
 ----
-    .venv/bin/python -m pipeline.ground_truth.report_combined --dir dataset_out/ground_truth/audit_combined
+    .venv/bin/python -m pipeline.ground_truth.report_combined --dir dataset_out/human_audit/audit_combined
 """
 from __future__ import annotations
 
@@ -439,7 +439,7 @@ cao. Luôn trích κ **cạnh** đồng thuận thô và ma trận đảo verdic
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="pipeline.ground_truth.report_combined")
-    ap.add_argument("--dir", default="dataset_out/ground_truth/audit_combined")
+    ap.add_argument("--dir", default="dataset_out/human_audit/audit_combined")
     ap.add_argument("--interrater", metavar="DIR",
                     help="thư mục mẻ liên người -> κ giữa hai người + KAPPA_LIEN_NGUOI.md "
                          "(chạy riêng, không cần --dir)")

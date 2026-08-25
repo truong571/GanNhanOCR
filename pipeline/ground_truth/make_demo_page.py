@@ -36,7 +36,7 @@ from .make_confusion_batch import audited_images
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_LABELS = REPO / "dataset_out" / "labels_final.csv"
-GT_DIR = REPO / "dataset_out" / "ground_truth"
+GT_DIR = REPO / "dataset_out" / "human_audit"
 DEFAULT_OUT = GT_DIR / "demo_audit.html"
 
 TIERS = ("GOLD", "SILVER", "SYLLABLE")
@@ -235,7 +235,7 @@ def render(cards: list[dict], seed: int, n_pop: dict) -> str:
   <footer>
     Sinh bởi <code>pipeline.ground_truth.make_demo_page</code> ·
     nguồn <code>dataset_out/labels_final.csv</code> ·
-    công cụ chấm thật: <code>dataset_out/ground_truth/audit_combined/audit.html</code>
+    công cụ chấm thật: <code>dataset_out/human_audit/audit_combined/audit.html</code>
     (860 ô) · thiết kế mẫu và lý do: <code>docs/KE_HOACH_CHAM_TAY.md</code>
   </footer>
 </div></body></html>

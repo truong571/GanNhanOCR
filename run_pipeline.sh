@@ -412,6 +412,13 @@ step_export() {
   X "$PY" pipeline/export_final_dataset.py \
       --labels "$LABELS_FINAL" --src-root dataset_out --out "$FINAL_DIR"
   [[ -f "$FINAL_DIR/labels.csv" ]] || die "bước export không sinh $FINAL_DIR/labels.csv"
+
+  # --- TÀI LIỆU ĐI KÈM BỘ GIAO NỘP -----------------------------------------
+  # Với ngành Hán Nôm, một bộ dữ liệu KHÔNG có lai lịch thư tịch là KHÔNG TRÍCH DẪN
+  # ĐƯỢC: người đọc không biết ba cuốn này là bản in nào, lưu ở đâu, ký hiệu gì, nên
+  # không kiểm lại được ô nhãn nào. Mọi con số trong DATASHEET đọc TỪ labels.csv nên
+  # không thể lệch với dữ liệu. Các mục chỉ người biết được để `⬜ CHƯA ĐIỀN`.
+  X "$PY" -m pipeline.tools.make_dataset_docs --dataset "$FINAL_DIR"
 }
 
 # ====================== FREEZE / EVIDENCE ====================================

@@ -239,6 +239,11 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--n-gold", type=int, default=DEFAULT_N["GOLD"])
     ap.add_argument("--n-silver", type=int, default=DEFAULT_N["SILVER"])
     ap.add_argument("--n-syllable", type=int, default=DEFAULT_N["SYLLABLE"])
+    ap.add_argument("--n-similar", type=int, default=0,
+                    help="số ô luật s1_inter_s2_similar (chỉ dùng với --by-rule)")
+    ap.add_argument("--by-rule", action="store_true",
+                    help="tách GOLD thành direct/similar — HAI LỚP RỦI RO KHÁC NHAU, "
+                         "precision gộp sẽ che lớp yếu hơn")
     ap.add_argument("--n-repeat", type=int, default=60,
                     help="số ô đưa vào hai lần để đo kappa nội tại (0 = tắt)")
     ap.add_argument("--min-gap", type=int, default=200,
@@ -265,13 +270,37 @@ def main(argv: list[str] | None = None) -> int:
     ranked = suspicion.add_suspicion(labels)
 
     already = set() if args.reuse_audited else audited_images(GT_DIR)
-    wanted = {"GOLD": args.n_gold, "SILVER": args.n_silver, "SYLLABLE": args.n_syllable}
+    # --- PHÂN TẦNG THEO LUẬT, KHÔNG CHỈ THEO TIER (sửa 2026-08-25) ----------------
+    # GOLD gộp hai lớp rủi ro KHÁC HẲN NHAU và precision gộp sẽ che lớp yếu hơn:
+    #   s1_inter_s2_direct  (46.327 ô) — chữ QUAN SÁT ĐƯỢC, từ điển xác nhận nó
+    #   s1_inter_s2_similar  (3.829 ô) — chữ quan sát được KHÔNG phải âm đọc; nhãn là
+    #                                    một chữ KHÁC bắc cầu qua "nhìn giống".
+    # Lớp thứ hai THAY chữ, nên sai ở đây là sai kiểu khác và phải đo riêng.
+    # SYLLABLE là lớp thứ ba, KHÁC VỀ BẢN CHẤT: cột `label` RỖNG — không gán chữ Nôm
+    # nào, chỉ ghi âm. Câu hỏi cho người chấm ở tầng này KHÔNG phải "chữ này đúng
+    # không" mà là "ÂM này đúng không".
+    #
+    # Vẫn TRỘN CHUNG rồi xáo trộn khi trình bày (lý do ở đầu tệp: người chấm không được
+    # biết mình đang ở tầng nào) — chỉ tách khi PHÂN TÍCH, qua cột `stratum`.
+    if args.by_rule:
+        wanted = {
+            "GOLD/direct": (args.n_gold, lambda d: (d["tier"] == "GOLD")
+                            & (d["rule"] == "s1_inter_s2_direct")),
+            "GOLD/similar": (args.n_similar, lambda d: (d["tier"] == "GOLD")
+                             & (d["rule"] == "s1_inter_s2_similar")),
+            "SILVER": (args.n_silver, lambda d: d["tier"] == "SILVER"),
+            "SYLLABLE": (args.n_syllable, lambda d: d["tier"] == "SYLLABLE"),
+        }
+    else:
+        wanted = {t: (n, (lambda t_: (lambda d: d["tier"] == t_))(t)) for t, n in
+                  (("GOLD", args.n_gold), ("SILVER", args.n_silver),
+                   ("SYLLABLE", args.n_syllable))}
 
     samples, cells, tiers_meta = [], [], []
-    for tier, n in wanted.items():
+    for tier, (n, pred) in wanted.items():
         if n <= 0:
             continue
-        pool = ranked[ranked["tier"] == tier]
+        pool = ranked[pred(ranked)]
         free = pool[~pool["image"].astype(str).isin(already)]
         if len(free) < n:
             raise SystemExit(f"{tier}: chỉ còn {len(free)} ô chưa chấm, không đủ {n}")

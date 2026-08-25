@@ -97,8 +97,8 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
     print(f"[export] ảnh: {n_copied} đã copy, {n_missing} thiếu trên đĩa")
     # export XOÁ SẠCH thư mục đích rồi ghi lại, nên tài liệu đi kèm biến mất theo.
     # run_pipeline gọi make_dataset_docs ngay sau đây; chạy TAY thì dễ quên, và bộ giao
-    # cho đội chấm sẽ thiếu HUONG_DAN_CHAM.md — họ không biết phải nộp lại cái gì.
-    if not (out_root / "HUONG_DAN_CHAM.md").exists():
+    # bộ giao ra sẽ thiếu README/DATASHEET — không ai biết cột nào nghĩa là gì.
+    if not (out_root / "README.md").exists():
         print(f"[export] ⚠️ {out_root}/ CHƯA có tài liệu đi kèm. Chạy tiếp:\n"
               f"    python -m pipeline.tools.make_dataset_docs --dataset {out_root}")
     if n_missing:

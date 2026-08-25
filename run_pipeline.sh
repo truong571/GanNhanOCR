@@ -632,7 +632,7 @@ if [[ "${FINAL_OUT:-}" == "$REDATASET_DIR" ]]; then
   log "  ${YEL}${BLD}ĐÂY LÀ BỘ ĐEM CHẤM, CHƯA PHẢI BỘ CUỐI CÙNG.${RST}"
   log ""
   log "  Giao CẢ thư mục ${BLD}$REDATASET_DIR/${RST} cho đội chấm — nó TỰ ĐỦ."
-  log "  Đặc tả cho họ: $REDATASET_DIR/HUONG_DAN_CHAM.md (đội tự làm giao diện)."
+  log "  Cột nào nghĩa gì: $REDATASET_DIR/README.md · giới hạn: DATASHEET.md"
   log ""
   log "  Nhận về, đặt ĐÚNG hai tệp vào $REDATASET_DIR/ :"
   log "     verdicts.csv     cột image,verdict,nguoi_cham,ghi_chu"

@@ -30,9 +30,13 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
 5. **424 ô có ảnh hỏng** (`usable_image=0`) vẫn nằm trong bộ — nhãn có thể
    đúng, ảnh thì không dùng được.
 6. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.
+7. **Chia tách neo ở mức CỘT, không phải TRANG** — 360/444 trang có cột ở nhiều phía, nên
+   chỉ số đo bằng `split` sẵn có là **cận trên**. Xem README.
+7. **Chia tách neo ở mức CỘT, không phải TRANG** — 360/444 trang có cột ở nhiều phía.
+   Chỉ số đo bằng `split` sẵn có là **cận trên**. Xem README.
 
 ## Khuyến nghị dùng
 Dùng được: huấn luyện mô hình, thăm dò, làm điểm khởi đầu để chấm tay.
 **Chưa dùng được**: trích dẫn như dữ liệu đã kiểm chứng, hoặc làm chuẩn đánh giá.
 
-*Sinh tự động từ `labels.csv` ngày 2026-08-25 · commit `90320fd1fd`*
+*Sinh tự động từ `labels.csv` ngày 2026-08-25 · commit `bfec0ac78b`*

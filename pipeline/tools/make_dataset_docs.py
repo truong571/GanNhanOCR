@@ -88,16 +88,29 @@ def readme(s: dict) -> str:
 | `tier` / `rule` | luật nào quyết nhãn này — xem DATASHEET |
 | `usable_image` | `0` = ảnh trắng hoặc bị cắt mất nét ({s['anh_hong']} ô). Nhãn có thể vẫn đúng; đừng chấm chiều ảnh ở các ô này |
 | `crop_quality_flag` | `ok` / `bleed` (dính mực chữ bên cạnh) / `truncated` / `blank` |
-| `split` / `split_group` | chia tách theo TRANG, không có trang nào nằm ở hai phía |
+| `split` / `split_group` | neo ở mức **CỘT** (`sách|trang|cột`) — xem cảnh báo dưới |
+
+## 🔴 Chia tách KHÔNG rời nhau theo TRANG
+
+`split` neo ở mức **cột**, không phải trang. Đo được: **0/3.985 cột** nằm ở hai phía —
+sạch theo đơn vị của chính nó — **nhưng 360/444 trang** có cột rơi vào các phía khác nhau.
+
+Hai cột cạnh nhau trên cùng một trang dùng chung ván khắc, chung mực, chung lần quét, nên
+mô hình huấn luyện trên `train` có thể học **diện mạo trang** rồi được chấm lại trên chính
+trang đó. **Mọi chỉ số đo bằng `split` sẵn có là CẬN TRÊN**, không phải hiệu năng thật trên
+trang chưa từng thấy.
+
+Muốn đánh giá trung thực thì tự chia lại theo `book` + `page`. Cái giá đo được: test
+4.881 → 3.868 ô, và số lớp chữ có ở test mà không có ở train tăng 9 → 31.
 
 ## 🔴 Trạng thái kiểm định
 
 **Chưa có phép đo precision nào còn hiệu lực.** Mọi con số precision trong các bản trước
 đã bị **tước tư cách bằng chứng** vì nguồn phán quyết hoá ra là máy chấm chứ không phải
-người. Mẻ chấm tay đúng quy trình đang được tiến hành — xem `docs/QUY_TRINH_CHAM_TAY.md`.
+người.
 
-Nói cách khác: bộ này dùng được để **huấn luyện** và **thăm dò**, nhưng **chưa được trích
-dẫn như dữ liệu đã kiểm chứng**.
+Nghĩa là: bộ này dùng được để **huấn luyện** và **thăm dò**, nhưng **chưa được trích dẫn
+như dữ liệu đã kiểm chứng**.
 
 ## Trích dẫn
 
@@ -176,89 +189,16 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
 5. **{s['anh_hong']} ô có ảnh hỏng** (`usable_image=0`) vẫn nằm trong bộ — nhãn có thể
    đúng, ảnh thì không dùng được.
 6. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.
+7. **Chia tách neo ở mức CỘT, không phải TRANG** — 360/444 trang có cột ở nhiều phía, nên
+   chỉ số đo bằng `split` sẵn có là **cận trên**. Xem README.
+7. **Chia tách neo ở mức CỘT, không phải TRANG** — 360/444 trang có cột ở nhiều phía.
+   Chỉ số đo bằng `split` sẵn có là **cận trên**. Xem README.
 
 ## Khuyến nghị dùng
 Dùng được: huấn luyện mô hình, thăm dò, làm điểm khởi đầu để chấm tay.
 **Chưa dùng được**: trích dẫn như dữ liệu đã kiểm chứng, hoặc làm chuẩn đánh giá.
 
 *Sinh tự động từ `labels.csv` ngày {s['ngay']} · commit `{s['commit']}`*
-"""
-
-
-def huong_dan_cham(s: dict) -> str:
-    """Đặc tả GIAO NỘP cho đội chấm ngoài. Họ tự làm giao diện; ta chỉ chốt ĐẦU RA."""
-    return f"""# Hướng dẫn chấm — dành cho đội chấm
-
-Thư mục này **tự đủ**: `labels.csv` + hai thư mục ảnh. Không cần công cụ nào của chúng
-tôi. Đội chấm **tự làm giao diện** theo cách thuận tiện nhất.
-
-Chúng tôi chỉ chốt **đầu ra**, để nạp ngược vào pipeline được.
-
-## Câu hỏi — KHÁC NHAU theo `label_level`
-
-| `label_level` | số ô | câu hỏi |
-|---|---|---|
-| `char` | {s['nhan_ky_tu']:,} | **Chữ trong ảnh có đúng là chữ ở cột `label` không?** |
-| `syllable` | {s['chu_giai_am']:,} | **Âm ở cột `syllable` có đúng với chữ trong ảnh không?** |
-
-> ⚠️ Ô `label_level = syllable` có cột **`label` RỖNG** — chúng **không gán chữ Nôm**.
-> Hỏi "chữ này đúng không" ở đó là hỏi một thứ không tồn tại.
-
-## Bốn quy tắc
-
-1. **Khung cắt xấu KHÔNG phải lỗi nhãn.** Dính chút mực chữ bên cạnh mà vẫn đọc ra chữ
-   → chấm **đúng**. Câu hỏi là về **chữ**, không phải về **khung**.
-2. **{s['anh_hong']} ô có `usable_image = 0`** (ảnh trắng hoặc cắt mất nét) — **bỏ qua**,
-   chấm `khong_doc_duoc`. Đừng chấm thành "sai".
-3. **Lưỡng lự → `khong_doc_duoc`, đừng chấm `sai`.** Ô *không đọc được* bị loại khỏi mẫu
-   số; ô *sai* bị tính là lỗi. Dữ liệu cũ cho thấy xu hướng **gọi quá tay**.
-4. Chấm khó thì mở ảnh trang gốc theo cột `book` / `page` / `bbox`.
-
-## Đầu ra cần nộp — ĐÚNG hai tệp, đặt ngay trong thư mục này
-
-### 1. `verdicts.csv`
-
-```csv
-image,verdict,nguoi_cham,ghi_chu
-gold/stt2_page_0012_c01_003.png,dung,Nguyen Van A,
-gold/stt2_page_0012_c01_004.png,sai,Nguyen Van A,nhìn giống chữ khác
-syllable/stt4_page_0020_c03_055.png,khong_doc_duoc,Tran Thi B,mực nhoè
-```
-
-| cột | bắt buộc | giá trị |
-|---|---|---|
-| `image` | ✅ | chép **nguyên văn** từ `labels.csv`, không đổi đường dẫn |
-| `verdict` | ✅ | **chỉ ba giá trị**: `dung` · `sai` · `khong_doc_duoc` |
-| `nguoi_cham` | nên có | tên người chấm ô đó — cần để tính κ liên-người |
-| `ghi_chu` | không | tuỳ ý |
-
-**Không cần chấm hết.** Chấm được bao nhiêu nộp bấy nhiêu; pipeline tự tính độ phủ.
-Nhưng nếu chấm một phần thì con số precision **chỉ đúng cho phần đã chấm** — sẽ không
-suy rộng ra toàn bộ, vì không biết phần đó có đại diện hay không.
-
-### 2. `NGUOI_CHAM.md`
-
-**Bắt buộc.** Không có nó thì pipeline **từ chối nạp**, dù `verdicts.csv` hoàn hảo.
-
-Lý do: dự án này đã một lần tin nhầm verdict **MÁY** là verdict người và phải huỷ toàn
-bộ số liệu — và các tệp đó **không hề tự khai là máy**. Nên chúng tôi không suy đoán
-xuất xứ từ dữ liệu nữa, mà **bắt khai ra**.
-
-Mẫu ở `docs/QUY_TRINH_CHAM_TAY.md`. Ba điều quyết định: người chấm có **đọc được chữ
-Nôm** không · có **ít nhất hai người** không · có cam kết **không dùng máy** không.
-
-## Nộp về rồi thì sao
-
-Chép cả thư mục `re-dataset/` (đã có hai tệp trên) về máy chạy pipeline, rồi:
-
-```bash
-bash run_pipeline.sh
-```
-
-Pipeline tự phát hiện `verdicts.csv`, nạp phán quyết, và xuất bộ **cuối cùng** ra
-`dataset/` kèm `docs/BANG_PRECISION.md`.
-
-*Sinh tự động ngày {s['ngay']} · commit `{s['commit']}`*
 """
 
 
@@ -285,8 +225,7 @@ def main(argv: list[str] | None = None) -> int:
 
     s = stats(lab)
     for name, body in (("README.md", readme(s)), ("DATASHEET.md", datasheet(s)),
-                       ("NGUON_THU_TICH.md", nguon(s)),
-                       ("HUONG_DAN_CHAM.md", huong_dan_cham(s))):
+                       ("NGUON_THU_TICH.md", nguon(s))):
         (root / name).write_text(body, encoding="utf-8")
     lic = root / "LICENSE.md"
     if not lic.exists():

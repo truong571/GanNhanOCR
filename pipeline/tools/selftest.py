@@ -257,6 +257,19 @@ def test_dataset_docs() -> None:
     check("README CẢNH BÁO đừng gộp hai loại nhãn", "Đừng phát biểu" in rd)
     ng = (ds / "NGUON_THU_TICH.md").read_text(encoding="utf-8")
     check("lai lịch để TRỐNG chứ không bịa", "⬜ CHƯA ĐIỀN" in ng)
+    # HỒI QUY: README từng khẳng định "chia tách theo TRANG, không trang nào ở hai phía"
+    # trong khi ĐO ĐƯỢC 360/444 trang có cột ở nhiều phía. Tài liệu nói dối về dữ liệu.
+    check("README KHÔNG khẳng định sai là chia tách theo TRANG",
+          "chia tách theo TRANG, không có trang nào" not in rd)
+    check("README cảnh báo split neo ở mức CỘT", "neo ở mức" in rd and "CỘT" in rd)
+    import csv as _csv, collections as _c
+    rows = list(_csv.DictReader(open(ds / "labels.csv", encoding="utf-8")))
+    pg = _c.defaultdict(set)
+    for r in rows:
+        pg[(r["book"], r["page"])].add(r.get("split", ""))
+    n_leak = sum(1 for v in pg.values() if len(v) > 1)
+    check(f"nếu CÓ rò rỉ theo trang ({n_leak}) thì README phải nói",
+          n_leak == 0 or "CẬN TRÊN" in rd)
     check("nói rõ vì sao để trống", "cố ý để trống" in ng.lower() or "bịa" in ng)
 
 

@@ -25,19 +25,32 @@
 | `tier` / `rule` | luật nào quyết nhãn này — xem DATASHEET |
 | `usable_image` | `0` = ảnh trắng hoặc bị cắt mất nét (424 ô). Nhãn có thể vẫn đúng; đừng chấm chiều ảnh ở các ô này |
 | `crop_quality_flag` | `ok` / `bleed` (dính mực chữ bên cạnh) / `truncated` / `blank` |
-| `split` / `split_group` | chia tách theo TRANG, không có trang nào nằm ở hai phía |
+| `split` / `split_group` | neo ở mức **CỘT** (`sách|trang|cột`) — xem cảnh báo dưới |
+
+## 🔴 Chia tách KHÔNG rời nhau theo TRANG
+
+`split` neo ở mức **cột**, không phải trang. Đo được: **0/3.985 cột** nằm ở hai phía —
+sạch theo đơn vị của chính nó — **nhưng 360/444 trang** có cột rơi vào các phía khác nhau.
+
+Hai cột cạnh nhau trên cùng một trang dùng chung ván khắc, chung mực, chung lần quét, nên
+mô hình huấn luyện trên `train` có thể học **diện mạo trang** rồi được chấm lại trên chính
+trang đó. **Mọi chỉ số đo bằng `split` sẵn có là CẬN TRÊN**, không phải hiệu năng thật trên
+trang chưa từng thấy.
+
+Muốn đánh giá trung thực thì tự chia lại theo `book` + `page`. Cái giá đo được: test
+4.881 → 3.868 ô, và số lớp chữ có ở test mà không có ở train tăng 9 → 31.
 
 ## 🔴 Trạng thái kiểm định
 
 **Chưa có phép đo precision nào còn hiệu lực.** Mọi con số precision trong các bản trước
 đã bị **tước tư cách bằng chứng** vì nguồn phán quyết hoá ra là máy chấm chứ không phải
-người. Mẻ chấm tay đúng quy trình đang được tiến hành — xem `docs/QUY_TRINH_CHAM_TAY.md`.
+người.
 
-Nói cách khác: bộ này dùng được để **huấn luyện** và **thăm dò**, nhưng **chưa được trích
-dẫn như dữ liệu đã kiểm chứng**.
+Nghĩa là: bộ này dùng được để **huấn luyện** và **thăm dò**, nhưng **chưa được trích dẫn
+như dữ liệu đã kiểm chứng**.
 
 ## Trích dẫn
 
 Xem `NGUON_THU_TICH.md` cho lai lịch ba cuốn sách nguồn.
 
-*Sinh tự động từ `labels.csv` ngày 2026-08-25 · commit `90320fd1fd`*
+*Sinh tự động từ `labels.csv` ngày 2026-08-25 · commit `bfec0ac78b`*

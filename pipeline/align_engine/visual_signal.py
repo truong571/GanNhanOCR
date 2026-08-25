@@ -212,6 +212,26 @@ class VisualS3:
             embs = [e for p in paths[:PROTO_K] if (e := self.enc.embed_path(p)) is not None]
             if embs:
                 proto[ch] = np.stack(embs)
+        # KHÔNG BAO GIỜ CACHE MỘT BỘ NGUYÊN MẪU SUY BIẾN (vá 2026-08-25).
+        # Lỗi đã xảy ra thật: `clean_build.sh` xoá dataset_out/gold/*.png mà index.csv
+        # trỏ vào, nên lượt build kế tiếp có embed_path() trả None cho MỌI đường dẫn ->
+        # `proto` RỖNG. Bản cũ vẫn ghi nó ra cache KÈM CHỮ KÝ HỢP LỆ, nên mọi lần chạy
+        # sau đó đều nạp lại bộ rỗng và BỎ QUA việc dựng — S3 chạy với 0 nguyên mẫu
+        # crop trong im lặng. Đo hậu quả: SILVER_uncalibrated 10.547 -> 8.044 (-2.503),
+        # SYLLABLE 6.991 -> 7.963 (+972). GOLD không đổi (GOLD = S1∩S2, không đọc S3).
+        #
+        # Chữ ký dựa trên mtime nên không tự phát hiện được chuyện này: index.csv và
+        # checkpoint đều KHÔNG đổi, chỉ có ẢNH bị xoá. Vì vậy phải kiểm chính KẾT QUẢ.
+        want = len(by)
+        got = len(proto)
+        if want and got < max(1, want // 2):
+            print(f"  [S3] 🔴 CHỈ dựng được {got}/{want} lớp nguyên mẫu crop — gần như chắc "
+                  f"chắn ảnh mà index.csv trỏ tới KHÔNG có trên đĩa.\n"
+                  f"       KHÔNG ghi cache (nếu ghi, mọi lần chạy sau sẽ nạp bộ rỗng này "
+                  f"và S3 chạy thiếu nguyên mẫu trong im lặng).\n"
+                  f"       Cách sửa: chạy build MỘT lần để dựng lại crop, rồi chạy tiếp.",
+                  flush=True)
+            return proto
         try:
             pickle.dump({**proto, "__sig__": sig}, open(cache, "wb"))
         except Exception:

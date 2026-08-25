@@ -283,6 +283,37 @@ def test_ocr_cache_guard():
     _shutil.rmtree(tmp, ignore_errors=True)
 
 
+def test_proto_cache_not_poisoned():
+    """HỒI QUY: KHÔNG được cache bộ nguyên mẫu S3 SUY BIẾN.
+
+    Lỗi thật 2026-08-25: clean_build.sh xoá dataset_out/gold/*.png mà index.csv trỏ
+    vào -> embed_path() trả None cho MỌI đường dẫn -> proto RỖNG. Bản cũ vẫn ghi nó
+    ra cache KÈM CHỮ KÝ HỢP LỆ, nên mọi lần chạy sau nạp lại bộ rỗng và bỏ qua việc
+    dựng. S3 chạy với 0 nguyên mẫu crop trong im lặng suốt nhiều lần build.
+    Hậu quả đo được: SILVER 10.547 -> 8.044, SYLLABLE 6.991 -> 7.963.
+
+    Chữ ký dựa trên mtime KHÔNG phát hiện được: index.csv và checkpoint đều không
+    đổi, chỉ ẢNH bị xoá. Nên phải kiểm chính KẾT QUẢ.
+    """
+    from pathlib import Path as _P
+    import pickle
+    REPO = _P(__file__).resolve().parents[1]
+    print("[cache nguyên mẫu S3 — không cache bộ suy biến]")
+    src = (REPO / "pipeline" / "align_engine" / "visual_signal.py").read_text(encoding="utf-8")
+    check("có chốt chặn suy biến trước khi ghi cache",
+          "got < max(1, want // 2)" in src)
+    check("chốt chặn nằm TRƯỚC pickle.dump",
+          src.index("got < max(1, want // 2)") < src.index('pickle.dump({**proto'))
+    check("có return sớm để KHÔNG ghi cache", "return proto" in
+          src[src.index("got < max(1, want // 2)"):src.index('pickle.dump({**proto')])
+
+    cache = REPO / "pipeline" / "align_engine" / "s3_proto_cache.pkl"
+    if cache.exists():
+        d = pickle.load(open(cache, "rb"))
+        n = len([k for k in d if k != "__sig__"])
+        check(f"cache trên đĩa KHÔNG suy biến ({n:,} lớp)", n >= 500, f"chỉ có {n}")
+
+
 def test_crop_geometry_wired():
     from pathlib import Path as _P
     REPO = _P(__file__).resolve().parents[1]
@@ -354,6 +385,7 @@ def main() -> int:
     test_syllable_gate()
     test_ocr_retry()
     test_ocr_cache_guard()
+    test_proto_cache_not_poisoned()
     test_crop_geometry_wired()
     test_labels_sorted()
     print("=" * 64)

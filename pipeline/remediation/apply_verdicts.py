@@ -45,6 +45,8 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 KAPPA_MIN = 0.60
+# Tệp KHAI XUẤT XỨ bắt buộc, đặt cạnh verdicts*.jsonl.
+PROV = "NGUOI_CHAM.md"
 VERDICT_COL = "human_verdict"
 NA = dict(keep_default_na=False, na_values=[""])
 
@@ -128,6 +130,29 @@ def main(argv: list[str] | None = None) -> int:
     if not vf:
         print(f"[phán quyết] chưa có verdicts*.jsonl trong {batch} — BỎ QUA bước này")
         return 0
+
+    # ---- CHỐT CHẶN XUẤT XỨ: có tệp verdict KHÔNG có nghĩa là người đã chấm ----------
+    # Thảm hoạ đã xảy ra thật trong dự án này: toàn bộ "chấm tay" hoá ra là MÁY chấm,
+    # và các tệp verdict đó KHÔNG hề tự khai là máy — nên mọi bộ lọc theo trường
+    # `source` đều vô dụng với chúng. Hậu quả: precision 97,98%, Fisher p = 5,4e-8,
+    # κ = 0,13 đều phải huỷ, và dự án mất nhiều tháng vì tin vào số của chính mình.
+    #
+    # Bài học: KHÔNG suy ra xuất xứ từ dữ liệu. Bắt khai ra, bằng một tệp riêng mà con
+    # người phải cố ý viết. Không có tệp đó thì TỪ CHỐI, dù verdict trông hợp lệ.
+    prov = batch / PROV
+    if not prov.exists():
+        print(f"[phán quyết] 🔴 TỪ CHỐI: có {len(vf)} tệp verdict nhưng KHÔNG có {PROV}.\n"
+              f"    Có tệp verdict KHÔNG chứng minh được là NGƯỜI chấm. Dự án này đã một\n"
+              f"    lần tin nhầm verdict MÁY là verdict người và phải huỷ toàn bộ số liệu.\n"
+              f"    Tạo {prov} khai rõ: AI chấm, chấm khi nào, có đọc được chữ Nôm không,\n"
+              f"    người thứ hai là ai. Mẫu: xem docs/QUY_TRINH_CHAM_TAY.md.",
+              file=sys.stderr)
+        return 1
+    txt = prov.read_text(encoding="utf-8")
+    if "⬜" in txt or "CHƯA ĐIỀN" in txt:
+        print(f"[phán quyết] 🔴 TỪ CHỐI: {PROV} còn mục ⬜ CHƯA ĐIỀN.", file=sys.stderr)
+        return 1
+    print(f"[phán quyết] xuất xứ: {PROV} có mặt và đã điền")
 
     est, joined = estimate(batch, args.conf)
     print(f"[phán quyết] {est['n_verdict']:,} verdict, "

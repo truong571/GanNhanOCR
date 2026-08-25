@@ -74,3 +74,42 @@ của ba con số.
 - **Chữ Nôm tự tạo hụt.** Bộ này chỉ 1,63% ô ngoài khối CJK cơ bản, so với 4,21% ở ngữ
   liệu NomNaOCR. Câu hỏi "pipeline bóc mất bộ thủ, hay Nôm Công giáo vốn chuộng dạng
   giản" cần một mẻ RIÊNG, lấy mẫu có chủ đích quanh các cặp `包/𠓨`, `弄/𢚸`, `礼/𥙩`.
+
+---
+
+## Mẫu khai xuất xứ — `NGUOI_CHAM.md`
+
+`apply_verdicts` **TỪ CHỐI chạy** nếu thư mục mẻ có `verdicts*.jsonl` mà **không có**
+tệp này, hoặc tệp này còn mục `⬜`.
+
+> **Vì sao bắt khai:** dự án đã một lần tin nhầm verdict **MÁY** là verdict người, và
+> các tệp đó **không hề tự khai là máy** — nên mọi bộ lọc theo trường `source` đều vô
+> dụng. Hậu quả: precision 97,98%, Fisher p = 5,4e-8, κ = 0,13 **phải huỷ toàn bộ**.
+> Bài học: **không suy ra xuất xứ từ dữ liệu — bắt khai ra.**
+
+Chép mẫu dưới đây vào `dataset_out/ground_truth/audit_combined/NGUOI_CHAM.md` và điền:
+
+```markdown
+# Xuất xứ phán quyết — mẻ audit_combined
+
+## Người chấm thứ nhất
+- Họ tên: ⬜
+- Đọc được chữ Nôm: ⬜ (có/không — nếu KHÔNG thì mẻ này không dùng được)
+- Quan hệ với đề tài: ⬜ (tác giả / đồng nghiệp / chuyên gia ngoài)
+- Ngày chấm: ⬜
+- Số buổi: ⬜
+
+## Người chấm thứ hai  (BẮT BUỘC — không có thì không tính được κ liên-người)
+- Họ tên: ⬜
+- Đọc được chữ Nôm: ⬜
+- KHÔNG phải tác giả đề tài: ⬜ (có/không)
+- Chấm MÙ với verdict của người thứ nhất: ⬜ (có/không)
+- Ngày chấm: ⬜
+
+## Cam kết
+- Không dùng máy/AI để sinh verdict: ⬜ (có/không)
+- Đã đọc bốn quy tắc trong README của mẻ: ⬜ (có/không)
+```
+
+**Nếu bất kỳ dòng nào là "không" ở ba mục in đậm — đọc được chữ Nôm, người thứ hai
+không phải tác giả, không dùng máy — thì mẻ đó không dùng làm ground truth được.**

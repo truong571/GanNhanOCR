@@ -338,6 +338,13 @@ def test_two_outputs_and_verdicts() -> None:
     check("LOẠI ô lặp ẩn khỏi ước lượng dân số", "repeat_of" in av)
     check("verdict unsure KHÔNG tính là lỗi", '"unsure"' in av and "MẪU SỐ" in av)
 
+    check("TỪ CHỐI verdict không có khai xuất xứ", 'PROV = "NGUOI_CHAM.md"' in av)
+    check("từ chối cả khi khai còn bỏ trống", '"⬜" in txt' in av)
+    check("ghi rõ vì sao bắt khai", "KHÔNG hề tự khai là máy" in av)
+    qt = (REPO / "docs" / "QUY_TRINH_CHAM_TAY.md").read_text(encoding="utf-8")
+    check("quy trình có MẪU khai xuất xứ", "NGUOI_CHAM.md" in qt)
+    check("mẫu hỏi người thứ hai có phải tác giả không", "KHÔNG phải tác giả" in qt)
+
     cb = (REPO / "scripts" / "clean_build.sh").read_text(encoding="utf-8")
     check("clean_build dọn cả re-dataset", "re-dataset" in cb)
     check("clean_build KHÔNG xoá verdicts của người",

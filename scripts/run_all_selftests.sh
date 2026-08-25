@@ -10,7 +10,7 @@
 #     remediation              35 passed,  0 failed
 #     phase1_engine            30 passed,  0 failed
 #     -------------------------------------------
-#     TỔNG                    645 passed,  0 failed  (mốc 2026-08-25, +43: T4.e + nối cấu hình + T6.b)
+#     TỔNG                    635 passed,  0 failed  (mốc 2026-08-25, +43: T4.e + nối cấu hình + T6.b)
 #
 # ĐỔI SO VỚI MỐC 448 (KHỐI 1):
 #   +47  pipeline.lab.selftest — bàn thí nghiệm (metrics/perturb/runner). Gồm chốt
@@ -68,7 +68,7 @@
 # xanh. Riêng phase1 "low-purity" là lỗi TEST (placeholder 'x' bị lọc là rác nên
 # purity không được kiểm) — đã sửa placeholder thành âm tiết hợp lệ 'an'/'ba'.
 #
-# => Con số trích dẫn trong luận văn phải là 645 assertions (645 pass, 0 fail), KHÔNG
+# => Con số trích dẫn trong luận văn phải là 635 assertions (635 pass, 0 fail), KHÔNG
 #    còn là 360 hay 223 — 223 là mốc cũ và đã bỏ sót toàn bộ selftest của bước 1-2.
 
 set -uo pipefail
@@ -77,7 +77,7 @@ cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=645
+BASELINE_PASS=635
 BASELINE_FAIL=0
 
 MODULES=(
@@ -127,6 +127,11 @@ echo "LỆCH MỐC:"
 # BÁO ĐỘNG GIẢ ĐÃ XẢY RA: chạy selftest TRONG LÚC pipeline đang dựng lại thì
 # dataset_out/*.csv chưa tồn tại, 105 test phụ thuộc dữ liệu tự bỏ qua, và bộ chạy
 # kêu "nghi hồi quy" dù 0 test hỏng. Phân biệt hai chuyện đó trước khi kết luận.
+if [[ ! -d dataset_out/human_audit/audit_combined ]]; then
+  echo
+  echo "  ℹ️  chưa dựng mẻ MẪU (đường phụ) — 10 test của nó tự bỏ qua, KHÔNG phải hồi quy."
+  echo "      Dựng mẻ thì tổng sẽ là 645 thay vì 635."
+fi
 if [[ ! -f dataset_out/labels_final.csv ]]; then
   echo
   echo "  ⚠️  dataset_out/labels_final.csv KHÔNG CÓ — các test phụ thuộc dữ liệu đã tự bỏ qua."

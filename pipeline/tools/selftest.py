@@ -238,7 +238,13 @@ def test_dataset_docs() -> None:
     from pathlib import Path as _P
     REPO = _P(__file__).resolve().parents[2]
     print("[tài liệu bộ giao nộp]")
+    # Đầu ra có HAI chỗ: dataset/ (đã nạp phán quyết) hoặc re-dataset/ (đem chấm).
+    # Ghim cứng "dataset" làm 18 test tự bỏ qua sau lần chạy đầu — đúng lỗi vừa vá ở
+    # update_bang_so_lieu, và test cũng dính.
     ds = REPO / "dataset"
+    if not (ds / "labels.csv").exists():
+        ds = REPO / "re-dataset"
+
     if not (ds / "labels.csv").exists():
         print("  [bỏ qua] chưa có bộ giao nộp"); return
     for n in ("README.md", "DATASHEET.md", "NGUON_THU_TICH.md", "LICENSE.md"):

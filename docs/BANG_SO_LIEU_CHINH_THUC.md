@@ -1,7 +1,7 @@
 # BẢNG SỐ LIỆU CHÍNH THỨC
 
 <!-- AUTO:HEADER:START -->
-**Bộ nhãn sinh ngày**: 2026-08-25 · **Commit chạm bộ nhãn gần nhất**: `9ff1431879` · **Bộ nhãn**: `dataset_out/labels_final.csv` (82.246 dòng)
+**Bộ nhãn sinh ngày**: 2026-08-25 · **Commit chạm bộ nhãn gần nhất**: `90320fd1fd` · **Bộ nhãn**: `dataset_out/labels_final.csv` (82.246 dòng)
 <!-- AUTO:HEADER:END -->
 
 > **QUY TẮC BẤT DI BẤT DỊCH**: mọi con số trong luận văn (mọi chương, mọi bảng, mọi slide) **chỉ
@@ -98,7 +98,7 @@ Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('datase
 | Lớp ký tự phân biệt (mọi tier có nhãn) | 1.601 |
 | **Lớp trong bộ giao nộp** | **1.583** |
 | Split bộ giao nộp | test 4.881 · train 47.601 · val 4.585 |
-| **Selftest** | **627 passed, 0 failed** |
+| **Selftest** | **635 passed, 0 failed** |
 <!-- AUTO:PHAM_VI:END -->
 
 ### 2.4 Vá lỗi (bước 4–6)

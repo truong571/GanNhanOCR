@@ -44,7 +44,7 @@ train_crop/kaggle_pkg/
 # nhìn thấy khi bấm từng ô — dựng lại từ manifest có thể ra thẻ khác nếu code
 # render đổi, nên không thay thế được khi cần trình bằng chứng.
 # Chỉ loại mẻ dựng ra rồi bỏ, chưa chấm ô nào:
-/dataset_out/ground_truth/audit_label_only/
+/dataset_out/human_audit/audit_label_only/
 
 # Bản đóng gói quốc tế: dựng lại bằng bước 8 publish từ labels_final.csv
 /dataset_out/release/
@@ -82,11 +82,11 @@ fonts/*
 #   .venv/bin/python -m pipeline.ground_truth.split_combined
 # Mỗi mẻ ~12-16 MB HTML nhúng ảnh base64 -> không đưa vào git. Mẻ GỘP (audit_combined)
 # thì VẪN track: đó là mẻ thật sự đem chấm, là bằng chứng.
-/dataset_out/ground_truth/audit_split_*/
+/dataset_out/human_audit/audit_split_*/
 
 # Trang đối chiếu Nôm↔Hán: 24 MB ảnh base64, dựng lại bằng
 #   .venv/bin/python -m pipeline.ground_truth.make_lookalike_page
-/dataset_out/ground_truth/lookalike/
+/dataset_out/human_audit/lookalike/
 
 # Cache nguyên mẫu S3 — TÁI SINH ĐƯỢC và không nên nằm trong git:
 # (1) mỗi lần build lại ghi đè nó -> cây làm việc KHÔNG BAO GIỜ sạch, làm hỏng phép

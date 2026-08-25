@@ -38,7 +38,11 @@ def _labels_path(explicit: str | None) -> Path:
 def _load(args) -> pd.DataFrame:
     path = _labels_path(args.labels)
     print(f"[labels] using {path}")
-    return pd.read_csv(path, dtype={"image_md5": str})
+    # keep_default_na=False: âm Quốc ngữ "nan" (難) là GIÁ TRỊ THẬT, pandas mặc định nuốt
+    # nó thành NaN. Cùng lỗi đã vá ở remediation/cli.py — mô-đun này sót lại.
+    return pd.read_csv(path, dtype={"image_md5": str, "label_in_train": str,
+                                    "crop_w": str, "crop_h": str},
+                       keep_default_na=False, na_values=[""])
 
 
 def _stats(df: pd.DataFrame) -> dict:

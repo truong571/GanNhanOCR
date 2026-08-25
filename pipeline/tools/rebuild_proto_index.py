@@ -55,6 +55,34 @@ def generation_of(index: Path = INDEX) -> set[str]:
     return out
 
 
+def split_lech(labels: Path = LABELS, index: Path = INDEX) -> tuple[int, int]:
+    """(số nguyên mẫu gắn train mà NAY thuộc val/test, tổng nguyên mẫu train).
+
+    Phép kiểm thế hệ cũ chỉ so TIỀN TỐ SÁCH, nên nó mù với việc đổi ĐỊNH NGHĨA split.
+    Đúng chuyện đã xảy ra 2026-08-25: chia tách chuyển từ mức CỘT sang mức TRANG, index.csv
+    không ai sinh lại, và 20,6% nguyên mẫu gắn `split=train` hoá ra nằm trên trang val/test
+    — trong khi `--check` vẫn báo "cùng thế hệ". Bảo đảm "nguyên mẫu rời khỏi val/test" của
+    `build_rows` bị phá mà không một tín hiệu nào.
+    """
+    if not index.exists() or not labels.exists():
+        return 0, 0
+    now: dict[tuple[str, str], str] = {}
+    with open(labels, encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            now.setdefault((r.get("book", ""), r.get("page", "")), r.get("split", ""))
+    pat = re.compile(r"/([a-z]+\d+)_(page_\d+)")
+    lech = tong = 0
+    with open(index, encoding="utf-8") as fh:
+        for r in csv.DictReader(fh):
+            if r.get("split") != "train":
+                continue
+            tong += 1
+            m = pat.search(r.get("path", ""))
+            if m and now.get((m.group(1), m.group(2))) in ("val", "test"):
+                lech += 1
+    return lech, tong
+
+
 def build_rows(labels: Path = LABELS, src_root: Path = REPO / "dataset_out") -> list[dict]:
     """Crop GOLD split=train có ảnh THẬT trên đĩa.
 
@@ -92,7 +120,15 @@ def main(argv: list[str] | None = None) -> int:
                   f"bộ nhãn dùng {sorted(want)} — giao nhau = 0.\n"
                   f"    chạy: python -m pipeline.tools.rebuild_proto_index", file=sys.stderr)
             return 1
-        print(f"[proto-index] cùng thế hệ ({sorted(have) or 'chưa có chỉ mục'})")
+        lech, tong = split_lech(Path(args.labels), Path(args.out))
+        if lech:
+            print(f"[proto-index] LỆCH CHIA TÁCH: {lech:,}/{tong:,} nguyên mẫu "
+                  f"({100*lech/tong:.1f}%) gắn split=train nhưng trang của chúng NAY là "
+                  f"val/test — nguyên mẫu thị giác đã rò sang phần held-out.\n"
+                  f"    chạy: python -m pipeline.tools.rebuild_proto_index", file=sys.stderr)
+            return 1
+        print(f"[proto-index] cùng thế hệ ({sorted(have) or 'chưa có chỉ mục'}) · "
+              f"chia tách khớp ({tong:,} nguyên mẫu train, 0 rò)")
         return 0
 
     rows = build_rows(Path(args.labels))

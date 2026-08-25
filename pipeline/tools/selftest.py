@@ -273,6 +273,45 @@ def test_dataset_docs() -> None:
         check("README nói rõ chỉ số là CẬN TRÊN", "CẬN TRÊN" in rd)
     if any("label_in_train" in r for r in _rows[:1]):
         check("có cột label_in_train -> README phải nêu", "label_in_train" in rd)
+
+    # ---- HỒI QUY 2026-08-25: DATASHEET nói NGƯỢC README, và chốt chặn không hề đọc nó ----
+    # Test cũ chỉ soi biến `rd` (=README) rồi báo 10/10 xanh, trong khi DATASHEET cùng thư
+    # mục, sinh cùng lần chạy, khẳng định "chia tách neo ở mức CỘT — 360/444 trang có cột ở
+    # nhiều phía". Câu đó là CHUỖI GHIM CỨNG sót lại từ trước khi đổi sang chia theo trang,
+    # nằm lọt giữa một f-string mà mọi số quanh nó đều động, và nằm đúng mục "🔴 Giới hạn —
+    # đọc trước khi dùng" mà run_pipeline.sh chỉ người đọc tới. Bộ giao nộp tự mâu thuẫn.
+    dsh = (ds / "DATASHEET.md").read_text(encoding="utf-8")
+    check("DATASHEET không còn chuỗi ghim cứng '360/444'", "360/444" not in dsh)
+    check("DATASHEET không mâu thuẫn README về mức chia tách",
+          ("CỘT, không phải TRANG" in dsh) == (_leak > 0))
+    import re as _re
+    _so_muc = _re.findall(r"^(\d+)\. \*\*", dsh, _re.M)
+    check("DATASHEET không đánh trùng số mục", len(_so_muc) == len(set(_so_muc)),
+          f"trùng: {[x for x in set(_so_muc) if _so_muc.count(x) > 1]}")
+    _lab = [r["label"] for r in _rows if (r.get("label") or "").strip()]
+    _ngoai = sum(1 for c in _lab if not ("\u4e00" <= c <= "\u9fff"))
+    _pct = f"{100*_ngoai/len(_lab):.2f}".replace(".", ",")
+    check(f"DATASHEET nêu tỷ lệ ngoài CJK ĐO ĐƯỢC ({_pct}%)", f"{_pct}%" in dsh,
+          "còn ghim cứng 1,63%?" if "1,63%" in dsh else "không thấy số đo")
+
+    # ---- HỒI QUY: README từng bảo "lọc label_in_train == 1" cho CẢ bộ ----
+    # Cột này RỖNG ở mọi dòng tầng SYLLABLE, nên điều kiện đó vứt luôn chúng: 7.070 dòng
+    # chứ không phải 159. README phải nói rõ phạm vi.
+    _syl = sum(1 for r in _rows if not (r.get("label") or "").strip())
+    if _syl and any("label_in_train" in r for r in _rows[:1]):
+        check("README cảnh báo lọc label_in_train vứt nhầm tầng SYLLABLE",
+              'label_level == "char"' in rd and "vứt" in rd)
+
+    # ---- HỒI QUY: label_in_train phải đúng TRÊN CHÍNH BỘ NÀY ----
+    # build_dataset tính cột này ở Bước 3 trên cả 82k hàng (GOLD+SILVER+REVIEW) rồi đóng
+    # băng; bộ giao nộp chỉ có GOLD+SYLLABLE, và confusion-fix còn hạ 1.988 GOLD sau đó.
+    # Đo được 31 ô bị gắn SAI là "lớp có trong train". Nay tính lại ở bước xuất.
+    _tr = {r["label"] for r in _rows if r.get("split") == "train"
+           and r.get("label_level") == "char" and (r.get("label") or "").strip()}
+    _sai = sum(1 for r in _rows
+               if r.get("label_level") == "char" and (r.get("label") or "").strip()
+               and r.get("label_in_train") != ("1" if r["label"] in _tr else "0"))
+    check("label_in_train khớp chính bộ giao nộp (0 ô lệch)", _sai == 0, f"{_sai} ô lệch")
     import csv as _csv, collections as _c
     rows = list(_csv.DictReader(open(ds / "labels.csv", encoding="utf-8")))
     pg = _c.defaultdict(set)
@@ -280,6 +319,77 @@ def test_dataset_docs() -> None:
         pg[(r["book"], r["page"])].add(r.get("split", ""))
 
     check("nói rõ vì sao để trống", "cố ý để trống" in ng.lower() or "bịa" in ng)
+
+
+def test_proto_index_ro_ri_split() -> None:
+    """Nguyên mẫu thị giác S3 không được lấy từ trang val/test.
+
+    HỒI QUY 2026-08-25: chia tách chuyển từ mức CỘT sang mức TRANG, `index.csv` không ai
+    sinh lại, và 8.615/41.835 nguyên mẫu (20,6%) gắn `split=train` hoá ra nằm trên trang
+    NAY thuộc val/test. Phép kiểm `--check` cũ chỉ so TIỀN TỐ SÁCH nên vẫn báo "cùng thế
+    hệ" — bảo đảm của build_rows bị phá mà không một tín hiệu nào. Trấn an sai, đúng lớp
+    lỗi tệ nhất trong kho này.
+    """
+    import csv as _csv, tempfile
+    from pipeline.tools import rebuild_proto_index as rpi
+    print("[nguyên mẫu S3 vs chia tách]")
+    lech, tong = rpi.split_lech()
+    check("index.csv hiện hành: 0 nguyên mẫu rơi vào val/test", lech == 0,
+          f"{lech:,}/{tong:,}")
+    check("index.csv không rỗng", tong > 0, str(tong))
+
+    # phép kiểm phải THẬT SỰ bắt được, không chỉ đọc số 0 rồi gật
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        (d / "idx.csv").write_text(
+            "path,label,unicode,split,source\n"
+            "dataset_out/gold/stt2_page_0001_c01_001.png,A,U+0041,train,crop\n"
+            "dataset_out/gold/stt2_page_0002_c01_001.png,B,U+0042,train,crop\n",
+            encoding="utf-8")
+        (d / "lab.csv").write_text(
+            "book,page,split\nstt2,page_0001,train\nstt2,page_0002,test\n", encoding="utf-8")
+        l2, t2 = rpi.split_lech(d / "lab.csv", d / "idx.csv")
+        check("tiêm 1 nguyên mẫu val/test -> phép kiểm BẮT được", (l2, t2) == (1, 2),
+              f"{l2}/{t2}")
+
+
+def test_publish_doc_csv_phong_ve() -> None:
+    """publish/ đọc CSV phải phòng vệ y như remediation/ — 'nan' là âm Việt thật."""
+    print("[publish đọc CSV]")
+    src = (REPO / "pipeline" / "publish" / "cli.py").read_text(encoding="utf-8")
+    check("publish/cli.py dùng keep_default_na=False", "keep_default_na=False" in src)
+    check("publish/cli.py đọc cột cờ là chuỗi", '"label_in_train": str' in src)
+
+
+def test_step1_khong_mat_trang() -> None:
+    """Số trang IN trên bản quét không duy nhất — trùng thì KHÔNG được nuốt trang.
+
+    HỒI QUY 2026-08-25: `page_name = f"page_{n:04d}"` với n do OCR đọc từ ảnh. Trùng thì
+    trang sau giữ nguyên tên trang trước, rồi MỌI bước sau (`if not img_path.exists()`,
+    cache OCR Nôm, ảnh QN tạm, cache OCR QN) đều thấy "đã có" nên bỏ qua — nó chép lại y
+    nguyên trang trước còn trang thật thì biến mất. results vẫn +1 nên total_pages đếm
+    LƯỢT chứ không đếm TRANG. Đo được 3 trang mất: STT2 page_0142 (trang PDF 132),
+    STT11 page_0010 (trang PDF 28 và 220).
+    """
+    print("[bước 1 không nuốt trang]")
+    src = (REPO / "pipeline" / "step1_extract.py").read_text(encoding="utf-8")
+    check("có sổ tên trang đã dùng", "seen_names" in src)
+    check("trùng thì TÁCH TÊN chứ không đè", "_p{page_idx:04d}" in src)
+    check("và NÓI RA chứ không nuốt", "trùng SỐ TRANG IN" in src)
+    check("Total báo cả số tên trang duy nhất", "tên trang duy nhất" in src)
+
+    # luật đặt tên phải tất định và không bao giờ đụng nhau
+    seen: dict[str, int] = {}
+    ten = []
+    for idx, bp in [(0, 10), (28, 10), (130, 142), (132, 142), (220, 10)]:
+        nm = f"page_{bp:04d}"
+        if nm in seen:
+            nm = f"{nm}_p{idx:04d}"
+        seen[nm] = idx
+        ten.append(nm)
+    check("5 lượt trùng số -> 5 tên PHÂN BIỆT", len(set(ten)) == 5, str(ten))
+    check("trang đầu giữ nguyên tên gốc", ten[0] == "page_0010")
+    check("trang sau mang hậu tố truy được về trang PDF", ten[1] == "page_0010_p0028")
 
 
 def test_batch_by_rule() -> None:
@@ -327,6 +437,9 @@ def main() -> int:
     test_dict_candidates()
     test_variant_table()
     test_dataset_docs()
+    test_proto_index_ro_ri_split()
+    test_publish_doc_csv_phong_ve()
+    test_step1_khong_mat_trang()
     test_batch_by_rule()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")

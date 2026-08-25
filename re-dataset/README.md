@@ -36,10 +36,17 @@ Chọn mức trang chứ không phải cột vì hai cột cạnh nhau trên cù
 chung ván khắc, chung mực, chung lần quét — chia theo cột thì mô hình học được
 *diện mạo trang* rồi được chấm lại trên chính trang đó.
 
-**Hệ quả phải biết:** 128 ô có lớp chữ **không xuất hiện trong
+**Hệ quả phải biết:** 159 ô có lớp chữ **không xuất hiện trong
 `train`** — hệ quả của việc không bóp méo chia tách. Cột **`label_in_train`**
-đánh dấu chúng. Khi đánh giá, **lọc `label_in_train == 1`**; nếu không, những
-lớp đó bị tính sai 100% dù mô hình chưa từng có cơ hội học.
+đánh dấu chúng: `1` có mặt, `0` không, **rỗng** với dòng tầng SYLLABLE (chúng
+không có nhãn cấp ký tự nên câu hỏi không áp dụng).
+
+Khi đánh giá **cấp ký tự**, bỏ các ô `label_in_train == 0` — nếu không, 159 ô đó
+bị tính sai 100% dù mô hình chưa từng có cơ hội học lớp chữ ấy.
+
+> ⚠️ Đừng viết `df[df.label_in_train == "1"]` để lọc cả bộ: điều kiện đó vứt
+> luôn 6,911 dòng SYLLABLE có ô rỗng, tức 7,070 dòng
+> chứ không phải 159. Lọc trong phạm vi `label_level == "char"`.
 
 ## 🔴 Trạng thái kiểm định
 

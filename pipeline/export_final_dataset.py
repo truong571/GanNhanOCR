@@ -68,6 +68,24 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
     for r in rows:
         r["usable_image"] = "0" if r.get("crop_quality_flag") in ("blank", "truncated") else "1"
 
+    # TÍNH LẠI label_in_train TRÊN ĐÚNG BỘ ĐƯỢC CÔNG BỐ.
+    # build_dataset tính cột này ở Bước 3 trên TOÀN BỘ 82k hàng — GOLD + SILVER + REVIEW
+    # gộp lại — rồi đóng băng. Nhưng bộ giao nộp chỉ có GOLD + SYLLABLE, và giữa hai mốc
+    # đó confusion-fix còn hạ 1.988 hàng GOLD xuống REVIEW. Hệ quả: một lớp chữ chỉ còn
+    # sống trong SILVER/REVIEW của phía train vẫn bị ghi là "có trong train", nên ô val/test
+    # mang lớp đó KHÔNG được cảnh báo. Đo được 31 hàng sai (cột ghi 128, số thật 159).
+    # Đây là cột người ta lọc để đánh giá, nên sai ở đây là chỉ số sai mà không ai biết.
+    _train_lop = {r["label"] for r in rows
+                  if r.get("split") == "train" and r.get("label_level") == "char" and r.get("label")}
+    _sua = 0
+    for r in rows:
+        moi = ("1" if r["label"] in _train_lop else "0") \
+            if (r.get("label_level") == "char" and r.get("label")) else ""
+        if moi != r.get("label_in_train"):
+            _sua += 1
+        r["label_in_train"] = moi
+    _unseen = sum(1 for r in rows if r["label_in_train"] == "0")
+
     with open(out_root / "labels.csv", "w", encoding="utf-8", newline="") as f:
         if "usable_image" not in fieldnames:
             fieldnames = list(fieldnames) + ["usable_image"]
@@ -93,6 +111,8 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
           f"SYLLABLE {tiers.get('SYLLABLE', 0)})")
     print(f"[export] ⚠️ con số đem so với bộ dữ liệu Hán Nôm khác là {_nchar:,}, "
           f"KHÔNG phải {len(rows):,}")
+    print(f"[export] label_in_train: {_unseen:,} ô có lớp chữ KHÔNG có trong train "
+          f"của chính bộ này (tính lại tại bước xuất, sửa {_sua:,} ô so với Bước 3)")
     print(f"[export] usable_image=0 (ảnh trắng/cụt, ĐỪNG chấm chiều ảnh): {_nbad:,} ô")
     print(f"[export] ảnh: {n_copied} đã copy, {n_missing} thiếu trên đĩa")
     # export XOÁ SẠCH thư mục đích rồi ghi lại, nên tài liệu đi kèm biến mất theo.

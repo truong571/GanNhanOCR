@@ -132,6 +132,11 @@ def run(in_csv: Path, out_csv: Path, fixes_yaml: Path, measure: bool) -> dict:
         post = measure_gold_precision(final)
         report["precision_gold_before"] = base
         report["precision_gold_after"] = post
+        # null TRẦN không phân biệt được "đúng theo thiết kế" với "đã sập". Ghi luôn lý do
+        # để ai đọc artifact về sau không phải đoán.
+        report["precision_gold_ly_do"] = (
+            "chua_co_verdict_nguoi: thieu " + "/".join(NGUON_VERDICT) + "/verdicts.csv + "
+            + PROV_FILE if post is None else "do_tren_verdict_nguoi")
     (out_csv.parent / "confusion_fix_report.json").write_text(
         json.dumps(report, ensure_ascii=False, indent=2))
 

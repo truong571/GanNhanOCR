@@ -54,6 +54,9 @@ def stats(labels: Path) -> dict:
         _pg[(r.get("book"), r.get("page"))].add(r.get("split", ""))
     n_leak = sum(1 for v in _pg.values() if len(v) > 1)
     unseen = sum(1 for r in rows if r.get("label_in_train") == "0")
+    # ĐO tỷ lệ chữ ngoài khối CJK cơ bản. Trước 2026-08-25 con số này là chuỗi ghim cứng
+    # "1,63%" nằm lọt giữa một f-string mà mọi số quanh nó đều động — đo lại được 2,25%.
+    _ngoai = sum(1 for r in char if not ("\u4e00" <= r["label"] <= "\u9fff"))
     co_cot_moi = "label_in_train" in (rows[0] if rows else {})
     return {
         "dong": len(rows), "nhan_ky_tu": len(char), "chu_giai_am": len(syl),
@@ -64,12 +67,19 @@ def stats(labels: Path) -> dict:
         "am_qn": len({(r.get("syllable") or "").lower() for r in rows if r.get("syllable")}),
         "anh_hong": q.get("blank", 0) + q.get("truncated", 0),
         "flag": {k: v for k, v in q.items() if k},
+        "ngoai_cjk": _ngoai,
+        "ngoai_cjk_pct": (100 * _ngoai / len(char)) if char else 0.0,
         "n_leak": n_leak, "n_trang_split": len(_pg), "unseen": unseen,
         "co_cot_moi": co_cot_moi,
         "commit": subprocess.run(["git", "log", "-1", "--format=%h", "--", str(labels)],
                                  cwd=REPO, capture_output=True, text=True).stdout.strip() or "?",
         "ngay": datetime.date.fromtimestamp(labels.stat().st_mtime).isoformat(),
     }
+
+
+def _pct(x: float) -> str:
+    """Dấu thập phân kiểu Việt — để không đứng cạnh '4,21%' mà viết '2.25%'."""
+    return f"{x:.2f}".replace(".", ",")
 
 
 def _khoi_chia_tach(s: dict) -> str:
@@ -83,8 +93,14 @@ def _khoi_chia_tach(s: dict) -> str:
         if s["co_cot_moi"]:
             t += ["", f"**Hệ quả phải biết:** {s['unseen']:,} ô có lớp chữ **không xuất hiện trong",
                   "`train`** — hệ quả của việc không bóp méo chia tách. Cột **`label_in_train`**",
-                  "đánh dấu chúng. Khi đánh giá, **lọc `label_in_train == 1`**; nếu không, những",
-                  "lớp đó bị tính sai 100% dù mô hình chưa từng có cơ hội học."]
+                  "đánh dấu chúng: `1` có mặt, `0` không, **rỗng** với dòng tầng SYLLABLE (chúng",
+                  "không có nhãn cấp ký tự nên câu hỏi không áp dụng).", "",
+                  f"Khi đánh giá **cấp ký tự**, bỏ các ô `label_in_train == 0` — nếu không, "
+                  f"{s['unseen']:,} ô đó",
+                  "bị tính sai 100% dù mô hình chưa từng có cơ hội học lớp chữ ấy.", "",
+                  "> ⚠️ Đừng viết `df[df.label_in_train == \"1\"]` để lọc cả bộ: điều kiện đó vứt",
+                  f"> luôn {s['chu_giai_am']:,} dòng SYLLABLE có ô rỗng, tức {s['chu_giai_am'] + s['unseen']:,} dòng",
+                  f"> chứ không phải {s['unseen']:,}. Lọc trong phạm vi `label_level == \"char\"`."]
         return "\n".join(t)
     return "\n".join([
         "## 🔴 Chia tách CÓ RÒ RỈ theo trang", "",
@@ -206,7 +222,8 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
    (nguồn phán quyết là máy chấm, không phải người).
 2. **Ba cuốn cùng MỘT thể loại** (truyện thánh Công giáo). Ngoại suy sang Nôm văn học
    hay hành chính **chưa được kiểm chứng**.
-3. **Chữ Nôm tự tạo có thể bị hụt**: chỉ **1,63%** ô nằm ngoài khối CJK cơ bản, so với
+3. **Chữ Nôm tự tạo có thể bị hụt**: chỉ **{_pct(s['ngoai_cjk_pct'])}%** ({s['ngoai_cjk']:,} ô)
+   nằm ngoài khối CJK cơ bản, so với
    **4,21%** ở ngữ liệu NomNaOCR. Chưa rõ do pipeline bóc mất bộ thủ hay do Nôm Công
    giáo thế kỷ XIX vốn chuộng dạng giản.
 4. **Chưa chuẩn hoá dị thể.** Cùng một chữ có thể xuất hiện dưới nhiều mã
@@ -215,10 +232,9 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
 5. **{s['anh_hong']} ô có ảnh hỏng** (`usable_image=0`) vẫn nằm trong bộ — nhãn có thể
    đúng, ảnh thì không dùng được.
 6. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.
-7. **Một số lớp chữ hiếm không có mặt trong `train`.** Hệ quả của việc chia tách trung
-   thực theo trang. Lọc bằng cột `label_in_train` khi đánh giá.
-7. **Chia tách neo ở mức CỘT, không phải TRANG** — 360/444 trang có cột ở nhiều phía.
-   Chỉ số đo bằng `split` sẵn có là **cận trên**. Xem README.
+7. **Chia tách: {s['n_leak']}/{s['n_trang_split']} trang nằm ở hai phía.** {s['unseen']:,} ô có
+   lớp chữ không mặt trong `train` — hệ quả của việc chia tách trung thực theo trang.
+   Lọc bằng `label_in_train` khi đánh giá (cột này RỖNG ở tầng SYLLABLE, xem README).
 
 ## Khuyến nghị dùng
 Dùng được: huấn luyện mô hình, thăm dò, làm điểm khởi đầu để chấm tay.

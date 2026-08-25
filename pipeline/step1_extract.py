@@ -72,6 +72,8 @@ def process_book(config: dict, book_name: str, verbose: bool = True):
     trans_dir = data_dir / "transcriptions"
 
     results = []
+    seen_names: dict[str, int] = {}          # page_name -> chỉ số trang PDF đã chiếm tên
+    va_cham: list[tuple[str, int, str]] = []
     page_idx = 0
     total_pages = doc.page_count
 
@@ -111,6 +113,21 @@ def process_book(config: dict, book_name: str, verbose: bool = True):
             book_page = page_idx + 10
 
         page_name = f"page_{book_page:04d}"
+
+        # SỐ TRANG IN TRÊN BẢN QUÉT KHÔNG DUY NHẤT. Nó do OCR đọc từ ảnh, và có ba nguồn
+        # trùng: OCR đọc nhầm, sách in lặp số, và chính nhánh dự phòng `page_idx + 10`.
+        # Trước 2026-08-25 trang thứ hai giữ nguyên tên trang thứ nhất, rồi mọi bước sau đó
+        # (`if not img_path.exists()`, cache OCR Nôm, ảnh QN tạm, cache OCR QN) đều thấy
+        # "đã có" nên BỎ QUA — tức nó chép lại y nguyên trang trước, còn trang thật thì
+        # biến mất khỏi ngữ liệu. results vẫn +1 nên total_pages đếm LƯỢT, không đếm TRANG.
+        # Đo được 3 trang mất: STT2 page_0142 (trang PDF 132), STT11 page_0010 (28 và 220).
+        # Nay: giữ tên cho trang đầu, trang sau lấy hậu tố theo chỉ số trang PDF — tất định,
+        # và tự nói ra nó đến từ đâu.
+        if page_name in seen_names:
+            goc = page_name
+            page_name = f"{page_name}_p{page_idx:04d}"
+            va_cham.append((goc, page_idx, page_name))
+        seen_names[page_name] = page_idx
 
         # 1a: Extract Nom image (original) — skip if already rendered
         img_path = pages_dir / f"{page_name}.png"
@@ -228,8 +245,15 @@ def process_book(config: dict, book_name: str, verbose: bool = True):
     with open(data_dir / "manifest.json", "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
 
+    if va_cham:
+        # Nói ra chứ không nuốt: đây là trang suýt biến mất khỏi ngữ liệu.
+        print(f"\n  🔴 {len(va_cham)} trang trùng SỐ TRANG IN — đã tách tên để KHÔNG mất:",
+              flush=True)
+        for goc, idx, moi in va_cham:
+            print(f"     {goc}  (trang PDF {idx})  ->  {moi}", flush=True)
+
     if verbose:
-        print(f"\n  Total: {len(results)} pages, "
+        print(f"\n  Total: {len(results)} pages ({len(seen_names)} tên trang duy nhất), "
               f"{sum(r['total_syllables'] for r in results)} syllables")
 
 

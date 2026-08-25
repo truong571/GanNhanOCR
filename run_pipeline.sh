@@ -18,6 +18,7 @@
 #                 ở step_build())
 #   4 remediate   pipeline.remediation -> labels_remediated.csv + remediation_report.json
 #   5 confusion   pipeline.remediation.confusion_fix -> labels_final.csv (BẢN CÔNG BỐ)
+#   7 quyết định  pipeline.remediation.glyph_fix — phán quyết NGƯỜI cho lớp glyph OCR mù
 #                 hạ tier các confusion HỆ THỐNG đã chứng minh bằng audit người
 #   7 export      pipeline/export_final_dataset.py -> dataset/ (chỉ tier
 #                 GOLD+SILVER+SYLLABLE = usable; XOÁ SẠCH dataset/ cũ trước khi ghi)
@@ -55,6 +56,7 @@ LABELS_RAW="dataset_out/labels.csv"
 LABELS_REMED="dataset_out/labels_remediated.csv"
 LABELS_FINAL="dataset_out/labels_final.csv"   # BẢN CÔNG BỐ — nguồn của export + audit
 CONFUSION_FIXES="${CONFUSION_FIXES:-config/confusion_fixes.yaml}"
+GLYPH_DECISIONS="${GLYPH_DECISIONS:-config/quyet_dinh_glyph.yaml}"
 # ---- HAI ĐẦU RA, TÙY CÓ PHÁN QUYẾT NGƯỜI HAY CHƯA --------------------------
 #   re-dataset/  bộ ĐEM CHẤM  — chưa có phán quyết người, chưa kiểm chứng
 #   dataset/     bộ CUỐI CÙNG — đã nạp phán quyết, có bảng precision
@@ -87,7 +89,7 @@ die()  { printf '%s[LỖI]%s %s\n' "$RED" "$RST" "$*" >&2; exit 1; }
 banner() {   # banner <số> <tên bước> <mô tả>
   log ""
   log "${BLD}================================================================${RST}"
-  printf '%s>>> BƯỚC %s/7 · %s%s — %s\n' "$BLD" "$1" "$2" "$RST" "$3"
+  printf '%s>>> BƯỚC %s/8 · %s%s — %s\n' "$BLD" "$1" "$2" "$RST" "$3"
   log "${BLD}================================================================${RST}"
 }
 
@@ -431,7 +433,25 @@ step_s3unwind() {
   [[ -f dataset_out/s3_unwind_report.json ]] || die "bước gỡ S3 không sinh báo cáo"
 }
 
-# ---- 7/7 export -------------------------------------------------------------
+# ---- 7/8 quyết định glyph -----------------------------------------------------
+# -> ghi ĐÈ labels_final.csv (luỹ đẳng) + glyph_fix_report.json
+# Đường để một PHÁN QUYẾT NGƯỜI đi vào bộ nhãn. Có những chữ mà bộ OCR Nôm mù hẳn — rõ
+# nhất là "người": âm phổ biến nhất cả ba cuốn (2.281 ô) nhưng 94% bị giữ lại, trong khi
+# tỷ lệ rớt chung là 31%. Từ điển BIẾT đáp án (𠊚 nằm trong 20 ứng viên, 37/49 ô GOLD dùng
+# nó); bộ OCR chỉ là không đọc nổi glyph, nên S1∩S2 không bao giờ khớp.
+# Mọi đường tự động đã thử và bác: Unihan kVietnamese 0 ô · hvdic 0 ô · khôi phục dấu 0 ô ·
+# cầu tự dạng hai chiều (T7) dưới ngưỡng · dịch vụ đọc ngoài 0/16 sống sót phản biện.
+# CHẠY SAU gỡ S3 để không tín hiệu thị giác nào đụng lại nhãn người đã quyết.
+# Mỗi quyết định BẮT BUỘC khai xuất xứ; thiếu -> module TỪ CHỐI chạy, không chạy tiếp.
+step_glyph() {
+  banner 7 "quyết định glyph" "áp phán quyết NGƯỜI cho lớp glyph mà OCR mù -> $LABELS_FINAL"
+  [[ -f "$GLYPH_DECISIONS" ]] || { log "  (không có $GLYPH_DECISIONS — bỏ qua)"; return 0; }
+  X "$PY" -m pipeline.remediation.glyph_fix \
+      --in "$LABELS_FINAL" --out "$LABELS_FINAL" \
+      --config "$GLYPH_DECISIONS" --src-root dataset_out --apply
+}
+
+# ---- 8/8 export -------------------------------------------------------------
 # -> dataset/labels.csv + ảnh crop copy hẳn (chỉ tier usable: GOLD+SILVER+SYLLABLE)
 # Nguồn là labels_final.csv (SAU confusion-fix), KHÔNG phải labels_remediated.csv —
 # xem cảnh báo ở đầu file. XOÁ SẠCH dataset/ trước khi ghi -> luôn là bản MỚI NHẤT,
@@ -460,7 +480,7 @@ step_export() {
     log "  ${YEL}-> xuất ra $REDATASET_DIR/ để đem chấm tay, KHÔNG phải bộ cuối cùng${RST}"
   fi
 
-  banner 7 export "xuất bộ $NHAN -> $OUT_DIR/ (tự chứa)"
+  banner 8 export "xuất bộ $NHAN -> $OUT_DIR/ (tự chứa)"
   X "$PY" pipeline/export_final_dataset.py \
       --labels "$LABELS_FINAL" --src-root dataset_out --out "$OUT_DIR"
   [[ -f "$OUT_DIR/labels.csv" ]] || die "bước export không sinh $OUT_DIR/labels.csv"

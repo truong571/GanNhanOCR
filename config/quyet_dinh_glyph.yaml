@@ -1,0 +1,37 @@
+# QUYẾT ĐỊNH KHỐI GLYPH — người quyết, máy chỉ thi hành.
+#
+# Đây là chiều NGƯỢC của config/confusion_fixes.yaml:
+#   confusion_fixes  hạ một lớp (âm, chữ) đã chứng minh là nhầm hệ thống
+#   quyet_dinh_glyph GÁN một chữ cho toàn bộ ô mang một âm, sau khi người đã NHÌN ảnh
+#
+# Áp bởi: pipeline.remediation.glyph_fix  (chạy SAU confusion_fix, TRƯỚC s3_unwind)
+#
+# 🔴 MỖI QUYẾT ĐỊNH BẮT BUỘC CÓ `xuat_xu` TRỎ TỚI MỘT TỆP KHAI NGƯỜI CHẤM CÓ THẬT.
+#    Thiếu tệp đó thì module TỪ CHỐI chạy. Dự án này đã một lần nhầm phán quyết MÁY thành
+#    phán quyết NGƯỜI và phải huỷ sạch số liệu dựng trên đó — không lặp lại.
+
+quyet_dinh:
+  - am: "người"
+    chu: "𠊚"
+    unicode: "U+2029A"
+    hanh_dong: gan_nhan
+    to_tier: GOLD
+    ly_do: "quyet_dinh_khoi_nguoi_2029A"
+    xuat_xu: "docs/NGUOI_CHAM_QUYET_DINH.md"
+    chi_khi_co_anh: true      # ô không có crop thì KHÔNG gán — người không nhìn được nó
+    bang_chung: >
+      "người" là âm phổ biến nhất cả ba cuốn (2.281 ô) nhưng 94% bị giữ lại, trong khi tỷ lệ
+      rớt chung là 31%. Nguyên nhân KHÔNG phải thiếu từ điển: từ điển kê 20 ứng viên cho
+      "người", trong đó có 𠊚, và 37/49 ô đã lọt GOLD đều dùng 𠊚. Nguyên nhân là bộ OCR Nôm
+      không đọc nổi glyph ấy — nó nhả ra 㝵 (1.183), 早 (223), 昇 (193), 身 (126), 𭔿 (79),
+      旱 (53) và một đuôi dài. Vì chữ nó đọc không phải cách đọc của "người" nên luật S1∩S2
+      không khớp và ô rơi xuống REVIEW.
+      Kiểm nhất quán: 𠊚 xuất hiện 38 lần trong cả ngữ liệu, TOÀN BỘ đều với âm "người" —
+      không dùng lẫn cho âm nào khác.
+      Người quyết đã xem toàn bộ 2.014 ảnh crop (docs/nguoi_2144_standalone.html) cùng 49 ô
+      mốc đã xác nhận, rồi chốt.
+    khong_dung_cho: >
+      12 ô GOLD âm "người" hiện mang chữ khác (昆 ×8, 辞 ×2, 匕 ×1, 命 ×1) KHÔNG bị đụng tới.
+      Quyết định này chỉ gán nhãn cho ô đang bị GIỮ LẠI, không ghi đè nhãn đã ở GOLD.
+      Nếu "người" luôn là 𠊚 thì 12 ô đó đang sai — nhưng đó là một quyết định KHÁC, cần
+      người xem riêng, không được suy ra từ quyết định này.

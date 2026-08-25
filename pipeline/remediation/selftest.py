@@ -7,6 +7,7 @@ and then runs the whole remediation on the real labels.csv, asserting the invari
 from __future__ import annotations
 
 import shutil
+import tempfile
 from pathlib import Path
 
 import numpy as np
@@ -541,6 +542,101 @@ def test_measure_chi_nhan_verdict_nguoi() -> None:
     check("có nhánh nói rõ CHƯA ĐO ĐƯỢC", "CHƯA ĐO ĐƯỢC" in src)
 
 
+def test_glyph_fix_quyet_dinh_nguoi() -> None:
+    """Phán quyết NGƯỜI đi vào bộ nhãn — và chỉ đi vào được qua ba cổng.
+
+    Mô-đun này GÁN nhãn cho cả một lớp âm, tức nó có quyền lực lớn nhất trong toàn pipeline:
+    một dòng cấu hình sai là 2.014 ô sai. Ba cổng phải luôn đứng:
+      1. THIẾU KHAI XUẤT XỨ -> từ chối chạy. Dự án đã một lần nhầm phán quyết MÁY thành
+         phán quyết NGƯỜI và phải huỷ sạch precision 97,98% / Fisher p=5,4e-8 / κ=0,13.
+      2. LỆCH MÃ ĐIỂM -> từ chối. 𠊚 U+2029A và 𠊛 U+2029B đều là chữ "người" và chỉ khác
+         nhau một mã điểm; lệch ở đây là gán sai cả khối mà nhìn mắt thường không thấy.
+      3. Ô KHÔNG CÓ ẢNH -> không gán. Người không nhìn được thì không có phán quyết.
+         Khối "người" có 2.144 ô nhưng chỉ 2.014 ô có crop.
+    """
+    import yaml as _y
+    from pipeline.remediation import glyph_fix as gf
+    print("[quyết định glyph]")
+    NG = "\U0002029A"
+
+    def _df():
+        return pd.DataFrame({
+            "image": ["gold/a.png", "gold/b.png", "", "gold/d.png"],
+            "book": ["stt2"] * 4, "syllable": ["người", "Người", "người", "mà"],
+            "ocr_char": ["㝵", "早", "身", "麻"], "label": ["", "", "", "麻"],
+            "unicode": ["", "", "", "U+9EBB"], "label_level": ["", "", "", "char"],
+            "tier": ["REVIEW", "SILVER_uncalibrated", "REVIEW", "GOLD"],
+            "rule": ["confusion_fix:x", "s2_inter_s3_corrected", "no_s1_inter_s2", "s1_inter_s2_direct"],
+        })
+
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        (d / "gold").mkdir()
+        for n in ("a", "b", "d"):
+            (d / "gold" / f"{n}.png").write_bytes(b"x")      # 'd.png' có ảnh nhưng đang GOLD
+        prov = d / "khai.md"
+        qd = {"am": "người", "chu": NG, "unicode": "U+2029A", "hanh_dong": "gan_nhan",
+              "to_tier": "GOLD", "ly_do": "test", "xuat_xu": None, "chi_khi_co_anh": True}
+
+        # CỔNG 1 — thiếu khai xuất xứ
+        for xx, ten in ((None, "không khai"), ("docs/khong_ton_tai_9999.md", "khai tệp ma")):
+            try:
+                gf.ap_dung(_df(), [{**qd, "xuat_xu": xx}], d)
+                check(f"THIẾU xuất xứ ({ten}) -> phải TỪ CHỐI", False, "chạy tuột")
+            except SystemExit as e:
+                check(f"THIẾU xuất xứ ({ten}) -> TỪ CHỐI", "TỪ CHỐI" in str(e))
+
+        prov.write_text("# ai chấm\n- Test\n", encoding="utf-8")
+        rel = str(prov.relative_to(gf.REPO)) if str(prov).startswith(str(gf.REPO)) else None
+        goc = gf.REPO
+        try:
+            gf.REPO = d                                    # trỏ gốc về sandbox
+            ok = {**qd, "xuat_xu": "khai.md"}
+
+            # CỔNG 2 — lệch mã điểm
+            try:
+                gf.ap_dung(_df(), [{**ok, "unicode": "U+2029B"}], d)
+                check("LỆCH mã điểm 𠊚/𠊛 -> phải TỪ CHỐI", False, "chạy tuột")
+            except SystemExit as e:
+                check("LỆCH mã điểm 𠊚/𠊛 -> TỪ CHỐI", "TỪ CHỐI" in str(e))
+
+            out, log = gf.ap_dung(_df(), [ok], d)
+            check("gán đúng 2 ô có ảnh", log[0]["gan"] == 2, str(log[0]))
+            check("CỔNG 3: bỏ 1 ô không có ảnh", log[0]["bo_vi_khong_anh"] == 1, str(log[0]))
+            check("khớp âm KHÔNG phân biệt hoa-thường", out.loc[1, "label"] == NG)
+            check("nhãn = 𠊚 và unicode = U+2029A",
+                  (out.loc[0, "label"], out.loc[0, "unicode"]) == (NG, "U+2029A"))
+            check("label_level thành char", out.loc[0, "label_level"] == "char")
+            check("tier thành GOLD", out.loc[0, "tier"] == "GOLD")
+            check("rule truy được về quyết định", out.loc[0, "rule"].startswith("quyet_dinh_nguoi:"))
+            check("giữ rule_goc để quy lỗi đúng luật cũ",
+                  out.loc[0, "rule_goc"] == "confusion_fix:x", out.loc[0, "rule_goc"])
+            check("giữ tier_goc", out.loc[0, "tier_goc"] == "REVIEW")
+            check("ô KHÔNG có ảnh giữ nguyên REVIEW", out.loc[2, "tier"] == "REVIEW")
+            check("KHÔNG ghi đè ô đã ở GOLD (âm khác)",
+                  (out.loc[3, "label"], out.loc[3, "tier"]) == ("麻", "GOLD"))
+        finally:
+            gf.REPO = goc
+
+    # cấu hình thật + dữ liệu thật
+    cfg = REPO / "config" / "quyet_dinh_glyph.yaml"
+    if cfg.exists():
+        qds = (_y.safe_load(cfg.read_text(encoding="utf-8")) or {}).get("quyet_dinh", [])
+        check("cấu hình thật: mọi quyết định đều khai xuất xứ CÓ THẬT",
+              all((REPO / q["xuat_xu"]).exists() for q in qds), str([q.get("xuat_xu") for q in qds]))
+        check("cấu hình thật: chữ khớp mã điểm đã khai",
+              all(f"U+{ord(q['chu']):04X}" == q["unicode"].upper() for q in qds))
+    lf = REPO / "dataset_out" / "labels_final.csv"
+    if lf.exists():
+        df = pd.read_csv(lf, dtype={"image_md5": str}, keep_default_na=False, na_values=[""])
+        q = df[df["rule"].astype(str).str.startswith("quyet_dinh_nguoi:")]
+        if len(q):
+            check(f"thật: {len(q):,} ô quyết định đều mang đúng một nhãn",
+                  set(q["label"]) == {NG}, str(set(q["label"]))[:60])
+            check("thật: đều có ảnh", (q["image"].astype(str).str.strip() != "").all())
+            check("thật: đều giữ tier_goc", (q["tier_goc"].astype(str) != "").all())
+
+
 def main() -> int:
     print("=" * 64)
     print("REMEDIATION SELFTEST")
@@ -554,6 +650,7 @@ def main() -> int:
     test_nan_syllable_not_eaten()
     test_confusion_fix_join()
     test_measure_chi_nhan_verdict_nguoi()
+    test_glyph_fix_quyet_dinh_nguoi()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

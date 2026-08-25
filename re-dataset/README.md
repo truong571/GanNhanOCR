@@ -1,11 +1,11 @@
 # Bộ dữ liệu gán nhãn chữ Nôm — Sách Thánh Truyện
 
-**50,427 nhãn cấp KÝ TỰ** + **6,930 chú giải cấp ÂM TIẾT**
-= 57,357 dòng · 1,590 lớp chữ · 447 trang · 4,011 cột
+**52,441 nhãn cấp KÝ TỰ** + **6,930 chú giải cấp ÂM TIẾT**
+= 59,371 dòng · 1,590 lớp chữ · 447 trang · 4,011 cột
 
-> ⚠️ **Đừng phát biểu là "57,357 nhãn".** 6,930 dòng tầng SYLLABLE có cột
+> ⚠️ **Đừng phát biểu là "59,371 nhãn".** 6,930 dòng tầng SYLLABLE có cột
 > `label` **rỗng** — chúng chỉ ghi âm Quốc ngữ, KHÔNG gán chữ Nôm. Con số đem so với các bộ
-> dữ liệu Hán Nôm khác là **50,427**.
+> dữ liệu Hán Nôm khác là **52,441**.
 
 ## Cấu trúc
 
@@ -23,11 +23,11 @@
 | `label_level` | `char` = nhãn ký tự · `syllable` = chỉ có âm |
 | `syllable` | âm Quốc ngữ tương ứng, lấy từ bản dịch song song in kèm |
 | `tier` / `rule` | luật nào quyết nhãn này — xem DATASHEET |
-| `usable_image` | `0` = ảnh trắng hoặc bị cắt mất nét (433 ô). Nhãn có thể vẫn đúng; đừng chấm chiều ảnh ở các ô này |
+| `usable_image` | `0` = ảnh trắng hoặc bị cắt mất nét (446 ô). Nhãn có thể vẫn đúng; đừng chấm chiều ảnh ở các ô này |
 | `crop_quality_flag` | `ok` / `bleed` (dính mực chữ bên cạnh) / `truncated` / `blank` |
 | `split` / `split_group` | **rời nhau theo TRANG** |
 | `label_in_train` | `0` = lớp chữ này **không có mặt trong `train`**. Đánh giá phải lọc theo cột này |
-| `page_cot_lech` | `1` = trang này không đủ 9 cột (191 ô / 3 trang). Ghép cột Nôm↔Quốc ngữ có thể đã trượt |
+| `page_cot_lech` | `1` = trang này không đủ 9 cột (197 ô / 3 trang). Ghép cột Nôm↔Quốc ngữ có thể đã trượt |
 
 ## Chia tách — rời nhau theo TRANG
 
@@ -62,4 +62,4 @@ như dữ liệu đã kiểm chứng**.
 
 Xem `NGUON_THU_TICH.md` cho lai lịch ba cuốn sách nguồn.
 
-*Sinh tự động từ `labels.csv` ngày 2026-08-25 · commit `6d383cf52f`*
+*Sinh tự động từ `labels.csv` ngày 2026-08-25 · commit `8899d0cb50`*

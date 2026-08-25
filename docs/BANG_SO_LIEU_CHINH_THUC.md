@@ -98,7 +98,7 @@ Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('datase
 | Lớp ký tự phân biệt (mọi tier có nhãn) | 1.608 |
 | **Lớp trong bộ giao nộp** | **1.590** |
 | Split bộ giao nộp | test 6.510 · train 46.788 · val 6.073 |
-| **Selftest** | **716 passed, 0 failed** |
+| **Selftest** | **722 passed, 0 failed** |
 <!-- AUTO:PHAM_VI:END -->
 
 ### 2.4 Vá lỗi (bước 4–6)

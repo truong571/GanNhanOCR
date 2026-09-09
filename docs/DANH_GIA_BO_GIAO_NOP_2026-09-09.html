@@ -1,0 +1,337 @@
+<title>Đánh giá bộ 59.371 ô</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700;1,7..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --ground:#f1f2f5; --surface:#fbfbfc; --surface-2:#e8eaef;
+    --line:#d3d7e0; --line-soft:#e2e5ec;
+    --ink:#1c1f27; --ink-2:#4a5060; --ink-3:#6b7280; --on-fill:#ffffff;
+    --indigo:#2f4a7a; --indigo-soft:#dde3ef;
+    --son:#9e3b26; --son-soft:#f3dfd9;
+    --song:#3d6b68; --song-soft:#d8e6e4;   /* tín hiệu SỐNG */
+    --roi:#8a8782;  --roi-soft:#e3e2df;    /* tín hiệu RƠI  */
+    --gold:#8a6d2f; --gold-soft:#ebe0c6;
+    --shadow:0 1px 2px rgba(28,31,39,.06), 0 6px 18px -12px rgba(28,31,39,.28);
+    --f-display:"Literata",Georgia,"Times New Roman",serif;
+    --f-body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+    --f-nom:"Noto Serif CJK SC","Songti SC","STSong","Hiragino Sans GB","Noto Serif",serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:#14161b; --surface:#1b1e25; --surface-2:#232833;
+      --line:#333a48; --line-soft:#272d38;
+      --ink:#e4e6ea; --ink-2:#b0b6c2; --ink-3:#838a99; --on-fill:#14161b;
+      --indigo:#8fb0e0; --indigo-soft:#23304a;
+      --son:#e08a72; --son-soft:#3d241d;
+      --song:#8cc3bd; --song-soft:#1f3230;
+      --roi:#97948e; --roi-soft:#2a2a27;
+      --gold:#d3b271; --gold-soft:#3a3120;
+      --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#14161b; --surface:#1b1e25; --surface-2:#232833;
+    --line:#333a48; --line-soft:#272d38;
+    --ink:#e4e6ea; --ink-2:#b0b6c2; --ink-3:#838a99; --on-fill:#14161b;
+    --indigo:#8fb0e0; --indigo-soft:#23304a;
+    --son:#e08a72; --son-soft:#3d241d;
+    --song:#8cc3bd; --song-soft:#1f3230;
+    --roi:#97948e; --roi-soft:#2a2a27;
+    --gold:#d3b271; --gold-soft:#3a3120;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 22px -14px rgba(0,0,0,.8);
+  }
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:880px;margin:0 auto;padding:40px 22px 96px}
+
+  header.mast{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:34px}
+  .eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:0 0 14px}
+  h1{font-family:var(--f-display);font-weight:700;font-size:clamp(30px,5.2vw,46px);line-height:1.1;letter-spacing:-.015em;margin:0 0 14px;text-wrap:balance}
+  .stand{font-family:var(--f-display);font-size:18px;line-height:1.55;color:var(--ink-2);margin:0;max-width:62ch}
+  .facts{display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:24px;font-family:var(--f-mono);font-size:12.5px;color:var(--ink-2)}
+  .facts b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
+
+  section{margin-top:52px}
+  h2{font-family:var(--f-display);font-size:25px;font-weight:600;letter-spacing:-.01em;margin:0 0 8px;text-wrap:balance}
+  h2 .num{font-family:var(--f-mono);font-size:13px;font-weight:500;color:var(--indigo);display:block;letter-spacing:.1em;margin-bottom:7px}
+  h3{font-family:var(--f-body);font-size:15px;font-weight:600;margin:30px 0 10px}
+  p{margin:0 0 14px;max-width:68ch}
+  .lede{color:var(--ink-2);max-width:66ch}
+  ul{margin:0 0 14px;padding-left:20px;max-width:68ch}li{margin-bottom:7px}
+  code{font-family:var(--f-mono);font-size:.875em;background:var(--surface-2);padding:.1em .34em;border-radius:3px;word-break:break-word}
+  .nom{font-family:var(--f-nom);font-size:1.16em;line-height:1}
+
+  .val{font-family:var(--f-mono);font-size:12.2px;background:var(--surface);border:1px solid var(--line-soft);border-left:2px solid var(--indigo);border-radius:0 3px 3px 0;padding:9px 12px;overflow-x:auto;white-space:pre;line-height:1.55;margin:0 0 16px}
+  .val.son{border-left-color:var(--son)}
+  .val.song{border-left-color:var(--song)}
+
+  .scroll{overflow-x:auto;margin:20px 0}
+  table{border-collapse:collapse;width:100%;min-width:580px;font-size:13.5px}
+  th,td{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  th{font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);font-weight:500;white-space:nowrap}
+  td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  tr.dead td{color:var(--ink-3)}
+
+  .chip{display:inline-block;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:2px;white-space:nowrap}
+  .chip.song{background:var(--song-soft);color:var(--song)}
+  .chip.roi{background:var(--roi-soft);color:var(--roi)}
+  .chip.son{background:var(--son-soft);color:var(--son)}
+  .chip.gold{background:var(--gold-soft);color:var(--gold)}
+
+  .note{border-left:3px solid var(--indigo);background:var(--surface);padding:15px 17px;margin:22px 0;border-radius:0 4px 4px 0;box-shadow:var(--shadow)}
+  .note.alert{border-left-color:var(--son)}
+  .note.good{border-left-color:var(--song)}
+  .note h4{font-family:var(--f-body);font-size:14px;font-weight:600;margin:0 0 8px}
+  .note.alert h4{color:var(--son)} .note.good h4{color:var(--song)}
+  .note p{font-size:14px;margin:0 0 9px;color:var(--ink-2)}
+  .note p:last-child{margin-bottom:0}
+  .note ul{font-size:14px;color:var(--ink-2);margin-bottom:0}
+
+  /* thanh mức độ lớn */
+  .mag{display:grid;grid-template-columns:1fr 76px;gap:0 14px;align-items:center;margin:0 0 9px}
+  .mag .lbl{font-size:13.5px}
+  .mag .bar{grid-column:1/-1;height:7px;background:var(--line-soft);border-radius:2px;overflow:hidden;margin-top:3px}
+  .mag .bar i{display:block;height:100%;background:var(--indigo)}
+  .mag .bar i.son{background:var(--son)}
+  .mag .bar i.roi{background:var(--roi)}
+  .mag .v{font-family:var(--f-mono);font-size:12px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2)}
+
+  .plan{border-top:1px solid var(--line);margin-top:20px}
+  .item{display:grid;grid-template-columns:34px 1fr;gap:0 14px;padding:15px 0;border-bottom:1px solid var(--line-soft)}
+  .item .rk{font-family:var(--f-mono);font-size:15px;color:var(--indigo);font-weight:500}
+  .item h4{font-family:var(--f-body);font-size:15px;font-weight:600;margin:0 0 5px}
+  .item p{font-size:14px;color:var(--ink-2);margin:0 0 7px;max-width:64ch}
+  .meta{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);display:flex;flex-wrap:wrap;gap:4px 16px}
+
+  footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);line-height:1.7}
+  @media (max-width:560px){.item{grid-template-columns:1fr;gap:4px}}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">GanNhanOCR · rà soát tổng thể · 09-09-2026 · 31 agent, 3 vòng phản biện</p>
+  <h1>Đánh giá bộ 59.371 ô</h1>
+  <p class="stand">Bộ dữ liệu chính xác tới đâu, sai ở đâu, và việc gì đáng làm trước khi nộp. Mọi con số dưới đây được đo lại ít nhất hai lần độc lập; những con số không sống sót đều được ghi rõ là đã chết.</p>
+  <div class="facts">
+    <span><b>0</b>/40 chỉ số rủi ro phân biệt được</span>
+    <span><b>1</b> phán quyết người độc lập</span>
+    <span><b>0</b> thí nghiệm hạ nguồn</span>
+    <span><b>21</b>/21 ô lai lịch trống</span>
+  </div>
+</header>
+
+<section>
+  <h2><span class="num">PHÁT HIỆN TRUNG TÂM</span>Kênh Quốc ngữ là bản phiên âm của người, không phải OCR thứ hai</h2>
+  <p class="lede">Đề tài đang tự mô tả là "giao của hai luồng OCR". Mở thẳng PDF gốc thì không phải vậy.</p>
+  <div class="val">STT11.pdf trang 0 (chẵn):  "9 8 7 6 5 4 3 2 1 ! ! ! ! ! ! ! ! ! 10"       ← trang mộc bản
+STT11.pdf trang 1 (lẻ) :  "1. THANG MUOI MOT. Co Ba muai ngay.
+                           2. MONG MOT. L~ Cac Thanh. Hom nay, I-ghe-re-gia
+                           lam l~ mung cac Thanh duoc phuc cuc trong la..."   ← 808 ký tự</div>
+  <p>Sách in <b>xen kẽ một trang mộc bản, một trang phiên âm Quốc ngữ hiện đại</b> do người biên tập làm, đặt chữ bằng máy tính. Lớp text nhúng bị hỏng phông (<code>L~</code> = "Lễ") nên pipeline phải render lại rồi cho VietOCR đọc — nhưng thứ VietOCR đọc là <em>chữ của người</em>, không phải mộc bản.</p>
+
+  <div class="note good">
+    <h4>Điều này nâng giá trị đề tài ở một chỗ và hạ ở chỗ khác — phải nói cả hai</h4>
+    <p><b>Nâng:</b> trần chất lượng của kênh âm là một người phiên âm, không phải một mô hình. Cổng S1∩S2 vì thế đáng tin hơn cách dự án đang tự mô tả. Phương pháp có tên đúng trong tài liệu quốc tế: <em>giám sát yếu bằng bản phiên âm song song</em> (distant supervision from a parallel transcription).</p>
+    <p><b>Hạ:</b> đó chính là công thức NomNaOCR dùng ở mức dòng. Nên phát biểu đóng góp <b>không được</b> đặt ở ý tưởng, mà phải đặt ở <b>mức nhãn</b>: họ cho nhãn mức dòng, đây cho hộp bao và nhãn mức <em>ký tự</em>, kèm âm Quốc ngữ song song cho từng ô.</p>
+  </div>
+
+  <p>Kèm theo là một điểm mạnh chưa ai khai: pipeline dựng 448 trang trên khoảng 452 trang mộc bản khả dụng — <b>phủ 99,1%, không chọn lọc trang</b>. Với một bộ dữ liệu, "không cherry-pick" là điều đáng nói ra.</p>
+</section>
+
+<section>
+  <h2><span class="num">01</span>Mọi chỉ số rủi ro đều rơi. Chỉ một thứ sống.</h2>
+  <p class="lede">Tám trục rà soát đề xuất khoảng 40 chỉ số để xếp hạng ô đáng ngờ. Tất cả được đưa qua cùng một phép kiểm: chúng có tách được lớp 㝵/"người" — lớp <em>duy nhất</em> đã được người xác nhận là sai hệ thống — khỏi phần còn lại của GOLD không?</p>
+
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Chỉ số</th><th class="n">AUC</th><th>Kết quả</th></tr></thead>
+    <tbody>
+      <tr class="dead"><td>Số "đối thủ tự dạng" (60,7% ô)</td><td class="n">0,519</td><td><span class="chip roi">rơi</span> top-5.000 bắt 0/1.183 ô sai; kỳ vọng ngẫu nhiên là 124</td></tr>
+      <tr class="dead"><td>Hạng chữ cầu trong bảng similar</td><td class="n">0,515</td><td><span class="chip roi">rơi</span> không đơn điệu: nhóm hạng &gt;15 <em>sạch hơn</em> nhóm hạng 4-10</td></tr>
+      <tr class="dead"><td>Độ tin VietOCR dòng thấp</td><td class="n">0,530</td><td><span class="chip roi">rơi</span> lift 0,81 — thấp hơn nền</td></tr>
+      <tr class="dead"><td>Hộp trung điểm thay vì detector</td><td class="n">0,487</td><td><span class="chip roi">rơi</span> lift 0,89</td></tr>
+      <tr class="dead"><td>slot_out (mực hàng xóm)</td><td class="n">0,512</td><td><span class="chip roi">rơi</span> đo cửa sổ cắt, không đo khuyết tật</td></tr>
+      <tr class="dead"><td>crop_quality_flag = bleed</td><td class="n">0,489</td><td><span class="chip roi">rơi</span> đo độ sáng bản quét: stt2 0,63% vs stt4 10,80%</td></tr>
+      <tr class="dead"><td>usable_image = 0</td><td class="n">0,500</td><td><span class="chip roi">rơi</span> hàm thuần của crop_quality_flag</td></tr>
+      <tr class="dead"><td>Thế hoà DP</td><td class="n">0,500</td><td><span class="chip roi">rơi</span> chỉ 266 ô toàn bộ (0,45%)</td></tr>
+      <tr><td><b>Gộp theo cặp (nhãn, âm), xếp theo số ô</b></td><td class="n">—</td><td><span class="chip song">sống</span> đưa lớp sai đã biết lên <b>hạng 1/2.528</b></td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="note alert">
+    <h4>Phép thử quyết định: hợp của mười cờ rủi ro</h4>
+    <p>Ghép cả mười cờ do tám trục đề xuất: chúng phủ <b>50.467/59.371 ô = 85,0%</b> bộ giao nộp, và phủ khối 2.011 ô đã chứng minh sai ở <b>87,4%</b> — <b>lift 1,03</b>.</p>
+    <p>Một sidecar gắn cờ 85% số ô không phải phân tầng rủi ro. Nó là mô tả chữ Nôm. <b>Đừng dựng nó</b>, và đừng phân tầng mẻ chấm tay theo bất kỳ cờ nào trong đó.</p>
+  </div>
+
+  <h3>Cái duy nhất hoạt động, và nó rẻ nhất</h3>
+  <p>Lỗi nhãn của dự án này <b>không cụm theo trang, nó cụm theo cặp (nhãn, âm)</b>. Một cặp sai kéo theo tới 3,9% bộ. Khung đúng là gộp theo <em>nhãn được gán</em> — vì đó chính là thứ người chấm phải đối chiếu với ảnh:</p>
+  <div class="val song">TRÊN BỘ GIAO NỘP (2.246 cặp)          TRÊN BẢN TRƯỚC QĐ-01 (2.528 cặp)
+  1. 𠊚 / người   2.051 ô             1. 㝵 / người   2.011 ô  ← lớp sai duy nhất đã biết
+  2. 麻 / mà      1.640 ô             2. 麻 / mà      1.639 ô
+  3. 朱 / cho     1.490 ô             3. 朱 / cho     1.436 ô
+  4. 主 / chúa    1.078 ô
+  top-30 phủ 19.472 ô = 37,1%  ·  top-50 phủ 24.652 ô = 47,0%</div>
+  <p>Đây là phép kiểm tính đúng đắn của cả phương pháp: xếp theo khung này thì lớp sai duy nhất từng được người xác nhận đứng <b>hạng nhất</b>, không phải nằm lẫn ở giữa bảng như mọi chỉ số rủi ro khác. <b>30 lớp × 6 ảnh = 180 ảnh, 30-60 phút người</b> — và mỗi phán quyết xử lý cả lớp, không phải một ô.</p>
+</section>
+
+<section>
+  <h2><span class="num">02</span>Nguồn sai thật, xếp theo độ lớn đo được</h2>
+  <p class="lede">Thanh dưới đây là số ô của bộ giao nộp chịu ảnh hưởng, trên nền 59.371.</p>
+
+  <div class="mag"><span class="lbl"><b>Thiên lệch chọn lọc theo tần suất</b> — chữ hiếm bị loại có hệ thống</span><span class="v">23.409 loại</span><i class="bar"><i style="width:39.4%"></i></i></div>
+  <div class="mag"><span class="lbl"><b>Cặp (chữ,âm) không được từ điển Nôm ngoài xác nhận</b> — 1.460 cặp</span><span class="v">20.733 ô</span><i class="bar"><i style="width:34.9%"></i></i></div>
+  <div class="mag"><span class="lbl">Phơi nhiễm mất dấu thanh <span class="chip roi">phơi nhiễm</span> hậu quả thật ước ~78 ô</span><span class="v">16.931 ô</span><i class="bar"><i class="roi" style="width:28.5%"></i></i></div>
+  <div class="mag"><span class="lbl"><b>Tầng SYLLABLE</b> — nhãn <em>chính là</em> âm do VietOCR đọc, không kênh nào kiểm</span><span class="v">6.930 ô</span><i class="bar"><i class="son" style="width:11.7%"></i></i></div>
+  <div class="mag"><span class="lbl"><b>Luật cầu tự dạng</b> — máy tự thay chữ; 41,1% chữ cầu chưa từng được chứng thực</span><span class="v">3.848 ô</span><i class="bar"><i class="son" style="width:6.5%"></i></i></div>
+  <div class="mag"><span class="lbl">Ô trên dòng phiên âm độ tin thấp</span><span class="v">3.266 ô</span><i class="bar"><i style="width:5.5%"></i></i></div>
+  <div class="mag"><span class="lbl">Thế hoà căn chỉnh DP mức ô</span><span class="v">266 ô</span><i class="bar"><i style="width:0.45%"></i></i></div>
+  <div class="mag"><span class="lbl">Toàn bộ "bom nổ chậm" cộng lại (y_center, _is_cjk, md5 trùng, âm rác…)</span><span class="v">&lt;60 ô</span><i class="bar"><i style="width:0.1%"></i></i></div>
+
+  <div class="note">
+    <h4>Thiên lệch chọn lọc — nguồn sai lớn nhất, và chưa khai</h4>
+    <p>Tỷ lệ ô đi được từ 82.780 vào bộ giao nộp, phân theo tần suất của chữ trong ngữ liệu:</p>
+    <div class="val" style="margin:10px 0">chữ xuất hiện   1 lần → 13,35% qua        11-50 lần → 54,45%
+                2 lần → 17,02%           51-200 → 74,28%
+               3-5 lần → 23,67%            &gt;200 → 93,29%
+              6-10 lần → 36,00%</div>
+    <p>Bộ này <b>dễ hơn trang thật một cách có hệ thống</b>. Mọi độ chính xác đo trên nó là <b>cận trên</b>. Con số trung thực về lớp bị mất là <b>154 lớp / 2.887 ô</b> (các lớp còn lại là mã tự chưa từng được từ điển xác nhận cho bất kỳ âm nào — không phải chữ bị đánh rơi).</p>
+    <p>Đây là điểm yếu, nhưng khai ra đúng cách thì thành một đóng góp phương pháp: bảng này chính là <em>đường cong đánh đổi precision-recall của một pipeline gán nhãn tự động</em>.</p>
+  </div>
+
+  <div class="note alert">
+    <h4>Ba điều phải nói thẳng về QĐ-01</h4>
+    <ul>
+      <li>Số phán quyết người <b>độc lập</b> của cả đề tài là <b>1</b>, không phải 2.014. Người xem 2.014 ảnh nhưng ra một quyết định mức lớp theo âm.</li>
+      <li>Người chấm nhìn ảnh có mức nhiễu hàng xóm <b>y hệt phần còn lại của bộ</b> (slot_out trung vị 0,227 so với nền 0,228-0,239); khoảng 78% ảnh không phải một chữ sạch, 13 ô có <code>usable_image=0</code>.</li>
+      <li>37/49 ô mốc dùng để chọn mã 𠊚 lại do chính <em>luật cầu của máy</em> sinh ra (得→𠊚). Còn một vòng lập luận nhẹ ở đây, phải khai.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">03</span>Rủi ro chặn công bố: ba tầng bản quyền</h2>
+  <p class="lede">Không phải rủi ro nhãn, nhưng mỗi tầng đều có thể chặn việc phát hành.</p>
+  <ul>
+    <li><b>Ảnh quét mộc bản.</b> <code>LICENSE.md</code> ghi "CHƯA CHỌN", trong khi <code>pipeline/publish/metadata.py</code> ghi cứng CC0-1.0 cho ảnh. Chạy <code>python -m pipeline.publish</code> là phát ra một tuyên bố giấy phép mà bên giữ bản gốc chưa đồng ý.</li>
+    <li><b>Bản phiên âm Quốc ngữ.</b> Cột <code>syllable</code> của cả 59.371 dòng — và toàn bộ nhãn của 6.930 ô tầng SYLLABLE — trích từ bản phiên âm hiện đại in kèm sách. Đó là tác phẩm phái sinh của một người biên tập, nhiều khả năng còn thời hạn bảo hộ.</li>
+    <li><b>Đầu ra dịch vụ OCR.</b> 88,82% nhãn ký tự là <em>nguyên văn</em> chuỗi <code>ocr_char</code> của dịch vụ HCMUS, truy cập bằng tài khoản đăng nhập. Điều khoản dịch vụ có cho phép phát hành lại đầu ra thành bộ dữ liệu công khai không?</li>
+  </ul>
+  <p>Cộng thêm: <code>re-dataset/NGUON_THU_TICH.md</code> có <b>21/21 ô trống</b> (nơi lưu giữ, ký hiệu kho, nhà in, niên đại, khổ sách, lần in, DPI) — chính tệp đó tự khai "không có phần này thì bộ dữ liệu không trích dẫn được". Đây là câu hỏi đầu tiên của thành viên hội đồng bên Hán Nôm.</p>
+</section>
+
+<section>
+  <h2><span class="num">04</span>Kế hoạch cải thiện, xếp theo lợi ích trên công</h2>
+
+  <div class="plan">
+    <div class="item"><span class="rk">1</span><div>
+      <h4>Rà mức lớp: 30 cặp (chữ, âm) lớn nhất</h4>
+      <p>Việc duy nhất có bằng chứng thu hồi được lớp sai. 30 lớp × 6 ảnh; người nhìn ảnh, máy chỉ đếm tần suất — không có vòng lập luận. Phủ 34,6% số ô có nhãn chữ.</p>
+      <div class="meta"><span>30-60 phút người</span><span>0 giờ máy</span><span>không đổi sha256</span></div>
+    </div></div>
+
+    <div class="item"><span class="rk">2</span><div>
+      <h4>Dựng khung nhìn còn thiếu của chính công cụ kiểm của bạn</h4>
+      <p>Bảng "cặp không được từ điển Nôm <em>ngoài</em> xác nhận, sắp theo số ô" — 1.460 cặp / 20.733 ô. Khối 㝵/người đứng hạng 2 trong bảng này. Script đã có sẵn ở <code>re-dataset/check/</code>; chỉ thiếu một sheet.</p>
+      <div class="meta"><span>1 giờ người</span><span>~5 phút máy</span><span>không đổi sha256</span></div>
+    </div></div>
+
+    <div class="item"><span class="rk">3</span><div>
+      <h4>Thí nghiệm hạ nguồn tối thiểu</h4>
+      <p>Chưa một script huấn luyện nào trong kho đọc bộ giao nộp. Phân loại 1.590 lớp ký tự trên chính split trang có sẵn, báo accuracy <b>tách theo luật</b> và <b>tách theo sách</b>. Giới hạn phải tự nêu: phép đo này đo <em>tính nhất quán</em> của nhãn, không đo tính đúng — một lỗi hệ thống như 㝵 sẽ được mô hình học thuộc hoàn hảo.</p>
+      <div class="meta"><span>3 giờ người</span><span>~2 giờ máy</span><span>không đổi sha256</span></div>
+    </div></div>
+
+    <div class="item"><span class="rk">4</span><div>
+      <h4>Sửa các lời khai sai trong tài liệu</h4>
+      <p>README trỏ commit <code>8899d0cb50</code> = bản 57.357 dòng (thiếu QĐ-01) · DATASHEET nói "tất định tới từng byte" trong khi bước 7 chạy tay · <code>seg_backend</code> là backend mức <em>trang</em> (24,4% ô thực ra dùng hộp trung điểm — nhưng chất lượng <b>không</b> kém, đo trong từng sách bằng nhau) · <code>usable_image=0</code> nghĩa là "mực chạm mép" chứ không phải "chữ bị cắt" · 552 ảnh trong <code>silver/</code> có tier GOLD · đọc CSV phải <code>keep_default_na=False</code>.</p>
+      <div class="meta"><span>2-3 giờ người</span><span>0 giờ máy</span><span>không đổi sha256</span></div>
+    </div></div>
+
+    <div class="item"><span class="rk">5</span><div>
+      <h4>Đưa <code>step_glyph</code> vào chuỗi MAIN + khoá chặn export</h4>
+      <p>Đây là rủi ro <em>mất dữ liệu</em>, khác hẳn mọi rủi ro nhãn ở trên: chạy <code>./run_pipeline.sh</code> hôm nay sẽ xoá sạch <code>re-dataset/</code> rồi ghi lại bản 57.357 dòng, mất phán quyết người duy nhất. Diễn tập khô đã chứng minh chuỗi vá tái lập đúng byte cả hai tạo phẩm.</p>
+      <div class="meta"><span>1-2 giờ người</span><span>20 giây máy</span><span>không đổi sha256</span></div>
+    </div></div>
+
+    <div class="item"><span class="rk">6</span><div>
+      <h4>Điền lai lịch thư tịch + chốt giấy phép</h4>
+      <p>21/21 ô trống. Cần: niên đại, nơi lưu giữ, ký hiệu kho, và <b>ai là người phiên âm Quốc ngữ</b>. Đồng thời gỡ CC0 ghi cứng trong <code>metadata.py</code> khi <code>LICENSE.md</code> còn "CHƯA CHỌN".</p>
+      <div class="meta"><span>2-4 giờ người + đàm phán</span><span>không đổi sha256</span></div>
+    </div></div>
+
+    <div class="item"><span class="rk">7</span><div>
+      <h4>Mẻ chấm tay 600 ô, phân tầng theo <em>luật</em> — không theo cờ rủi ro</h4>
+      <p>Phân bổ direct 330 / syllable 110 / similar 90 / QĐ-01 70, cộng 20-30 ô mồi và 60 ô lặp ẩn. Bắt buộc: <b>một câu hỏi nhị phân mỗi lần bấm</b> (<code>mode='label_only'</code>), tách hẳn câu hỏi crop — đó là sửa đúng nguyên nhân κ=0,14. Khung mẫu hiện có ba lỗi phải vá trước: thiếu nhánh QĐ-01 (bỏ sót 2.014 ô), <code>DEFAULT_LABELS</code> trỏ bản trước QĐ-01 nên sẽ hiện nhãn cũ 㝵, và <code>cmd_grid</code> dùng mặc định <code>mode='full'</code> — chính thiết kế đã cho κ=0,14.</p>
+      <div class="meta"><span>~5 giờ chấm + ~15 giờ viết mã</span><span>không đổi sha256 nếu chỉ để đo</span></div>
+    </div></div>
+
+    <div class="item"><span class="rk">8</span><div>
+      <h4>Đưa tầng SYLLABLE về đúng vị trí: đóng góp từ điển học</h4>
+      <p>6.930 ô thuộc 326 cặp (chữ, âm), và <b>326/326 không có trong <code>QuocNgu_SinoNom.csv</code></b>. Đây đúng là tập cặp mà từ điển thiếu nhưng ngữ liệu lặp ≥5 lần trên ≥3 trang, <em>kèm ảnh chứng cứ</em> — đóng góp cho chữ Nôm Công giáo mà không bộ nào khác có. Cần một người biết Hán Nôm duyệt ~50 cặp đầu bảng. Cách phát biểu đúng: "326 cặp ứng viên, 6.930 lần xuất hiện", không phải "6.930 nhãn âm".</p>
+      <div class="meta"><span>~50 cặp cần chuyên gia duyệt</span><span>không đổi sha256</span></div>
+    </div></div>
+  </div>
+
+  <div class="note alert" style="margin-top:26px">
+    <h4>Việc <em>không</em> nên làm — tổng cộng khoảng 3-5 tuần người, lợi ích đo được gần bằng 0</h4>
+    <ul>
+      <li><b>Sidecar 10 cờ rủi ro</b> — phủ 85% bộ, lift 1,03. Nếu vẫn muốn sidecar thì chỉ 3 cột: cặp-không-được-xác-nhận-ngoài, số ô của cặp, hạng cặp theo số ô.</li>
+      <li><b>crop-v2</b> (cắt lại 59.371 ảnh) — biện minh bằng ngưỡng do máy tự đặt; trọng tài không dùng mô hình đã đo hai phép cắt ngang nhau (p=0,159). Và nếu cắt lại trước khi sửa nguồn lệch chữ thì sẽ cho ra <em>ảnh sạch của chữ sai</em> — nguy hiểm hơn ảnh bẩn mà mơ hồ.</li>
+      <li><b>Huấn luyện lại detector</b> — F1 0,8436 không xuất hiện trong bất kỳ cột nào của bộ, và 24,4% ô không dùng hộp detector.</li>
+      <li><b>Thay bảng SinoNom_Similar</b>, <b>chuẩn hoá dị thể bằng cách chạy lại</b> (tác động lên chỉ số đánh giá bị chặn ở 1,96% ô val/test), <b>thêm chi phí vị trí vào DP</b> (0,45% ô).</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">05</span>Câu được phép nói, và câu không</h2>
+  <div class="scroll">
+  <table>
+    <thead><tr><th style="width:50%">Bảo vệ được</th><th>Không được nói</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Bộ ảnh-chữ Nôm có hộp bao và nhãn <b>mức ký tự</b>, kèm âm Quốc ngữ song song cho từng ô — 59.371 ô, 1.590 lớp chữ, 447 trang.</td>
+        <td>"Độ chính xác nhãn là X%" — chưa có mẻ chấm tay nào hợp lệ. Số duy nhất từng công bố đã bị huỷ.</td>
+      </tr>
+      <tr>
+        <td>Phủ <b>99,1%</b> số trang mộc bản khả dụng của ba cuốn: không chọn lọc trang.</td>
+        <td>"Bộ đại diện cho chữ Nôm" — thiên lệch chọn lọc từ 13,35% đến 93,29% theo tần suất chữ.</td>
+      </tr>
+      <tr>
+        <td>Ngữ liệu <b>truyện thánh Công giáo</b>, mang <b>282 lớp chữ không có trong NomNaOCR</b> — đo trực tiếp trên <code>All.txt</code>, dẫn đầu là từ vựng tôn giáo.</td>
+        <td>"Bộ lớn hơn / nhiều lớp hơn NomNaOCR" — họ 38.318 mẫu mức dòng, 7.507 lớp ký tự; 94,78% ô của ta thuộc lớp họ đã phủ.</td>
+      </tr>
+      <tr>
+        <td><b>326 cặp (chữ, âm) ứng viên bổ sung từ điển</b>, mỗi cặp có ảnh chứng cứ và ≥5 lần xuất hiện trên ≥3 trang.</td>
+        <td>"Tất định tới từng byte, chạy lại trùng khít" — đúng cho bước 1-6 và 8; bước 7 là phán quyết người nạp bằng lệnh riêng.</td>
+      </tr>
+      <tr>
+        <td>Toàn bộ pipeline <b>tái lập đúng byte</b> (đã chứng minh: build lại 448 trang ra cùng sha256; chuỗi 4→8 ra cùng hai hash).</td>
+        <td>"Hai luồng OCR độc lập xác nhận chéo" — kênh âm là bản phiên âm của người, không phải OCR mộc bản thứ hai.</td>
+      </tr>
+      <tr>
+        <td>Một bảng so sánh <b>đo trực tiếp</b> với NomNaOCR: thể loại · mức nhãn · số lớp · có/không hộp ký tự · có/không âm song song.</td>
+        <td>"Thể loại này chưa bộ dữ liệu nào phủ" — mới đối chiếu <b>đúng một bộ</b>. Chưa khảo sát NomNaOCRpp, các bộ Kiều / Lục Vân Tiên, ICFHR/CLC.</td>
+      </tr>
+      <tr>
+        <td>Ba cuốn là truyện thánh Công giáo, in mộc bản, có bản phiên âm Quốc ngữ in kèm từng trang.</td>
+        <td><b>Bất kỳ niên đại, nơi lưu giữ, ký hiệu kho hay tên người phiên âm nào</b> — <code>NGUON_THU_TICH.md</code> trống 21/21 ô, không có nguồn nào trong kho chống lưng.</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer>
+  Rà soát ngày 09-09-2026: 31 agent trên 3 workflow, 615 lệnh đo, 3 vòng phản biện độc lập tự chạy lại mọi phép đếm.<br>
+  Nguyên tắc áp dụng: mọi chỉ số rủi ro phải qua phép kiểm phân biệt trên lớp 㝵/"người" trước khi được đề xuất; chỉ số không tách được lớp đó bị loại bất kể nghe hợp lý tới đâu.<br>
+  Cảnh báo tái lập: mọi con số trong trang này được đo bằng script tạm ngoài kho. Số nào đưa vào luận văn phải có một script trong <code>pipeline/tools/</code> và một assertion trong selftest — nếu không, phản biện chạy lại sẽ ra số khác.
+</footer>
+
+</div>

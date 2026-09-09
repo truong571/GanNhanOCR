@@ -1,0 +1,223 @@
+<title>Kế hoạch cập nhật bộ Nôm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;0,7..72,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root{
+    --ground:#f1f2f5;--surface:#fbfbfc;--surface-2:#e8eaef;--line:#d3d7e0;--line-soft:#e2e5ec;
+    --ink:#1c1f27;--ink-2:#4a5060;--ink-3:#6b7280;--on-fill:#fff;
+    --indigo:#2f4a7a;--indigo-soft:#dde3ef;--son:#9e3b26;--son-soft:#f3dfd9;
+    --song:#3d6b68;--song-soft:#d8e6e4;--roi:#8a8782;--roi-soft:#e3e2df;
+    --gold:#8a6d2f;--gold-soft:#ebe0c6;
+    --shadow:0 1px 2px rgba(28,31,39,.06),0 6px 18px -12px rgba(28,31,39,.28);
+    --f-display:"Literata",Georgia,serif;--f-body:"IBM Plex Sans",-apple-system,"Segoe UI",sans-serif;
+    --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+    --f-nom:"Noto Serif CJK SC","Songti SC","STSong","Hiragino Sans GB","Noto Serif",serif;
+  }
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --ground:#14161b;--surface:#1b1e25;--surface-2:#232833;--line:#333a48;--line-soft:#272d38;
+    --ink:#e4e6ea;--ink-2:#b0b6c2;--ink-3:#838a99;--on-fill:#14161b;
+    --indigo:#8fb0e0;--indigo-soft:#23304a;--son:#e08a72;--son-soft:#3d241d;
+    --song:#8cc3bd;--song-soft:#1f3230;--roi:#97948e;--roi-soft:#2a2a27;
+    --gold:#d3b271;--gold-soft:#3a3120;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 22px -14px rgba(0,0,0,.8);}}
+  :root[data-theme="dark"]{
+    --ground:#14161b;--surface:#1b1e25;--surface-2:#232833;--line:#333a48;--line-soft:#272d38;
+    --ink:#e4e6ea;--ink-2:#b0b6c2;--ink-3:#838a99;--on-fill:#14161b;
+    --indigo:#8fb0e0;--indigo-soft:#23304a;--son:#e08a72;--son-soft:#3d241d;
+    --song:#8cc3bd;--song-soft:#1f3230;--roi:#97948e;--roi-soft:#2a2a27;
+    --gold:#d3b271;--gold-soft:#3a3120;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 22px -14px rgba(0,0,0,.8);}
+  *{box-sizing:border-box}
+  body{background:var(--ground);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.62;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:900px;margin:0 auto;padding:40px 22px 96px}
+  header.mast{border-bottom:2px solid var(--ink);padding-bottom:22px;margin-bottom:34px}
+  .eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);margin:0 0 14px}
+  h1{font-family:var(--f-display);font-weight:700;font-size:clamp(30px,5.2vw,46px);line-height:1.1;letter-spacing:-.015em;margin:0 0 14px;text-wrap:balance}
+  .stand{font-family:var(--f-display);font-size:18px;line-height:1.55;color:var(--ink-2);margin:0;max-width:62ch}
+  section{margin-top:52px}
+  h2{font-family:var(--f-display);font-size:25px;font-weight:600;margin:0 0 8px;text-wrap:balance}
+  h2 .num{font-family:var(--f-mono);font-size:13px;font-weight:500;color:var(--indigo);display:block;letter-spacing:.1em;margin-bottom:7px}
+  h3{font-family:var(--f-body);font-size:15px;font-weight:600;margin:28px 0 10px}
+  p{margin:0 0 14px;max-width:70ch}.lede{color:var(--ink-2);max-width:68ch}
+  ul{margin:0 0 14px;padding-left:20px;max-width:70ch}li{margin-bottom:6px}
+  code{font-family:var(--f-mono);font-size:.875em;background:var(--surface-2);padding:.1em .34em;border-radius:3px;word-break:break-word}
+  .nom{font-family:var(--f-nom);font-size:1.16em;line-height:1}
+  .val{font-family:var(--f-mono);font-size:12.2px;background:var(--surface);border:1px solid var(--line-soft);border-left:2px solid var(--indigo);border-radius:0 3px 3px 0;padding:9px 12px;overflow-x:auto;white-space:pre;line-height:1.55;margin:0 0 16px}
+  .val.son{border-left-color:var(--son)}.val.song{border-left-color:var(--song)}
+  .scroll{overflow-x:auto;margin:18px 0}
+  table{border-collapse:collapse;width:100%;min-width:600px;font-size:13.5px}
+  th,td{text-align:left;padding:9px 14px 9px 0;border-bottom:1px solid var(--line-soft);vertical-align:top}
+  th{font-family:var(--f-mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line);font-weight:500;white-space:nowrap}
+  td.n{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .chip{display:inline-block;font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:2px 7px;border-radius:2px;white-space:nowrap}
+  .chip.song{background:var(--song-soft);color:var(--song)}
+  .chip.roi{background:var(--roi-soft);color:var(--roi)}
+  .chip.son{background:var(--son-soft);color:var(--son)}
+  .chip.gold{background:var(--gold-soft);color:var(--gold)}
+  .note{border-left:3px solid var(--indigo);background:var(--surface);padding:15px 17px;margin:20px 0;border-radius:0 4px 4px 0;box-shadow:var(--shadow)}
+  .note.alert{border-left-color:var(--son)}.note.good{border-left-color:var(--song)}
+  .note h4{font-family:var(--f-body);font-size:14px;font-weight:600;margin:0 0 8px}
+  .note.alert h4{color:var(--son)}.note.good h4{color:var(--song)}
+  .note p{font-size:14px;margin:0 0 9px;color:var(--ink-2)}.note p:last-child{margin-bottom:0}
+  .note ul{font-size:14px;color:var(--ink-2);margin-bottom:0}
+  .dot{border-left:2px solid var(--line);margin:26px 0 0 10px}
+  .wave{position:relative;padding:0 0 26px 26px}
+  .wave::before{content:"";position:absolute;left:-7px;top:5px;width:12px;height:12px;border-radius:50%;background:var(--indigo);border:2px solid var(--ground)}
+  .wave.now::before{background:var(--son)}
+  .wave.late::before{background:var(--roi)}
+  .wave h4{font-family:var(--f-body);font-size:15.5px;font-weight:600;margin:0 0 4px}
+  .wave .when{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);margin-bottom:8px}
+  .wave p{font-size:14px;color:var(--ink-2);margin:0 0 8px;max-width:64ch}
+  .wave ul{font-size:14px;color:var(--ink-2);margin:0 0 10px}
+  .gate{font-family:var(--f-mono);font-size:11.5px;background:var(--surface-2);border-radius:3px;padding:7px 10px;display:inline-block;color:var(--ink-2)}
+  footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--line);font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3);line-height:1.7}
+</style>
+
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">GanNhanOCR · kế hoạch tổng thể · bản sửa 09-09-2026</p>
+  <h1>Kế hoạch cập nhật bộ Nôm</h1>
+  <p class="stand">Bản này thay bản trước. Hai điều đã đổi kể từ đó: ngữ liệu được xác nhận là <b>chữ viết tay</b>, và flow gán nhãn mới đã được kiểm chứng đầu-cuối cho <b>64.525 ô</b>.</p>
+</header>
+
+<section>
+  <h2><span class="num">I</span>Điều đã chốt</h2>
+
+  <h3>1 · Ngữ liệu là bản chép tay, không phải mộc bản</h3>
+  <p>Xác nhận bằng mắt trên ảnh trang gốc: <b>bút lông thể hành-thảo</b>, có độ đậm nhạt theo lực bút và nét nối, trên giấy hiện đại; số cột <code>9 8 7 6 5 4 3 2 1</code>, mũi tên và số trang là <b>chữ in máy</b> — chú dẫn của người biên soạn.</p>
+
+  <div class="val song">HỆ QUẢ ĐO ĐƯỢC — CNN sạch huấn luyện 100% trên ảnh phông, 4.706 lớp:
+   trên phông FD             99,9%
+   trên phông GIỮ LẠI        89,7%    ← tổng quát tốt qua phông
+   trên CROP THẬT             3,72%   ← ngưỡng khả thi đặt ra là 15%
+=> khoảng cách không nằm giữa phông A và phông B, mà giữa CHỮ IN và CHỮ VIẾT</div>
+
+  <p>Đây là lời giải thống nhất cho mọi thất bại của kênh thị giác: <code>gannhanocr-fd</code> sinh từ phông in nên lệch miền tận gốc với dữ liệu. Nó cũng giải thích câu hỏi <span class="nom">㝵</span>/<span class="nom">𠊚</span>: trong thể thảo, bộ <span class="nom">亻</span> rút thành một nét mảnh. Phép đo cùng miền: <b>38 ô đã mang nhãn <span class="nom">𠊚</span> không phân biệt được với 400 ô mang nhãn <span class="nom">㝵</span></b> — tất cả cùng một tự dạng viết tay.</p>
+
+  <div class="note good">
+    <h4>Phát hiện này nâng giá trị đề tài</h4>
+    <p>Bộ ảnh-chữ Nôm <b>viết tay</b> hiếm và khó hơn bộ chữ in. NomNaOCR là chữ in. Đóng góp nên phát biểu theo trục đó: <em>nhãn mức ký tự cho chữ Nôm viết tay, kèm âm Quốc ngữ song song</em> — chứ không theo trục số lượng, vì so số lượng thì thua.</p>
+  </div>
+
+  <h3>2 · Flow gán nhãn mới — tầng 1, đã kiểm chứng đầu-cuối</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>Luật</th><th>Nguồn dùng</th><th class="n">Lift</th><th class="n">Ô</th></tr></thead>
+    <tbody>
+      <tr><td><b>L1</b> sửa dấu của âm, có neo GOLD</td><td>ngữ liệu + từ điển âm</td><td class="n">51,7×</td><td class="n">+755</td></tr>
+      <tr><td><b>L2</b> cầu tự dạng <b>ngược</b>, khi cầu xuôi = 0</td><td><code>SinoNom_Similar</code> chiều chưa dùng</td><td class="n">3,88×</td><td class="n">+848</td></tr>
+      <tr><td><b>L3</b> cột lệch + đúng 1 cầu + cặp đã chứng thực</td><td>từ điển</td><td class="n">339×</td><td class="n">+112</td></tr>
+      <tr><td><b>L5</b> mở cổng âm tiết trên bể đầy đủ</td><td>thống kê ngữ liệu</td><td class="n">—</td><td class="n">khối lớn</td></tr>
+      <tr><td colspan="3"><b>Tổng, đã áp thật và biên dịch được, 5 mốc selftest giữ nguyên</b></td><td class="n"><b>64.525</b></td></tr>
+    </tbody>
+  </table></div>
+  <p>Nền hiện tại 59.371 ô → <b>64.525 ô (+5.154)</b>. Kèm hai hệ quả <em>đúng</em> phải giữ: <b>751 ô SYLLABLE rớt</b> khỏi bộ vì độ thuần thật &lt; 0,6 (chúng lọt vào chỉ do bể mẫu cũ bị S3 cắt thiên lệch), và <b>chốt chặn <code>AM_DA_QUYET = {"người"}</code> là bắt buộc</b> — thiếu nó thì mất 406 nhãn <span class="nom">𠊚</span> của QĐ-01.</p>
+
+  <h3>3 · Đã bị loại, có bằng chứng</h3>
+  <div class="scroll"><table>
+    <thead><tr><th>Bị loại</th><th>Vì sao</th></tr></thead>
+    <tbody>
+      <tr><td>Đi 2 bước trên đồ thị tự dạng (khai 4.651 ô)</td><td>lift <b>1,16×</b> so đối chứng hoán vị — 86% trùng ngẫu nhiên; hàng xóm 2 bước trung vị 590 chữ</td></tr>
+      <tr><td>Luật biến thể thanh không neo</td><td>lift 23×, nhưng yếu hơn L1 mười bốn lần, bất đồng 100% với L2 trên 109 ô, chỉ +401 ô</td></tr>
+      <tr><td>Bộ phân loại sạch áp thẳng lên crop</td><td>top-1 <b>3,72%</b></td></tr>
+      <tr><td>Lan nhãn kNN</td><td>ngân hàng là nhãn của chính ta — vòng lập luận, và tái sản xuất <span class="nom">㝵</span></td></tr>
+      <tr><td>Mọi cờ rủi ro mức ô (~40 chỉ số)</td><td>AUC trong [0,446; 0,604]; hợp 10 cờ phủ 85% bộ, lift 1,03</td></tr>
+      <tr><td>Sinh lại <code>gannhanocr-fd</code> bằng phông in</td><td>đã chứng minh mô hình tổng quát qua phông (89,7%) mà vẫn hỏng trên crop</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section>
+  <h2><span class="num">II</span>Bảy đợt thi hành</h2>
+  <p class="lede">Đợt 0-1 không đổi <code>sha256</code>. Đợt 2 là điểm vượt <em>có chủ ý</em> — sau đó mọi con số của luận văn phải đo lại.</p>
+
+  <div class="dot">
+
+    <div class="wave now">
+      <h4>Đợt 0 · Chống mất dữ liệu</h4>
+      <div class="when">~1 giờ người · KHÔNG đổi sha256</div>
+      <ul>
+        <li><code>cp -R re-dataset/check ~/backup_check</code> · <code>touch dataset_out/.FROZEN</code></li>
+        <li>chèn <code>step_glyph</code> + <code>checkpoint glyph</code> vào MAIN, ngay sau <code>step_s3unwind</code></li>
+        <li>cổng chặn trong <code>step_export</code>: đếm ô <code>quyet_dinh_nguoi</code> <em>trước khi xoá</em>, bằng 0 thì <code>die</code></li>
+      </ul>
+      <span class="gate">CỔNG: diễn tập khô ra đúng 550a9726… và c346a032…</span>
+    </div>
+
+    <div class="wave now">
+      <h4>Đợt 1 · Sửa sự thật "mộc bản" và lược đồ lai lịch</h4>
+      <div class="when">~2 giờ người · KHÔNG đổi sha256</div>
+      <p>"Mộc bản / ván khắc" xuất hiện trong <b>9 tệp</b>, kể cả <code>pipeline/tools/make_dataset_docs.py</code> — tức lỗi được sinh tự động vào mọi bản giao nộp. Sửa ở <b>mẫu</b>, không sửa ở đầu ra.</p>
+      <p>Đổi luôn lược đồ <code>NGUON_THU_TICH.md</code> từ sách in sang bản chép tay:</p>
+      <div class="val son">BỎ   : Nhà in / nơi khắc · Lần in / bản
+THÊM : Người chép · Niên đại chép · Chất liệu giấy
+       Ai làm bản phiên âm Quốc ngữ  ← câu hỏi quan trọng nhất
+GIỮ  : Nơi lưu giữ + ký hiệu kho · Khổ sách + DPI</div>
+      <span class="gate">CỔNG: grep 9 tệp còn 0 kết quả · shasum labels.csv không đổi</span>
+    </div>
+
+    <div class="wave now">
+      <h4>Đợt 1b · Gửi câu hỏi lai lịch (chạy song song, chờ bên ngoài)</h4>
+      <div class="when">gửi trong ngày</div>
+      <p>Hỏi đúng câu của bản chép tay: <b>ai chép, chép năm nào, bản gốc chép từ đâu, ai phiên âm Quốc ngữ</b>, và điều khoản dịch vụ OCR HCMUS về phát hành lại đầu ra. Đây là việc có thời gian chờ, không rút ngắn được, và nó chặn công bố.</p>
+      <span class="gate">CỔNG: mỗi ô trong NGUON_THU_TICH có người chịu trách nhiệm trả lời</span>
+    </div>
+
+    <div class="wave">
+      <h4>Đợt 2 · Cài flow mới và chạy lại</h4>
+      <div class="when">~3 giờ người + ~20 phút máy · <b>ĐỔI sha256, có chủ ý</b></div>
+      <ul>
+        <li>áp bộ vá L1+L2+L3+L5 (một bộ đã hoà tay, biên dịch được)</li>
+        <li>chốt chặn toàn cục: <code>AM_DA_QUYET={"người"}</code> chặn theo <b>âm</b>, không theo chữ đích</li>
+        <li>lọc PUA khỏi mọi tập ứng viên · chặn bẫy <code>|R|=1</code> (hiện gán <code>margin=99</code> nên bắn ở mọi ngưỡng)</li>
+        <li>xoá khái niệm "thứ tự luật quyết định" ở chỗ hai luật bất đồng — đưa sang tier riêng thay vì chọn bừa</li>
+      </ul>
+      <span class="gate">CỔNG: 64.525 ô · 5 mốc selftest giữ nguyên · 2.014 ô QĐ-01 còn nguyên</span>
+    </div>
+
+    <div class="wave">
+      <h4>Đợt 3 · Đóng gói số liệu và tài liệu</h4>
+      <div class="when">~3 giờ người · không đổi sha256</div>
+      <p><code>pipeline/tools/so_lieu_luan_van.py</code> tính lại mọi con số sẽ vào luận văn, cộng assertion trong selftest. Sửa các lời khai còn sai: README trỏ nhầm commit · DATASHEET nói "tất định tới từng byte" · <code>seg_backend</code> là backend mức trang · <code>bbox</code> không phải khung ảnh · 552 ảnh <code>silver/</code> mang tier GOLD · đọc CSV phải <code>keep_default_na=False</code>.</p>
+      <span class="gate">CỔNG: phản biện chạy lại script ra đúng số đã in</span>
+    </div>
+
+    <div class="wave">
+      <h4>Đợt 4 · Thí nghiệm hạ nguồn</h4>
+      <div class="when">~3 giờ người + ~2 giờ máy · không đổi sha256</div>
+      <p>Phân loại lớp ký tự trên chính split trang có sẵn, accuracy <b>tách theo luật và theo sách</b>. <b>Không dùng <code>nom-embed/best.pt</code></b> — đã đo là nghiêng về nhãn huấn luyện 87%. Phải tự nêu giới hạn: phép đo này đo <em>tính nhất quán</em>, không đo tính đúng.</p>
+      <span class="gate">CỔNG: bảng accuracy theo luật × theo sách, kèm câu giới hạn</span>
+    </div>
+
+    <div class="wave late">
+      <h4>Đợt 5 · Tầng 2, chỉ khi còn thời gian</h4>
+      <div class="when">tin cậy THẤP-TRUNG BÌNH</div>
+      <p>Bảng nhầm học từ ngữ liệu + ma trận nhầm sinh từ phông: thêm ~2.650 ô. Ba lý do hoãn: độ chính xác trên khối đích <b>không đo được</b> vì khối đó không có nhãn nào; nơi hai luật cùng bắn chúng bất đồng <b>21,7%</b>; và hai luật quyết theo <em>cặp</em> chứ không theo ô, nên một cặp sai kéo theo hàng trăm ô.</p>
+      <span class="gate">CỔNG: nếu bật, phải hợp nhất hai luật và trừ 750 ô chồng lấn</span>
+    </div>
+
+    <div class="wave late">
+      <h4>Đợt 6 · Sau luận văn</h4>
+      <div class="when">—</div>
+      <p>Sinh lại kho glyph theo <b>kiểu chữ viết</b> bằng <code>font_diffusion/train_fst.py</code>. Làm phép thử rẻ trước: sinh vài trăm glyph thể hành-thảo rồi chạy lại đúng phép đo 3,72%. Nhích lên ~25% thì đáng làm 89.898 ảnh.</p>
+      <p><b>Cảnh báo vòng lập luận:</b> nếu lấy chính crop của bộ làm mẫu phong cách thì glyph sinh ra thừa hưởng tự dạng của bộ — chỉ dùng được để <em>tăng cường dữ liệu huấn luyện</em>, tuyệt đối không dùng để xác nhận nhãn.</p>
+    </div>
+
+  </div>
+</section>
+
+<section>
+  <h2><span class="num">III</span>Nếu chỉ còn một ngày</h2>
+  <p>Đợt 0 (1 giờ) → Đợt 1 sửa "mộc bản" và lược đồ lai lịch (2 giờ) → Đợt 2 cài flow mới và chạy lại (3 giờ). Sáu giờ, và nó đóng được ba thứ hội đồng chắc chắn hỏi: bộ tái lập được không, ngữ liệu thật ra là gì, và pipeline đã khai thác hết nguồn đang có chưa.</p>
+  <p>Bỏ hẳn: mẻ chấm tay (người dùng đã loại), sidecar cờ rủi ro, crop-v2, huấn luyện lại detector, thay bảng <code>SinoNom_Similar</code>.</p>
+</section>
+
+<footer>
+  Bản sửa 09-09-2026, thay bản trước cùng ngày. Cơ sở: 5 cuộc rà soát (56 agent, 5 vòng phản biện độc lập) và các phép đo trực tiếp.<br>
+  Nguyên tắc xuyên suốt: mọi luật phải có đối chứng hoán vị và báo <b>lift</b>; luật dưới 3× coi như không có. Bài học <code>HOP2</code>: lift trên <em>tần suất bắn</em> từng bị khai thành 4.651 ô cứu, sự thật là 1,16×.<br>
+  Tài liệu liên quan: <code>docs/DANH_GIA_BO_GIAO_NOP_2026-09-09.html</code> · <code>docs/DUONG_DI_RE_DATASET_2026-09-08.html</code>
+</footer>
+
+</div>

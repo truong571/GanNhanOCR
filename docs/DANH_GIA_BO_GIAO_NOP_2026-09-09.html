@@ -127,11 +127,11 @@
 <section>
   <h2><span class="num">PHÁT HIỆN TRUNG TÂM</span>Kênh Quốc ngữ là bản phiên âm của người, không phải OCR thứ hai</h2>
   <p class="lede">Đề tài đang tự mô tả là "giao của hai luồng OCR". Mở thẳng PDF gốc thì không phải vậy.</p>
-  <div class="val">STT11.pdf trang 0 (chẵn):  "9 8 7 6 5 4 3 2 1 ! ! ! ! ! ! ! ! ! 10"       ← trang mộc bản
+  <div class="val">STT11.pdf trang 0 (chẵn):  "9 8 7 6 5 4 3 2 1 ! ! ! ! ! ! ! ! ! 10"       ← trang chữ Nôm chép tay
 STT11.pdf trang 1 (lẻ) :  "1. THANG MUOI MOT. Co Ba muai ngay.
                            2. MONG MOT. L~ Cac Thanh. Hom nay, I-ghe-re-gia
                            lam l~ mung cac Thanh duoc phuc cuc trong la..."   ← 808 ký tự</div>
-  <p>Sách in <b>xen kẽ một trang mộc bản, một trang phiên âm Quốc ngữ hiện đại</b> do người biên tập làm, đặt chữ bằng máy tính. Lớp text nhúng bị hỏng phông (<code>L~</code> = "Lễ") nên pipeline phải render lại rồi cho VietOCR đọc — nhưng thứ VietOCR đọc là <em>chữ của người</em>, không phải mộc bản.</p>
+  <p>Sách <b>xen kẽ một trang chữ Nôm chép tay bút lông, một trang phiên âm Quốc ngữ hiện đại</b> do người biên tập làm, đặt chữ bằng máy tính. Lớp text nhúng bị hỏng phông (<code>L~</code> = "Lễ") nên pipeline phải render lại rồi cho VietOCR đọc — nhưng thứ VietOCR đọc là <em>bản phiên âm của người biên tập</em>, không phải trang chữ Nôm.</p>
 
   <div class="note good">
     <h4>Điều này nâng giá trị đề tài ở một chỗ và hạ ở chỗ khác — phải nói cả hai</h4>
@@ -139,7 +139,7 @@ STT11.pdf trang 1 (lẻ) :  "1. THANG MUOI MOT. Co Ba muai ngay.
     <p><b>Hạ:</b> đó chính là công thức NomNaOCR dùng ở mức dòng. Nên phát biểu đóng góp <b>không được</b> đặt ở ý tưởng, mà phải đặt ở <b>mức nhãn</b>: họ cho nhãn mức dòng, đây cho hộp bao và nhãn mức <em>ký tự</em>, kèm âm Quốc ngữ song song cho từng ô.</p>
   </div>
 
-  <p>Kèm theo là một điểm mạnh chưa ai khai: pipeline dựng 448 trang trên khoảng 452 trang mộc bản khả dụng — <b>phủ 99,1%, không chọn lọc trang</b>. Với một bộ dữ liệu, "không cherry-pick" là điều đáng nói ra.</p>
+  <p>Kèm theo là một điểm mạnh chưa ai khai: pipeline dựng 448 trang trên khoảng 452 trang chữ Nôm khả dụng — <b>phủ 99,1%, không chọn lọc trang</b>. Với một bộ dữ liệu, "không cherry-pick" là điều đáng nói ra.</p>
 </section>
 
 <section>
@@ -218,7 +218,7 @@ STT11.pdf trang 1 (lẻ) :  "1. THANG MUOI MOT. Co Ba muai ngay.
   <h2><span class="num">03</span>Rủi ro chặn công bố: ba tầng bản quyền</h2>
   <p class="lede">Không phải rủi ro nhãn, nhưng mỗi tầng đều có thể chặn việc phát hành.</p>
   <ul>
-    <li><b>Ảnh quét mộc bản.</b> <code>LICENSE.md</code> ghi "CHƯA CHỌN", trong khi <code>pipeline/publish/metadata.py</code> ghi cứng CC0-1.0 cho ảnh. Chạy <code>python -m pipeline.publish</code> là phát ra một tuyên bố giấy phép mà bên giữ bản gốc chưa đồng ý.</li>
+    <li><b>Ảnh quét bản chép tay.</b> <code>LICENSE.md</code> ghi "CHƯA CHỌN", trong khi <code>pipeline/publish/metadata.py</code> ghi cứng CC0-1.0 cho ảnh. Chạy <code>python -m pipeline.publish</code> là phát ra một tuyên bố giấy phép mà bên giữ bản gốc chưa đồng ý.</li>
     <li><b>Bản phiên âm Quốc ngữ.</b> Cột <code>syllable</code> của cả 59.371 dòng — và toàn bộ nhãn của 6.930 ô tầng SYLLABLE — trích từ bản phiên âm hiện đại in kèm sách. Đó là tác phẩm phái sinh của một người biên tập, nhiều khả năng còn thời hạn bảo hộ.</li>
     <li><b>Đầu ra dịch vụ OCR.</b> 88,82% nhãn ký tự là <em>nguyên văn</em> chuỗi <code>ocr_char</code> của dịch vụ HCMUS, truy cập bằng tài khoản đăng nhập. Điều khoản dịch vụ có cho phép phát hành lại đầu ra thành bộ dữ liệu công khai không?</li>
   </ul>
@@ -300,7 +300,7 @@ STT11.pdf trang 1 (lẻ) :  "1. THANG MUOI MOT. Co Ba muai ngay.
         <td>"Độ chính xác nhãn là X%" — chưa có mẻ chấm tay nào hợp lệ. Số duy nhất từng công bố đã bị huỷ.</td>
       </tr>
       <tr>
-        <td>Phủ <b>99,1%</b> số trang mộc bản khả dụng của ba cuốn: không chọn lọc trang.</td>
+        <td>Phủ <b>99,1%</b> số trang chữ Nôm khả dụng của ba cuốn: không chọn lọc trang.</td>
         <td>"Bộ đại diện cho chữ Nôm" — thiên lệch chọn lọc từ 13,35% đến 93,29% theo tần suất chữ.</td>
       </tr>
       <tr>
@@ -313,14 +313,14 @@ STT11.pdf trang 1 (lẻ) :  "1. THANG MUOI MOT. Co Ba muai ngay.
       </tr>
       <tr>
         <td>Toàn bộ pipeline <b>tái lập đúng byte</b> (đã chứng minh: build lại 448 trang ra cùng sha256; chuỗi 4→8 ra cùng hai hash).</td>
-        <td>"Hai luồng OCR độc lập xác nhận chéo" — kênh âm là bản phiên âm của người, không phải OCR mộc bản thứ hai.</td>
+        <td>"Hai luồng OCR độc lập xác nhận chéo" — kênh âm là bản phiên âm của người, không phải OCR bản chép tay thứ hai.</td>
       </tr>
       <tr>
         <td>Một bảng so sánh <b>đo trực tiếp</b> với NomNaOCR: thể loại · mức nhãn · số lớp · có/không hộp ký tự · có/không âm song song.</td>
         <td>"Thể loại này chưa bộ dữ liệu nào phủ" — mới đối chiếu <b>đúng một bộ</b>. Chưa khảo sát NomNaOCRpp, các bộ Kiều / Lục Vân Tiên, ICFHR/CLC.</td>
       </tr>
       <tr>
-        <td>Ba cuốn là truyện thánh Công giáo, in mộc bản, có bản phiên âm Quốc ngữ in kèm từng trang.</td>
+        <td>Ba cuốn là truyện thánh Công giáo, <b>chép tay bút lông thể hành-thảo</b> trên giấy hiện đại, có bản phiên âm Quốc ngữ in kèm từng trang.</td>
         <td><b>Bất kỳ niên đại, nơi lưu giữ, ký hiệu kho hay tên người phiên âm nào</b> — <code>NGUON_THU_TICH.md</code> trống 21/21 ô, không có nguồn nào trong kho chống lưng.</td>
       </tr>
     </tbody>

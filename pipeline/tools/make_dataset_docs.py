@@ -92,7 +92,7 @@ def _khoi_chia_tach(s: dict) -> str:
         t = ["## Chia tách — rời nhau theo TRANG", "",
              f"Đo trên chính `labels.csv`: **0/{s['n_trang_split']} trang** nằm ở hai phía.", "",
              "Chọn mức trang chứ không phải cột vì hai cột cạnh nhau trên cùng một trang dùng",
-             "chung ván khắc, chung mực, chung lần quét — chia theo cột thì mô hình học được",
+             "chung nét bút, chung mực, chung lần quét — chia theo cột thì mô hình học được",
              "*diện mạo trang* rồi được chấm lại trên chính trang đó."]
         if s["co_cot_moi"]:
             t += ["", f"**Hệ quả phải biết:** {s['unseen']:,} ô có lớp chữ **không xuất hiện trong",
@@ -109,7 +109,7 @@ def _khoi_chia_tach(s: dict) -> str:
     return "\n".join([
         "## 🔴 Chia tách CÓ RÒ RỈ theo trang", "",
         f"Đo trên chính `labels.csv`: **{s['n_leak']}/{s['n_trang_split']} trang** có ô nằm ở",
-        "**hai phía khác nhau**. Hai cột cạnh nhau trên cùng một trang dùng chung ván khắc,",
+        "**hai phía khác nhau**. Hai cột cạnh nhau trên cùng một trang dùng chung nét bút,",
         "chung mực, chung lần quét, nên mô hình huấn luyện trên `train` học được *diện mạo",
         "trang* rồi được chấm lại trên chính trang đó.", "",
         "**Mọi chỉ số đo bằng `split` sẵn có là CẬN TRÊN**, không phải hiệu năng thật trên",
@@ -190,10 +190,10 @@ một ô nhãn nào về bản in gốc.
 | mục | vì sao |
 |---|---|
 | Nơi lưu giữ + ký hiệu kho | để người khác **tra lại được** bản gốc |
-| Nhà in / nơi khắc | ván khắc khác nhau cho tự dạng khác nhau |
-| Niên đại | chính tả Nôm biến đổi theo thời kỳ |
-| Khổ sách + DPI | quyết định kích thước ảnh crop, ảnh hưởng khả năng tái lập |
-| Lần in / bản | cùng một tên sách có thể có nhiều bản khắc khác nhau |
+| Người chép + niên đại chép | ĐÂY LÀ BẢN CHÉP TAY BÚT LÔNG. Nét bút mỗi người một khác, nên tự dạng phụ thuộc tay người chép, không cố định như chữ in |
+| Niên đại bản được chép lại | chính tả Nôm biến đổi theo thời kỳ |
+| Chất liệu + khổ giấy + DPI | quyết định kích thước ảnh crop, ảnh hưởng khả năng tái lập |
+| Ai làm bản phiên âm Quốc ngữ | toàn bộ cột `syllable` bắt nguồn từ bản phiên âm in kèm — nó là tác phẩm riêng, có bản quyền riêng |
 
 ## Giấy phép bản quét
 
@@ -207,8 +207,9 @@ def datasheet(s: dict) -> str:
     return f"""# Datasheet
 
 ## Động cơ
-Gán nhãn tự động ở mức ký tự cho văn bản chữ Nôm khắc gỗ, bằng cách khai thác **bản dịch
-Quốc ngữ song song in kèm** làm giám sát yếu — thay cho việc gán tay từng chữ.
+Gán nhãn tự động ở mức ký tự cho văn bản chữ Nôm **chép tay bút lông, thể hành-thảo**,
+bằng cách khai thác **bản phiên âm Quốc ngữ song song in kèm** làm giám sát yếu — thay cho
+việc gán tay từng chữ.
 
 ## Thành phần
 - **{s['nhan_ky_tu']:,}** ô có nhãn cấp ký tự · **{s['chu_giai_am']:,}** ô chỉ có chú giải âm
@@ -237,7 +238,7 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
 5. **{s['anh_hong']} ô có ảnh hỏng** (`usable_image=0`) vẫn nằm trong bộ — nhãn có thể
    đúng, ảnh thì không dùng được.
 6. **{s['cot_lech']} ô nằm trên {s['trang_cot_lech']} trang không đủ 9 cột** (`page_cot_lech=1`).
-   Bố cục ván khắc luôn 9 cột, nên thiếu cột nghĩa là phép ghép cột Nôm↔Quốc ngữ trên
+   Bố cục trang luôn 9 cột, nên thiếu cột nghĩa là phép ghép cột Nôm↔Quốc ngữ trên
    trang đó có thể đã trượt một nhịp. Cờ chỉ nêu sự việc, không kết luận nhãn sai.
 
 7. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.

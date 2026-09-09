@@ -1,4 +1,9 @@
 # CHƯƠNG TRÌNH THÍ NGHIỆM — TỐI ƯU PIPELINE KHÔNG CẦN NHÃN NGƯỜI
+> **⚠️ ĐÍNH CHÍNH 2026-09-09 — KHÔNG SỬA THÂN TỆP (đây là nhật ký có ngày).**
+> Ngữ liệu là **chữ chép tay bút lông**, không phải bản khắc. Công thức tăng cường ảnh ở mục 2
+> ("đứt nét, nhòe mực, vân gỗ") mô phỏng SAI vật liệu. Bằng chứng: CNN huấn luyện trên ảnh phông
+> đạt 89,7% trên một phông chưa từng thấy nhưng chỉ **3,72%** trên crop thật — khoảng cách nằm
+> giữa chữ IN và chữ VIẾT. Xem `docs/KE_HOACH_CAP_NHAT_2026-09-09.html`.
 
 **Ngày**: 2026-08-22 · **Bối cảnh**: tạm gác chấm tay; tập trung nghiên cứu–thử nghiệm để đưa mọi
 bước còn lại lên mức tốt nhất đo được. Phần chấm tay sẽ rút từ bộ dữ liệu sau và nạp ngược vào.

@@ -42,10 +42,10 @@ một ô nhãn nào về bản in gốc.
 | mục | vì sao |
 |---|---|
 | Nơi lưu giữ + ký hiệu kho | để người khác **tra lại được** bản gốc |
-| Nhà in / nơi khắc | ván khắc khác nhau cho tự dạng khác nhau |
-| Niên đại | chính tả Nôm biến đổi theo thời kỳ |
-| Khổ sách + DPI | quyết định kích thước ảnh crop, ảnh hưởng khả năng tái lập |
-| Lần in / bản | cùng một tên sách có thể có nhiều bản khắc khác nhau |
+| Người chép + niên đại chép | ĐÂY LÀ BẢN CHÉP TAY BÚT LÔNG. Nét bút mỗi người một khác, nên tự dạng phụ thuộc tay người chép, không cố định như chữ in |
+| Niên đại bản được chép lại | chính tả Nôm biến đổi theo thời kỳ |
+| Chất liệu + khổ giấy + DPI | quyết định kích thước ảnh crop, ảnh hưởng khả năng tái lập |
+| Ai làm bản phiên âm Quốc ngữ | toàn bộ cột `syllable` bắt nguồn từ bản phiên âm in kèm — nó là tác phẩm riêng, có bản quyền riêng |
 
 ## Giấy phép bản quét
 

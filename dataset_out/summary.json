@@ -2,24 +2,50 @@
   "pages": 448,
   "total_pairs": 82780,
   "tiers": {
-    "GOLD": 51889,
-    "REVIEW": 12824,
-    "SILVER": 11137,
-    "SYLLABLE": 6930
+    "GOLD": 53604,
+    "SILVER": 6880,
+    "REVIEW": 11927,
+    "SYLLABLE": 10369
   },
-  "syllable_promoted": 6930,
-  "char_classes": 1608,
-  "usable_char": 63026,
-  "usable_total": 69956,
+  "syllable_promoted": 6494,
+  "syllable_tu_silver": 3875,
+  "rules": {
+    "s1_inter_s2_direct": 47762,
+    "s1_inter_s2_similar_nguoc": 848,
+    "s1_inter_s2_similar_cot_lech": 112,
+    "s3_head_bank_consensus": 194,
+    "below_visual_threshold": 10725,
+    "s1_inter_s3_out_of_dict": 174,
+    "s1_inter_s2_direct_am_sua_dau": 755,
+    "nghia_consensus_tu_silver": 3875,
+    "nghia_consensus": 6494,
+    "s2_inter_s3_corrected": 6512,
+    "s1_inter_s2_similar": 4127,
+    "diverged_column": 1163,
+    "unconfirmed_no_s3": 39
+  },
+  "luat_moi": {
+    "s1_inter_s2_direct_am_sua_dau": 755,
+    "  trong đó từ REVIEW": 716,
+    "  trong đó từ SILVER": 39,
+    "s1_inter_s2_similar_cot_lech": 112,
+    "s1_inter_s2_similar_nguoc": 848,
+    "am_da_quyet": [
+      "người"
+    ]
+  },
+  "char_classes": 1676,
+  "usable_char": 60484,
+  "usable_total": 70853,
   "split_counts": {
-    "GOLD/test": 5671,
-    "GOLD/train": 40866,
-    "GOLD/val": 5352,
-    "SILVER/test": 1228,
-    "SILVER/train": 8773,
-    "SILVER/val": 1136,
-    "SYLLABLE/test": 786,
-    "SYLLABLE/train": 5477,
-    "SYLLABLE/val": 667
+    "GOLD/test": 5868,
+    "GOLD/train": 42232,
+    "GOLD/val": 5504,
+    "SILVER/test": 769,
+    "SILVER/train": 5404,
+    "SILVER/val": 707,
+    "SYLLABLE/test": 1135,
+    "SYLLABLE/train": 8183,
+    "SYLLABLE/val": 1051
   }
 }

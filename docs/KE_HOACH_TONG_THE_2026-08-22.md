@@ -1,4 +1,8 @@
 # KẾ HOẠCH TỔNG THỂ HOÀN THIỆN ĐỀ TÀI — GanNhanOCR
+> **⚠️ ĐÍNH CHÍNH 2026-09-09 — KHÔNG SỬA THÂN TỆP (đây là nhật ký có ngày).**
+> Ngữ liệu được xác nhận là **chữ Nôm CHÉP TAY bút lông, thể hành-thảo** trên giấy hiện đại,
+> KHÔNG phải văn bản khắc gỗ. Vì vậy nhan đề đề xuất ở mục cuối tệp này ("văn bản Hán Nôm
+> khắc gỗ") là SAI và không được dùng. Xem `docs/KE_HOACH_CAP_NHAT_2026-09-09.html`.
 
 **Ngày lập**: 2026-08-22 · **Căn cứ**: đợt kiểm định 199 khẳng định (v2) + tuyên bố của chủ nhiệm
 đề tài rằng **toàn bộ phần "chấm tay" hiện có thực chất do máy chấm**.

@@ -26,9 +26,36 @@ by the banded anchored alignment (anchor_align.py).
 """
 from __future__ import annotations
 
+import unicodedata
 from dataclasses import dataclass
 
 from core.text.text_utils import is_plausible_qn_syllable
+
+# --------------------------------------------------------------------------- #
+# CHỐT CHẶN: ÂM ĐÃ CÓ PHÁN QUYẾT NGƯỜI
+# --------------------------------------------------------------------------- #
+# `pipeline/remediation/glyph_fix.py` chỉ gán được cho ô đang ở tier
+# {REVIEW, SILVER, SILVER_uncalibrated} (hằng CO_THE_GAN của nó) — cố ý, để không
+# lặng lẽ ghi đè một nhãn do luật khác sinh ra. Hệ quả: bất kỳ luật TỰ ĐỘNG nào
+# nâng một ô âm "người" lên GOLD/SYLLABLE ở bước build đều ĐẨY ô đó RA NGOÀI tầm
+# với của QĐ-01, và nhãn 𠊚 (U+2029A) mà người đã phán cho ô ấy biến mất im lặng.
+# Nên: mọi luật tự động thêm mới (L1/L2/L3/L5) PHẢI tránh các âm trong tập này.
+# Đây KHÔNG phải danh sách "âm khó"; nó là danh sách "âm đã có người quyết rồi".
+AM_DA_QUYET = frozenset({"người"})
+
+
+def chuan_am(syllable: str | None) -> str:
+    """Chuẩn hoá âm GIỐNG HỆT glyph_fix.nrm (NFC + strip + lower).
+
+    Nếu hai bên chuẩn hoá khác nhau thì "Người" hay dạng NFD lọt qua chốt chặn, và
+    ô đó rơi ra ngoài tầm với của QĐ-01 mà không ai thấy.
+    """
+    return unicodedata.normalize("NFC", str(syllable or "").strip()).lower()
+
+
+def am_da_quyet(syllable: str | None) -> bool:
+    """True nếu âm này đã có phán quyết người -> luật tự động không được chạm."""
+    return chuan_am(syllable) in AM_DA_QUYET
 
 # Visual thresholds for the TRAINED Nôm embedder (visual_signal.NomEncoder).
 # Measured on test split: same-char cosine ~0.80, different-char ~0.50 -> a
@@ -97,10 +124,35 @@ def decide_label(ocr_char: str | None,
     #     that bridge char (NOT ocr_char). Emit the bridge, only when unique and
     #     the column is anchored/matched (this path is weaker than direct). [#1]
     if gold_ok and ocr_char and similar_dict:
-        bridges = list(dict.fromkeys(s for s in similar_dict.get(ocr_char, []) if s in R))
+        bridges = list(dict.fromkeys(s for s in similar_dict.get(ocr_char, [])
+                                     if s in R and s != ocr_char))
         if len(bridges) == 1:
             return LabelDecision(bridges[0], syllable, "GOLD", "s1_inter_s2_similar", True)
-        # 0 bridges -> not similar; >=2 -> ambiguous -> fall through to REVIEW
+
+        # --- L2 · CẦU NGƯỢC 1 BƯỚC -----------------------------------------
+        # Dict/SinoNom_Similar.csv là top-20 KHÔNG đối xứng: có 33.396 chữ nguồn,
+        # mỗi chữ 20 hàng xóm, nhưng "b nằm trong top-20 của a" KHÔNG kéo theo
+        # "a nằm trong top-20 của b". Khi bộ OCR nhả ra một chữ HIẾM, danh sách
+        # hàng xóm của nó thường không chứa chữ Nôm phổ thông đúng; chiều ngược
+        # lại thì có. Nên: chỉ khi cầu XUÔI cho ĐÚNG 0 cầu mới soi chiều ngược.
+        #   `for s in R` (|R| ~20) chứ không dựng chỉ mục ngược 33k chữ — rẻ hơn
+        #   và không giữ trạng thái toàn cục nào.
+        # KHÔNG bỏ chốt `s != ocr_char`: dù ở đây ocr_char ∉ R (nếu thuộc R thì đã
+        # về GOLD trực tiếp ở khối trên), chốt này chặn luật tự khẳng định chính
+        # chữ OCR đọc ra — đúng cái vòng lập luận đã giết lớp 㝵/"người".
+        if not bridges and not am_da_quyet(syl):
+            # CHỐT CHẶN chỉ gắn ở NHÁNH MỚI. Nhánh cầu XUÔI ở trên là luật đã có từ
+            # trước bộ vá này; gắn chốt lên nó sẽ ĐỔI 326 ô âm "người" đang ở GOLD
+            # (279 trong đó mang nhãn 㝵) — một thay đổi nằm ngoài phạm vi L1/L2/L3/L5
+            # và làm lệch mọi số nền đang được báo cáo. Bộ vá này chỉ chịu trách nhiệm
+            # cho phần nó thêm vào.
+            rev = list(dict.fromkeys(
+                s for s in R
+                if s != ocr_char and ocr_char in (similar_dict.get(s) or ())))
+            if len(rev) == 1:
+                return LabelDecision(rev[0], syllable, "GOLD",
+                                     "s1_inter_s2_similar_nguoc", True)
+        # 0 cầu cả hai chiều -> không giống; >=2 -> nhập nhằng -> rơi xuống REVIEW
 
     # --- SILVER : vision breaks the tie (needs S3) ------------------------
     # The accept/reject gate now lives in visual_signal (calibrated P(match) at a

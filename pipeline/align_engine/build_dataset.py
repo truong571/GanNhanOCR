@@ -40,12 +40,14 @@ REPO = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO))
 
 from pipeline.step0_setup import load_config                       # noqa: E402
-from core.text.dictionary import load_qn_to_nom, load_similarity_dict  # noqa: E402
-from core.text.text_utils import is_plausible_qn_syllable  # noqa: E402
+from core.text.dictionary import (                                    # noqa: E402
+    build_nom_to_qn, load_qn_to_nom, load_similarity_dict)
+from core.text.text_utils import is_plausible_qn_syllable, strip_all  # noqa: E402
 from pipeline.align_engine import align_production as ap_mod          # noqa: E402
 from pipeline.align_engine.align_production import (                    # noqa: E402
     DetectorUnavailableError, align_page, preflight_detector)
-from pipeline.align_engine.consensus import decide_label              # noqa: E402
+from pipeline.align_engine.consensus import (                         # noqa: E402
+    AM_DA_QUYET, am_da_quyet, chuan_am, decide_label)
 from pipeline.align_engine.bbox_fix import tighten_box, carve_neighbor_ink  # noqa: E402
 
 
@@ -66,19 +68,175 @@ SYL_MIN_OCC = 5      # the (char,syllable) must occur >= this many times corpus-
 SYL_MIN_PAGES = 3    # on >= this many distinct pages
 SYL_MIN_PURITY = 0.6  # and be the dominant syllable for that char by this share
 
+# --------------------------------------------------------------------------- #
+# NEO GOLD-TRỰC-TIẾP — bằng chứng cấp ngữ liệu dùng chung cho L1 và L3.
+# --------------------------------------------------------------------------- #
+# Chỉ đếm ô `s1_inter_s2_direct` của PASS 1: đó là luật DUY NHẤT không cần cầu tự
+# dạng, không cần S3, không cần cột khớp — nó là ocr_char NẰM SẴN trong từ điển
+# đọc âm của chính âm ấy. Vì L1/L3 phát ra rule id KHÁC ("..._am_sua_dau",
+# "..._cot_lech") nên ô do chúng sinh KHÔNG BAO GIỜ quay lại làm neo cho chính
+# chúng: không có vòng tự khẳng định, dù chạy lại pipeline bao nhiêu lần.
+GOLD_DIRECT_RULE = "s1_inter_s2_direct"
+ANCHOR_MIN_OCC = 5     # cặp (chữ, âm) phải có >= ngần này ô GOLD-trực-tiếp
+ANCHOR_MIN_PAGES = 3   # trên >= ngần này TRANG khác nhau (chặn 1 trang hỏng tự neo mình)
+L3_MIN_ATTEST = 1      # L3 chỉ đòi cặp (chữ-cầu, âm) ĐÃ TỪNG được chứng thực GOLD-trực-tiếp
+
+# rule id do bộ vá này sinh ra — gom một chỗ để bảng số liệu/báo cáo bắt được hết
+RULE_L1 = "s1_inter_s2_direct_am_sua_dau"
+RULE_L3 = "s1_inter_s2_similar_cot_lech"
+
+
+def gold_direct_anchors(records):
+    """{(ocr_char, âm-thường): (số ô, số trang)} trên riêng ô GOLD-TRỰC-TIẾP."""
+    cnt = Counter()
+    pages_of = defaultdict(set)
+    for r in records:
+        if r["tier"] == "GOLD" and r["rule"] == GOLD_DIRECT_RULE and r["ocr_char"]:
+            k = (r["ocr_char"], str(r["syllable"]).lower())
+            cnt[k] += 1
+            pages_of[k].add((r["book"], r["page"]))
+    return {k: (n, len(pages_of[k])) for k, n in cnt.items()}
+
+
+def _du_neo(anchors, key, min_occ=ANCHOR_MIN_OCC, min_pages=ANCHOR_MIN_PAGES):
+    n, npg = anchors.get(key, (0, 0))
+    return n >= min_occ and npg >= min_pages
+
+
+def apply_am_sua_dau(records, qn_to_nom, nom_to_qn, anchors,
+                     min_occ=ANCHOR_MIN_OCC, min_pages=ANCHOR_MIN_PAGES):
+    """L1 · SỬA DẤU CỦA ÂM khi chính ocr_char đã có neo GOLD ở âm cùng khung xương.
+
+    VietOCR rụng dấu ("den" cho "đến", "ay" cho "ấy") hoặc lệch thanh. Khi âm sai,
+    R = qn_to_nom[âm] sai theo, nên `s1_inter_s2_direct` không thể khớp và ô rơi
+    xuống REVIEW/SILVER dù chữ Nôm OCR đọc ra ĐÚNG.
+
+    Luật: giữ nguyên ocr_char (S1), SỬA ÂM (S2) — ngược hẳn với các luật cầu tự
+    dạng. Chỉ nhận khi:
+      · ô chưa phải GOLD, có ocr_char, và ocr_char ∉ R(âm hiện tại);
+      · âm ứng viên là một ĐỌC ÂM CÓ THẬT của chính ocr_char (nom_to_qn), cùng
+        KHUNG XƯƠNG (strip_all: bỏ mọi dấu phụ + thanh, đ→d) với âm hiện tại;
+      · cặp (ocr_char, âm ứng viên) đã có >= min_occ ô GOLD-trực-tiếp trên
+        >= min_pages TRANG — tức chính ngữ liệu này đã chứng thực cách đọc ấy;
+      · và còn ĐÚNG MỘT ứng viên. Nhiều hơn một -> ĐỂ NGUYÊN, không đoán.
+
+    `strip_all` gộp cả dấu tạo chữ nên "vua"/"vừa" cùng khung xương — chính vì thế
+    ràng buộc neo GOLD (>=5 ô/>=3 trang) là bắt buộc, nó mới là phần mang bằng chứng.
+    """
+    n_moi = n_nang = 0
+    for r in records:
+        if r["tier"] == "GOLD":
+            continue
+        ch = r["ocr_char"]
+        if not ch:
+            continue
+        syl = str(r["syllable"]).lower()
+        if am_da_quyet(syl):
+            continue            # CHỐT CHẶN: nhường quyền quyết cho glyph_fix (QĐ-01)
+        if ch in qn_to_nom.get(syl, []):
+            continue            # đã là GOLD-trực-tiếp, không việc gì tới đây
+        khung = strip_all(syl)
+        cands = []
+        for alt in nom_to_qn.get(ch, ()):
+            alt = str(alt).lower()
+            if alt == syl or strip_all(alt) != khung:
+                continue
+            if am_da_quyet(alt) or not is_plausible_qn_syllable(alt):
+                continue
+            if not _du_neo(anchors, (ch, alt), min_occ, min_pages):
+                continue
+            if alt not in cands:
+                cands.append(alt)
+        if len(cands) != 1:
+            continue
+        if r["tier"] == "REVIEW":
+            n_moi += 1
+        else:
+            n_nang += 1          # SILVER (nhãn do S3 quyết) -> GOLD (nhãn do từ điển quyết)
+        r["syllable"] = cands[0]
+        r["label"] = ch
+        r["tier"] = "GOLD"
+        r["rule"] = RULE_L1
+    return n_moi, n_nang
+
+
+def apply_cot_lech_cau_xuoi(records, qn_to_nom, similar_dict, anchors,
+                            min_attest=L3_MIN_ATTEST):
+    """L3 · CỘT LỆCH + ĐÚNG 1 CẦU XUÔI + CẶP ĐÃ CHỨNG THỰC -> GOLD.
+
+    `decide_label` chặn cầu tự dạng khi cột lệch (gold_ok=False) vì khi ấy không
+    có gì bảo đảm ô này ứng với âm này. Nhưng cầu tự dạng DUY NHẤT cộng với việc
+    cặp (chữ-cầu, âm) ĐÃ được chính ngữ liệu chứng thực ở tier GOLD-trực-tiếp là
+    hai điều kiện độc lập nhau: một đến từ hình chữ (Dict/SinoNom_Similar), một
+    đến từ thống kê ghép đã xác nhận. Hai cái cùng trỏ một chỗ thì đủ.
+
+    Chạy SAU L1 và chỉ trên ô còn `diverged_column` — ô L1 đã cứu thì không đụng lại.
+    """
+    n = 0
+    for r in records:
+        if r["tier"] != "REVIEW" or r["rule"] != "diverged_column":
+            continue
+        ch = r["ocr_char"]
+        if not ch:
+            continue
+        syl = str(r["syllable"]).lower()
+        if am_da_quyet(syl) or not is_plausible_qn_syllable(syl):
+            continue            # CHỐT CHẶN + không cho âm rác neo nhãn
+        R = qn_to_nom.get(syl, [])
+        if not R or ch in R:
+            continue
+        cau = list(dict.fromkeys(s for s in similar_dict.get(ch, []) if s in R and s != ch))
+        if len(cau) != 1:
+            continue
+        if anchors.get((cau[0], syl), (0, 0))[0] < min_attest:
+            continue            # cặp chưa từng được chứng thực -> không nhận
+        r["label"] = cau[0]
+        r["tier"] = "GOLD"
+        r["rule"] = RULE_L3
+        n += 1
+    return n
+
+
+def be_day_du(r, unconf) -> bool:
+    """L5 · Ô có nằm trong BỂ ĐẦY ĐỦ của cổng âm tiết không?
+
+    Bể = MỌI ô mà `ocr_char ∉ R(âm)` — tức mọi ô mà S1∩S2 KHÔNG tự khớp. Tập đó
+    chính là REVIEW ∪ SILVER: một ô có ocr_char ∈ R đã về GOLD-trực-tiếp ở nhánh
+    đầu `decide_label`, nên không ô GOLD nào thuộc bể.
+
+    Vì sao PHẢI gộp SILVER vào: bể cũ chỉ lấy REVIEW, mà SILVER chính là phần S3
+    ĐÃ NHẶT RA KHỎI REVIEW. Nghĩa là mẫu số của phép tính độ thuần bị cắt theo đúng
+    tiêu chí của một tín hiệu mà bước `s3_unwind` đã gỡ quyền quyết (CI95 của AUC
+    bắt lỗi = [0,459; 0,672], chứa 0,5). Đo được: bể cũ cho chữ 𭔿 độ thuần 0,79,
+    bể đầy đủ cho 0,502 — con số thứ hai mới là độ thuần THẬT của chữ ấy.
+    """
+    if r["tier"] == "SILVER":
+        return True
+    return r["tier"] == "REVIEW" and r["rule"] in unconf
+
 
 def syllable_gate(records, unconf, min_occ=SYL_MIN_OCC, min_pages=SYL_MIN_PAGES,
-                  min_purity=SYL_MIN_PURITY):
+                  min_purity=SYL_MIN_PURITY, bo_qua_am=AM_DA_QUYET, gom_silver=True):
     """(ocr_char, LOWERCASED syllable) pairs passing the cross-page consistency gate.
 
     Case-insensitive on the syllable so 'Nhị' and 'nhị' merge into one class — the
     cased keying used to split them, diluting the occurrence/purity thresholds and
     dropping ~1,131 labels. Pure + deterministic; unit-tested in phase1_engine_selftest.
+
+    L5 · BỂ ĐẦY ĐỦ: `unconf` do lời gọi truyền vào, và main() nay truyền CẢ
+    "diverged_column"; `gom_silver=True` gộp thêm tier SILVER — xem `be_day_du`.
+    `gom_silver=False` khôi phục đúng hành vi cũ (dùng cho kiểm thử hồi quy).
+
+    `bo_qua_am` — âm đã có phán quyết người: VẪN ĐẾM vào mẫu số (nếu loại khỏi mẫu số
+    thì một chữ như 㝵 mất 1.183 ô "người" trong denominator và âm phổ biến THỨ HAI
+    của nó bỗng đủ độ thuần, tức chốt chặn lại đẻ ra đúng cái nó định chặn), nhưng
+    KHÔNG BAO GIỜ được trả ra làm cặp hợp lệ.
     """
     cnt = defaultdict(Counter)
     pages_of = defaultdict(lambda: defaultdict(set))
     for r in records:
-        if r["tier"] == "REVIEW" and r["rule"] in unconf and r["ocr_char"]:
+        if r["ocr_char"] and (be_day_du(r, unconf) if gom_silver else
+                              (r["tier"] == "REVIEW" and r["rule"] in unconf)):
             syl = str(r["syllable"]).lower()
             if not is_plausible_qn_syllable(syl):
                 continue      # garbage ('0'/'2017') must never become a SYLLABLE target
@@ -87,6 +245,8 @@ def syllable_gate(records, unconf, min_occ=SYL_MIN_OCC, min_pages=SYL_MIN_PAGES,
     syl_ok = set()
     for ch, c in cnt.items():
         syl, n = c.most_common(1)[0]
+        if chuan_am(syl) in (bo_qua_am or ()):
+            continue          # CHỐT CHẶN: nhường quyền quyết cho glyph_fix (QĐ-01)
         if (n >= min_occ and len(pages_of[ch][syl]) >= min_pages
                 and n / sum(c.values()) >= min_purity):
             syl_ok.add((ch, syl))
@@ -193,6 +353,9 @@ def main():
           f"-> hộp cao {1 + 2 * _ov:.2f} × bước lặp", flush=True)
     qn_to_nom = load_qn_to_nom(str(REPO / paths["qn_to_nom_dict"]))
     qn_dict_set = set(qn_to_nom.keys())
+    # từ điển NGƯỢC {chữ Nôm: [âm QN từ điển công nhận]} — L1 cần nó để biết một
+    # ocr_char còn được đọc là những âm nào khác cùng khung xương.
+    nom_to_qn = build_nom_to_qn(qn_to_nom)
     similar = load_similarity_dict(str(REPO / paths["similar_dict"]))
     data_root = REPO / paths["data_dir"]
 
@@ -283,24 +446,62 @@ def main():
                     "seg_backend": rec.get("seg_backend", ""),
                 })
 
+    # ---------- L1 + L3: neo bằng bằng chứng CẤP NGỮ LIỆU (TRƯỚC khối PROMOTE) ----
+    # Đặt ở đây, không đặt trong decide_label, vì cả hai luật cần thống kê TOÀN NGỮ
+    # LIỆU (cặp nào đã được chứng thực ở GOLD-trực-tiếp) — thứ chỉ có sau PASS 1.
+    # Đặt TRƯỚC PROMOTE vì một ô đã được nâng lên nhãn CHỮ thì không được đồng thời
+    # đi làm nhãn ÂM TIẾT; nếu chạy sau, cùng một ô sẽ vào hai tier.
+    anchors = gold_direct_anchors(records)
+    n_l1_moi, n_l1_nang = apply_am_sua_dau(records, qn_to_nom, nom_to_qn, anchors)
+    n_l3 = apply_cot_lech_cau_xuoi(records, qn_to_nom, similar, anchors)
+    print(f"  [L1 sửa dấu âm] {n_l1_moi + n_l1_nang:,} ô -> GOLD/{RULE_L1} "
+          f"({n_l1_moi:,} từ REVIEW, {n_l1_nang:,} từ SILVER)", flush=True)
+    print(f"  [L3 cột lệch]   {n_l3:,} ô -> GOLD/{RULE_L3}", flush=True)
+    print(f"  [chốt chặn]     âm nhường cho phán quyết người: "
+          f"{sorted(AM_DA_QUYET)} (L1/L2/L3/L5 không chạm)", flush=True)
+
     # ---------- PROMOTE: cross-page-consistent unconfirmed -> SYLLABLE [#6] ----------
     # The unconfirmed pool = REVIEW rows with an ocr_char that S1∩S2 didn't confirm.
     # Without S3 the rule is 'unconfirmed_no_s3'; with S3 ON the S3-failed ones are
     # 'below_visual_threshold'. Both are eligible for the syllable tier (SILVER
     # already took the S3-confirmed ones), so SYLLABLE coexists with SILVER.
-    UNCONF = {"unconfirmed_no_s3", "below_visual_threshold"}
+    #
+    # L5 · BỂ ĐẦY ĐỦ. "diverged_column" nằm trong bể từ nay. Ba rule dưới đây là
+    # TOÀN BỘ lý do một ô có thể ở REVIEW sau PASS 1, nên tập này = "mọi ô REVIEW
+    # còn ocr_char" = mọi ô có ocr_char ∉ R(âm). Bể cũ thiếu "diverged_column", tức
+    # độ thuần của mỗi chữ được tính trên một MẪU BỊ CẮT theo đúng tiêu chí S3 —
+    # một tín hiệu mà bước s3_unwind đã gỡ quyền quyết (CI của AUC bắt lỗi chứa 0,5).
+    # HỆ QUẢ ĐÚNG, KHÔNG PHẢI HỒI QUY: một số cặp (chữ, âm) đang ở SYLLABLE sẽ RỚT,
+    # vì trên bể đầy đủ độ thuần THẬT của chúng dưới ngưỡng 0,6. Chúng chưa bao giờ
+    # đạt ngưỡng; chỉ là mẫu số bị giấu mất một phần.
+    UNCONF = {"unconfirmed_no_s3", "below_visual_threshold", "diverged_column"}
     # Case-insensitive gate (fixes the case-split; +~1,131 labels). The promoted row
     # also stores the canonical lowercase syllable so its target class is not fragmented
     # into cased variants downstream.
     syl_ok = syllable_gate(records, UNCONF)
-    n_promoted = 0
+    n_promoted = 0        # từ REVIEW (nhãn mới hoàn toàn)
+    n_tu_silver = 0       # từ SILVER (đổi nhãn CHỮ do S3 quyết -> nhãn ÂM có bằng chứng)
     for r in records:
         syl_l = str(r["syllable"]).lower()
-        if (r["tier"] == "REVIEW" and r["rule"] in UNCONF
-                and (r["ocr_char"], syl_l) in syl_ok):
+        if am_da_quyet(syl_l):
+            continue      # CHỐT CHẶN: ô âm "người" phải ở lại REVIEW cho glyph_fix (QĐ-01)
+        if (r["ocr_char"], syl_l) not in syl_ok:
+            continue
+        if r["tier"] == "REVIEW" and r["rule"] in UNCONF:
             r["tier"], r["rule"] = "SYLLABLE", "nghia_consensus"
             r["syllable"] = syl_l
             n_promoted += 1
+        elif r["tier"] == "SILVER":
+            # Ô này đang mang một nhãn CHỮ do S3 quyết. `s3_unwind` sẽ đổi tên tier
+            # thành SILVER_uncalibrated và `export_final_dataset` LOẠI hẳn khỏi bộ
+            # giao nộp — nên nhãn chữ ấy hiện không đi đâu cả. Cổng âm tiết thì có
+            # bằng chứng ĐỘC LẬP với S3 (>=5 ô, >=3 trang, độ thuần >=0,6 trên bể
+            # đầy đủ). Đổi một khẳng định KHÔNG dùng được lấy một khẳng định YẾU HƠN
+            # NHƯNG DÙNG ĐƯỢC. Nhãn chữ bị xoá (giao ước của tier SYLLABLE), nên
+            # xuất xứ nằm ở rule id riêng để đếm lại được, không lẫn vào 'nghia_consensus'.
+            r["tier"], r["rule"], r["label"] = "SYLLABLE", "nghia_consensus_tu_silver", ""
+            r["syllable"] = syl_l
+            n_tu_silver += 1
 
     # label_level + unicode
     for r in records:
@@ -429,6 +630,14 @@ def main():
     summary = {
         "pages": pages_done, "total_pairs": len(records),
         "tiers": dict(tiers), "syllable_promoted": n_promoted,
+        "syllable_tu_silver": n_tu_silver,
+        # rã theo luật để bảng số liệu không phải suy ngược từ tier
+        "rules": dict(Counter(r["rule"] for r in records)),
+        "luat_moi": {RULE_L1: n_l1_moi + n_l1_nang, "  trong đó từ REVIEW": n_l1_moi,
+                     "  trong đó từ SILVER": n_l1_nang, RULE_L3: n_l3,
+                     "s1_inter_s2_similar_nguoc":
+                         sum(1 for r in records if r["rule"] == "s1_inter_s2_similar_nguoc"),
+                     "am_da_quyet": sorted(AM_DA_QUYET)},
         "char_classes": char_classes,
         "usable_char": tiers["GOLD"] + tiers["SILVER"],
         "usable_total": tiers["GOLD"] + tiers["SILVER"] + tiers["SYLLABLE"],
@@ -444,6 +653,7 @@ def main():
     for t in ("GOLD", "SILVER", "SYLLABLE", "REVIEW"):
         print(f"   {t:9s}: {tiers.get(t, 0)}")
     print(f" SYLLABLE promoted from REVIEW: {n_promoted}")
+    print(f" SYLLABLE chuyển từ SILVER (L5): {n_tu_silver}")
     print(f" USABLE char-level (GOLD+SILVER): {summary['usable_char']}  | "
           f"+syllable: {summary['usable_total']}")
     print(f" manifest: {out}/labels.csv  ({len(fields)} cột)")

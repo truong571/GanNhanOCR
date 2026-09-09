@@ -458,6 +458,28 @@ step_glyph() {
 # không cộng dồn qua các lần chạy trước. dataset_out/ KHÔNG bị đụng — vẫn còn
 # labels_remediated.csv đầy đủ mọi tier (kể cả REVIEW/QUARANTINE) để tra cứu sau.
 step_export() {
+  # --- CỔNG CHẶN QĐ: ĐẾM TRƯỚC KHI XOÁ ----------------------------------------
+  # export_final_dataset.py:47-48 chạy shutil.rmtree(thư mục đích) RỒI mới ghi lại.
+  # Nếu bước 7 bị bỏ qua (thiếu config, đổi tên tệp, hàm không được gọi như trước
+  # 2026-09-09) thì lệnh xoá đó nuốt mất 2.014 ô phán quyết NGƯỜI và không hồi được
+  # từ chính lần chạy này. Đếm TRƯỚC KHI XOÁ, không đếm sau.
+  if [[ -f "$GLYPH_DECISIONS" ]]; then
+    # GÁN RỒI MỚI CHỮA MÃ THOÁT — không dùng `|| echo 0`: grep -c không khớp gì vẫn IN "0"
+    # rồi thoát mã 1, nên `|| echo 0` sẽ in THÊM một "0" nữa và biến giá trị thành "0 0".
+    local _ndc _nqd
+    _ndc=$("$PY" -c "
+import yaml
+d = yaml.safe_load(open('$GLYPH_DECISIONS')) or {}
+print(len(d.get('quyet_dinh', []) or []))" 2>/dev/null) || _ndc=0
+    _nqd=$(grep -c 'quyet_dinh_nguoi:' "$LABELS_FINAL" 2>/dev/null) || _nqd=0
+    if [[ "$_ndc" -gt 0 && "$_nqd" -eq 0 ]]; then
+      die "$GLYPH_DECISIONS khai $_ndc quyết định NGƯỜI nhưng $LABELS_FINAL có 0 ô mang
+      rule 'quyet_dinh_nguoi:'. Bước 7 đã không chạy hoặc chạy hỏng.
+      DỪNG TRƯỚC KHI XOÁ — export sẽ rmtree thư mục đích và bộ hiện có sẽ mất."
+    fi
+    log "  ${GRN}cổng QĐ: $_nqd ô phán quyết người trong $(basename "$LABELS_FINAL")${RST}"
+  fi
+
   # --- CÓ PHÁN QUYẾT NGƯỜI CHƯA? ----------------------------------------------
   # Hai đường nạp phán quyết, dò cả hai:
   #   (A) re-dataset/verdicts.csv  — ĐỘI NGOÀI chấm trên chính bộ đem chấm. Đường CHÍNH.
@@ -639,6 +661,15 @@ step_confusion
 checkpoint confusion "$LABELS_FINAL"
 step_s3unwind
 checkpoint s3unwind "$LABELS_FINAL"
+# BƯỚC 7 PHẢI NẰM Ở ĐÂY, KHÔNG PHẢI CHỖ KHÁC. glyph_fix áp phán quyết NGƯỜI, nên nó
+# phải chạy SAU bước máy cuối cùng đụng tier (s3_unwind) và TRƯỚC export. Đã chứng
+# minh bằng phép chạy lại chứ không bằng chú thích: thứ tự này tái lập ĐÚNG BYTE cả
+# dataset_out/labels_final.csv (550a9726…) lẫn re-dataset/labels.csv (c346a032…);
+# đảo lại (glyph trước s3_unwind) cho tệp KHÁC — lệch 3 ô ở cột tier_goc và đổi cả
+# thứ tự cột. Trước 2026-09-09 hàm này được ĐỊNH NGHĨA ở dòng 446 nhưng KHÔNG AI GỌI,
+# nên mỗi lần chạy script lại sinh bộ 57.357 dòng, thiếu đúng 2.014 ô phán quyết người.
+step_glyph
+checkpoint glyph "$LABELS_FINAL"
 step_export
 checkpoint export "${FINAL_OUT:-$FINAL_DIR}/labels.csv"
 evidence

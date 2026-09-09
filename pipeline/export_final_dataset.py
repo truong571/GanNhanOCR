@@ -44,9 +44,22 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
               f"{labels_path} — không ghi gì vào {out_root}.", file=sys.stderr)
         return 1
 
+    # XOÁ SẠCH RỒI GHI LẠI — nhưng CHỈ xoá thứ do chính bước này sinh ra.
+    # Sự cố thật 2026-09-09: re-dataset/check/ (bộ kiểm độc lập do người dùng viết, CÓ
+    # trong git) bị rmtree nuốt mất khi chạy lại export. Thư mục đích không phải của
+    # riêng bước xuất: người ta đặt thêm việc của họ vào đó, và một lệnh dọn dẹp không
+    # có quyền xoá thứ mình không tạo ra.
+    SINH_BOI_BUOC_NAY = {"gold", "silver", "syllable", "review"}
     if out_root.exists():
-        shutil.rmtree(out_root)
-    out_root.mkdir(parents=True)
+        for m in out_root.iterdir():
+            if m.is_dir():
+                if m.name in SINH_BOI_BUOC_NAY:
+                    shutil.rmtree(m)
+                else:
+                    print(f"[export] GIỮ LẠI thư mục không do bước này sinh: {m.name}/")
+            elif m.suffix in {".csv", ".md", ".xlsx"}:
+                m.unlink()          # labels.csv + tài liệu đi kèm: sinh lại ngay dưới đây
+    out_root.mkdir(parents=True, exist_ok=True)
 
     n_copied = 0
     n_missing = 0

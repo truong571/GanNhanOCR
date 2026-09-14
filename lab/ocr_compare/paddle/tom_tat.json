@@ -1,0 +1,1274 @@
+{
+ "moi_truong": {
+  "thiet_bi": "Apple M4 16GB, CPU (không MPS)",
+  "python": "3.10.20 (Homebrew) trong /tmp/venv_paddle",
+  "paddlepaddle": "3.3.1",
+  "paddleocr": "3.7.0",
+  "paddlex": "3.7.2",
+  "models": [
+   "PP-OCRv6_medium_rec (76MB)",
+   "PP-OCRv6_medium_det",
+   "PP-OCRv5_server_rec (84MB)",
+   "PP-OCRv5_server_det",
+   "PaddleOCR-VL-1.6-0.9B (1.8GB)"
+  ]
+ },
+ "charset": {
+  "charset": 18708,
+  "cjk": 15906,
+  "by_block": {
+   "URO": 15565,
+   "ExtA": 137,
+   "ExtC-F": 160,
+   "ExtB": 44
+  },
+  "nom_vocab_covered": 14758,
+  "nom_vocab_pct": 0.3556,
+  "nom_vocab_covered_by_block": {
+   "URO": 14648,
+   "ExtA": 80,
+   "ExtB": 17,
+   "other": 2,
+   "ExtC-F": 11
+  },
+  "corpus_ocr_char_token_coverage": 0.9282,
+  "corpus_distinct_ocr_char_coverage": 0.8679,
+  "has_㝵": false,
+  "has_𠊚": false,
+  "has_𠊛": false,
+  "M1_R_reachable": 1.0,
+  "M1_ocr_char_in_charset": 0.955,
+  "M1_label_in_charset": 0.955,
+  "M2_R_reachable": 0.9967,
+  "M2_ocr_char_in_charset": 0.8767,
+  "M2_label_in_charset": 0.8356,
+  "M3_R_reachable": 1.0,
+  "M3_ocr_char_in_charset": 0.0,
+  "M3_label_in_charset": 0.0
+ },
+ "M1": {
+  "M1_PP-OCRv5_server_rec_pad": {
+   "in_R": 0.2783333333333333,
+   "eq_kinh": 0.25333333333333335,
+   "one_cjk": 0.7366666666666667,
+   "sec": 0.11297566666666668
+  },
+  "M1_PP-OCRv5_server_rec_raw": {
+   "in_R": 0.37166666666666665,
+   "eq_kinh": 0.34,
+   "one_cjk": 0.77,
+   "sec": 0.10307200000000001
+  },
+  "M1_PP-OCRv6_medium_rec_pad": {
+   "in_R": 0.2816666666666667,
+   "eq_kinh": 0.25333333333333335,
+   "one_cjk": 0.595,
+   "sec": 0.07041833333333335
+  },
+  "M1_PP-OCRv6_medium_rec_padup3": {
+   "in_R": 0.2783333333333333,
+   "eq_kinh": 0.24833333333333332,
+   "one_cjk": 0.5966666666666667,
+   "sec": 0.08429733333333334
+  },
+  "M1_PP-OCRv6_medium_rec_raw": {
+   "in_R": 0.3433333333333333,
+   "eq_kinh": 0.315,
+   "one_cjk": 0.695,
+   "sec": 0.06746766666666666
+  },
+  "M1_PP-OCRv6_medium_rec_up3": {
+   "in_R": 0.345,
+   "eq_kinh": 0.31666666666666665,
+   "one_cjk": 0.6916666666666667,
+   "sec": 0.07834966666666666
+  },
+  "M1_PaddleOCR-VL-1.6": {
+   "in_R": 0.315,
+   "eq_kinh": 0.28833333333333333,
+   "one_cjk": 0.6166666666666667,
+   "sec": 2.8221666666666665
+  },
+  "M1_col-PP-OCRv5_server_rec": {
+   "in_R": 0.31333333333333335,
+   "eq_kinh": 0.285,
+   "one_cjk": 0.6183333333333333,
+   "sec": 0.26469149999999997
+  },
+  "M1_col-PP-OCRv5_server_rec+seq": {
+   "in_R": 0.4066666666666667,
+   "eq_kinh": 0.38666666666666666,
+   "one_cjk": 0.6266666666666667,
+   "sec": 0.26469149999999997
+  },
+  "M1_col-PP-OCRv6_medium_rec": {
+   "in_R": 0.5233333333333333,
+   "eq_kinh": 0.48,
+   "one_cjk": 0.9066666666666666,
+   "sec": 0.16739816666666665
+  },
+  "M1_col-PP-OCRv6_medium_rec+seq": {
+   "in_R": 0.71,
+   "eq_kinh": 0.6483333333333333,
+   "one_cjk": 0.97,
+   "sec": 0.16739816666666665
+  },
+  "M1_pipe-PP-OCRv6_padup3": {
+   "in_R": 0.2916666666666667,
+   "eq_kinh": 0.27166666666666667,
+   "one_cjk": 0.6233333333333333,
+   "sec": 1.0799155
+  }
+ },
+ "M2": {
+  "M2_PP-OCRv5_server_rec_pad": {
+   "rescue": "29/600",
+   "rate": 0.04833333333333333,
+   "lift_freq": 7.594879842067298,
+   "lift_uniform": 83.48186169105917,
+   "SILVER": 0.0639269406392694,
+   "SYLLABLE": 0.03937007874015748,
+   "sec": 0.12766666666666665
+  },
+  "M2_PP-OCRv5_server_rec_raw": {
+   "rescue": "40/600",
+   "rate": 0.06666666666666667,
+   "lift_freq": 10.475696333885928,
+   "lift_uniform": 115.14739543594368,
+   "SILVER": 0.0776255707762557,
+   "SYLLABLE": 0.06036745406824147,
+   "sec": 0.10508866666666668
+  },
+  "M2_PP-OCRv6_medium_rec_pad": {
+   "rescue": "21/600",
+   "rate": 0.035,
+   "lift_freq": 5.499740575290113,
+   "lift_uniform": 60.45238260387044,
+   "SILVER": 0.0593607305936073,
+   "SYLLABLE": 0.02099737532808399,
+   "sec": 0.07132316666666667
+  },
+  "M2_PP-OCRv6_medium_rec_raw": {
+   "rescue": "39/600",
+   "rate": 0.065,
+   "lift_freq": 10.21380392553878,
+   "lift_uniform": 112.26871055004509,
+   "SILVER": 0.0867579908675799,
+   "SYLLABLE": 0.05249343832020997,
+   "sec": 0.06809599999999999
+  },
+  "M2_PP-OCRv6_medium_rec_up3": {
+   "rescue": "43/600",
+   "rate": 0.07166666666666667,
+   "lift_freq": 11.261373558927374,
+   "lift_uniform": 123.78345009363946,
+   "SILVER": 0.1004566210045662,
+   "SYLLABLE": 0.05511811023622047,
+   "sec": 0.07878283333333333
+  },
+  "M2_PaddleOCR-VL-1.6": {
+   "rescue": "33/600",
+   "rate": 0.055,
+   "lift_freq": 8.64244947545589,
+   "lift_uniform": 94.99660123465354,
+   "SILVER": 0.0730593607305936,
+   "SYLLABLE": 0.04461942257217848,
+   "sec": 2.830666666666666
+  },
+  "M2_col-PP-OCRv5_server_rec": {
+   "rescue": "33/600",
+   "rate": 0.055,
+   "lift_freq": 8.64244947545589,
+   "lift_uniform": 94.99660123465354,
+   "SILVER": 0.0547945205479452,
+   "SYLLABLE": 0.05511811023622047,
+   "sec": 0.2270373333333333
+  },
+  "M2_col-PP-OCRv5_server_rec+seq": {
+   "rescue": "19/600",
+   "rate": 0.03166666666666667,
+   "lift_freq": 4.975955758595816,
+   "lift_uniform": 54.69501283207325,
+   "SILVER": 0.0273972602739726,
+   "SYLLABLE": 0.03412073490813648,
+   "sec": 0.2270373333333333
+  },
+  "M2_col-PP-OCRv6_medium_rec": {
+   "rescue": "54/600",
+   "rate": 0.09,
+   "lift_freq": 14.142190050746002,
+   "lift_uniform": 155.44898383852396,
+   "SILVER": 0.1415525114155251,
+   "SYLLABLE": 0.06036745406824147,
+   "sec": 0.194924
+  },
+  "M2_col-PP-OCRv6_medium_rec+seq": {
+   "rescue": "61/600",
+   "rate": 0.10166666666666667,
+   "lift_freq": 15.975436909176041,
+   "lift_uniform": 175.5997780398141,
+   "SILVER": 0.1415525114155251,
+   "SYLLABLE": 0.07874015748031496,
+   "sec": 0.194924
+  },
+  "M2_pipe-PP-OCRv6_padup3": {
+   "rescue": "31/600",
+   "rate": 0.051666666666666666,
+   "lift_freq": 8.118664658761595,
+   "lift_uniform": 89.23923146285635,
+   "SILVER": 0.0593607305936073,
+   "SYLLABLE": 0.047244094488188976,
+   "sec": 1.0311423333333334
+  }
+ },
+ "M3": {
+  "M3_PP-OCRv5_server_rec_pad": {
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "in_R_nguoi": 0.0,
+   "top": [
+    [
+     "<rỗng>",
+     66,
+     0.22
+    ],
+    [
+     "等",
+     52,
+     0.1733
+    ],
+    [
+     "导",
+     23,
+     0.0767
+    ],
+    [
+     "寻",
+     20,
+     0.0667
+    ],
+    [
+     "景",
+     13,
+     0.0433
+    ],
+    [
+     "哥",
+     7,
+     0.0233
+    ],
+    [
+     "学",
+     6,
+     0.02
+    ],
+    [
+     "享",
+     5,
+     0.0167
+    ]
+   ]
+  },
+  "M3_PP-OCRv5_server_rec_raw": {
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "in_R_nguoi": 0.0,
+   "top": [
+    [
+     "<rỗng>",
+     51,
+     0.17
+    ],
+    [
+     "寻",
+     45,
+     0.15
+    ],
+    [
+     "等",
+     36,
+     0.12
+    ],
+    [
+     "导",
+     29,
+     0.0967
+    ],
+    [
+     "享",
+     13,
+     0.0433
+    ],
+    [
+     "尊",
+     8,
+     0.0267
+    ],
+    [
+     "哥",
+     7,
+     0.0233
+    ],
+    [
+     "号",
+     7,
+     0.0233
+    ]
+   ]
+  },
+  "M3_PP-OCRv6_medium_rec_pad": {
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "in_R_nguoi": 0.0,
+   "top": [
+    [
+     "导",
+     63,
+     0.21
+    ],
+    [
+     "等",
+     25,
+     0.0833
+    ],
+    [
+     "<rỗng>",
+     21,
+     0.07
+    ],
+    [
+     "寻",
+     15,
+     0.05
+    ],
+    [
+     "哥",
+     10,
+     0.0333
+    ],
+    [
+     "旱",
+     7,
+     0.0233
+    ],
+    [
+     "景",
+     6,
+     0.02
+    ],
+    [
+     "尊",
+     5,
+     0.0167
+    ]
+   ]
+  },
+  "M3_PP-OCRv6_medium_rec_raw": {
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "in_R_nguoi": 0.0,
+   "top": [
+    [
+     "寻",
+     45,
+     0.15
+    ],
+    [
+     "导",
+     38,
+     0.1267
+    ],
+    [
+     "<rỗng>",
+     30,
+     0.1
+    ],
+    [
+     "等",
+     26,
+     0.0867
+    ],
+    [
+     "是",
+     21,
+     0.07
+    ],
+    [
+     "守",
+     9,
+     0.03
+    ],
+    [
+     "子",
+     7,
+     0.0233
+    ],
+    [
+     "得",
+     6,
+     0.02
+    ]
+   ]
+  },
+  "M3_PaddleOCR-VL-1.6": {
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "in_R_nguoi": 0.0,
+   "top": [
+    [
+     "等",
+     71,
+     0.2367
+    ],
+    [
+     "导",
+     45,
+     0.15
+    ],
+    [
+     "尊",
+     20,
+     0.0667
+    ],
+    [
+     "旱",
+     18,
+     0.06
+    ],
+    [
+     "寻",
+     9,
+     0.03
+    ],
+    [
+     "寺",
+     8,
+     0.0267
+    ],
+    [
+     "早",
+     7,
+     0.0233
+    ],
+    [
+     "<rỗng>",
+     6,
+     0.02
+    ]
+   ]
+  },
+  "M3_col-PP-OCRv6_medium_rec": {
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "in_R_nguoi": 0.006666666666666667,
+   "top": [
+    [
+     "尋",
+     97,
+     0.3233
+    ],
+    [
+     "等",
+     46,
+     0.1533
+    ],
+    [
+     "是",
+     31,
+     0.1033
+    ],
+    [
+     "得",
+     23,
+     0.0767
+    ],
+    [
+     "<rỗng>",
+     18,
+     0.06
+    ],
+    [
+     "景",
+     12,
+     0.04
+    ],
+    [
+     "畢",
+     8,
+     0.0267
+    ],
+    [
+     "旱",
+     4,
+     0.0133
+    ]
+   ]
+  },
+  "M3_col-PP-OCRv6_medium_rec+seq": {
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "in_R_nguoi": 0.0,
+   "top": [
+    [
+     "尋",
+     121,
+     0.4033
+    ],
+    [
+     "等",
+     53,
+     0.1767
+    ],
+    [
+     "是",
+     40,
+     0.1333
+    ],
+    [
+     "得",
+     27,
+     0.09
+    ],
+    [
+     "景",
+     17,
+     0.0567
+    ],
+    [
+     "畢",
+     8,
+     0.0267
+    ],
+    [
+     "旱",
+     6,
+     0.02
+    ],
+    [
+     "<rỗng>",
+     5,
+     0.0167
+    ]
+   ]
+  }
+ },
+ "M4": {
+  "PP-OCRv6": {
+   "pipe": {
+    "n_cols": 20,
+    "n_read_mean": 20.85,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.9911972990777338,
+    "cols_with_any_cjk": 20,
+    "cols_within_pm2_of_kinh": 20,
+    "lcs_total": 217,
+    "lcs_over_kinh": 0.5154394299287411,
+    "sec_mean": 1.01835,
+    "n_boxes_mean": 1.0,
+    "boxes_total": 20,
+    "boxes_tall_rotated": 20
+   },
+   "pipe_ori": {
+    "n_cols": 20,
+    "n_read_mean": 19.25,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.9172842555994729,
+    "cols_with_any_cjk": 20,
+    "cols_within_pm2_of_kinh": 17,
+    "lcs_total": 184,
+    "lcs_over_kinh": 0.43705463182897863,
+    "sec_mean": 1.0549000000000002,
+    "n_boxes_mean": 1.0,
+    "boxes_total": 20,
+    "boxes_tall_rotated": 20
+   },
+   "pipe_rot90ccw": {
+    "n_cols": 20,
+    "n_read_mean": 21.0,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.9979166666666666,
+    "cols_with_any_cjk": 20,
+    "cols_within_pm2_of_kinh": 20,
+    "lcs_total": 219,
+    "lcs_over_kinh": 0.5201900237529691,
+    "sec_mean": 0.9459,
+    "n_boxes_mean": 1.0,
+    "boxes_total": 20,
+    "boxes_tall_rotated": 0
+   },
+   "pipe_up2": {
+    "n_cols": 20,
+    "n_read_mean": 20.9,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.9934700263504611,
+    "cols_with_any_cjk": 20,
+    "cols_within_pm2_of_kinh": 20,
+    "lcs_total": 207,
+    "lcs_over_kinh": 0.4916864608076009,
+    "sec_mean": 3.3141,
+    "n_boxes_mean": 1.0,
+    "boxes_total": 20,
+    "boxes_tall_rotated": 20
+   },
+   "rec_rot90ccw": {
+    "n_cols": 20,
+    "n_read_mean": 20.95,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.9956439393939395,
+    "cols_with_any_cjk": 20,
+    "cols_within_pm2_of_kinh": 20,
+    "lcs_total": 208,
+    "lcs_over_kinh": 0.49406175771971494,
+    "sec_mean": 0.18595
+   },
+   "rec_rot90cw": {
+    "n_cols": 20,
+    "n_read_mean": 10.35,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.49041185973730733,
+    "cols_with_any_cjk": 20,
+    "cols_within_pm2_of_kinh": 0,
+    "lcs_total": 1,
+    "lcs_over_kinh": 0.0023752969121140144,
+    "sec_mean": 0.1682
+   }
+  },
+  "PP-OCRv5": {
+   "pipe": {
+    "n_cols": 20,
+    "n_read_mean": 12.3,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.5840354771684695,
+    "cols_with_any_cjk": 20,
+    "cols_within_pm2_of_kinh": 0,
+    "lcs_total": 134,
+    "lcs_over_kinh": 0.3182897862232779,
+    "sec_mean": 2.7023,
+    "n_boxes_mean": 1.1,
+    "boxes_total": 22,
+    "boxes_tall_rotated": 20
+   },
+   "pipe_ori": {
+    "n_cols": 20,
+    "n_read_mean": 11.4,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.543662806361016,
+    "cols_with_any_cjk": 18,
+    "cols_within_pm2_of_kinh": 0,
+    "lcs_total": 126,
+    "lcs_over_kinh": 0.2992874109263658,
+    "sec_mean": 2.88155,
+    "n_boxes_mean": 1.1,
+    "boxes_total": 22,
+    "boxes_tall_rotated": 20
+   },
+   "pipe_rot90ccw": {
+    "n_cols": 20,
+    "n_read_mean": 12.4,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.587500442864893,
+    "cols_with_any_cjk": 20,
+    "cols_within_pm2_of_kinh": 0,
+    "lcs_total": 130,
+    "lcs_over_kinh": 0.3087885985748218,
+    "sec_mean": 2.4149000000000003,
+    "n_boxes_mean": 1.15,
+    "boxes_total": 23,
+    "boxes_tall_rotated": 0
+   },
+   "pipe_up2": {
+    "n_cols": 20,
+    "n_read_mean": 13.5,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.6453693631602839,
+    "cols_with_any_cjk": 20,
+    "cols_within_pm2_of_kinh": 2,
+    "lcs_total": 137,
+    "lcs_over_kinh": 0.3254156769596199,
+    "sec_mean": 58.47510000000001,
+    "n_boxes_mean": 4.85,
+    "boxes_total": 97,
+    "boxes_tall_rotated": 67
+   },
+   "rec_rot90ccw": {
+    "n_cols": 20,
+    "n_read_mean": 11.8,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.5617128722371689,
+    "cols_with_any_cjk": 20,
+    "cols_within_pm2_of_kinh": 0,
+    "lcs_total": 125,
+    "lcs_over_kinh": 0.29691211401425177,
+    "sec_mean": 0.41050000000000003
+   },
+   "rec_rot90cw": {
+    "n_cols": 20,
+    "n_read_mean": 0.1,
+    "n_kinh_mean": 21.05,
+    "ratio_read_over_kinh": 0.004653679653679654,
+    "cols_with_any_cjk": 2,
+    "cols_within_pm2_of_kinh": 0,
+    "lcs_total": 0,
+    "lcs_over_kinh": 0.0,
+    "sec_mean": 0.30974999999999997
+   }
+  }
+ },
+ "phan_tich_them": {
+  "col-PP-OCRv6_medium_rec": {
+   "M1": {
+    "in_R": "314/600 = 52.3% CI95 (48.3, 56.3)",
+    "perm_control_in_R": "1.08%",
+    "lift_vs_perm": 48.7,
+    "lift_vs_freq_random": 56.7,
+    "eq_kinhhannom": "288/600 = 48.0%",
+    "in_R_but_ne_kinh": 26
+   },
+   "M2": {
+    "in_R": "54/600 = 9.0% CI95 (7.0, 11.6)",
+    "perm_control_in_R": "0.33%",
+    "lift_vs_perm": 27.6,
+    "lift_vs_freq_random": 14.1,
+    "SILVER_in_R": "31/219 = 14.2%",
+    "SYLLABLE_in_R": "23/381 = 6.0%",
+    "SILVER_rescued_eq_pipeline_label": "24/31",
+    "by_book_in_R": {
+     "stt11": "13/200",
+     "stt2": "20/200",
+     "stt4": "21/200"
+    },
+    "by_rule_in_R": {
+     "nghia_consensus": "11/226",
+     "nghia_consensus_tu_silver": "12/155",
+     "s2_inter_s3_corrected": "30/209",
+     "s3_head_bank_consensus": "1/10"
+    },
+    "rescued_examples": [
+     [
+      "M2_0003",
+      "杢",
+      "lai",
+      "吏",
+      "吏"
+     ],
+     [
+      "M2_0022",
+      "𬒳",
+      "vẻ",
+      "彼",
+      "彼"
+     ],
+     [
+      "M2_0025",
+      "𣣔",
+      "hết",
+      "歇",
+      "歇"
+     ],
+     [
+      "M2_0038",
+      "𠬧",
+      "song",
+      "双",
+      ""
+     ],
+     [
+      "M2_0040",
+      "𠇭",
+      "mình",
+      "命",
+      ""
+     ],
+     [
+      "M2_0048",
+      "福",
+      "xu",
+      "樞",
+      "樞"
+     ],
+     [
+      "M2_0069",
+      "之",
+      "đời",
+      "代",
+      "匕"
+     ],
+     [
+      "M2_0072",
+      "馬",
+      "vì",
+      "為",
+      ""
+     ],
+     [
+      "M2_0075",
+      "𡚶",
+      "ăn",
+      "安",
+      ""
+     ],
+     [
+      "M2_0086",
+      "達",
+      "trên",
+      "連",
+      "連"
+     ],
+     [
+      "M2_0100",
+      "女",
+      "cũng",
+      "共",
+      "共"
+     ],
+     [
+      "M2_0106",
+      "𭃡",
+      "xưa",
+      "初",
+      ""
+     ]
+    ]
+   },
+   "M3": {
+    "in_R": "2/300 = 0.7% CI95 (0.2, 2.4)",
+    "perm_control_in_R": "0.67%",
+    "lift_vs_perm": 1.0,
+    "lift_vs_freq_random": 0.3,
+    "top10": [
+     [
+      "尋",
+      97
+     ],
+     [
+      "等",
+      46
+     ],
+     [
+      "是",
+      31
+     ],
+     [
+      "得",
+      23
+     ],
+     [
+      "",
+      18
+     ],
+     [
+      "景",
+      12
+     ],
+     [
+      "畢",
+      8
+     ],
+     [
+      "旱",
+      4
+     ],
+     [
+      "麻",
+      3
+     ],
+     [
+      "燒",
+      3
+     ]
+    ],
+    "pct_得_variants": "23/300"
+   }
+  },
+  "PP-OCRv6_medium_rec_raw": {
+   "M1": {
+    "in_R": "206/600 = 34.3% CI95 (30.6, 38.2)",
+    "perm_control_in_R": "0.75%",
+    "lift_vs_perm": 45.8,
+    "lift_vs_freq_random": 37.2,
+    "eq_kinhhannom": "189/600 = 31.5%",
+    "in_R_but_ne_kinh": 17
+   },
+   "M2": {
+    "in_R": "39/600 = 6.5% CI95 (4.8, 8.8)",
+    "perm_control_in_R": "0.25%",
+    "lift_vs_perm": 26.4,
+    "lift_vs_freq_random": 10.2,
+    "SILVER_in_R": "19/219 = 8.7%",
+    "SYLLABLE_in_R": "20/381 = 5.2%",
+    "SILVER_rescued_eq_pipeline_label": "16/19",
+    "by_book_in_R": {
+     "stt11": "12/200",
+     "stt2": "14/200",
+     "stt4": "13/200"
+    },
+    "by_rule_in_R": {
+     "nghia_consensus": "5/226",
+     "nghia_consensus_tu_silver": "15/155",
+     "s2_inter_s3_corrected": "18/209",
+     "s3_head_bank_consensus": "1/10"
+    },
+    "rescued_examples": [
+     [
+      "M2_0038",
+      "𠬧",
+      "song",
+      "双",
+      ""
+     ],
+     [
+      "M2_0040",
+      "𠇭",
+      "mình",
+      "命",
+      ""
+     ],
+     [
+      "M2_0051",
+      "極",
+      "su",
+      "樞",
+      "樞"
+     ],
+     [
+      "M2_0052",
+      "安",
+      "cùng",
+      "共",
+      "共"
+     ],
+     [
+      "M2_0055",
+      "仪",
+      "ấy",
+      "衣",
+      ""
+     ],
+     [
+      "M2_0067",
+      "𡜞",
+      "em",
+      "俺",
+      "㛪"
+     ],
+     [
+      "M2_0083",
+      "技",
+      "giê",
+      "枝",
+      ""
+     ],
+     [
+      "M2_0100",
+      "女",
+      "cũng",
+      "共",
+      "共"
+     ],
+     [
+      "M2_0106",
+      "𭃡",
+      "xưa",
+      "初",
+      ""
+     ],
+     [
+      "M2_0112",
+      "屠",
+      "phú",
+      "富",
+      "富"
+     ],
+     [
+      "M2_0152",
+      "逆",
+      "lại",
+      "吏",
+      ""
+     ],
+     [
+      "M2_0155",
+      "女",
+      "an",
+      "安",
+      ""
+     ]
+    ]
+   },
+   "M3": {
+    "in_R": "0/300 = 0.0% CI95 (0.0, 1.3)",
+    "perm_control_in_R": "0.00%",
+    "lift_vs_perm": 0.0,
+    "lift_vs_freq_random": 0.0,
+    "top10": [
+     [
+      "寻",
+      45
+     ],
+     [
+      "导",
+      38
+     ],
+     [
+      "",
+      30
+     ],
+     [
+      "等",
+      26
+     ],
+     [
+      "是",
+      21
+     ],
+     [
+      "守",
+      9
+     ],
+     [
+      "子",
+      7
+     ],
+     [
+      "得",
+      6
+     ],
+     [
+      "号",
+      6
+     ],
+     [
+      "身",
+      4
+     ]
+    ],
+    "pct_得_variants": "6/300"
+   }
+  },
+  "PP-OCRv5_server_rec_raw": {
+   "M1": {
+    "in_R": "223/600 = 37.2% CI95 (33.4, 41.1)",
+    "perm_control_in_R": "0.77%",
+    "lift_vs_perm": 48.0,
+    "lift_vs_freq_random": 40.3,
+    "eq_kinhhannom": "204/600 = 34.0%",
+    "in_R_but_ne_kinh": 19
+   },
+   "M2": {
+    "in_R": "40/600 = 6.7% CI95 (4.9, 9.0)",
+    "perm_control_in_R": "0.21%",
+    "lift_vs_perm": 31.9,
+    "lift_vs_freq_random": 10.5,
+    "SILVER_in_R": "17/219 = 7.8%",
+    "SYLLABLE_in_R": "23/381 = 6.0%",
+    "SILVER_rescued_eq_pipeline_label": "13/17",
+    "by_book_in_R": {
+     "stt11": "8/200",
+     "stt2": "14/200",
+     "stt4": "18/200"
+    },
+    "by_rule_in_R": {
+     "nghia_consensus": "4/226",
+     "nghia_consensus_tu_silver": "19/155",
+     "s2_inter_s3_corrected": "16/209",
+     "s3_head_bank_consensus": "1/10"
+    },
+    "rescued_examples": [
+     [
+      "M2_0010",
+      "良",
+      "dân",
+      "民",
+      "民"
+     ],
+     [
+      "M2_0018",
+      "府",
+      "thì",
+      "寺",
+      "寺"
+     ],
+     [
+      "M2_0020",
+      "敗",
+      "khi",
+      "欺",
+      ""
+     ],
+     [
+      "M2_0023",
+      "虎",
+      "xác",
+      "壳",
+      ""
+     ],
+     [
+      "M2_0032",
+      "放",
+      "nhớ",
+      "汝",
+      "汝"
+     ],
+     [
+      "M2_0033",
+      "底",
+      "đêm",
+      "店",
+      "店"
+     ],
+     [
+      "M2_0035",
+      "直",
+      "nghe",
+      "宜",
+      ""
+     ],
+     [
+      "M2_0038",
+      "𠬧",
+      "song",
+      "双",
+      ""
+     ],
+     [
+      "M2_0052",
+      "安",
+      "cùng",
+      "共",
+      "共"
+     ],
+     [
+      "M2_0065",
+      "餘",
+      "thờ",
+      "除",
+      ""
+     ],
+     [
+      "M2_0069",
+      "之",
+      "đời",
+      "代",
+      "匕"
+     ],
+     [
+      "M2_0106",
+      "𭃡",
+      "xưa",
+      "初",
+      ""
+     ]
+    ]
+   },
+   "M3": {
+    "in_R": "0/300 = 0.0% CI95 (0.0, 1.3)",
+    "perm_control_in_R": "0.00%",
+    "lift_vs_perm": 0.0,
+    "lift_vs_freq_random": 0.0,
+    "top10": [
+     [
+      "",
+      51
+     ],
+     [
+      "寻",
+      45
+     ],
+     [
+      "等",
+      36
+     ],
+     [
+      "导",
+      29
+     ],
+     [
+      "享",
+      13
+     ],
+     [
+      "尊",
+      8
+     ],
+     [
+      "哥",
+      7
+     ],
+     [
+      "号",
+      7
+     ],
+     [
+      "母",
+      6
+     ],
+     [
+      "是",
+      5
+     ]
+    ],
+    "pct_得_variants": "0/300"
+   }
+  }
+ },
+ "PaddleOCR_VL": {
+  "M1": {
+   "n_done": 600,
+   "in_R": "189/600",
+   "any_in_R": 228,
+   "one_cjk": 0.617,
+   "eq_kinh": 173,
+   "sec": 2.82
+  },
+  "M2": {
+   "n_done": 600,
+   "in_R": "33/600",
+   "any_in_R": 46,
+   "one_cjk": 0.605,
+   "eq_kinh": 36,
+   "sec": 2.83
+  },
+  "M3": {
+   "n_done": 300,
+   "in_R": "0/300",
+   "any_in_R": 0,
+   "one_cjk": 0.703,
+   "eq_kinh": 0,
+   "sec": 2.76,
+   "top": [
+    [
+     "等",
+     71
+    ],
+    [
+     "导",
+     45
+    ],
+    [
+     "尊",
+     20
+    ],
+    [
+     "旱",
+     18
+    ],
+    [
+     "寻",
+     9
+    ],
+    [
+     "寺",
+     8
+    ],
+    [
+     "早",
+     7
+    ],
+    [
+     "",
+     6
+    ]
+   ]
+  }
+ }
+}

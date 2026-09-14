@@ -1,0 +1,1720 @@
+{
+ "M1_PP-OCRv5_server_rec_pad": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 549,
+  "one_cjk": 0.7366666666666667,
+  "n_cjk_mean": 0.9683333333333334,
+  "first_in_R": 0.2783333333333333,
+  "any_in_R": 0.3016666666666667,
+  "eq_kinhhannom": 0.25333333333333335,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 511,
+  "sec_per_cell": 0.11297566666666668,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.355,
+    "one_cjk": 0.725
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.195,
+    "one_cjk": 0.755
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.285,
+    "one_cjk": 0.73
+   }
+  }
+ },
+ "M1_PP-OCRv5_server_rec_raw": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 573,
+  "one_cjk": 0.77,
+  "n_cjk_mean": 1.0533333333333332,
+  "first_in_R": 0.37166666666666665,
+  "any_in_R": 0.4166666666666667,
+  "eq_kinhhannom": 0.34,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 547,
+  "sec_per_cell": 0.10307200000000001,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.43,
+    "one_cjk": 0.775
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.315,
+    "one_cjk": 0.79
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.37,
+    "one_cjk": 0.745
+   }
+  }
+ },
+ "M1_PP-OCRv6_medium_rec_pad": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 575,
+  "one_cjk": 0.595,
+  "n_cjk_mean": 1.3016666666666667,
+  "first_in_R": 0.2816666666666667,
+  "any_in_R": 0.33666666666666667,
+  "eq_kinhhannom": 0.25333333333333335,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 569,
+  "sec_per_cell": 0.07041833333333335,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.335,
+    "one_cjk": 0.63
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.245,
+    "one_cjk": 0.56
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.265,
+    "one_cjk": 0.595
+   }
+  }
+ },
+ "M1_PP-OCRv6_medium_rec_padup3": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 574,
+  "one_cjk": 0.5966666666666667,
+  "n_cjk_mean": 1.2933333333333332,
+  "first_in_R": 0.2783333333333333,
+  "any_in_R": 0.33166666666666667,
+  "eq_kinhhannom": 0.24833333333333332,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 567,
+  "sec_per_cell": 0.08429733333333334,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.335,
+    "one_cjk": 0.635
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.23,
+    "one_cjk": 0.55
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.27,
+    "one_cjk": 0.605
+   }
+  }
+ },
+ "M1_PP-OCRv6_medium_rec_raw": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 570,
+  "one_cjk": 0.695,
+  "n_cjk_mean": 1.1666666666666667,
+  "first_in_R": 0.3433333333333333,
+  "any_in_R": 0.4166666666666667,
+  "eq_kinhhannom": 0.315,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 558,
+  "sec_per_cell": 0.06746766666666666,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.41,
+    "one_cjk": 0.715
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.3,
+    "one_cjk": 0.69
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.32,
+    "one_cjk": 0.68
+   }
+  }
+ },
+ "M1_PP-OCRv6_medium_rec_up3": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 568,
+  "one_cjk": 0.6916666666666667,
+  "n_cjk_mean": 1.1583333333333334,
+  "first_in_R": 0.345,
+  "any_in_R": 0.41833333333333333,
+  "eq_kinhhannom": 0.31666666666666665,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 555,
+  "sec_per_cell": 0.07834966666666666,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.415,
+    "one_cjk": 0.695
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.305,
+    "one_cjk": 0.69
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.315,
+    "one_cjk": 0.69
+   }
+  }
+ },
+ "M1_PaddleOCR-VL-1.6": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 600,
+  "one_cjk": 0.6166666666666667,
+  "n_cjk_mean": 1.2966666666666666,
+  "first_in_R": 0.315,
+  "any_in_R": 0.38,
+  "eq_kinhhannom": 0.28833333333333333,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 570,
+  "sec_per_cell": 2.8221666666666665,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.365,
+    "one_cjk": 0.645
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.25,
+    "one_cjk": 0.585
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.33,
+    "one_cjk": 0.62
+   }
+  }
+ },
+ "M1_col-PP-OCRv5_server_rec": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 371,
+  "one_cjk": 0.6183333333333333,
+  "n_cjk_mean": 0.6183333333333333,
+  "first_in_R": 0.31333333333333335,
+  "any_in_R": 0.31333333333333335,
+  "eq_kinhhannom": 0.285,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 371,
+  "sec_per_cell": 0.26469149999999997,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.33,
+    "one_cjk": 0.66
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.355,
+    "one_cjk": 0.63
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.255,
+    "one_cjk": 0.565
+   }
+  }
+ },
+ "M1_col-PP-OCRv5_server_rec+seq": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 377,
+  "one_cjk": 0.6266666666666667,
+  "n_cjk_mean": 0.6266666666666667,
+  "first_in_R": 0.4066666666666667,
+  "any_in_R": 0.4066666666666667,
+  "eq_kinhhannom": 0.38666666666666666,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 376,
+  "sec_per_cell": 0.26469149999999997,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.41,
+    "one_cjk": 0.65
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.435,
+    "one_cjk": 0.625
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.375,
+    "one_cjk": 0.605
+   }
+  }
+ },
+ "M1_col-PP-OCRv6_medium_rec": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 544,
+  "one_cjk": 0.9066666666666666,
+  "n_cjk_mean": 0.9066666666666666,
+  "first_in_R": 0.5233333333333333,
+  "any_in_R": 0.5233333333333333,
+  "eq_kinhhannom": 0.48,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 544,
+  "sec_per_cell": 0.16739816666666665,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.59,
+    "one_cjk": 0.89
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.54,
+    "one_cjk": 0.945
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.44,
+    "one_cjk": 0.885
+   }
+  }
+ },
+ "M1_col-PP-OCRv6_medium_rec+seq": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 582,
+  "one_cjk": 0.97,
+  "n_cjk_mean": 0.97,
+  "first_in_R": 0.71,
+  "any_in_R": 0.71,
+  "eq_kinhhannom": 0.6483333333333333,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 582,
+  "sec_per_cell": 0.16739816666666665,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.745,
+    "one_cjk": 0.95
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.735,
+    "one_cjk": 1.0
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.65,
+    "one_cjk": 0.96
+   }
+  }
+ },
+ "M1_pipe-PP-OCRv6_padup3": {
+  "set": "M1",
+  "n": 600,
+  "n_pred_nonempty": 580,
+  "one_cjk": 0.6233333333333333,
+  "n_cjk_mean": 1.2683333333333333,
+  "first_in_R": 0.2916666666666667,
+  "any_in_R": 0.3616666666666667,
+  "eq_kinhhannom": 0.27166666666666667,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 564,
+  "sec_per_cell": 1.0799155,
+  "p_random_in_R_uniform": 0.0005864777601079466,
+  "p_random_in_R_freqweighted": 0.00922485302407989,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.355,
+    "one_cjk": 0.63
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.265,
+    "one_cjk": 0.64
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.255,
+    "one_cjk": 0.6
+   }
+  }
+ },
+ "M2_PP-OCRv5_server_rec_pad": {
+  "set": "M2",
+  "n": 600,
+  "n_pred_nonempty": 522,
+  "one_cjk": 0.695,
+  "n_cjk_mean": 0.8816666666666667,
+  "first_in_R": 0.04833333333333333,
+  "any_in_R": 0.055,
+  "eq_kinhhannom": 0.055,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 473,
+  "sec_per_cell": 0.12766666666666665,
+  "p_random_in_R_uniform": 0.0005789680818595088,
+  "p_random_in_R_freqweighted": 0.006363936538616413,
+  "rescue_rate": 0.04833333333333333,
+  "rescue_n": 600,
+  "rescue_count": 29,
+  "lift_uniform": 83.48186169105917,
+  "lift_freq": 7.594879842067298,
+  "rescue_eq_label": 0.3103448275862069,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0639269406392694,
+    "one_cjk": 0.7168949771689498
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.03937007874015748,
+    "one_cjk": 0.6824146981627297
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.045,
+    "one_cjk": 0.705
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.035,
+    "one_cjk": 0.75
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.065,
+    "one_cjk": 0.63
+   }
+  }
+ },
+ "M2_PP-OCRv5_server_rec_raw": {
+  "set": "M2",
+  "n": 600,
+  "n_pred_nonempty": 553,
+  "one_cjk": 0.7533333333333333,
+  "n_cjk_mean": 0.955,
+  "first_in_R": 0.06666666666666667,
+  "any_in_R": 0.08,
+  "eq_kinhhannom": 0.07833333333333334,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 512,
+  "sec_per_cell": 0.10508866666666668,
+  "p_random_in_R_uniform": 0.0005789680818595088,
+  "p_random_in_R_freqweighted": 0.006363936538616413,
+  "rescue_rate": 0.06666666666666667,
+  "rescue_n": 600,
+  "rescue_count": 40,
+  "lift_uniform": 115.14739543594368,
+  "lift_freq": 10.475696333885928,
+  "rescue_eq_label": 0.325,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0776255707762557,
+    "one_cjk": 0.7671232876712328
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.06036745406824147,
+    "one_cjk": 0.7454068241469817
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.04,
+    "one_cjk": 0.73
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.07,
+    "one_cjk": 0.825
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.09,
+    "one_cjk": 0.705
+   }
+  }
+ },
+ "M2_PP-OCRv6_medium_rec_pad": {
+  "set": "M2",
+  "n": 600,
+  "n_pred_nonempty": 571,
+  "one_cjk": 0.5666666666666667,
+  "n_cjk_mean": 1.2766666666666666,
+  "first_in_R": 0.035,
+  "any_in_R": 0.058333333333333334,
+  "eq_kinhhannom": 0.07,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 550,
+  "sec_per_cell": 0.07132316666666667,
+  "p_random_in_R_uniform": 0.0005789680818595088,
+  "p_random_in_R_freqweighted": 0.006363936538616413,
+  "rescue_rate": 0.035,
+  "rescue_n": 600,
+  "rescue_count": 21,
+  "lift_uniform": 60.45238260387044,
+  "lift_freq": 5.499740575290113,
+  "rescue_eq_label": 0.42857142857142855,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0593607305936073,
+    "one_cjk": 0.6164383561643836
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.02099737532808399,
+    "one_cjk": 0.5380577427821522
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.03,
+    "one_cjk": 0.59
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.04,
+    "one_cjk": 0.63
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.035,
+    "one_cjk": 0.48
+   }
+  }
+ },
+ "M2_PP-OCRv6_medium_rec_raw": {
+  "set": "M2",
+  "n": 600,
+  "n_pred_nonempty": 548,
+  "one_cjk": 0.635,
+  "n_cjk_mean": 1.1016666666666666,
+  "first_in_R": 0.065,
+  "any_in_R": 0.08666666666666667,
+  "eq_kinhhannom": 0.10833333333333334,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 521,
+  "sec_per_cell": 0.06809599999999999,
+  "p_random_in_R_uniform": 0.0005789680818595088,
+  "p_random_in_R_freqweighted": 0.006363936538616413,
+  "rescue_rate": 0.065,
+  "rescue_n": 600,
+  "rescue_count": 39,
+  "lift_uniform": 112.26871055004509,
+  "lift_freq": 10.21380392553878,
+  "rescue_eq_label": 0.41025641025641024,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0867579908675799,
+    "one_cjk": 0.7031963470319634
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.05249343832020997,
+    "one_cjk": 0.5958005249343832
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.06,
+    "one_cjk": 0.67
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.07,
+    "one_cjk": 0.73
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.065,
+    "one_cjk": 0.505
+   }
+  }
+ },
+ "M2_PP-OCRv6_medium_rec_up3": {
+  "set": "M2",
+  "n": 600,
+  "n_pred_nonempty": 548,
+  "one_cjk": 0.6383333333333333,
+  "n_cjk_mean": 1.0983333333333334,
+  "first_in_R": 0.07166666666666667,
+  "any_in_R": 0.09333333333333334,
+  "eq_kinhhannom": 0.105,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 521,
+  "sec_per_cell": 0.07878283333333333,
+  "p_random_in_R_uniform": 0.0005789680818595088,
+  "p_random_in_R_freqweighted": 0.006363936538616413,
+  "rescue_rate": 0.07166666666666667,
+  "rescue_n": 600,
+  "rescue_count": 43,
+  "lift_uniform": 123.78345009363946,
+  "lift_freq": 11.261373558927374,
+  "rescue_eq_label": 0.4186046511627907,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.1004566210045662,
+    "one_cjk": 0.6940639269406392
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.05511811023622047,
+    "one_cjk": 0.6062992125984252
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.06,
+    "one_cjk": 0.67
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.085,
+    "one_cjk": 0.72
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.07,
+    "one_cjk": 0.525
+   }
+  }
+ },
+ "M2_PaddleOCR-VL-1.6": {
+  "set": "M2",
+  "n": 600,
+  "n_pred_nonempty": 600,
+  "one_cjk": 0.605,
+  "n_cjk_mean": 1.285,
+  "first_in_R": 0.055,
+  "any_in_R": 0.07666666666666666,
+  "eq_kinhhannom": 0.06,
+  "first_in_vocab_given_pred": 0.998220640569395,
+  "n_first_pred": 562,
+  "sec_per_cell": 2.830666666666666,
+  "p_random_in_R_uniform": 0.0005789680818595088,
+  "p_random_in_R_freqweighted": 0.006363936538616413,
+  "rescue_rate": 0.055,
+  "rescue_n": 600,
+  "rescue_count": 33,
+  "lift_uniform": 94.99660123465354,
+  "lift_freq": 8.64244947545589,
+  "rescue_eq_label": 0.2727272727272727,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0730593607305936,
+    "one_cjk": 0.6438356164383562
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.04461942257217848,
+    "one_cjk": 0.5826771653543307
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.035,
+    "one_cjk": 0.585
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.075,
+    "one_cjk": 0.635
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.055,
+    "one_cjk": 0.595
+   }
+  }
+ },
+ "M2_col-PP-OCRv5_server_rec": {
+  "set": "M2",
+  "n": 600,
+  "n_pred_nonempty": 281,
+  "one_cjk": 0.4683333333333333,
+  "n_cjk_mean": 0.4683333333333333,
+  "first_in_R": 0.055,
+  "any_in_R": 0.055,
+  "eq_kinhhannom": 0.055,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 281,
+  "sec_per_cell": 0.2270373333333333,
+  "p_random_in_R_uniform": 0.0005789680818595088,
+  "p_random_in_R_freqweighted": 0.006363936538616413,
+  "rescue_rate": 0.055,
+  "rescue_n": 600,
+  "rescue_count": 33,
+  "lift_uniform": 94.99660123465354,
+  "lift_freq": 8.64244947545589,
+  "rescue_eq_label": 0.3333333333333333,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0547945205479452,
+    "one_cjk": 0.4748858447488584
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.05511811023622047,
+    "one_cjk": 0.4645669291338583
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.05,
+    "one_cjk": 0.505
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.045,
+    "one_cjk": 0.43
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.07,
+    "one_cjk": 0.47
+   }
+  }
+ },
+ "M2_col-PP-OCRv5_server_rec+seq": {
+  "set": "M2",
+  "n": 600,
+  "n_pred_nonempty": 251,
+  "one_cjk": 0.41833333333333333,
+  "n_cjk_mean": 0.41833333333333333,
+  "first_in_R": 0.03166666666666667,
+  "any_in_R": 0.03166666666666667,
+  "eq_kinhhannom": 0.07833333333333334,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 251,
+  "sec_per_cell": 0.2270373333333333,
+  "p_random_in_R_uniform": 0.0005789680818595088,
+  "p_random_in_R_freqweighted": 0.006363936538616413,
+  "rescue_rate": 0.03166666666666667,
+  "rescue_n": 600,
+  "rescue_count": 19,
+  "lift_uniform": 54.69501283207325,
+  "lift_freq": 4.975955758595816,
+  "rescue_eq_label": 0.2631578947368421,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0273972602739726,
+    "one_cjk": 0.3881278538812785
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.03412073490813648,
+    "one_cjk": 0.4356955380577428
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.04,
+    "one_cjk": 0.465
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.025,
+    "one_cjk": 0.415
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.03,
+    "one_cjk": 0.375
+   }
+  }
+ },
+ "M2_col-PP-OCRv6_medium_rec": {
+  "set": "M2",
+  "n": 600,
+  "n_pred_nonempty": 550,
+  "one_cjk": 0.9166666666666666,
+  "n_cjk_mean": 0.9166666666666666,
+  "first_in_R": 0.09,
+  "any_in_R": 0.09,
+  "eq_kinhhannom": 0.19333333333333333,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 550,
+  "sec_per_cell": 0.194924,
+  "p_random_in_R_uniform": 0.0005789680818595088,
+  "p_random_in_R_freqweighted": 0.006363936538616413,
+  "rescue_rate": 0.09,
+  "rescue_n": 600,
+  "rescue_count": 54,
+  "lift_uniform": 155.44898383852396,
+  "lift_freq": 14.142190050746002,
+  "rescue_eq_label": 0.4444444444444444,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.1415525114155251,
+    "one_cjk": 0.9360730593607306
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.06036745406824147,
+    "one_cjk": 0.905511811023622
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.065,
+    "one_cjk": 0.885
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.1,
+    "one_cjk": 0.95
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.105,
+    "one_cjk": 0.915
+   }
+  }
+ },
+ "M2_col-PP-OCRv6_medium_rec+seq": {
+  "set": "M2",
+  "n": 600,
+  "n_pred_nonempty": 582,
+  "one_cjk": 0.97,
+  "n_cjk_mean": 0.97,
+  "first_in_R": 0.10166666666666667,
+  "any_in_R": 0.10166666666666667,
+  "eq_kinhhannom": 0.25666666666666665,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 582,
+  "sec_per_cell": 0.194924,
+  "p_random_in_R_uniform": 0.0005789680818595088,
+  "p_random_in_R_freqweighted": 0.006363936538616413,
+  "rescue_rate": 0.10166666666666667,
+  "rescue_n": 600,
+  "rescue_count": 61,
+  "lift_uniform": 175.5997780398141,
+  "lift_freq": 15.975436909176041,
+  "rescue_eq_label": 0.4098360655737705,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.1415525114155251,
+    "one_cjk": 0.9817351598173516
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.07874015748031496,
+    "one_cjk": 0.963254593175853
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.085,
+    "one_cjk": 0.955
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.11,
+    "one_cjk": 0.99
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.11,
+    "one_cjk": 0.965
+   }
+  }
+ },
+ "M2_pipe-PP-OCRv6_padup3": {
+  "set": "M2",
+  "n": 600,
+  "n_pred_nonempty": 566,
+  "one_cjk": 0.5816666666666667,
+  "n_cjk_mean": 1.1066666666666667,
+  "first_in_R": 0.051666666666666666,
+  "any_in_R": 0.07166666666666667,
+  "eq_kinhhannom": 0.07666666666666666,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 506,
+  "sec_per_cell": 1.0311423333333334,
+  "p_random_in_R_uniform": 0.0005789680818595088,
+  "p_random_in_R_freqweighted": 0.006363936538616413,
+  "rescue_rate": 0.051666666666666666,
+  "rescue_n": 600,
+  "rescue_count": 31,
+  "lift_uniform": 89.23923146285635,
+  "lift_freq": 8.118664658761595,
+  "rescue_eq_label": 0.2903225806451613,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0593607305936073,
+    "one_cjk": 0.6027397260273972
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.047244094488188976,
+    "one_cjk": 0.5695538057742782
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.045,
+    "one_cjk": 0.525
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.05,
+    "one_cjk": 0.67
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.06,
+    "one_cjk": 0.55
+   }
+  }
+ },
+ "M3_PP-OCRv5_server_rec_pad": {
+  "set": "M3",
+  "n": 300,
+  "n_pred_nonempty": 260,
+  "one_cjk": 0.73,
+  "n_cjk_mean": 0.83,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 234,
+  "sec_per_cell": 0.09744633333333333,
+  "p_random_in_R_uniform": 0.0004819044865307696,
+  "p_random_in_R_freqweighted": 0.022867842474027542,
+  "dist_top": [
+   [
+    "<rỗng>",
+    66,
+    0.22
+   ],
+   [
+    "等",
+    52,
+    0.1733
+   ],
+   [
+    "导",
+    23,
+    0.0767
+   ],
+   [
+    "寻",
+    20,
+    0.0667
+   ],
+   [
+    "景",
+    13,
+    0.0433
+   ],
+   [
+    "哥",
+    7,
+    0.0233
+   ],
+   [
+    "学",
+    6,
+    0.02
+   ],
+   [
+    "享",
+    5,
+    0.0167
+   ],
+   [
+    "是",
+    5,
+    0.0167
+   ],
+   [
+    "号",
+    5,
+    0.0167
+   ],
+   [
+    "尊",
+    3,
+    0.01
+   ],
+   [
+    "好",
+    3,
+    0.01
+   ],
+   [
+    "有",
+    3,
+    0.01
+   ],
+   [
+    "字",
+    3,
+    0.01
+   ],
+   [
+    "旱",
+    3,
+    0.01
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.8181818181818182
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.7421052631578947
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.6363636363636364
+   }
+  }
+ },
+ "M3_PP-OCRv5_server_rec_raw": {
+  "set": "M3",
+  "n": 300,
+  "n_pred_nonempty": 279,
+  "one_cjk": 0.7633333333333333,
+  "n_cjk_mean": 0.8966666666666666,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 249,
+  "sec_per_cell": 0.08666633333333333,
+  "p_random_in_R_uniform": 0.0004819044865307696,
+  "p_random_in_R_freqweighted": 0.022867842474027542,
+  "dist_top": [
+   [
+    "<rỗng>",
+    51,
+    0.17
+   ],
+   [
+    "寻",
+    45,
+    0.15
+   ],
+   [
+    "等",
+    36,
+    0.12
+   ],
+   [
+    "导",
+    29,
+    0.0967
+   ],
+   [
+    "享",
+    13,
+    0.0433
+   ],
+   [
+    "尊",
+    8,
+    0.0267
+   ],
+   [
+    "哥",
+    7,
+    0.0233
+   ],
+   [
+    "号",
+    7,
+    0.0233
+   ],
+   [
+    "母",
+    6,
+    0.02
+   ],
+   [
+    "是",
+    5,
+    0.0167
+   ],
+   [
+    "旱",
+    4,
+    0.0133
+   ],
+   [
+    "景",
+    4,
+    0.0133
+   ],
+   [
+    "早",
+    4,
+    0.0133
+   ],
+   [
+    "好",
+    4,
+    0.0133
+   ],
+   [
+    "子",
+    3,
+    0.01
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.7045454545454546
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.7947368421052632
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.7121212121212122
+   }
+  }
+ },
+ "M3_PP-OCRv6_medium_rec_pad": {
+  "set": "M3",
+  "n": 300,
+  "n_pred_nonempty": 289,
+  "one_cjk": 0.6633333333333333,
+  "n_cjk_mean": 1.1966666666666668,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 279,
+  "sec_per_cell": 0.10501566666666666,
+  "p_random_in_R_uniform": 0.0004819044865307696,
+  "p_random_in_R_freqweighted": 0.022867842474027542,
+  "dist_top": [
+   [
+    "导",
+    63,
+    0.21
+   ],
+   [
+    "等",
+    25,
+    0.0833
+   ],
+   [
+    "<rỗng>",
+    21,
+    0.07
+   ],
+   [
+    "寻",
+    15,
+    0.05
+   ],
+   [
+    "哥",
+    10,
+    0.0333
+   ],
+   [
+    "旱",
+    7,
+    0.0233
+   ],
+   [
+    "景",
+    6,
+    0.02
+   ],
+   [
+    "尊",
+    5,
+    0.0167
+   ],
+   [
+    "事",
+    4,
+    0.0133
+   ],
+   [
+    "今",
+    3,
+    0.01
+   ],
+   [
+    "号",
+    3,
+    0.01
+   ],
+   [
+    "是",
+    3,
+    0.01
+   ],
+   [
+    "心",
+    3,
+    0.01
+   ],
+   [
+    "身",
+    2,
+    0.0067
+   ],
+   [
+    "知",
+    2,
+    0.0067
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.6818181818181818
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.6842105263157895
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.5909090909090909
+   }
+  }
+ },
+ "M3_PP-OCRv6_medium_rec_raw": {
+  "set": "M3",
+  "n": 300,
+  "n_pred_nonempty": 286,
+  "one_cjk": 0.7666666666666667,
+  "n_cjk_mean": 1.0333333333333334,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 270,
+  "sec_per_cell": 0.06847366666666665,
+  "p_random_in_R_uniform": 0.0004819044865307696,
+  "p_random_in_R_freqweighted": 0.022867842474027542,
+  "dist_top": [
+   [
+    "寻",
+    45,
+    0.15
+   ],
+   [
+    "导",
+    38,
+    0.1267
+   ],
+   [
+    "<rỗng>",
+    30,
+    0.1
+   ],
+   [
+    "等",
+    26,
+    0.0867
+   ],
+   [
+    "是",
+    21,
+    0.07
+   ],
+   [
+    "守",
+    9,
+    0.03
+   ],
+   [
+    "子",
+    7,
+    0.0233
+   ],
+   [
+    "得",
+    6,
+    0.02
+   ],
+   [
+    "号",
+    6,
+    0.02
+   ],
+   [
+    "身",
+    4,
+    0.0133
+   ],
+   [
+    "星",
+    4,
+    0.0133
+   ],
+   [
+    "學",
+    4,
+    0.0133
+   ],
+   [
+    "尊",
+    4,
+    0.0133
+   ],
+   [
+    "早",
+    4,
+    0.0133
+   ],
+   [
+    "如",
+    3,
+    0.01
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.8863636363636364
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.7894736842105263
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.6212121212121212
+   }
+  }
+ },
+ "M3_PaddleOCR-VL-1.6": {
+  "set": "M3",
+  "n": 300,
+  "n_pred_nonempty": 300,
+  "one_cjk": 0.7033333333333334,
+  "n_cjk_mean": 1.2633333333333334,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 294,
+  "sec_per_cell": 2.7626666666666666,
+  "p_random_in_R_uniform": 0.0004819044865307696,
+  "p_random_in_R_freqweighted": 0.022867842474027542,
+  "dist_top": [
+   [
+    "等",
+    71,
+    0.2367
+   ],
+   [
+    "导",
+    45,
+    0.15
+   ],
+   [
+    "尊",
+    20,
+    0.0667
+   ],
+   [
+    "旱",
+    18,
+    0.06
+   ],
+   [
+    "寻",
+    9,
+    0.03
+   ],
+   [
+    "寺",
+    8,
+    0.0267
+   ],
+   [
+    "早",
+    7,
+    0.0233
+   ],
+   [
+    "<rỗng>",
+    6,
+    0.02
+   ],
+   [
+    "景",
+    4,
+    0.0133
+   ],
+   [
+    "大",
+    3,
+    0.01
+   ],
+   [
+    "一",
+    3,
+    0.01
+   ],
+   [
+    "奇",
+    3,
+    0.01
+   ],
+   [
+    "寸",
+    3,
+    0.01
+   ],
+   [
+    "哥",
+    2,
+    0.0067
+   ],
+   [
+    "时",
+    2,
+    0.0067
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.6590909090909091
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.7315789473684211
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.6515151515151515
+   }
+  }
+ },
+ "M3_col-PP-OCRv6_medium_rec": {
+  "set": "M3",
+  "n": 300,
+  "n_pred_nonempty": 282,
+  "one_cjk": 0.94,
+  "n_cjk_mean": 0.94,
+  "first_in_R": 0.006666666666666667,
+  "any_in_R": 0.006666666666666667,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 282,
+  "sec_per_cell": 0.16423666666666667,
+  "p_random_in_R_uniform": 0.0004819044865307696,
+  "p_random_in_R_freqweighted": 0.022867842474027542,
+  "dist_top": [
+   [
+    "尋",
+    97,
+    0.3233
+   ],
+   [
+    "等",
+    46,
+    0.1533
+   ],
+   [
+    "是",
+    31,
+    0.1033
+   ],
+   [
+    "得",
+    23,
+    0.0767
+   ],
+   [
+    "<rỗng>",
+    18,
+    0.06
+   ],
+   [
+    "景",
+    12,
+    0.04
+   ],
+   [
+    "畢",
+    8,
+    0.0267
+   ],
+   [
+    "旱",
+    4,
+    0.0133
+   ],
+   [
+    "麻",
+    3,
+    0.01
+   ],
+   [
+    "燒",
+    3,
+    0.01
+   ],
+   [
+    "康",
+    2,
+    0.0067
+   ],
+   [
+    "命",
+    2,
+    0.0067
+   ],
+   [
+    "為",
+    2,
+    0.0067
+   ],
+   [
+    "弄",
+    2,
+    0.0067
+   ],
+   [
+    "朱",
+    2,
+    0.0067
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_in_R_nguoi": 0.006666666666666667,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.022727272727272728,
+    "one_cjk": 0.9318181818181818
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.005263157894736842,
+    "one_cjk": 0.9473684210526315
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.9242424242424242
+   }
+  }
+ },
+ "M3_col-PP-OCRv6_medium_rec+seq": {
+  "set": "M3",
+  "n": 300,
+  "n_pred_nonempty": 295,
+  "one_cjk": 0.9833333333333333,
+  "n_cjk_mean": 0.9833333333333333,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "n_first_pred": 295,
+  "sec_per_cell": 0.16423666666666667,
+  "p_random_in_R_uniform": 0.0004819044865307696,
+  "p_random_in_R_freqweighted": 0.022867842474027542,
+  "dist_top": [
+   [
+    "尋",
+    121,
+    0.4033
+   ],
+   [
+    "等",
+    53,
+    0.1767
+   ],
+   [
+    "是",
+    40,
+    0.1333
+   ],
+   [
+    "得",
+    27,
+    0.09
+   ],
+   [
+    "景",
+    17,
+    0.0567
+   ],
+   [
+    "畢",
+    8,
+    0.0267
+   ],
+   [
+    "旱",
+    6,
+    0.02
+   ],
+   [
+    "<rỗng>",
+    5,
+    0.0167
+   ],
+   [
+    "早",
+    2,
+    0.0067
+   ],
+   [
+    "冊",
+    1,
+    0.0033
+   ],
+   [
+    "死",
+    1,
+    0.0033
+   ],
+   [
+    "中",
+    1,
+    0.0033
+   ],
+   [
+    "考",
+    1,
+    0.0033
+   ],
+   [
+    "批",
+    1,
+    0.0033
+   ],
+   [
+    "晉",
+    1,
+    0.0033
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.9545454545454546
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.9894736842105263
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.9848484848484849
+   }
+  }
+ }
+}

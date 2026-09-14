@@ -1,0 +1,3423 @@
+{
+ "tham_so": {
+  "n_perm": 500,
+  "seed": 20260911,
+  "P": "PP-OCRv6 cột gióng đơn điệu (pred_mono)",
+  "G": "GLM-OCR col-ctx"
+ },
+ "M1": {
+  "A1 P==G (2 engine mới trùng nhau)": {
+   "luat": "A1 P==G (2 engine mới trùng nhau)",
+   "set": "M1",
+   "n": 600,
+   "fired": 235,
+   "fired_pct": 39.2,
+   "fired_ci": [
+    35.3,
+    43.1
+   ],
+   "prop_n": 235,
+   "prop_inR": 222,
+   "prop_inR_pct_of_fired": 94.5,
+   "prop_inR_pct_of_n": 37.0,
+   "prop_inR_ci_of_n": [
+    33.23,
+    40.93
+   ],
+   "prop_eqK": 212,
+   "prop_eqK_pct_of_fired": 90.2,
+   "prop_inR_neK": 10,
+   "perm_fired_mean": 3.2,
+   "perm_fired_p95": 7.0,
+   "perm_inR_mean": 0.08,
+   "perm_inR_p95": 1.0,
+   "lift_fired_vs_perm": "72.3",
+   "lift_inR_vs_perm": "2775.0",
+   "lift_inR_vs_freq": 40.1,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "A2 P==G ∧ ∈R": {
+   "luat": "A2 P==G ∧ ∈R",
+   "set": "M1",
+   "n": 600,
+   "fired": 222,
+   "fired_pct": 37.0,
+   "fired_ci": [
+    33.2,
+    40.9
+   ],
+   "prop_n": 222,
+   "prop_inR": 222,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 37.0,
+   "prop_inR_ci_of_n": [
+    33.23,
+    40.93
+   ],
+   "prop_eqK": 212,
+   "prop_eqK_pct_of_fired": 95.5,
+   "prop_inR_neK": 10,
+   "perm_fired_mean": 0.1,
+   "perm_fired_p95": 1.0,
+   "perm_inR_mean": 0.08,
+   "perm_inR_p95": 1.0,
+   "lift_fired_vs_perm": "2775.0",
+   "lift_inR_vs_perm": "2775.0",
+   "lift_inR_vs_freq": 40.1,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "A3 ≥2/3 trong {K,P,G} trùng (bất kỳ)": {
+   "luat": "A3 ≥2/3 trong {K,P,G} trùng (bất kỳ)",
+   "set": "M1",
+   "n": 600,
+   "fired": 459,
+   "fired_pct": 76.5,
+   "fired_ci": [
+    72.9,
+    79.7
+   ],
+   "prop_n": 459,
+   "prop_inR": 446,
+   "prop_inR_pct_of_fired": 97.2,
+   "prop_inR_pct_of_n": 74.33,
+   "prop_inR_ci_of_n": [
+    70.69,
+    77.67
+   ],
+   "prop_eqK": 436,
+   "prop_eqK_pct_of_fired": 95.0,
+   "prop_inR_neK": 10,
+   "perm_fired_mean": 11.5,
+   "perm_fired_p95": 17.0,
+   "perm_inR_mean": 8.362,
+   "perm_inR_p95": 13.0,
+   "lift_fired_vs_perm": "39.8",
+   "lift_inR_vs_perm": "53.3",
+   "lift_inR_vs_freq": 80.6,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "A4 K==P hoặc K==G (engine mới XÁC NHẬN K)": {
+   "luat": "A4 K==P hoặc K==G (engine mới XÁC NHẬN K)",
+   "set": "M1",
+   "n": 600,
+   "fired": 436,
+   "fired_pct": 72.7,
+   "fired_ci": [
+    69.0,
+    76.1
+   ],
+   "prop_n": 436,
+   "prop_inR": 436,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 72.67,
+   "prop_inR_ci_of_n": [
+    68.96,
+    76.08
+   ],
+   "prop_eqK": 436,
+   "prop_eqK_pct_of_fired": 100.0,
+   "prop_inR_neK": 0,
+   "perm_fired_mean": 8.3,
+   "perm_fired_p95": 13.0,
+   "perm_inR_mean": 8.34,
+   "perm_inR_p95": 13.0,
+   "lift_fired_vs_perm": "52.3",
+   "lift_inR_vs_perm": "52.3",
+   "lift_inR_vs_freq": 78.8,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "A5 K==P==G (3/3)": {
+   "luat": "A5 K==P==G (3/3)",
+   "set": "M1",
+   "n": 600,
+   "fired": 212,
+   "fired_pct": 35.3,
+   "fired_ci": [
+    31.6,
+    39.2
+   ],
+   "prop_n": 212,
+   "prop_inR": 212,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 35.33,
+   "prop_inR_ci_of_n": [
+    31.61,
+    39.24
+   ],
+   "prop_eqK": 212,
+   "prop_eqK_pct_of_fired": 100.0,
+   "prop_inR_neK": 0,
+   "perm_fired_mean": 0.1,
+   "perm_fired_p95": 1.0,
+   "perm_inR_mean": 0.058,
+   "perm_inR_p95": 1.0,
+   "lift_fired_vs_perm": "3655.2",
+   "lift_inR_vs_perm": "3655.2",
+   "lift_inR_vs_freq": 38.3,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "A1v P≈G (chuẩn hoá giản/phồn)": {
+   "luat": "A1v P≈G (chuẩn hoá giản/phồn)",
+   "set": "M1",
+   "n": 600,
+   "fired": 245,
+   "fired_pct": 40.8,
+   "fired_ci": [
+    37.0,
+    44.8
+   ],
+   "prop_n": 245,
+   "prop_inR": 230,
+   "prop_inR_pct_of_fired": 93.9,
+   "prop_inR_pct_of_n": 38.33,
+   "prop_inR_ci_of_n": [
+    34.53,
+    42.29
+   ],
+   "prop_eqK": 215,
+   "prop_eqK_pct_of_fired": 87.8,
+   "prop_inR_neK": 15,
+   "perm_fired_mean": 3.4,
+   "perm_fired_p95": 7.0,
+   "perm_inR_mean": 0.08,
+   "perm_inR_p95": 1.0,
+   "lift_fired_vs_perm": "71.4",
+   "lift_inR_vs_perm": "2875.0",
+   "lift_inR_vs_freq": 41.6,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "A2v P≈G ∧ (P∈R ∨ G∈R) → lấy dạng ∈R": {
+   "luat": "A2v P≈G ∧ (P∈R ∨ G∈R) → lấy dạng ∈R",
+   "set": "M1",
+   "n": 600,
+   "fired": 230,
+   "fired_pct": 38.3,
+   "fired_ci": [
+    34.5,
+    42.3
+   ],
+   "prop_n": 230,
+   "prop_inR": 230,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 38.33,
+   "prop_inR_ci_of_n": [
+    34.53,
+    42.29
+   ],
+   "prop_eqK": 215,
+   "prop_eqK_pct_of_fired": 93.5,
+   "prop_inR_neK": 15,
+   "perm_fired_mean": 0.1,
+   "perm_fired_p95": 1.0,
+   "perm_inR_mean": 0.08,
+   "perm_inR_p95": 1.0,
+   "lift_fired_vs_perm": "2875.0",
+   "lift_inR_vs_perm": "2875.0",
+   "lift_inR_vs_freq": 41.6,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "A4v K≈P hoặc K≈G (xác nhận K, chuẩn hoá giản/phồn)": {
+   "luat": "A4v K≈P hoặc K≈G (xác nhận K, chuẩn hoá giản/phồn)",
+   "set": "M1",
+   "n": 600,
+   "fired": 448,
+   "fired_pct": 74.7,
+   "fired_ci": [
+    71.0,
+    78.0
+   ],
+   "prop_n": 448,
+   "prop_inR": 448,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 74.67,
+   "prop_inR_ci_of_n": [
+    71.04,
+    77.98
+   ],
+   "prop_eqK": 448,
+   "prop_eqK_pct_of_fired": 100.0,
+   "prop_inR_neK": 0,
+   "perm_fired_mean": 8.5,
+   "perm_fired_p95": 13.0,
+   "perm_inR_mean": 8.502,
+   "perm_inR_p95": 13.0,
+   "lift_fired_vs_perm": "52.7",
+   "lift_inR_vs_perm": "52.7",
+   "lift_inR_vs_freq": 80.9,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "B1 P∈R ? P : (G∈R ? G : ∅)": {
+   "luat": "B1 P∈R ? P : (G∈R ? G : ∅)",
+   "set": "M1",
+   "n": 600,
+   "fired": 468,
+   "fired_pct": 78.0,
+   "fired_ci": [
+    74.5,
+    81.1
+   ],
+   "prop_n": 468,
+   "prop_inR": 468,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 78.0,
+   "prop_inR_ci_of_n": [
+    74.51,
+    81.13
+   ],
+   "prop_eqK": 427,
+   "prop_eqK_pct_of_fired": 91.2,
+   "prop_inR_neK": 41,
+   "perm_fired_mean": 13.1,
+   "perm_fired_p95": 19.0,
+   "perm_inR_mean": 13.102,
+   "perm_inR_p95": 19.0,
+   "lift_fired_vs_perm": "35.7",
+   "lift_inR_vs_perm": "35.7",
+   "lift_inR_vs_freq": 84.6,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "B2 G∈R ? G : (P∈R ? P : ∅)": {
+   "luat": "B2 G∈R ? G : (P∈R ? P : ∅)",
+   "set": "M1",
+   "n": 600,
+   "fired": 468,
+   "fired_pct": 78.0,
+   "fired_ci": [
+    74.5,
+    81.1
+   ],
+   "prop_n": 468,
+   "prop_inR": 468,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 78.0,
+   "prop_inR_ci_of_n": [
+    74.51,
+    81.13
+   ],
+   "prop_eqK": 431,
+   "prop_eqK_pct_of_fired": 92.1,
+   "prop_inR_neK": 37,
+   "perm_fired_mean": 13.1,
+   "perm_fired_p95": 19.0,
+   "perm_inR_mean": 13.102,
+   "perm_inR_p95": 19.0,
+   "lift_fired_vs_perm": "35.7",
+   "lift_inR_vs_perm": "35.7",
+   "lift_inR_vs_freq": 84.6,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "B3 chỉ P∈R": {
+   "luat": "B3 chỉ P∈R",
+   "set": "M1",
+   "n": 600,
+   "fired": 343,
+   "fired_pct": 57.2,
+   "fired_ci": [
+    53.2,
+    61.1
+   ],
+   "prop_n": 343,
+   "prop_inR": 343,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 57.17,
+   "prop_inR_ci_of_n": [
+    53.17,
+    61.07
+   ],
+   "prop_eqK": 311,
+   "prop_eqK_pct_of_fired": 90.7,
+   "prop_inR_neK": 32,
+   "perm_fired_mean": 6.9,
+   "perm_fired_p95": 11.0,
+   "perm_inR_mean": 6.874,
+   "perm_inR_p95": 11.0,
+   "lift_fired_vs_perm": "49.9",
+   "lift_inR_vs_perm": "49.9",
+   "lift_inR_vs_freq": 62.0,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "B4 chỉ G∈R": {
+   "luat": "B4 chỉ G∈R",
+   "set": "M1",
+   "n": 600,
+   "fired": 361,
+   "fired_pct": 60.2,
+   "fired_ci": [
+    56.2,
+    64.0
+   ],
+   "prop_n": 361,
+   "prop_inR": 361,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 60.17,
+   "prop_inR_ci_of_n": [
+    56.2,
+    64.01
+   ],
+   "prop_eqK": 337,
+   "prop_eqK_pct_of_fired": 93.4,
+   "prop_inR_neK": 24,
+   "perm_fired_mean": 6.4,
+   "perm_fired_p95": 11.0,
+   "perm_inR_mean": 6.354,
+   "perm_inR_p95": 11.0,
+   "lift_fired_vs_perm": "56.8",
+   "lift_inR_vs_perm": "56.8",
+   "lift_inR_vs_freq": 65.2,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "B5 P∈R ∧ G∈R ∧ P==G (2 cầu ∈R)": {
+   "luat": "B5 P∈R ∧ G∈R ∧ P==G (2 cầu ∈R)",
+   "set": "M1",
+   "n": 600,
+   "fired": 222,
+   "fired_pct": 37.0,
+   "fired_ci": [
+    33.2,
+    40.9
+   ],
+   "prop_n": 222,
+   "prop_inR": 222,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 37.0,
+   "prop_inR_ci_of_n": [
+    33.23,
+    40.93
+   ],
+   "prop_eqK": 212,
+   "prop_eqK_pct_of_fired": 95.5,
+   "prop_inR_neK": 10,
+   "perm_fired_mean": 0.1,
+   "perm_fired_p95": 1.0,
+   "perm_inR_mean": 0.08,
+   "perm_inR_p95": 1.0,
+   "lift_fired_vs_perm": "2775.0",
+   "lift_inR_vs_perm": "2775.0",
+   "lift_inR_vs_freq": 40.1,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "B6 đúng 1 ứng viên ∈R trong {P,G} (không mâu thuẫn)": {
+   "luat": "B6 đúng 1 ứng viên ∈R trong {P,G} (không mâu thuẫn)",
+   "set": "M1",
+   "n": 600,
+   "fired": 454,
+   "fired_pct": 75.7,
+   "fired_ci": [
+    72.1,
+    78.9
+   ],
+   "prop_n": 454,
+   "prop_inR": 454,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 75.67,
+   "prop_inR_ci_of_n": [
+    72.08,
+    78.93
+   ],
+   "prop_eqK": 422,
+   "prop_eqK_pct_of_fired": 93.0,
+   "prop_inR_neK": 32,
+   "perm_fired_mean": 13.1,
+   "perm_fired_p95": 19.0,
+   "perm_inR_mean": 13.056,
+   "perm_inR_p95": 19.0,
+   "lift_fired_vs_perm": "34.8",
+   "lift_inR_vs_perm": "34.8",
+   "lift_inR_vs_freq": 82.0,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "C1 phủ quyết nếu P≠K (P≠∅)": {
+   "luat": "C1 phủ quyết nếu P≠K (P≠∅)",
+   "set": "M1",
+   "n": 600,
+   "fired": 264,
+   "fired_pct": 44.0,
+   "fired_ci": [
+    40.1,
+    48.0
+   ],
+   "perm_fired_mean": 570.8,
+   "perm_fired_p95": 574.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "0.5",
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "C2 phủ quyết nếu G≠K (G≠∅)": {
+   "luat": "C2 phủ quyết nếu G≠K (G≠∅)",
+   "set": "M1",
+   "n": 600,
+   "fired": 186,
+   "fired_pct": 31.0,
+   "fired_ci": [
+    27.4,
+    34.8
+   ],
+   "perm_fired_mean": 518.8,
+   "perm_fired_p95": 521.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "0.4",
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "C3 phủ quyết nếu P≠K ∧ G≠K (cả hai ≠∅)": {
+   "luat": "C3 phủ quyết nếu P≠K ∧ G≠K (cả hai ≠∅)",
+   "set": "M1",
+   "n": 600,
+   "fired": 123,
+   "fired_pct": 20.5,
+   "fired_ci": [
+    17.5,
+    23.9
+   ],
+   "perm_fired_mean": 493.5,
+   "perm_fired_p95": 499.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "0.2",
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "C4 phủ quyết nếu P≠K ∨ G≠K (kể cả rỗng)": {
+   "luat": "C4 phủ quyết nếu P≠K ∨ G≠K (kể cả rỗng)",
+   "set": "M1",
+   "n": 600,
+   "fired": 388,
+   "fired_pct": 64.7,
+   "fired_ci": [
+    60.8,
+    68.4
+   ],
+   "perm_fired_mean": 599.9,
+   "perm_fired_p95": 600.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "0.6",
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "C5 phủ quyết nếu P==G≠K": {
+   "luat": "C5 phủ quyết nếu P==G≠K",
+   "set": "M1",
+   "n": 600,
+   "fired": 23,
+   "fired_pct": 3.8,
+   "fired_ci": [
+    2.6,
+    5.7
+   ],
+   "perm_fired_mean": 3.2,
+   "perm_fired_p95": 6.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "7.2",
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "C6 phủ quyết nếu (P≠K ∧ P∈R) ∨ (G≠K ∧ G∈R)": {
+   "luat": "C6 phủ quyết nếu (P≠K ∧ P∈R) ∨ (G≠K ∧ G∈R)",
+   "set": "M1",
+   "n": 600,
+   "fired": 46,
+   "fired_pct": 7.7,
+   "fired_ci": [
+    5.8,
+    10.1
+   ],
+   "perm_fired_mean": 4.8,
+   "perm_fired_p95": 9.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "9.6",
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "D1 ({P}∪P_all∪{G})∩R, ứng viên duy nhất/nhiều cầu nhất": {
+   "luat": "D1 ({P}∪P_all∪{G})∩R, ứng viên duy nhất/nhiều cầu nhất",
+   "set": "M1",
+   "n": 600,
+   "fired": 466,
+   "fired_pct": 77.7,
+   "fired_ci": [
+    74.2,
+    80.8
+   ],
+   "prop_n": 466,
+   "prop_inR": 466,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 77.67,
+   "prop_inR_ci_of_n": [
+    74.16,
+    80.82
+   ],
+   "prop_eqK": 426,
+   "prop_eqK_pct_of_fired": 91.4,
+   "prop_inR_neK": 40,
+   "perm_fired_mean": 19.8,
+   "perm_fired_p95": 27.049999999999955,
+   "perm_inR_mean": 19.832,
+   "perm_inR_p95": 27.049999999999955,
+   "lift_fired_vs_perm": "23.5",
+   "lift_inR_vs_perm": "23.5",
+   "lift_inR_vs_freq": 84.2,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "D1 ({P}∪P_all∪{G})∩R, ứng viên duy nhất/nhiều cầu nhất |ncand": {
+   "phan_bo_so_ung_vien": {
+    "0": 132,
+    "1": 454,
+    "2": 14
+   },
+   "phan_bo_so_cau": {
+    "3": 204,
+    "1": 120,
+    "2": 142
+   }
+  },
+  "D2 mở rộng 7 luồng (thêm crop v6/v5/VL/GLM-force)∩R": {
+   "luat": "D2 mở rộng 7 luồng (thêm crop v6/v5/VL/GLM-force)∩R",
+   "set": "M1",
+   "n": 600,
+   "fired": 493,
+   "fired_pct": 82.2,
+   "fired_ci": [
+    78.9,
+    85.0
+   ],
+   "prop_n": 493,
+   "prop_inR": 493,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 82.17,
+   "prop_inR_ci_of_n": [
+    78.9,
+    85.02
+   ],
+   "prop_eqK": 451,
+   "prop_eqK_pct_of_fired": 91.5,
+   "prop_inR_neK": 42,
+   "perm_fired_mean": 33.4,
+   "perm_fired_p95": 43.0,
+   "perm_inR_mean": 33.42,
+   "perm_inR_p95": 43.0,
+   "lift_fired_vs_perm": "14.8",
+   "lift_inR_vs_perm": "14.8",
+   "lift_inR_vs_freq": 89.1,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  },
+  "D2 mở rộng 7 luồng (thêm crop v6/v5/VL/GLM-force)∩R |ncand": {
+   "phan_bo_so_ung_vien": {
+    "0": 101,
+    "1": 466,
+    "2": 31,
+    "3": 2
+   },
+   "phan_bo_so_cau": {
+    "5": 67,
+    "3": 100,
+    "2": 78,
+    "1": 99,
+    "4": 66,
+    "7": 16,
+    "6": 67
+   }
+  },
+  "D3 ∈R được CẢ Paddle lẫn GLM đọc ra (bất kỳ cấu hình)": {
+   "luat": "D3 ∈R được CẢ Paddle lẫn GLM đọc ra (bất kỳ cấu hình)",
+   "set": "M1",
+   "n": 600,
+   "fired": 281,
+   "fired_pct": 46.8,
+   "fired_ci": [
+    42.9,
+    50.8
+   ],
+   "prop_n": 281,
+   "prop_inR": 281,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 46.83,
+   "prop_inR_ci_of_n": [
+    42.87,
+    50.83
+   ],
+   "prop_eqK": 263,
+   "prop_eqK_pct_of_fired": 93.6,
+   "prop_inR_neK": 18,
+   "perm_fired_mean": 0.4,
+   "perm_fired_p95": 2.0,
+   "perm_inR_mean": 0.402,
+   "perm_inR_p95": 2.0,
+   "lift_fired_vs_perm": "699.0",
+   "lift_inR_vs_perm": "699.0",
+   "lift_inR_vs_freq": 50.8,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.922,
+   "p_random_uniform": 0.059
+  }
+ },
+ "M2": {
+  "A1 P==G (2 engine mới trùng nhau)": {
+   "luat": "A1 P==G (2 engine mới trùng nhau)",
+   "set": "M2",
+   "n": 600,
+   "fired": 90,
+   "fired_pct": 15.0,
+   "fired_ci": [
+    12.4,
+    18.1
+   ],
+   "prop_n": 90,
+   "prop_inR": 19,
+   "prop_inR_pct_of_fired": 21.1,
+   "prop_inR_pct_of_n": 3.17,
+   "prop_inR_ci_of_n": [
+    2.04,
+    4.89
+   ],
+   "prop_eqK": 42,
+   "prop_eqK_pct_of_fired": 46.7,
+   "prop_inR_neK": 19,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 33,
+     "inR": 11,
+     "inR_ci": [
+      2.8,
+      8.8
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 57,
+     "inR": 8,
+     "inR_ci": [
+      1.1,
+      4.1
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 32,
+     "inR": 6
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 28,
+     "inR": 4
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 30,
+     "inR": 9
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "11/11",
+   "perm_fired_mean": 0.9,
+   "perm_fired_p95": 3.0,
+   "perm_inR_mean": 0.004,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "103.9",
+   "lift_inR_vs_perm": "4750.0",
+   "lift_inR_vs_freq": 5.0,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "A2 P==G ∧ ∈R": {
+   "luat": "A2 P==G ∧ ∈R",
+   "set": "M2",
+   "n": 600,
+   "fired": 19,
+   "fired_pct": 3.2,
+   "fired_ci": [
+    2.0,
+    4.9
+   ],
+   "prop_n": 19,
+   "prop_inR": 19,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 3.17,
+   "prop_inR_ci_of_n": [
+    2.04,
+    4.89
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 19,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 11,
+     "inR": 11,
+     "inR_ci": [
+      2.8,
+      8.8
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 8,
+     "inR": 8,
+     "inR_ci": [
+      1.1,
+      4.1
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 6,
+     "inR": 6
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 4,
+     "inR": 4
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 9,
+     "inR": 9
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "11/11",
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.004,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "4750.0",
+   "lift_inR_vs_perm": "4750.0",
+   "lift_inR_vs_freq": 5.0,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "A3 ≥2/3 trong {K,P,G} trùng (bất kỳ)": {
+   "luat": "A3 ≥2/3 trong {K,P,G} trùng (bất kỳ)",
+   "set": "M2",
+   "n": 600,
+   "fired": 219,
+   "fired_pct": 36.5,
+   "fired_ci": [
+    32.7,
+    40.4
+   ],
+   "prop_n": 219,
+   "prop_inR": 19,
+   "prop_inR_pct_of_fired": 8.7,
+   "prop_inR_pct_of_n": 3.17,
+   "prop_inR_ci_of_n": [
+    2.04,
+    4.89
+   ],
+   "prop_eqK": 171,
+   "prop_eqK_pct_of_fired": 78.1,
+   "prop_inR_neK": 19,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 66,
+     "inR": 11,
+     "inR_ci": [
+      2.8,
+      8.8
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 153,
+     "inR": 8,
+     "inR_ci": [
+      1.1,
+      4.1
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 79,
+     "inR": 6
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 69,
+     "inR": 4
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 71,
+     "inR": 9
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "11/11",
+   "perm_fired_mean": 3.3,
+   "perm_fired_p95": 6.0,
+   "perm_inR_mean": 0.004,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "66.6",
+   "lift_inR_vs_perm": "4750.0",
+   "lift_inR_vs_freq": 5.0,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "A4 K==P hoặc K==G (engine mới XÁC NHẬN K)": {
+   "luat": "A4 K==P hoặc K==G (engine mới XÁC NHẬN K)",
+   "set": "M2",
+   "n": 600,
+   "fired": 171,
+   "fired_pct": 28.5,
+   "fired_ci": [
+    25.0,
+    32.2
+   ],
+   "prop_n": 171,
+   "prop_inR": 0,
+   "prop_inR_pct_of_fired": 0.0,
+   "prop_inR_pct_of_n": 0.0,
+   "prop_inR_ci_of_n": [
+    0.0,
+    0.64
+   ],
+   "prop_eqK": 171,
+   "prop_eqK_pct_of_fired": 100.0,
+   "prop_inR_neK": 0,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 46,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 125,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.0
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 60,
+     "inR": 0
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 56,
+     "inR": 0
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 55,
+     "inR": 0
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "0/0",
+   "perm_fired_mean": 2.4,
+   "perm_fired_p95": 5.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "70.5",
+   "lift_inR_vs_perm": ">0.0",
+   "lift_inR_vs_freq": 0.0,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "A5 K==P==G (3/3)": {
+   "luat": "A5 K==P==G (3/3)",
+   "set": "M2",
+   "n": 600,
+   "fired": 42,
+   "fired_pct": 7.0,
+   "fired_ci": [
+    5.2,
+    9.3
+   ],
+   "prop_n": 42,
+   "prop_inR": 0,
+   "prop_inR_pct_of_fired": 0.0,
+   "prop_inR_pct_of_n": 0.0,
+   "prop_inR_ci_of_n": [
+    0.0,
+    0.64
+   ],
+   "prop_eqK": 42,
+   "prop_eqK_pct_of_fired": 100.0,
+   "prop_inR_neK": 0,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 13,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 29,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.0
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 13,
+     "inR": 0
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 15,
+     "inR": 0
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 14,
+     "inR": 0
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "0/0",
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "10500.0",
+   "lift_inR_vs_perm": ">0.0",
+   "lift_inR_vs_freq": 0.0,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "A1v P≈G (chuẩn hoá giản/phồn)": {
+   "luat": "A1v P≈G (chuẩn hoá giản/phồn)",
+   "set": "M2",
+   "n": 600,
+   "fired": 98,
+   "fired_pct": 16.3,
+   "fired_ci": [
+    13.6,
+    19.5
+   ],
+   "prop_n": 98,
+   "prop_inR": 20,
+   "prop_inR_pct_of_fired": 20.4,
+   "prop_inR_pct_of_n": 3.33,
+   "prop_inR_ci_of_n": [
+    2.17,
+    5.09
+   ],
+   "prop_eqK": 43,
+   "prop_eqK_pct_of_fired": 43.9,
+   "prop_inR_neK": 20,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 41,
+     "inR": 12,
+     "inR_ci": [
+      3.2,
+      9.3
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 57,
+     "inR": 8,
+     "inR_ci": [
+      1.1,
+      4.1
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 33,
+     "inR": 6
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 29,
+     "inR": 5
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 36,
+     "inR": 9
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "11/12",
+   "perm_fired_mean": 1.1,
+   "perm_fired_p95": 3.0,
+   "perm_inR_mean": 0.004,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "91.4",
+   "lift_inR_vs_perm": "5000.0",
+   "lift_inR_vs_freq": 5.2,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "A2v P≈G ∧ (P∈R ∨ G∈R) → lấy dạng ∈R": {
+   "luat": "A2v P≈G ∧ (P∈R ∨ G∈R) → lấy dạng ∈R",
+   "set": "M2",
+   "n": 600,
+   "fired": 20,
+   "fired_pct": 3.3,
+   "fired_ci": [
+    2.2,
+    5.1
+   ],
+   "prop_n": 20,
+   "prop_inR": 20,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 3.33,
+   "prop_inR_ci_of_n": [
+    2.17,
+    5.09
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 20,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 12,
+     "inR": 12,
+     "inR_ci": [
+      3.2,
+      9.3
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 8,
+     "inR": 8,
+     "inR_ci": [
+      1.1,
+      4.1
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 6,
+     "inR": 6
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 5,
+     "inR": 5
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 9,
+     "inR": 9
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "11/12",
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.004,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "5000.0",
+   "lift_inR_vs_perm": "5000.0",
+   "lift_inR_vs_freq": 5.2,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "A4v K≈P hoặc K≈G (xác nhận K, chuẩn hoá giản/phồn)": {
+   "luat": "A4v K≈P hoặc K≈G (xác nhận K, chuẩn hoá giản/phồn)",
+   "set": "M2",
+   "n": 600,
+   "fired": 176,
+   "fired_pct": 29.3,
+   "fired_ci": [
+    25.8,
+    33.1
+   ],
+   "prop_n": 176,
+   "prop_inR": 0,
+   "prop_inR_pct_of_fired": 0.0,
+   "prop_inR_pct_of_n": 0.0,
+   "prop_inR_ci_of_n": [
+    0.0,
+    0.64
+   ],
+   "prop_eqK": 176,
+   "prop_eqK_pct_of_fired": 100.0,
+   "prop_inR_neK": 0,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 47,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 129,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.0
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 60,
+     "inR": 0
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 57,
+     "inR": 0
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 59,
+     "inR": 0
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "0/0",
+   "perm_fired_mean": 2.5,
+   "perm_fired_p95": 5.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "69.5",
+   "lift_inR_vs_perm": ">0.0",
+   "lift_inR_vs_freq": 0.0,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "B1 P∈R ? P : (G∈R ? G : ∅)": {
+   "luat": "B1 P∈R ? P : (G∈R ? G : ∅)",
+   "set": "M2",
+   "n": 600,
+   "fired": 100,
+   "fired_pct": 16.7,
+   "fired_ci": [
+    13.9,
+    19.9
+   ],
+   "prop_n": 100,
+   "prop_inR": 100,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 16.67,
+   "prop_inR_ci_of_n": [
+    13.9,
+    19.86
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 100,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 56,
+     "inR": 56,
+     "inR_ci": [
+      20.2,
+      31.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 44,
+     "inR": 44,
+     "inR_ci": [
+      8.7,
+      15.1
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 32,
+     "inR": 32
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 29,
+     "inR": 29
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 39,
+     "inR": 39
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "47/56",
+   "perm_fired_mean": 3.6,
+   "perm_fired_p95": 7.0,
+   "perm_inR_mean": 3.6,
+   "perm_inR_p95": 7.0,
+   "lift_fired_vs_perm": "27.8",
+   "lift_inR_vs_perm": "27.8",
+   "lift_inR_vs_freq": 26.2,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "B2 G∈R ? G : (P∈R ? P : ∅)": {
+   "luat": "B2 G∈R ? G : (P∈R ? P : ∅)",
+   "set": "M2",
+   "n": 600,
+   "fired": 100,
+   "fired_pct": 16.7,
+   "fired_ci": [
+    13.9,
+    19.9
+   ],
+   "prop_n": 100,
+   "prop_inR": 100,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 16.67,
+   "prop_inR_ci_of_n": [
+    13.9,
+    19.86
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 100,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 56,
+     "inR": 56,
+     "inR_ci": [
+      20.2,
+      31.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 44,
+     "inR": 44,
+     "inR_ci": [
+      8.7,
+      15.1
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 32,
+     "inR": 32
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 29,
+     "inR": 29
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 39,
+     "inR": 39
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "47/56",
+   "perm_fired_mean": 3.6,
+   "perm_fired_p95": 7.0,
+   "perm_inR_mean": 3.6,
+   "perm_inR_p95": 7.0,
+   "lift_fired_vs_perm": "27.8",
+   "lift_inR_vs_perm": "27.8",
+   "lift_inR_vs_freq": 26.2,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "B3 chỉ P∈R": {
+   "luat": "B3 chỉ P∈R",
+   "set": "M2",
+   "n": 600,
+   "fired": 57,
+   "fired_pct": 9.5,
+   "fired_ci": [
+    7.4,
+    12.1
+   ],
+   "prop_n": 57,
+   "prop_inR": 57,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 9.5,
+   "prop_inR_ci_of_n": [
+    7.4,
+    12.11
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 57,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 31,
+     "inR": 31,
+     "inR_ci": [
+      10.2,
+      19.4
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 26,
+     "inR": 26,
+     "inR_ci": [
+      4.7,
+      9.8
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 15,
+     "inR": 15
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 20,
+     "inR": 20
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 22,
+     "inR": 22
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "24/31",
+   "perm_fired_mean": 2.1,
+   "perm_fired_p95": 5.0,
+   "perm_inR_mean": 2.072,
+   "perm_inR_p95": 5.0,
+   "lift_fired_vs_perm": "27.5",
+   "lift_inR_vs_perm": "27.5",
+   "lift_inR_vs_freq": 14.9,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "B4 chỉ G∈R": {
+   "luat": "B4 chỉ G∈R",
+   "set": "M2",
+   "n": 600,
+   "fired": 62,
+   "fired_pct": 10.3,
+   "fired_ci": [
+    8.1,
+    13.0
+   ],
+   "prop_n": 62,
+   "prop_inR": 62,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 10.33,
+   "prop_inR_ci_of_n": [
+    8.14,
+    13.03
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 62,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 36,
+     "inR": 36,
+     "inR_ci": [
+      12.1,
+      21.9
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 26,
+     "inR": 26,
+     "inR_ci": [
+      4.7,
+      9.8
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 23,
+     "inR": 23
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 13,
+     "inR": 13
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 26,
+     "inR": 26
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "34/36",
+   "perm_fired_mean": 1.5,
+   "perm_fired_p95": 3.0499999999999545,
+   "perm_inR_mean": 1.542,
+   "perm_inR_p95": 3.0499999999999545,
+   "lift_fired_vs_perm": "40.2",
+   "lift_inR_vs_perm": "40.2",
+   "lift_inR_vs_freq": 16.2,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "B5 P∈R ∧ G∈R ∧ P==G (2 cầu ∈R)": {
+   "luat": "B5 P∈R ∧ G∈R ∧ P==G (2 cầu ∈R)",
+   "set": "M2",
+   "n": 600,
+   "fired": 19,
+   "fired_pct": 3.2,
+   "fired_ci": [
+    2.0,
+    4.9
+   ],
+   "prop_n": 19,
+   "prop_inR": 19,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 3.17,
+   "prop_inR_ci_of_n": [
+    2.04,
+    4.89
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 19,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 11,
+     "inR": 11,
+     "inR_ci": [
+      2.8,
+      8.8
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 8,
+     "inR": 8,
+     "inR_ci": [
+      1.1,
+      4.1
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 6,
+     "inR": 6
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 4,
+     "inR": 4
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 9,
+     "inR": 9
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "11/11",
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.004,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "4750.0",
+   "lift_inR_vs_perm": "4750.0",
+   "lift_inR_vs_freq": 5.0,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "B6 đúng 1 ứng viên ∈R trong {P,G} (không mâu thuẫn)": {
+   "luat": "B6 đúng 1 ứng viên ∈R trong {P,G} (không mâu thuẫn)",
+   "set": "M2",
+   "n": 600,
+   "fired": 100,
+   "fired_pct": 16.7,
+   "fired_ci": [
+    13.9,
+    19.9
+   ],
+   "prop_n": 100,
+   "prop_inR": 100,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 16.67,
+   "prop_inR_ci_of_n": [
+    13.9,
+    19.86
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 100,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 56,
+     "inR": 56,
+     "inR_ci": [
+      20.2,
+      31.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 44,
+     "inR": 44,
+     "inR_ci": [
+      8.7,
+      15.1
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 32,
+     "inR": 32
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 29,
+     "inR": 29
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 39,
+     "inR": 39
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "47/56",
+   "perm_fired_mean": 3.6,
+   "perm_fired_p95": 7.0,
+   "perm_inR_mean": 3.59,
+   "perm_inR_p95": 7.0,
+   "lift_fired_vs_perm": "27.9",
+   "lift_inR_vs_perm": "27.9",
+   "lift_inR_vs_freq": 26.2,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "C1 phủ quyết nếu P≠K (P≠∅)": {
+   "luat": "C1 phủ quyết nếu P≠K (P≠∅)",
+   "set": "M2",
+   "n": 600,
+   "fired": 444,
+   "fired_pct": 74.0,
+   "fired_ci": [
+    70.3,
+    77.3
+   ],
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 178,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 266,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.0
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 145,
+     "inR": 0
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 151,
+     "inR": 0
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 148,
+     "inR": 0
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "0/0",
+   "perm_fired_mean": 573.5,
+   "perm_fired_p95": 575.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "0.8",
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "C2 phủ quyết nếu G≠K (G≠∅)": {
+   "luat": "C2 phủ quyết nếu G≠K (G≠∅)",
+   "set": "M2",
+   "n": 600,
+   "fired": 433,
+   "fired_pct": 72.2,
+   "fired_ci": [
+    68.4,
+    75.6
+   ],
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 165,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 268,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.0
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 145,
+     "inR": 0
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 135,
+     "inR": 0
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 153,
+     "inR": 0
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "0/0",
+   "perm_fired_mean": 514.1,
+   "perm_fired_p95": 515.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "0.8",
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "C3 phủ quyết nếu P≠K ∧ G≠K (cả hai ≠∅)": {
+   "luat": "C3 phủ quyết nếu P≠K ∧ G≠K (cả hai ≠∅)",
+   "set": "M2",
+   "n": 600,
+   "fired": 346,
+   "fired_pct": 57.7,
+   "fired_ci": [
+    53.7,
+    61.6
+   ],
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 141,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 205,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.0
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 113,
+     "inR": 0
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 112,
+     "inR": 0
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 121,
+     "inR": 0
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "0/0",
+   "perm_fired_mean": 491.3,
+   "perm_fired_p95": 495.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "0.7",
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "C4 phủ quyết nếu P≠K ∨ G≠K (kể cả rỗng)": {
+   "luat": "C4 phủ quyết nếu P≠K ∨ G≠K (kể cả rỗng)",
+   "set": "M2",
+   "n": 600,
+   "fired": 558,
+   "fired_pct": 93.0,
+   "fired_ci": [
+    90.7,
+    94.8
+   ],
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 206,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 352,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.0
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 187,
+     "inR": 0
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 185,
+     "inR": 0
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 186,
+     "inR": 0
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "0/0",
+   "perm_fired_mean": 600.0,
+   "perm_fired_p95": 600.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "0.9",
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "C5 phủ quyết nếu P==G≠K": {
+   "luat": "C5 phủ quyết nếu P==G≠K",
+   "set": "M2",
+   "n": 600,
+   "fired": 48,
+   "fired_pct": 8.0,
+   "fired_ci": [
+    6.1,
+    10.4
+   ],
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 20,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 28,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.0
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 19,
+     "inR": 0
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 13,
+     "inR": 0
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 16,
+     "inR": 0
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "0/0",
+   "perm_fired_mean": 0.9,
+   "perm_fired_p95": 3.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "55.7",
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "C6 phủ quyết nếu (P≠K ∧ P∈R) ∨ (G≠K ∧ G∈R)": {
+   "luat": "C6 phủ quyết nếu (P≠K ∧ P∈R) ∨ (G≠K ∧ G∈R)",
+   "set": "M2",
+   "n": 600,
+   "fired": 100,
+   "fired_pct": 16.7,
+   "fired_ci": [
+    13.9,
+    19.9
+   ],
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 56,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 44,
+     "inR": 0,
+     "inR_ci": [
+      0.0,
+      1.0
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 32,
+     "inR": 0
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 29,
+     "inR": 0
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 39,
+     "inR": 0
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "0/0",
+   "perm_fired_mean": 3.6,
+   "perm_fired_p95": 7.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "27.8",
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "D1 ({P}∪P_all∪{G})∩R, ứng viên duy nhất/nhiều cầu nhất": {
+   "luat": "D1 ({P}∪P_all∪{G})∩R, ứng viên duy nhất/nhiều cầu nhất",
+   "set": "M2",
+   "n": 600,
+   "fired": 101,
+   "fired_pct": 16.8,
+   "fired_ci": [
+    14.1,
+    20.0
+   ],
+   "prop_n": 101,
+   "prop_inR": 101,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 16.83,
+   "prop_inR_ci_of_n": [
+    14.05,
+    20.04
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 101,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 56,
+     "inR": 56,
+     "inR_ci": [
+      20.2,
+      31.7
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 45,
+     "inR": 45,
+     "inR_ci": [
+      8.9,
+      15.4
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 32,
+     "inR": 32
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 29,
+     "inR": 29
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 40,
+     "inR": 40
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "47/56",
+   "perm_fired_mean": 5.7,
+   "perm_fired_p95": 10.0,
+   "perm_inR_mean": 5.712,
+   "perm_inR_p95": 10.0,
+   "lift_fired_vs_perm": "17.7",
+   "lift_inR_vs_perm": "17.7",
+   "lift_inR_vs_freq": 26.5,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "D1 ({P}∪P_all∪{G})∩R, ứng viên duy nhất/nhiều cầu nhất |ncand": {
+   "phan_bo_so_ung_vien": {
+    "0": 499,
+    "1": 101
+   },
+   "phan_bo_so_cau": {
+    "1": 45,
+    "3": 17,
+    "2": 39
+   }
+  },
+  "D2 mở rộng 7 luồng (thêm crop v6/v5/VL/GLM-force)∩R": {
+   "luat": "D2 mở rộng 7 luồng (thêm crop v6/v5/VL/GLM-force)∩R",
+   "set": "M2",
+   "n": 600,
+   "fired": 150,
+   "fired_pct": 25.0,
+   "fired_ci": [
+    21.7,
+    28.6
+   ],
+   "prop_n": 150,
+   "prop_inR": 150,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 25.0,
+   "prop_inR_ci_of_n": [
+    21.7,
+    28.62
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 150,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 74,
+     "inR": 74,
+     "inR_ci": [
+      27.9,
+      40.3
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 76,
+     "inR": 76,
+     "inR_ci": [
+      16.2,
+      24.3
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 48,
+     "inR": 48
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 48,
+     "inR": 48
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 54,
+     "inR": 54
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "59/74",
+   "perm_fired_mean": 10.7,
+   "perm_fired_p95": 16.0,
+   "perm_inR_mean": 10.658,
+   "perm_inR_p95": 16.0,
+   "lift_fired_vs_perm": "14.1",
+   "lift_inR_vs_perm": "14.1",
+   "lift_inR_vs_freq": 39.3,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  },
+  "D2 mở rộng 7 luồng (thêm crop v6/v5/VL/GLM-force)∩R |ncand": {
+   "phan_bo_so_ung_vien": {
+    "0": 450,
+    "1": 147,
+    "2": 3
+   },
+   "phan_bo_so_cau": {
+    "1": 68,
+    "3": 33,
+    "2": 38,
+    "5": 3,
+    "4": 8
+   }
+  },
+  "D3 ∈R được CẢ Paddle lẫn GLM đọc ra (bất kỳ cấu hình)": {
+   "luat": "D3 ∈R được CẢ Paddle lẫn GLM đọc ra (bất kỳ cấu hình)",
+   "set": "M2",
+   "n": 600,
+   "fired": 33,
+   "fired_pct": 5.5,
+   "fired_ci": [
+    3.9,
+    7.6
+   ],
+   "prop_n": 33,
+   "prop_inR": 33,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 5.5,
+   "prop_inR_ci_of_n": [
+    3.94,
+    7.62
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 33,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "fired": 19,
+     "inR": 19,
+     "inR_ci": [
+      5.6,
+      13.2
+     ]
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "fired": 14,
+     "inR": 14,
+     "inR_ci": [
+      2.2,
+      6.1
+     ]
+    }
+   },
+   "by_book": {
+    "stt11": {
+     "n": 200,
+     "fired": 10,
+     "inR": 10
+    },
+    "stt2": {
+     "n": 200,
+     "fired": 7,
+     "inR": 7
+    },
+    "stt4": {
+     "n": 200,
+     "fired": 16,
+     "inR": 16
+    }
+   },
+   "SILVER_inR_eq_pipeline_label": "18/19",
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.024,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "1375.0",
+   "lift_inR_vs_perm": "1375.0",
+   "lift_inR_vs_freq": 8.6,
+   "p_perm_ge_obs": 0.0,
+   "p_random_freq": 0.636,
+   "p_random_uniform": 0.058
+  }
+ },
+ "M3": {
+  "A1 P==G (2 engine mới trùng nhau)": {
+   "luat": "A1 P==G (2 engine mới trùng nhau)",
+   "set": "M3",
+   "n": 300,
+   "fired": 6,
+   "fired_pct": 2.0,
+   "fired_ci": [
+    0.9,
+    4.3
+   ],
+   "prop_n": 6,
+   "prop_inR": 0,
+   "prop_inR_pct_of_fired": 0.0,
+   "prop_inR_pct_of_n": 0.0,
+   "prop_inR_ci_of_n": [
+    0.0,
+    1.26
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 0,
+   "dist_top": [
+    [
+     "等",
+     2
+    ],
+    [
+     "義",
+     1
+    ],
+    [
+     "旱",
+     1
+    ],
+    [
+     "早",
+     1
+    ],
+    [
+     "景",
+     1
+    ]
+   ],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 2.3,
+   "perm_fired_p95": 5.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "2.6",
+   "lift_inR_vs_perm": ">0.0",
+   "lift_inR_vs_freq": 0.0,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "A2 P==G ∧ ∈R": {
+   "luat": "A2 P==G ∧ ∈R",
+   "set": "M3",
+   "n": 300,
+   "fired": 0,
+   "fired_pct": 0.0,
+   "fired_ci": [
+    0.0,
+    1.3
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": ">0.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "A3 ≥2/3 trong {K,P,G} trùng (bất kỳ)": {
+   "luat": "A3 ≥2/3 trong {K,P,G} trùng (bất kỳ)",
+   "set": "M3",
+   "n": 300,
+   "fired": 6,
+   "fired_pct": 2.0,
+   "fired_ci": [
+    0.9,
+    4.3
+   ],
+   "prop_n": 6,
+   "prop_inR": 0,
+   "prop_inR_pct_of_fired": 0.0,
+   "prop_inR_pct_of_n": 0.0,
+   "prop_inR_ci_of_n": [
+    0.0,
+    1.26
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 0,
+   "dist_top": [
+    [
+     "等",
+     2
+    ],
+    [
+     "義",
+     1
+    ],
+    [
+     "旱",
+     1
+    ],
+    [
+     "早",
+     1
+    ],
+    [
+     "景",
+     1
+    ]
+   ],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 2.3,
+   "perm_fired_p95": 5.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "2.6",
+   "lift_inR_vs_perm": ">0.0",
+   "lift_inR_vs_freq": 0.0,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "A4 K==P hoặc K==G (engine mới XÁC NHẬN K)": {
+   "luat": "A4 K==P hoặc K==G (engine mới XÁC NHẬN K)",
+   "set": "M3",
+   "n": 300,
+   "fired": 0,
+   "fired_pct": 0.0,
+   "fired_ci": [
+    0.0,
+    1.3
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": ">0.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "A5 K==P==G (3/3)": {
+   "luat": "A5 K==P==G (3/3)",
+   "set": "M3",
+   "n": 300,
+   "fired": 0,
+   "fired_pct": 0.0,
+   "fired_ci": [
+    0.0,
+    1.3
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": ">0.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "A1v P≈G (chuẩn hoá giản/phồn)": {
+   "luat": "A1v P≈G (chuẩn hoá giản/phồn)",
+   "set": "M3",
+   "n": 300,
+   "fired": 67,
+   "fired_pct": 22.3,
+   "fired_ci": [
+    18.0,
+    27.4
+   ],
+   "prop_n": 67,
+   "prop_inR": 0,
+   "prop_inR_pct_of_fired": 0.0,
+   "prop_inR_pct_of_n": 0.0,
+   "prop_inR_ci_of_n": [
+    0.0,
+    1.26
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 0,
+   "dist_top": [
+    [
+     "尋",
+     60
+    ],
+    [
+     "等",
+     2
+    ],
+    [
+     "義",
+     1
+    ],
+    [
+     "爲",
+     1
+    ],
+    [
+     "旱",
+     1
+    ],
+    [
+     "早",
+     1
+    ],
+    [
+     "景",
+     1
+    ]
+   ],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 49.3,
+   "perm_fired_p95": 56.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "1.4",
+   "lift_inR_vs_perm": ">0.0",
+   "lift_inR_vs_freq": 0.0,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "A2v P≈G ∧ (P∈R ∨ G∈R) → lấy dạng ∈R": {
+   "luat": "A2v P≈G ∧ (P∈R ∨ G∈R) → lấy dạng ∈R",
+   "set": "M3",
+   "n": 300,
+   "fired": 0,
+   "fired_pct": 0.0,
+   "fired_ci": [
+    0.0,
+    1.3
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": ">0.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "A4v K≈P hoặc K≈G (xác nhận K, chuẩn hoá giản/phồn)": {
+   "luat": "A4v K≈P hoặc K≈G (xác nhận K, chuẩn hoá giản/phồn)",
+   "set": "M3",
+   "n": 300,
+   "fired": 0,
+   "fired_pct": 0.0,
+   "fired_ci": [
+    0.0,
+    1.3
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": ">0.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "B1 P∈R ? P : (G∈R ? G : ∅)": {
+   "luat": "B1 P∈R ? P : (G∈R ? G : ∅)",
+   "set": "M3",
+   "n": 300,
+   "fired": 2,
+   "fired_pct": 0.7,
+   "fired_ci": [
+    0.2,
+    2.4
+   ],
+   "prop_n": 2,
+   "prop_inR": 2,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 0.67,
+   "prop_inR_ci_of_n": [
+    0.18,
+    2.4
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 2,
+   "dist_top": [
+    [
+     "命",
+     2
+    ]
+   ],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 2.0,
+   "perm_fired_p95": 2.0,
+   "perm_inR_mean": 2.0,
+   "perm_inR_p95": 2.0,
+   "lift_fired_vs_perm": "1.0",
+   "lift_inR_vs_perm": "1.0",
+   "lift_inR_vs_freq": 0.3,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "B2 G∈R ? G : (P∈R ? P : ∅)": {
+   "luat": "B2 G∈R ? G : (P∈R ? P : ∅)",
+   "set": "M3",
+   "n": 300,
+   "fired": 2,
+   "fired_pct": 0.7,
+   "fired_ci": [
+    0.2,
+    2.4
+   ],
+   "prop_n": 2,
+   "prop_inR": 2,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 0.67,
+   "prop_inR_ci_of_n": [
+    0.18,
+    2.4
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 2,
+   "dist_top": [
+    [
+     "命",
+     2
+    ]
+   ],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 2.0,
+   "perm_fired_p95": 2.0,
+   "perm_inR_mean": 2.0,
+   "perm_inR_p95": 2.0,
+   "lift_fired_vs_perm": "1.0",
+   "lift_inR_vs_perm": "1.0",
+   "lift_inR_vs_freq": 0.3,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "B3 chỉ P∈R": {
+   "luat": "B3 chỉ P∈R",
+   "set": "M3",
+   "n": 300,
+   "fired": 2,
+   "fired_pct": 0.7,
+   "fired_ci": [
+    0.2,
+    2.4
+   ],
+   "prop_n": 2,
+   "prop_inR": 2,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 0.67,
+   "prop_inR_ci_of_n": [
+    0.18,
+    2.4
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 2,
+   "dist_top": [
+    [
+     "命",
+     2
+    ]
+   ],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 2.0,
+   "perm_fired_p95": 2.0,
+   "perm_inR_mean": 2.0,
+   "perm_inR_p95": 2.0,
+   "lift_fired_vs_perm": "1.0",
+   "lift_inR_vs_perm": "1.0",
+   "lift_inR_vs_freq": 0.3,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "B4 chỉ G∈R": {
+   "luat": "B4 chỉ G∈R",
+   "set": "M3",
+   "n": 300,
+   "fired": 0,
+   "fired_pct": 0.0,
+   "fired_ci": [
+    0.0,
+    1.3
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": ">0.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "B5 P∈R ∧ G∈R ∧ P==G (2 cầu ∈R)": {
+   "luat": "B5 P∈R ∧ G∈R ∧ P==G (2 cầu ∈R)",
+   "set": "M3",
+   "n": 300,
+   "fired": 0,
+   "fired_pct": 0.0,
+   "fired_ci": [
+    0.0,
+    1.3
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": ">0.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "B6 đúng 1 ứng viên ∈R trong {P,G} (không mâu thuẫn)": {
+   "luat": "B6 đúng 1 ứng viên ∈R trong {P,G} (không mâu thuẫn)",
+   "set": "M3",
+   "n": 300,
+   "fired": 2,
+   "fired_pct": 0.7,
+   "fired_ci": [
+    0.2,
+    2.4
+   ],
+   "prop_n": 2,
+   "prop_inR": 2,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 0.67,
+   "prop_inR_ci_of_n": [
+    0.18,
+    2.4
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 2,
+   "dist_top": [
+    [
+     "命",
+     2
+    ]
+   ],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 2.0,
+   "perm_fired_p95": 2.0,
+   "perm_inR_mean": 2.0,
+   "perm_inR_p95": 2.0,
+   "lift_fired_vs_perm": "1.0",
+   "lift_inR_vs_perm": "1.0",
+   "lift_inR_vs_freq": 0.3,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "C1 phủ quyết nếu P≠K (P≠∅)": {
+   "luat": "C1 phủ quyết nếu P≠K (P≠∅)",
+   "set": "M3",
+   "n": 300,
+   "fired": 291,
+   "fired_pct": 97.0,
+   "fired_ci": [
+    94.4,
+    98.4
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 291.0,
+   "perm_fired_p95": 291.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "1.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "C2 phủ quyết nếu G≠K (G≠∅)": {
+   "luat": "C2 phủ quyết nếu G≠K (G≠∅)",
+   "set": "M3",
+   "n": 300,
+   "fired": 265,
+   "fired_pct": 88.3,
+   "fired_ci": [
+    84.2,
+    91.5
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 265.0,
+   "perm_fired_p95": 265.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "1.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "C3 phủ quyết nếu P≠K ∧ G≠K (cả hai ≠∅)": {
+   "luat": "C3 phủ quyết nếu P≠K ∧ G≠K (cả hai ≠∅)",
+   "set": "M3",
+   "n": 300,
+   "fired": 256,
+   "fired_pct": 85.3,
+   "fired_ci": [
+    80.9,
+    88.9
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 257.0,
+   "perm_fired_p95": 258.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "1.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "C4 phủ quyết nếu P≠K ∨ G≠K (kể cả rỗng)": {
+   "luat": "C4 phủ quyết nếu P≠K ∨ G≠K (kể cả rỗng)",
+   "set": "M3",
+   "n": 300,
+   "fired": 300,
+   "fired_pct": 100.0,
+   "fired_ci": [
+    98.7,
+    100.0
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 300.0,
+   "perm_fired_p95": 300.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "1.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "C5 phủ quyết nếu P==G≠K": {
+   "luat": "C5 phủ quyết nếu P==G≠K",
+   "set": "M3",
+   "n": 300,
+   "fired": 6,
+   "fired_pct": 2.0,
+   "fired_ci": [
+    0.9,
+    4.3
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 2.3,
+   "perm_fired_p95": 5.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "2.6",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "C6 phủ quyết nếu (P≠K ∧ P∈R) ∨ (G≠K ∧ G∈R)": {
+   "luat": "C6 phủ quyết nếu (P≠K ∧ P∈R) ∨ (G≠K ∧ G∈R)",
+   "set": "M3",
+   "n": 300,
+   "fired": 2,
+   "fired_pct": 0.7,
+   "fired_ci": [
+    0.2,
+    2.4
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 2.0,
+   "perm_fired_p95": 2.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": "1.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "D1 ({P}∪P_all∪{G})∩R, ứng viên duy nhất/nhiều cầu nhất": {
+   "luat": "D1 ({P}∪P_all∪{G})∩R, ứng viên duy nhất/nhiều cầu nhất",
+   "set": "M3",
+   "n": 300,
+   "fired": 2,
+   "fired_pct": 0.7,
+   "fired_ci": [
+    0.2,
+    2.4
+   ],
+   "prop_n": 2,
+   "prop_inR": 2,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 0.67,
+   "prop_inR_ci_of_n": [
+    0.18,
+    2.4
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 2,
+   "dist_top": [
+    [
+     "命",
+     2
+    ]
+   ],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 4.0,
+   "perm_fired_p95": 4.0,
+   "perm_inR_mean": 3.988,
+   "perm_inR_p95": 4.0,
+   "lift_fired_vs_perm": "0.5",
+   "lift_inR_vs_perm": "0.5",
+   "lift_inR_vs_freq": 0.3,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "D1 ({P}∪P_all∪{G})∩R, ứng viên duy nhất/nhiều cầu nhất |ncand": {
+   "phan_bo_so_ung_vien": {
+    "0": 298,
+    "1": 2
+   },
+   "phan_bo_so_cau": {
+    "2": 2
+   }
+  },
+  "D2 mở rộng 7 luồng (thêm crop v6/v5/VL/GLM-force)∩R": {
+   "luat": "D2 mở rộng 7 luồng (thêm crop v6/v5/VL/GLM-force)∩R",
+   "set": "M3",
+   "n": 300,
+   "fired": 2,
+   "fired_pct": 0.7,
+   "fired_ci": [
+    0.2,
+    2.4
+   ],
+   "prop_n": 2,
+   "prop_inR": 2,
+   "prop_inR_pct_of_fired": 100.0,
+   "prop_inR_pct_of_n": 0.67,
+   "prop_inR_ci_of_n": [
+    0.18,
+    2.4
+   ],
+   "prop_eqK": 0,
+   "prop_eqK_pct_of_fired": 0.0,
+   "prop_inR_neK": 2,
+   "dist_top": [
+    [
+     "命",
+     2
+    ]
+   ],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 4.0,
+   "perm_fired_p95": 4.0,
+   "perm_inR_mean": 3.988,
+   "perm_inR_p95": 4.0,
+   "lift_fired_vs_perm": "0.5",
+   "lift_inR_vs_perm": "0.5",
+   "lift_inR_vs_freq": 0.3,
+   "p_perm_ge_obs": 1.0,
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  },
+  "D2 mở rộng 7 luồng (thêm crop v6/v5/VL/GLM-force)∩R |ncand": {
+   "phan_bo_so_ung_vien": {
+    "0": 298,
+    "1": 2
+   },
+   "phan_bo_so_cau": {
+    "2": 2
+   }
+  },
+  "D3 ∈R được CẢ Paddle lẫn GLM đọc ra (bất kỳ cấu hình)": {
+   "luat": "D3 ∈R được CẢ Paddle lẫn GLM đọc ra (bất kỳ cấu hình)",
+   "set": "M3",
+   "n": 300,
+   "fired": 0,
+   "fired_pct": 0.0,
+   "fired_ci": [
+    0.0,
+    1.3
+   ],
+   "dist_top": [],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "perm_fired_mean": 0.0,
+   "perm_fired_p95": 0.0,
+   "perm_inR_mean": 0.0,
+   "perm_inR_p95": 0.0,
+   "lift_fired_vs_perm": ">0.0",
+   "p_random_freq": 2.287,
+   "p_random_uniform": 0.048
+  }
+ },
+ "phu_quyet_phan_loai": {
+  "C1 phủ quyết nếu P≠K (P≠∅)": {
+   "TPR_M2": 74.0,
+   "FPR_M1": 44.0,
+   "lift": 1.68,
+   "M3_fired_pct": 97.0,
+   "uoc_GOLD_bi_oan": 23586,
+   "uoc_khoi_bat_duoc": 20550,
+   "precision_uoc": 46.6
+  },
+  "C2 phủ quyết nếu G≠K (G≠∅)": {
+   "TPR_M2": 72.2,
+   "FPR_M1": 31.0,
+   "lift": 2.33,
+   "M3_fired_pct": 88.3,
+   "uoc_GOLD_bi_oan": 16617,
+   "uoc_khoi_bat_duoc": 20041,
+   "precision_uoc": 54.7
+  },
+  "C3 phủ quyết nếu P≠K ∧ G≠K (cả hai ≠∅)": {
+   "TPR_M2": 57.7,
+   "FPR_M1": 20.5,
+   "lift": 2.81,
+   "M3_fired_pct": 85.3,
+   "uoc_GOLD_bi_oan": 10989,
+   "uoc_khoi_bat_duoc": 16014,
+   "precision_uoc": 59.3
+  },
+  "C4 phủ quyết nếu P≠K ∨ G≠K (kể cả rỗng)": {
+   "TPR_M2": 93.0,
+   "FPR_M1": 64.7,
+   "lift": 1.44,
+   "M3_fired_pct": 100.0,
+   "uoc_GOLD_bi_oan": 34664,
+   "uoc_khoi_bat_duoc": 25826,
+   "precision_uoc": 42.7
+  },
+  "C5 phủ quyết nếu P==G≠K": {
+   "TPR_M2": 8.0,
+   "FPR_M1": 3.8,
+   "lift": 2.09,
+   "M3_fired_pct": 2.0,
+   "uoc_GOLD_bi_oan": 2055,
+   "uoc_khoi_bat_duoc": 2222,
+   "precision_uoc": 51.9
+  },
+  "C6 phủ quyết nếu (P≠K ∧ P∈R) ∨ (G≠K ∧ G∈R)": {
+   "TPR_M2": 16.7,
+   "FPR_M1": 7.7,
+   "lift": 2.17,
+   "M3_fired_pct": 0.7,
+   "uoc_GOLD_bi_oan": 4110,
+   "uoc_khoi_bat_duoc": 4628,
+   "precision_uoc": 53.0
+  }
+ },
+ "ngoai_suy": {
+  "pool_SILVER_SYLLABLE_R_nonempty": 16991,
+  "REVIEW_R_nonempty": 11545,
+  "khoi_muc_tieu": 27770,
+  "ghi_chu": "Khối 27.770 = SILVER không cầu 5.959 + SYLLABLE 10.369 + REVIEW 11.442. M2 lấy từ SILVER+SYLLABLE (R≠∅: 16991 ô), KHÔNG có ô REVIEW (không crop, S3 dưới ngưỡng) → REVIEW ngoại suy theo kịch bản 'như SYLLABLE' (giả định, chưa đo).",
+  "B1 P∈R ? P : (G∈R ? G : ∅)": {
+   "M2_inR": "100/600",
+   "ty_le_hau_phan_tang_pct": 17.07,
+   "so_o_SILVER_SYLLABLE": {
+    "diem": 2901,
+    "ci95": [
+     2417,
+     3427
+    ]
+   },
+   "so_o_REVIEW_kich_ban_nhu_SYLLABLE": {
+    "diem": 1333,
+    "ci95": [
+     1006,
+     1749
+    ],
+    "gia_dinh": "tỷ lệ SYLLABLE áp cho REVIEW; chưa đo"
+   },
+   "tong_khoi_27770": {
+    "diem": 4234,
+    "ci95": [
+     3423,
+     5176
+    ]
+   },
+   "do_chinh_xac_thay_the_M1": {
+    "mo_ta": "P(đề xuất == K | luật bắn) trên M1, K∈R; '∈R' chỉ là điều kiện cần",
+    "gia_tri_pct": 91.2,
+    "ci95": [
+     88.3,
+     93.5
+    ],
+    "n_fired_M1": 468,
+    "neu_coi_bien_the_gian_phon_la_dung_pct": 94.7
+   },
+   "so_o_dung_uoc_tinh_SILVER_SYLLABLE": {
+    "diem": 2647,
+    "ci95": [
+     2135,
+     3204
+    ]
+   }
+  },
+  "B3 chỉ P∈R": {
+   "M2_inR": "57/600",
+   "ty_le_hau_phan_tang_pct": 9.77,
+   "so_o_SILVER_SYLLABLE": {
+    "diem": 1660,
+    "ci95": [
+     1269,
+     2064
+    ]
+   },
+   "so_o_REVIEW_kich_ban_nhu_SYLLABLE": {
+    "diem": 788,
+    "ci95": [
+     543,
+     1133
+    ],
+    "gia_dinh": "tỷ lệ SYLLABLE áp cho REVIEW; chưa đo"
+   },
+   "tong_khoi_27770": {
+    "diem": 2448,
+    "ci95": [
+     1811,
+     3197
+    ]
+   },
+   "do_chinh_xac_thay_the_M1": {
+    "mo_ta": "P(đề xuất == K | luật bắn) trên M1, K∈R; '∈R' chỉ là điều kiện cần",
+    "gia_tri_pct": 90.7,
+    "ci95": [
+     87.1,
+     93.3
+    ],
+    "n_fired_M1": 343,
+    "neu_coi_bien_the_gian_phon_la_dung_pct": 93.9
+   },
+   "so_o_dung_uoc_tinh_SILVER_SYLLABLE": {
+    "diem": 1505,
+    "ci95": [
+     1105,
+     1926
+    ]
+   }
+  },
+  "B4 chỉ G∈R": {
+   "M2_inR": "62/600",
+   "ty_le_hau_phan_tang_pct": 10.47,
+   "so_o_SILVER_SYLLABLE": {
+    "diem": 1780,
+    "ci95": [
+     1380,
+     2196
+    ]
+   },
+   "so_o_REVIEW_kich_ban_nhu_SYLLABLE": {
+    "diem": 788,
+    "ci95": [
+     543,
+     1133
+    ],
+    "gia_dinh": "tỷ lệ SYLLABLE áp cho REVIEW; chưa đo"
+   },
+   "tong_khoi_27770": {
+    "diem": 2568,
+    "ci95": [
+     1923,
+     3329
+    ]
+   },
+   "do_chinh_xac_thay_the_M1": {
+    "mo_ta": "P(đề xuất == K | luật bắn) trên M1, K∈R; '∈R' chỉ là điều kiện cần",
+    "gia_tri_pct": 93.4,
+    "ci95": [
+     90.3,
+     95.5
+    ],
+    "n_fired_M1": 361,
+    "neu_coi_bien_the_gian_phon_la_dung_pct": 96.1
+   },
+   "so_o_dung_uoc_tinh_SILVER_SYLLABLE": {
+    "diem": 1661,
+    "ci95": [
+     1246,
+     2097
+    ]
+   }
+  },
+  "A2 P==G ∧ ∈R": {
+   "M2_inR": "19/600",
+   "ty_le_hau_phan_tang_pct": 3.17,
+   "so_o_SILVER_SYLLABLE": {
+    "diem": 539,
+    "ci95": [
+     321,
+     784
+    ]
+   },
+   "so_o_REVIEW_kich_ban_nhu_SYLLABLE": {
+    "diem": 242,
+    "ci95": [
+     123,
+     472
+    ],
+    "gia_dinh": "tỷ lệ SYLLABLE áp cho REVIEW; chưa đo"
+   },
+   "tong_khoi_27770": {
+    "diem": 781,
+    "ci95": [
+     444,
+     1256
+    ]
+   },
+   "do_chinh_xac_thay_the_M1": {
+    "mo_ta": "P(đề xuất == K | luật bắn) trên M1, K∈R; '∈R' chỉ là điều kiện cần",
+    "gia_tri_pct": 95.5,
+    "ci95": [
+     91.9,
+     97.5
+    ],
+    "n_fired_M1": 222,
+    "neu_coi_bien_the_gian_phon_la_dung_pct": 96.4
+   },
+   "so_o_dung_uoc_tinh_SILVER_SYLLABLE": {
+    "diem": 515,
+    "ci95": [
+     295,
+     765
+    ]
+   }
+  },
+  "A2v P≈G ∧ (P∈R ∨ G∈R) → lấy dạng ∈R": {
+   "M2_inR": "20/600",
+   "ty_le_hau_phan_tang_pct": 3.37,
+   "so_o_SILVER_SYLLABLE": {
+    "diem": 573,
+    "ci95": [
+     333,
+     831
+    ]
+   },
+   "so_o_REVIEW_kich_ban_nhu_SYLLABLE": {
+    "diem": 242,
+    "ci95": [
+     123,
+     472
+    ],
+    "gia_dinh": "tỷ lệ SYLLABLE áp cho REVIEW; chưa đo"
+   },
+   "tong_khoi_27770": {
+    "diem": 815,
+    "ci95": [
+     456,
+     1303
+    ]
+   },
+   "do_chinh_xac_thay_the_M1": {
+    "mo_ta": "P(đề xuất == K | luật bắn) trên M1, K∈R; '∈R' chỉ là điều kiện cần",
+    "gia_tri_pct": 93.5,
+    "ci95": [
+     89.5,
+     96.0
+    ],
+    "n_fired_M1": 230,
+    "neu_coi_bien_the_gian_phon_la_dung_pct": 96.5
+   },
+   "so_o_dung_uoc_tinh_SILVER_SYLLABLE": {
+    "diem": 535,
+    "ci95": [
+     298,
+     798
+    ]
+   }
+  },
+  "B6 đúng 1 ứng viên ∈R trong {P,G} (không mâu thuẫn)": {
+   "M2_inR": "100/600",
+   "ty_le_hau_phan_tang_pct": 17.07,
+   "so_o_SILVER_SYLLABLE": {
+    "diem": 2901,
+    "ci95": [
+     2416,
+     3408
+    ]
+   },
+   "so_o_REVIEW_kich_ban_nhu_SYLLABLE": {
+    "diem": 1333,
+    "ci95": [
+     1006,
+     1749
+    ],
+    "gia_dinh": "tỷ lệ SYLLABLE áp cho REVIEW; chưa đo"
+   },
+   "tong_khoi_27770": {
+    "diem": 4234,
+    "ci95": [
+     3422,
+     5157
+    ]
+   },
+   "do_chinh_xac_thay_the_M1": {
+    "mo_ta": "P(đề xuất == K | luật bắn) trên M1, K∈R; '∈R' chỉ là điều kiện cần",
+    "gia_tri_pct": 93.0,
+    "ci95": [
+     90.2,
+     95.0
+    ],
+    "n_fired_M1": 454,
+    "neu_coi_bien_the_gian_phon_la_dung_pct": 95.4
+   },
+   "so_o_dung_uoc_tinh_SILVER_SYLLABLE": {
+    "diem": 2696,
+    "ci95": [
+     2179,
+     3237
+    ]
+   }
+  },
+  "D2 mở rộng 7 luồng (thêm crop v6/v5/VL/GLM-force)∩R": {
+   "M2_inR": "150/600",
+   "ty_le_hau_phan_tang_pct": 25.35,
+   "so_o_SILVER_SYLLABLE": {
+    "diem": 4307,
+    "ci95": [
+     3736,
+     4882
+    ]
+   },
+   "so_o_REVIEW_kich_ban_nhu_SYLLABLE": {
+    "diem": 2303,
+    "ci95": [
+     1875,
+     2800
+    ],
+    "gia_dinh": "tỷ lệ SYLLABLE áp cho REVIEW; chưa đo"
+   },
+   "tong_khoi_27770": {
+    "diem": 6610,
+    "ci95": [
+     5611,
+     7682
+    ]
+   },
+   "do_chinh_xac_thay_the_M1": {
+    "mo_ta": "P(đề xuất == K | luật bắn) trên M1, K∈R; '∈R' chỉ là điều kiện cần",
+    "gia_tri_pct": 91.5,
+    "ci95": [
+     88.7,
+     93.6
+    ],
+    "n_fired_M1": 493,
+    "neu_coi_bien_the_gian_phon_la_dung_pct": 94.1
+   },
+   "so_o_dung_uoc_tinh_SILVER_SYLLABLE": {
+    "diem": 3940,
+    "ci95": [
+     3313,
+     4571
+    ]
+   }
+  },
+  "D1 ({P}∪P_all∪{G})∩R, ứng viên duy nhất/nhiều cầu nhất": {
+   "M2_inR": "101/600",
+   "ty_le_hau_phan_tang_pct": 17.23,
+   "so_o_SILVER_SYLLABLE": {
+    "diem": 2927,
+    "ci95": [
+     2436,
+     3452
+    ]
+   },
+   "so_o_REVIEW_kich_ban_nhu_SYLLABLE": {
+    "diem": 1364,
+    "ci95": [
+     1033,
+     1782
+    ],
+    "gia_dinh": "tỷ lệ SYLLABLE áp cho REVIEW; chưa đo"
+   },
+   "tong_khoi_27770": {
+    "diem": 4291,
+    "ci95": [
+     3468,
+     5234
+    ]
+   },
+   "do_chinh_xac_thay_the_M1": {
+    "mo_ta": "P(đề xuất == K | luật bắn) trên M1, K∈R; '∈R' chỉ là điều kiện cần",
+    "gia_tri_pct": 91.4,
+    "ci95": [
+     88.5,
+     93.6
+    ],
+    "n_fired_M1": 466,
+    "neu_coi_bien_the_gian_phon_la_dung_pct": 94.6
+   },
+   "so_o_dung_uoc_tinh_SILVER_SYLLABLE": {
+    "diem": 2676,
+    "ci95": [
+     2156,
+     3232
+    ]
+   }
+  },
+  "D3 ∈R được CẢ Paddle lẫn GLM đọc ra (bất kỳ cấu hình)": {
+   "M2_inR": "33/600",
+   "ty_le_hau_phan_tang_pct": 5.65,
+   "so_o_SILVER_SYLLABLE": {
+    "diem": 960,
+    "ci95": [
+     652,
+     1294
+    ]
+   },
+   "so_o_REVIEW_kich_ban_nhu_SYLLABLE": {
+    "diem": 424,
+    "ci95": [
+     254,
+     701
+    ],
+    "gia_dinh": "tỷ lệ SYLLABLE áp cho REVIEW; chưa đo"
+   },
+   "tong_khoi_27770": {
+    "diem": 1384,
+    "ci95": [
+     906,
+     1995
+    ]
+   },
+   "do_chinh_xac_thay_the_M1": {
+    "mo_ta": "P(đề xuất == K | luật bắn) trên M1, K∈R; '∈R' chỉ là điều kiện cần",
+    "gia_tri_pct": 93.6,
+    "ci95": [
+     90.1,
+     95.9
+    ],
+    "n_fired_M1": 281,
+    "neu_coi_bien_the_gian_phon_la_dung_pct": 95.7
+   },
+   "so_o_dung_uoc_tinh_SILVER_SYLLABLE": {
+    "diem": 899,
+    "ci95": [
+     587,
+     1241
+    ]
+   }
+  }
+ }
+}

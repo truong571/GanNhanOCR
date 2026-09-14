@@ -1,0 +1,1680 @@
+{
+ "M1_a-force-s1": {
+  "set": "M1",
+  "n": 600,
+  "one_cjk": 0.4633,
+  "n_cjk_mean": 0.57,
+  "first_in_R": 0.1217,
+  "any_in_R": 0.1317,
+  "eq_kinhhannom": 0.1117,
+  "first_in_vocab_given_pred": 0.9935,
+  "bia": {
+   "empty": 0.0,
+   "no_cjk": 0.485,
+   "latin": 0.0533,
+   "multi_cjk": 0.0517,
+   "first_not_in_vocab": 0.0033
+  },
+  "sec_per_cell": 0.315,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0092,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.135,
+    "one_cjk": 0.445
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.08,
+    "one_cjk": 0.37
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.15,
+    "one_cjk": 0.575
+   }
+  }
+ },
+ "M1_a-nat-s3": {
+  "set": "M1",
+  "n": 600,
+  "one_cjk": 0.1383,
+  "n_cjk_mean": 0.16,
+  "first_in_R": 0.0567,
+  "any_in_R": 0.0567,
+  "eq_kinhhannom": 0.0483,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.4967,
+   "no_cjk": 0.8533,
+   "latin": 0.2333,
+   "multi_cjk": 0.0083,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 0.874,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0092,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.075,
+    "one_cjk": 0.155
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.025,
+    "one_cjk": 0.1
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.07,
+    "one_cjk": 0.16
+   }
+  }
+ },
+ "M1_b-force-s3": {
+  "set": "M1",
+  "n": 600,
+  "one_cjk": 0.2133,
+  "n_cjk_mean": 0.67,
+  "first_in_R": 0.0433,
+  "any_in_R": 0.045,
+  "eq_kinhhannom": 0.0367,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.0,
+   "no_cjk": 0.6733,
+   "latin": 0.0467,
+   "multi_cjk": 0.1133,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 0.925,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0092,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.045,
+    "one_cjk": 0.205
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.04,
+    "one_cjk": 0.195
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.045,
+    "one_cjk": 0.24
+   }
+  }
+ },
+ "M1_b-nat-s3": {
+  "set": "M1",
+  "n": 600,
+  "one_cjk": 0.0517,
+  "n_cjk_mean": 0.08,
+  "first_in_R": 0.0217,
+  "any_in_R": 0.0217,
+  "eq_kinhhannom": 0.02,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.91,
+   "no_cjk": 0.935,
+   "latin": 0.0217,
+   "multi_cjk": 0.0133,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 0.837,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0092,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.035,
+    "one_cjk": 0.06
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.005,
+    "one_cjk": 0.035
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.025,
+    "one_cjk": 0.06
+   }
+  }
+ },
+ "M1_c-force-s3-CTRL-người": {
+  "set": "M1",
+  "n": 200,
+  "one_cjk": 0.97,
+  "n_cjk_mean": 1.01,
+  "first_in_R": 0.05,
+  "any_in_R": 0.05,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.0,
+   "no_cjk": 0.02,
+   "latin": 0.02,
+   "multi_cjk": 0.01,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 0.8,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0094,
+  "by_book": {
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.05,
+    "one_cjk": 0.97
+   }
+  }
+ },
+ "M1_c-force-s3": {
+  "set": "M1",
+  "n": 600,
+  "one_cjk": 0.625,
+  "n_cjk_mean": 1.24,
+  "first_in_R": 0.5433,
+  "any_in_R": 0.595,
+  "eq_kinhhannom": 0.0283,
+  "first_in_vocab_given_pred": 0.9694,
+  "bia": {
+   "empty": 0.0,
+   "no_cjk": 0.2367,
+   "latin": 0.2767,
+   "multi_cjk": 0.1383,
+   "first_not_in_vocab": 0.0233
+  },
+  "sec_per_cell": 1.065,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0092,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.575,
+    "one_cjk": 0.655
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.615,
+    "one_cjk": 0.73
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.44,
+    "one_cjk": 0.49
+   }
+  }
+ },
+ "M1_c-nat-s3": {
+  "set": "M1",
+  "n": 600,
+  "one_cjk": 0.095,
+  "n_cjk_mean": 0.33,
+  "first_in_R": 0.0717,
+  "any_in_R": 0.12,
+  "eq_kinhhannom": 0.0183,
+  "first_in_vocab_given_pred": 0.9921,
+  "bia": {
+   "empty": 0.7783,
+   "no_cjk": 0.79,
+   "latin": 0.0683,
+   "multi_cjk": 0.115,
+   "first_not_in_vocab": 0.0017
+  },
+  "sec_per_cell": 0.939,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0092,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.05,
+    "one_cjk": 0.065
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.025,
+    "one_cjk": 0.07
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.14,
+    "one_cjk": 0.15
+   }
+  }
+ },
+ "M1_col-ctx": {
+  "set": "M1",
+  "n": 600,
+  "one_cjk": 0.8717,
+  "n_cjk_mean": 0.87,
+  "first_in_R": 0.6017,
+  "any_in_R": 0.6017,
+  "eq_kinhhannom": 0.5617,
+  "first_in_vocab_given_pred": 0.9943,
+  "bia": {
+   "empty": 0.1283,
+   "no_cjk": 0.1283,
+   "latin": 0.0,
+   "multi_cjk": 0.0,
+   "first_not_in_vocab": 0.005
+  },
+  "sec_per_cell": 1.171,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0092,
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.66,
+    "one_cjk": 0.875
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.595,
+    "one_cjk": 0.855
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.55,
+    "one_cjk": 0.885
+   }
+  },
+  "n_col_pred_over_kinh": 0.873,
+  "col_cer_vs_kinh": 0.614,
+  "align_op": {
+   "eq": 0.562,
+   "sub": 0.31,
+   "del": 0.127,
+   "nocol": 0.002
+  }
+ },
+ "M2_a-force-s1": {
+  "set": "M2",
+  "n": 600,
+  "one_cjk": 0.4133,
+  "n_cjk_mean": 0.54,
+  "first_in_R": 0.0117,
+  "any_in_R": 0.0133,
+  "eq_kinhhannom": 0.0133,
+  "first_in_vocab_given_pred": 0.9926,
+  "bia": {
+   "empty": 0.0,
+   "no_cjk": 0.5467,
+   "latin": 0.0667,
+   "multi_cjk": 0.04,
+   "first_not_in_vocab": 0.0033
+  },
+  "sec_per_cell": 0.309,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0064,
+  "rescue_n": 600,
+  "rescue_count": 7,
+  "rescue_rate": 0.0117,
+  "rescue_any_count": 8,
+  "lift_uniform": 20.21,
+  "lift_freq": 1.84,
+  "rescue_eq_label": 0.2857,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0091,
+    "one_cjk": 0.3562
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.0131,
+    "one_cjk": 0.4462
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.005,
+    "one_cjk": 0.46
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.01,
+    "one_cjk": 0.325
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.02,
+    "one_cjk": 0.455
+   }
+  }
+ },
+ "M2_a-nat-s3": {
+  "set": "M2",
+  "n": 600,
+  "one_cjk": 0.105,
+  "n_cjk_mean": 0.11,
+  "first_in_R": 0.0033,
+  "any_in_R": 0.0033,
+  "eq_kinhhannom": 0.01,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.5017,
+   "no_cjk": 0.8917,
+   "latin": 0.2267,
+   "multi_cjk": 0.0033,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 0.72,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0064,
+  "rescue_n": 600,
+  "rescue_count": 2,
+  "rescue_rate": 0.0033,
+  "rescue_any_count": 2,
+  "lift_uniform": 5.7,
+  "lift_freq": 0.52,
+  "rescue_eq_label": 0.0,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0,
+    "one_cjk": 0.0822
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.0052,
+    "one_cjk": 0.1181
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.0,
+    "one_cjk": 0.175
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.0,
+    "one_cjk": 0.04
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.01,
+    "one_cjk": 0.1
+   }
+  }
+ },
+ "M2_b-force-s3": {
+  "set": "M2",
+  "n": 600,
+  "one_cjk": 0.1883,
+  "n_cjk_mean": 0.64,
+  "first_in_R": 0.0017,
+  "any_in_R": 0.005,
+  "eq_kinhhannom": 0.0017,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.0,
+   "no_cjk": 0.7083,
+   "latin": 0.0617,
+   "multi_cjk": 0.1033,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 0.97,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0064,
+  "rescue_n": 600,
+  "rescue_count": 1,
+  "rescue_rate": 0.0017,
+  "rescue_any_count": 3,
+  "lift_uniform": 2.94,
+  "lift_freq": 0.27,
+  "rescue_eq_label": 0.0,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0,
+    "one_cjk": 0.1872
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.0026,
+    "one_cjk": 0.189
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.0,
+    "one_cjk": 0.255
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.0,
+    "one_cjk": 0.12
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.005,
+    "one_cjk": 0.19
+   }
+  }
+ },
+ "M2_b-nat-s3": {
+  "set": "M2",
+  "n": 600,
+  "one_cjk": 0.0333,
+  "n_cjk_mean": 0.05,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.9117,
+   "no_cjk": 0.9583,
+   "latin": 0.0217,
+   "multi_cjk": 0.0083,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 0.869,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0064,
+  "rescue_n": 600,
+  "rescue_count": 0,
+  "rescue_rate": 0.0,
+  "rescue_any_count": 0,
+  "lift_uniform": 0.0,
+  "lift_freq": 0.0,
+  "rescue_eq_label": null,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0,
+    "one_cjk": 0.0183
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.0,
+    "one_cjk": 0.042
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.0,
+    "one_cjk": 0.055
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.0,
+    "one_cjk": 0.015
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.0,
+    "one_cjk": 0.03
+   }
+  }
+ },
+ "M2_c-force-s3": {
+  "set": "M2",
+  "n": 600,
+  "one_cjk": 0.7,
+  "n_cjk_mean": 1.06,
+  "first_in_R": 0.6517,
+  "any_in_R": 0.69,
+  "eq_kinhhannom": 0.0017,
+  "first_in_vocab_given_pred": 0.9579,
+  "bia": {
+   "empty": 0.0,
+   "no_cjk": 0.2083,
+   "latin": 0.22,
+   "multi_cjk": 0.0917,
+   "first_not_in_vocab": 0.0333
+  },
+  "sec_per_cell": 0.688,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0064,
+  "rescue_n": 600,
+  "rescue_count": 391,
+  "rescue_rate": 0.6517,
+  "rescue_any_count": 414,
+  "lift_uniform": 1125.62,
+  "lift_freq": 102.41,
+  "rescue_eq_label": 0.0026,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.589,
+    "one_cjk": 0.6804
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.6877,
+    "one_cjk": 0.7113
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.66,
+    "one_cjk": 0.7
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.78,
+    "one_cjk": 0.84
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.515,
+    "one_cjk": 0.56
+   }
+  }
+ },
+ "M2_c-nat-s3": {
+  "set": "M2",
+  "n": 600,
+  "one_cjk": 0.105,
+  "n_cjk_mean": 0.25,
+  "first_in_R": 0.0683,
+  "any_in_R": 0.11,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 0.9906,
+  "bia": {
+   "empty": 0.8017,
+   "no_cjk": 0.8233,
+   "latin": 0.0617,
+   "multi_cjk": 0.0717,
+   "first_not_in_vocab": 0.0017
+  },
+  "sec_per_cell": 0.944,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0064,
+  "rescue_n": 600,
+  "rescue_count": 41,
+  "rescue_rate": 0.0683,
+  "rescue_any_count": 66,
+  "lift_uniform": 117.97,
+  "lift_freq": 10.73,
+  "rescue_eq_label": 0.0,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.0502,
+    "one_cjk": 0.0959
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.0787,
+    "one_cjk": 0.1102
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.05,
+    "one_cjk": 0.065
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.08,
+    "one_cjk": 0.1
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.075,
+    "one_cjk": 0.15
+   }
+  }
+ },
+ "M2_col-ctx": {
+  "set": "M2",
+  "n": 600,
+  "one_cjk": 0.8583,
+  "n_cjk_mean": 0.86,
+  "first_in_R": 0.1033,
+  "any_in_R": 0.1033,
+  "eq_kinhhannom": 0.1367,
+  "first_in_vocab_given_pred": 0.9903,
+  "bia": {
+   "empty": 0.1417,
+   "no_cjk": 0.1417,
+   "latin": 0.0,
+   "multi_cjk": 0.0,
+   "first_not_in_vocab": 0.0083
+  },
+  "sec_per_cell": 1.522,
+  "p_random_in_R_uniform": 0.0006,
+  "p_random_in_R_freqweighted": 0.0064,
+  "rescue_n": 600,
+  "rescue_count": 62,
+  "rescue_rate": 0.1033,
+  "rescue_any_count": 62,
+  "lift_uniform": 178.42,
+  "lift_freq": 16.23,
+  "rescue_eq_label": 0.5484,
+  "by_tier": {
+   "SILVER": {
+    "n": 219,
+    "first_in_R": 0.1644,
+    "one_cjk": 0.863
+   },
+   "SYLLABLE": {
+    "n": 381,
+    "first_in_R": 0.0682,
+    "one_cjk": 0.8556
+   }
+  },
+  "by_book": {
+   "stt11": {
+    "n": 200,
+    "first_in_R": 0.115,
+    "one_cjk": 0.86
+   },
+   "stt2": {
+    "n": 200,
+    "first_in_R": 0.065,
+    "one_cjk": 0.815
+   },
+   "stt4": {
+    "n": 200,
+    "first_in_R": 0.13,
+    "one_cjk": 0.9
+   }
+  },
+  "n_col_pred_over_kinh": 0.871,
+  "col_cer_vs_kinh": 0.624,
+  "align_op": {
+   "sub": 0.722,
+   "del": 0.142,
+   "eq": 0.137
+  }
+ },
+ "M3_a-force-s1": {
+  "set": "M3",
+  "n": 300,
+  "one_cjk": 0.17,
+  "n_cjk_mean": 0.23,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 0.9833,
+  "bia": {
+   "empty": 0.0,
+   "no_cjk": 0.8,
+   "latin": 0.1033,
+   "multi_cjk": 0.03,
+   "first_not_in_vocab": 0.0033
+  },
+  "sec_per_cell": 0.407,
+  "p_random_in_R_uniform": 0.0005,
+  "p_random_in_R_freqweighted": 0.0229,
+  "dist_top": [
+   [
+    "<rỗng>",
+    240,
+    0.8
+   ],
+   [
+    "一",
+    18,
+    0.06
+   ],
+   [
+    "答",
+    8,
+    0.0267
+   ],
+   [
+    "导",
+    3,
+    0.01
+   ],
+   [
+    "峨",
+    3,
+    0.01
+   ],
+   [
+    "尋",
+    2,
+    0.0067
+   ],
+   [
+    "言",
+    2,
+    0.0067
+   ],
+   [
+    "境",
+    2,
+    0.0067
+   ],
+   [
+    "遠",
+    2,
+    0.0067
+   ],
+   [
+    "曰",
+    2,
+    0.0067
+   ],
+   [
+    "峙",
+    1,
+    0.0033
+   ],
+   [
+    "徵",
+    1,
+    0.0033
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_𠊛": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.3182
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.1368
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.1667
+   }
+  }
+ },
+ "M3_a-nat-s3": {
+  "set": "M3",
+  "n": 300,
+  "one_cjk": 0.04,
+  "n_cjk_mean": 0.05,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.5967,
+   "no_cjk": 0.9567,
+   "latin": 0.2733,
+   "multi_cjk": 0.0033,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 0.718,
+  "p_random_in_R_uniform": 0.0005,
+  "p_random_in_R_freqweighted": 0.0229,
+  "dist_top": [
+   [
+    "<rỗng>",
+    287,
+    0.9567
+   ],
+   [
+    "一",
+    2,
+    0.0067
+   ],
+   [
+    "寸",
+    1,
+    0.0033
+   ],
+   [
+    "于",
+    1,
+    0.0033
+   ],
+   [
+    "从",
+    1,
+    0.0033
+   ],
+   [
+    "礼",
+    1,
+    0.0033
+   ],
+   [
+    "等",
+    1,
+    0.0033
+   ],
+   [
+    "助",
+    1,
+    0.0033
+   ],
+   [
+    "八",
+    1,
+    0.0033
+   ],
+   [
+    "答",
+    1,
+    0.0033
+   ],
+   [
+    "因",
+    1,
+    0.0033
+   ],
+   [
+    "寻",
+    1,
+    0.0033
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_𠊛": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.0682
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.0316
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.0455
+   }
+  }
+ },
+ "M3_b-force-s3": {
+  "set": "M3",
+  "n": 300,
+  "one_cjk": 0.2367,
+  "n_cjk_mean": 0.76,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.0,
+   "no_cjk": 0.6533,
+   "latin": 0.0567,
+   "multi_cjk": 0.11,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 0.998,
+  "p_random_in_R_uniform": 0.0005,
+  "p_random_in_R_freqweighted": 0.0229,
+  "dist_top": [
+   [
+    "<rỗng>",
+    196,
+    0.6533
+   ],
+   [
+    "越",
+    25,
+    0.0833
+   ],
+   [
+    "峙",
+    22,
+    0.0733
+   ],
+   [
+    "峄",
+    7,
+    0.0233
+   ],
+   [
+    "峨",
+    7,
+    0.0233
+   ],
+   [
+    "一",
+    7,
+    0.0233
+   ],
+   [
+    "𠀄",
+    4,
+    0.0133
+   ],
+   [
+    "𠕃",
+    4,
+    0.0133
+   ],
+   [
+    "峷",
+    3,
+    0.01
+   ],
+   [
+    "否",
+    2,
+    0.0067
+   ],
+   [
+    "请",
+    2,
+    0.0067
+   ],
+   [
+    "亻",
+    1,
+    0.0033
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_𠊛": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.0682
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.2895
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.197
+   }
+  }
+ },
+ "M3_b-nat-s3": {
+  "set": "M3",
+  "n": 300,
+  "one_cjk": 0.0267,
+  "n_cjk_mean": 0.03,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.9467,
+   "no_cjk": 0.97,
+   "latin": 0.0067,
+   "multi_cjk": 0.0033,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 0.957,
+  "p_random_in_R_uniform": 0.0005,
+  "p_random_in_R_freqweighted": 0.0229,
+  "dist_top": [
+   [
+    "<rỗng>",
+    291,
+    0.97
+   ],
+   [
+    "等",
+    2,
+    0.0067
+   ],
+   [
+    "一",
+    1,
+    0.0033
+   ],
+   [
+    "礼",
+    1,
+    0.0033
+   ],
+   [
+    "宰",
+    1,
+    0.0033
+   ],
+   [
+    "分",
+    1,
+    0.0033
+   ],
+   [
+    "饯",
+    1,
+    0.0033
+   ],
+   [
+    "否",
+    1,
+    0.0033
+   ],
+   [
+    "因",
+    1,
+    0.0033
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_𠊛": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.0
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.0368
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.0152
+   }
+  }
+ },
+ "M3_c-force-s3": {
+  "set": "M3",
+  "n": 300,
+  "one_cjk": 0.8467,
+  "n_cjk_mean": 0.85,
+  "first_in_R": 0.8233,
+  "any_in_R": 0.8233,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.0,
+   "no_cjk": 0.15,
+   "latin": 0.1033,
+   "multi_cjk": 0.0033,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 1.093,
+  "p_random_in_R_uniform": 0.0005,
+  "p_random_in_R_freqweighted": 0.0229,
+  "dist_top": [
+   [
+    "𫴮",
+    135,
+    0.45
+   ],
+   [
+    "𠊚",
+    69,
+    0.23
+   ],
+   [
+    "<rỗng>",
+    45,
+    0.15
+   ],
+   [
+    "𠊛",
+    43,
+    0.1433
+   ],
+   [
+    "仄",
+    5,
+    0.0167
+   ],
+   [
+    "尋",
+    1,
+    0.0033
+   ],
+   [
+    "侩",
+    1,
+    0.0033
+   ],
+   [
+    "八",
+    1,
+    0.0033
+   ]
+  ],
+  "pct_𠊚": 0.23,
+  "pct_㝵": 0.0,
+  "pct_𠊛": 0.1433,
+  "pct_in_R_nguoi": 0.8233,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.75,
+    "one_cjk": 0.8182
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 1.0,
+    "one_cjk": 1.0
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.3636,
+    "one_cjk": 0.4242
+   }
+  }
+ },
+ "M3_c-nat-s3": {
+  "set": "M3",
+  "n": 300,
+  "one_cjk": 0.0867,
+  "n_cjk_mean": 0.09,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 1.0,
+  "bia": {
+   "empty": 0.91,
+   "no_cjk": 0.91,
+   "latin": 0.0867,
+   "multi_cjk": 0.0033,
+   "first_not_in_vocab": 0.0
+  },
+  "sec_per_cell": 0.991,
+  "p_random_in_R_uniform": 0.0005,
+  "p_random_in_R_freqweighted": 0.0229,
+  "dist_top": [
+   [
+    "<rỗng>",
+    273,
+    0.91
+   ],
+   [
+    "侄",
+    14,
+    0.0467
+   ],
+   [
+    "仄",
+    7,
+    0.0233
+   ],
+   [
+    "答",
+    1,
+    0.0033
+   ],
+   [
+    "侔",
+    1,
+    0.0033
+   ],
+   [
+    "侩",
+    1,
+    0.0033
+   ],
+   [
+    "儘",
+    1,
+    0.0033
+   ],
+   [
+    "侉",
+    1,
+    0.0033
+   ],
+   [
+    "尋",
+    1,
+    0.0033
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_𠊛": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.0227
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.0053
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.3636
+   }
+  }
+ },
+ "M3_col-ctx": {
+  "set": "M3",
+  "n": 300,
+  "one_cjk": 0.8833,
+  "n_cjk_mean": 0.88,
+  "first_in_R": 0.0,
+  "any_in_R": 0.0,
+  "eq_kinhhannom": 0.0,
+  "first_in_vocab_given_pred": 0.9962,
+  "bia": {
+   "empty": 0.1167,
+   "no_cjk": 0.1167,
+   "latin": 0.0,
+   "multi_cjk": 0.0,
+   "first_not_in_vocab": 0.0033
+  },
+  "sec_per_cell": 1.213,
+  "p_random_in_R_uniform": 0.0005,
+  "p_random_in_R_freqweighted": 0.0229,
+  "dist_top": [
+   [
+    "寻",
+    142,
+    0.4733
+   ],
+   [
+    "导",
+    42,
+    0.14
+   ],
+   [
+    "<rỗng>",
+    35,
+    0.1167
+   ],
+   [
+    "哥",
+    12,
+    0.04
+   ],
+   [
+    "暑",
+    10,
+    0.0333
+   ],
+   [
+    "等",
+    8,
+    0.0267
+   ],
+   [
+    "景",
+    7,
+    0.0233
+   ],
+   [
+    "旱",
+    6,
+    0.02
+   ],
+   [
+    "罟",
+    3,
+    0.01
+   ],
+   [
+    "學",
+    3,
+    0.01
+   ],
+   [
+    "号",
+    2,
+    0.0067
+   ],
+   [
+    "寄",
+    2,
+    0.0067
+   ]
+  ],
+  "pct_𠊚": 0.0,
+  "pct_㝵": 0.0,
+  "pct_𠊛": 0.0,
+  "pct_in_R_nguoi": 0.0,
+  "by_book": {
+   "stt11": {
+    "n": 44,
+    "first_in_R": 0.0,
+    "one_cjk": 0.9318
+   },
+   "stt2": {
+    "n": 190,
+    "first_in_R": 0.0,
+    "one_cjk": 0.8579
+   },
+   "stt4": {
+    "n": 66,
+    "first_in_R": 0.0,
+    "one_cjk": 0.9242
+   }
+  },
+  "n_col_pred_over_kinh": 0.859,
+  "col_cer_vs_kinh": 0.639,
+  "align_op": {
+   "sub": 0.883,
+   "del": 0.117
+  }
+ },
+ "M4_a-nat-s1": {
+  "set": "M4",
+  "n": 20,
+  "n_kinh_mean": 21.05,
+  "n_pred_mean": 19.15,
+  "n_pred_eq_kinh": 4,
+  "n_pred_within_2": 13,
+  "ratio_pred_over_kinh": 0.911,
+  "cer_vs_kinhhannom_mean": 0.624,
+  "chars_equal_1_minus_cer": 0.376,
+  "sec_per_col": 6.06,
+  "rows": [
+   {
+    "id": "M4_00",
+    "n_kinh": 18,
+    "n_pred": 17,
+    "lev": 11,
+    "pred": "初代嘈瑪先罘安善君奴固露寻先罘憑橇"
+   },
+   {
+    "id": "M4_01",
+    "n_kinh": 17,
+    "n_pred": 17,
+    "lev": 12,
+    "pred": "翁堊生罷庇墒漾出一吱那異名郎重凛导"
+   },
+   {
+    "id": "M4_02",
+    "n_kinh": 20,
+    "n_pred": 18,
+    "lev": 11,
+    "pred": "事占吏朱塂几奸女歇寻菇旦熟巴导相時庄"
+   },
+   {
+    "id": "M4_03",
+    "n_kinh": 18,
+    "n_pred": 15,
+    "lev": 10,
+    "pred": "連共扛罂麻蝎收斡堇在計事衣毒喝"
+   },
+   {
+    "id": "M4_04",
+    "n_kinh": 22,
+    "n_pred": 18,
+    "lev": 16,
+    "pred": "共移青拱辫耕麻四谱衐主蚕重禮笨些高动"
+   },
+   {
+    "id": "M4_05",
+    "n_kinh": 23,
+    "n_pred": 20,
+    "lev": 12,
+    "pred": "除奇罢譙讓庄召虎拣韵並墨舟代扶外午尼天下"
+   },
+   {
+    "id": "M4_06",
+    "n_kinh": 18,
+    "n_pred": 17,
+    "lev": 11,
+    "pred": "舜跕舜跴奉行主丞麻補事对法双齿鬼体"
+   },
+   {
+    "id": "M4_07",
+    "n_kinh": 22,
+    "n_pred": 22,
+    "lev": 14,
+    "pred": "把皇意偭几久牵共科命焉德主支秋文時記呈愈共遤"
+   },
+   {
+    "id": "M4_08",
+    "n_kinh": 22,
+    "n_pred": 21,
+    "lev": 13,
+    "pred": "萬哥多仔凄麻打累囵皮客哥真屯犯没罪重奔旦称"
+   },
+   {
+    "id": "M4_09",
+    "n_kinh": 21,
+    "n_pred": 18,
+    "lev": 16,
+    "pred": "麾意箕埋渚体寻哮柴盆屯先哮咙罘的牢欺"
+   },
+   {
+    "id": "M4_10",
+    "n_kinh": 24,
+    "n_pred": 21,
+    "lev": 18,
+    "pred": "時寻宜没吆歌的率正匹寄德主府訓殉走思皂妻生"
+   },
+   {
+    "id": "M4_11",
+    "n_kinh": 21,
+    "n_pred": 21,
+    "lev": 13,
+    "pred": "沛風波沉寋歇志遷艩将漂叁潺奴浩其時庄恕鎰几"
+   },
+   {
+    "id": "M4_12",
+    "n_kinh": 22,
+    "n_pred": 20,
+    "lev": 17,
+    "pred": "新浚峪庇班店翁呈批署句契旦共寻佯浪屯泌共"
+   },
+   {
+    "id": "M4_13",
+    "n_kinh": 22,
+    "n_pred": 20,
+    "lev": 11,
+    "pred": "庄朱於蕎兵本道音女如舌翁耒庄翰朱捕尾真論"
+   },
+   {
+    "id": "M4_14",
+    "n_kinh": 22,
+    "n_pred": 18,
+    "lev": 11,
+    "pred": "事世間麻燒的莒四寻厲代旦獻梨色趙天堂"
+   },
+   {
+    "id": "M4_15",
+    "n_kinh": 21,
+    "n_pred": 19,
+    "lev": 11,
+    "pred": "牢折之归麻翁垩安發于庄朱呌麻寻烊於賒匝"
+   },
+   {
+    "id": "M4_16",
+    "n_kinh": 21,
+    "n_pred": 18,
+    "lev": 16,
+    "pred": "筆歷史呢榛真导避庸卿每泣竜垣滦几停役"
+   },
+   {
+    "id": "M4_17",
+    "n_kinh": 22,
+    "n_pred": 22,
+    "lev": 11,
+    "pred": "皇太子明各禁凛退烫仨匮除明時落秘烧不固欺杂尼"
+   },
+   {
+    "id": "M4_18",
+    "n_kinh": 22,
+    "n_pred": 20,
+    "lev": 13,
+    "pred": "涕困染麻翁宋殃么仕寄聤閔朱湃浠困連歇仕油"
+   },
+   {
+    "id": "M4_19",
+    "n_kinh": 23,
+    "n_pred": 21,
+    "lev": 16,
+    "pred": "其生時麻寻括壳婪哭吹燒得唐末吧灵谡命割导累"
+   }
+  ]
+ },
+ "M4_col-nat-s1": {
+  "set": "M4",
+  "n": 20,
+  "n_kinh_mean": 21.05,
+  "n_pred_mean": 20.25,
+  "n_pred_eq_kinh": 9,
+  "n_pred_within_2": 18,
+  "ratio_pred_over_kinh": 0.96,
+  "cer_vs_kinhhannom_mean": 0.608,
+  "chars_equal_1_minus_cer": 0.392,
+  "sec_per_col": 6.12,
+  "rows": [
+   {
+    "id": "M4_00",
+    "n_kinh": 18,
+    "n_pred": 15,
+    "lev": 11,
+    "pred": "初代嘈瑪先罘安兽君奴固露先罘憎"
+   },
+   {
+    "id": "M4_01",
+    "n_kinh": 17,
+    "n_pred": 16,
+    "lev": 11,
+    "pred": "翁堊生罘庇漱出一吱那異名郎重凛导"
+   },
+   {
+    "id": "M4_02",
+    "n_kinh": 20,
+    "n_pred": 19,
+    "lev": 11,
+    "pred": "閉事占吏朱塂几奸女歇寻菇旦熟巴导相哕庄"
+   },
+   {
+    "id": "M4_03",
+    "n_kinh": 18,
+    "n_pred": 18,
+    "lev": 8,
+    "pred": "真羱僚連共扛罂麻鴩吆斡堇在計事衣毒喝"
+   },
+   {
+    "id": "M4_04",
+    "n_kinh": 22,
+    "n_pred": 22,
+    "lev": 16,
+    "pred": "麻该恤共稼者拱矣辫耕麻四谱衍主蚕重禦笨些高动"
+   },
+   {
+    "id": "M4_05",
+    "n_kinh": 23,
+    "n_pred": 22,
+    "lev": 14,
+    "pred": "蓮若除奇罢譙讓庄召虎拣韵並墨舟代挠外午后天下"
+   },
+   {
+    "id": "M4_06",
+    "n_kinh": 18,
+    "n_pred": 17,
+    "lev": 8,
+    "pred": "下彘曙酵奉行主尽麻補事对法双齿鬼体"
+   },
+   {
+    "id": "M4_07",
+    "n_kinh": 22,
+    "n_pred": 22,
+    "lev": 14,
+    "pred": "把皇意偭几久牵共科命焉德主支秋文時記呈愈共遤"
+   },
+   {
+    "id": "M4_08",
+    "n_kinh": 22,
+    "n_pred": 21,
+    "lev": 14,
+    "pred": "萬哥叁仔凄麻打累囫皮客哥真屯犯没罪重奔旦称"
+   },
+   {
+    "id": "M4_09",
+    "n_kinh": 21,
+    "n_pred": 18,
+    "lev": 17,
+    "pred": "麾意箕埋涛体寻哮柴宜応先哮咙罘的牢欺"
+   },
+   {
+    "id": "M4_10",
+    "n_kinh": 24,
+    "n_pred": 24,
+    "lev": 17,
+    "pred": "弄吧焚時寻宜没吆歇的率正匹寄德主府訓殉走思皂妻生"
+   },
+   {
+    "id": "M4_11",
+    "n_kinh": 21,
+    "n_pred": 21,
+    "lev": 15,
+    "pred": "沛風波沉寋歜志遷艩將漂叁潺奴涪其時庄恕鎰几"
+   },
+   {
+    "id": "M4_12",
+    "n_kinh": 22,
+    "n_pred": 22,
+    "lev": 17,
+    "pred": "书屯新设厄庇班店翁呈批署句契旦共寻佯浪屯泌共"
+   },
+   {
+    "id": "M4_13",
+    "n_kinh": 22,
+    "n_pred": 22,
+    "lev": 10,
+    "pred": "峙補庄朱於蕎兵本道音女如舌翁耒庄翰朱捕尾真論"
+   },
+   {
+    "id": "M4_14",
+    "n_kinh": 22,
+    "n_pred": 20,
+    "lev": 11,
+    "pred": "補姇事世間麻燒的莒四寻厲代旦獻梨色趉天堂"
+   },
+   {
+    "id": "M4_15",
+    "n_kinh": 21,
+    "n_pred": 20,
+    "lev": 9,
+    "pred": "磊牢折之归麻翁垩安段干庄朱呌麻寻烊於赊匝"
+   },
+   {
+    "id": "M4_16",
+    "n_kinh": 21,
+    "n_pred": 20,
+    "lev": 16,
+    "pred": "誌导筆歷史呢榛真导邈庸卿每泣竜垣滦几停伎"
+   },
+   {
+    "id": "M4_17",
+    "n_kinh": 22,
+    "n_pred": 22,
+    "lev": 11,
+    "pred": "皇太子明各禁凛退烫仨匮除明時落秘烧不固欺杂尼"
+   },
+   {
+    "id": "M4_18",
+    "n_kinh": 22,
+    "n_pred": 22,
+    "lev": 12,
+    "pred": "得峉沛困染麻翁宋碎么仕笥聤閌朱湃浠困連歇仕油"
+   },
+   {
+    "id": "M4_19",
+    "n_kinh": 23,
+    "n_pred": 22,
+    "lev": 15,
+    "pred": "哆共生時麻寻拮壳婪哭吹燒鍝唐末吧灵谡命割导累"
+   }
+  ]
+ }
+}

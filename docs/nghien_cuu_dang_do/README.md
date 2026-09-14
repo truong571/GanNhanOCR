@@ -59,3 +59,28 @@ cộng dồn 21.111 ô nhưng hợp thực chỉ 9.893.
 
 Vì vậy **đừng trích số nào từ hai tệp JSON này vào luận văn** cho tới khi chạy hết phán xử.
 Chúng là ghi chép trung gian, không phải kết luận.
+
+---
+
+## Cập nhật 2026-09-12 — thêm 6 agent xong từ hai mẻ tiếp theo (cả hai lại chết theo phiên)
+
+### `hoan_tat_4_huong.json` — 3/6 agent (mẻ `wf_4f4ab767-2e6`)
+| | Hướng | Trạng thái |
+|---|---|---|
+| B | Tăng cường glyph sẵn có, không sinh lại | ✅ |
+| C | Siết cửa sổ crop | ✅ |
+| D | Thí nghiệm hạ nguồn (CNN, chạy thật trên MPS) | ✅ |
+| A | Sinh glyph theo chữ viết (`font_diffusion`) | ❌ chưa — chưa bao giờ hoàn thành qua 3 lần chạy |
+| — | 2 agent phán xử | ❌ |
+
+### `so_sanh_ocr.json` — 3/5 agent (mẻ `wf_5808988a-d28`)
+| | | Trạng thái |
+|---|---|---|
+| PaddleOCR 3.7 / PP-OCRv6 + v5 + VL-1.6 | ✅ chạy đủ M1-M4 | mã + kết quả thô ở `lab/ocr_compare/paddle/` |
+| GLM-OCR 0,9B (mlx, self-hosted) | ✅ chạy đủ M1-M4 | `lab/ocr_compare/glm/` |
+| Kết hợp 3 luồng | ✅ | `lab/ocr_compare/ket_hop/` |
+| — | 2 agent phán xử | ❌ |
+
+Bộ mẫu dùng chung: `lab/ocr_compare/mau/M1..M4.csv` (seed 20260911, page-disjoint).
+
+⚠️ Vẫn CHƯA qua phản biện. Xem `docs/DANH_GIA_OCR_2026-09-12.md` cho phần tôi tự kiểm.

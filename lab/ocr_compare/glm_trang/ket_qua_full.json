@@ -1,0 +1,183 @@
+{
+ "mode": "full",
+ "n_pages": 2,
+ "trang": {
+  "n_lines_cjk_mean": 9.5,
+  "pct_pages_9_lines": 0.5,
+  "dist_lines_minus_cols": {
+   "0": 1,
+   "2": 1
+  },
+  "n_chars_mean": 187.5,
+  "n_chars_kinh_mean": 191.5,
+  "ratio_mean": 0.982,
+  "cer_vs_kinh_mean": 0.566,
+  "sec_mean": 31.4,
+  "gen_tokens_mean": 247.0,
+  "bia": {
+   "pages_with_num_line": 1.0,
+   "num_lines_mean": 1.0,
+   "pages_with_latin_line": 0.0,
+   "pages_with_latin_chars": 0.0,
+   "pages_with_md": 0.0,
+   "pages_with_repeat": 0.0,
+   "noncjk_chars_per_page": 0.5,
+   "pages_missing_cols": 0.0,
+   "pages_extra_lines": 0.5,
+   "cols_unmatched_total": 0
+  }
+ },
+ "M1": {
+  "n": 600,
+  "pct_page_read": 0.005,
+  "pct_col_matched": 0.0033,
+  "p_random_in_R_freq": 0.0092,
+  "p_random_in_R_uniform": 0.0006,
+  "lev": {
+   "got_char": 0.0033,
+   "in_R": 0.0033,
+   "eq_kinh": 0.0033,
+   "in_vocab_given_char": 1.0,
+   "inR_but_ne_kinh": 0,
+   "by_book": {
+    "stt11": 0.01,
+    "stt2": 0.0,
+    "stt4": 0.0
+   }
+  },
+  "prop": {
+   "got_char": 0.0033,
+   "in_R": 0.0033,
+   "eq_kinh": 0.0033,
+   "in_vocab_given_char": 1.0,
+   "inR_but_ne_kinh": 0,
+   "by_book": {
+    "stt11": 0.01,
+    "stt2": 0.0,
+    "stt4": 0.0
+   }
+  },
+  "n_pred_minus_n_kinh_mean": 1.0,
+  "pct_col_len_within2": 1.0
+ },
+ "M2": {
+  "n": 600,
+  "pct_page_read": 0.005,
+  "pct_col_matched": 0.005,
+  "p_random_in_R_freq": 0.0064,
+  "p_random_in_R_uniform": 0.0006,
+  "lev": {
+   "got_char": 0.005,
+   "in_R": 0.0,
+   "eq_kinh": 0.0,
+   "in_vocab_given_char": 1.0,
+   "rescue_count": 0,
+   "rescue_rate": 0.0,
+   "lift_freq": 0.0,
+   "lift_uniform": 0.0,
+   "perm_in_R_mean": 0.0,
+   "perm_in_R_max": 0.0,
+   "lift_perm": 0.0,
+   "rescue_eq_label": 0,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "in_R": 0.0,
+     "rescue": 0
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "in_R": 0.0,
+     "rescue": 0
+    }
+   },
+   "by_book": {
+    "stt11": 0.0,
+    "stt2": 0.0,
+    "stt4": 0.0
+   }
+  },
+  "prop": {
+   "got_char": 0.005,
+   "in_R": 0.0,
+   "eq_kinh": 0.0,
+   "in_vocab_given_char": 1.0,
+   "rescue_count": 0,
+   "rescue_rate": 0.0,
+   "lift_freq": 0.0,
+   "lift_uniform": 0.0,
+   "perm_in_R_mean": 0.0,
+   "perm_in_R_max": 0.0,
+   "lift_perm": 0.0,
+   "rescue_eq_label": 0,
+   "by_tier": {
+    "SILVER": {
+     "n": 219,
+     "in_R": 0.0,
+     "rescue": 0
+    },
+    "SYLLABLE": {
+     "n": 381,
+     "in_R": 0.0,
+     "rescue": 0
+    }
+   },
+   "by_book": {
+    "stt11": 0.0,
+    "stt2": 0.0,
+    "stt4": 0.0
+   }
+  },
+  "n_pred_minus_n_kinh_mean": -1.0,
+  "pct_col_len_within2": 1.0
+ },
+ "M3": {
+  "n": 300,
+  "pct_page_read": 0.0,
+  "pct_col_matched": 0.0,
+  "p_random_in_R_freq": 0.0229,
+  "p_random_in_R_uniform": 0.0005,
+  "lev": {
+   "got_char": 0.0,
+   "in_R": 0.0,
+   "eq_kinh": 0.0,
+   "in_vocab_given_char": null,
+   "dist_top": [
+    [
+     "<rỗng>",
+     300
+    ]
+   ],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "pct_𠊛": 0.0,
+   "by_book": {
+    "stt11": 0.0,
+    "stt2": 0.0,
+    "stt4": 0.0
+   }
+  },
+  "prop": {
+   "got_char": 0.0,
+   "in_R": 0.0,
+   "eq_kinh": 0.0,
+   "in_vocab_given_char": null,
+   "dist_top": [
+    [
+     "<rỗng>",
+     300
+    ]
+   ],
+   "pct_𠊚": 0.0,
+   "pct_㝵": 0.0,
+   "pct_𠊛": 0.0,
+   "by_book": {
+    "stt11": 0.0,
+    "stt2": 0.0,
+    "stt4": 0.0
+   }
+  },
+  "n_pred_minus_n_kinh_mean": NaN,
+  "pct_col_len_within2": NaN
+ }
+}

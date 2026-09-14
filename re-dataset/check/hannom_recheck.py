@@ -58,13 +58,50 @@ _get_net = hc._get
 hc._get = _get_cached
 
 
-def load_dicts(use_internet=True):
-    hv, nom, ng = {}, {}, hc.NghiaDict()
+# Từ điển Hán Nôm chuyên sâu dạng CSV chữ <-> âm, có sẵn trong repo.
+# 104.177 cặp / 41.502 chữ, trung vị 2 âm/chữ -> phủ 100% chữ của bộ nhãn
+# mà vẫn chặt, không phải loại từ điển "chữ nào cũng đọc được mọi âm".
+HANNOM_CSV = os.path.join(HERE, '..', '..', 'dict', 'QuocNgu_SinoNom.csv')
+
+
+def load_hannom_csv(path=HANNOM_CSV):
+    """CSV hai cột QuocNgu,SinoNom -> {chữ: [âm, ...]}."""
+    try:
+        t = pd.read_csv(path, encoding='utf-8-sig').dropna()
+        t.columns = [c.strip() for c in t.columns]
+        d = collections.defaultdict(set)
+        for q, c in zip(t['QuocNgu'], t['SinoNom']):
+            c = str(c).strip()
+            if len(c) == 1:
+                d[c].add(unicodedata.normalize('NFC', str(q).strip().lower()))
+        return {k: sorted(v) for k, v in d.items()}
+    except Exception as e:
+        print('  ! Bỏ qua từ điển CSV Hán Nôm:', e)
+        return {}
+
+
+def load_dicts(use_internet=True, use_unihan=True, csv_as_verdict=False):
+    """csv_as_verdict=False: CSV QuocNgu_SinoNom KHÔNG được dùng làm căn cứ phán quyết.
+
+    Lý do: chính pipeline sinh ra bộ nhãn này dùng nó làm lexicon (run_pipeline.sh,
+    pipeline/lab/*, pipeline/tools/*), nên đối chiếu nhãn với nó là kiểm tra vòng tròn:
+    đo được 2.330/2.332 cặp (99,9%) tự khớp, kể cả những cặp đáng ngờ nhất.
+    Nó vẫn được nạp, để (1) báo ở cột riêng và (2) dựng ứng viên sửa."""
+    hv, nom, ng, uh = {}, {}, hc.NghiaDict(), {}
+    csvnom = load_hannom_csv()
     if use_internet:
         print('  tải âm Hán Việt ...');       hv = hc.load_hanviet()
         print('  tải âm Nôm ...');            nom = hc.load_nom()
         print('  tải nghĩa tiếng Việt ...');  ng = hc.load_nghia()
-    return hv, nom, ng
+        if use_unihan:
+            print('  tải Unihan kVietnamese (~8MB) ...'); uh = hc.load_unihan_vietnamese()
+    # Unihan kVietnamese là nguồn ngoài, độc lập với pipeline -> gộp vào refs_nom (nhánh A)
+    nom = dict(nom)
+    srcs = (uh, csvnom) if csv_as_verdict else (uh,)
+    for src in srcs:
+        for ch, rs in src.items():
+            nom[ch] = sorted(set(nom.get(ch, [])) | set(rs))
+    return hv, nom, ng, csvnom, uh
 
 
 def verdict_of(lab, syl, hv, nom, ng):
@@ -131,7 +168,7 @@ def formal_errors(df):
     return bad
 
 
-def main(use_internet=True):
+def main(use_internet=True, use_unihan=True, csv_as_verdict=False):
     print('ĐỌC:', os.path.abspath(IN))
     raw = pd.read_excel(IN, dtype=str)
     raw.columns = [c.strip() for c in raw.columns]
@@ -141,8 +178,9 @@ def main(use_internet=True):
     print('  %d dòng, giữ %d/%d cột' % (n, df.shape[1], raw.shape[1]))
 
     print('TẢI TỪ ĐIỂN')
-    hv, nom, ng = load_dicts(use_internet)
-    print('  âm Hán Việt %d | âm Nôm %d | nghĩa %d chữ' % (len(hv), len(nom), len(ng.detail)))
+    hv, nom, ng, csvnom, uh = load_dicts(use_internet, use_unihan, csv_as_verdict)
+    print('  âm Hán Việt %d | âm Nôm làm căn cứ %d | nghĩa %d chữ' % (len(hv), len(nom), len(ng.detail)))
+    print('    trong đó CSV Hán Nôm %d chữ | Unihan kVietnamese %d chữ' % (len(csvnom), len(uh)))
 
     # --- phán quyết theo CẶP (chữ, âm), rồi ánh xạ ngược về dòng ---
     lab_s = df['label'].fillna('')
@@ -163,6 +201,9 @@ def main(use_internet=True):
         for r in rs:
             by_syl[r].add(ch)
     for ch, rs in ng.mean.items():
+        for r in rs:
+            by_syl[r].add(ch)
+    for ch, rs in csvnom.items():          # dùng cho gợi ý sửa, không dùng để phán quyết
         for r in rs:
             by_syl[r].add(ch)
     corpus_n = {k: int(v) for k, v in pair_n.items()}     # tần suất cặp trong chính corpus
@@ -221,6 +262,9 @@ def main(use_internet=True):
     df['sua_thanh'] = sua
     df['ung_vien_sua'] = ung
     df['loi_hinh_thuc'] = formal.values
+    df['co_trong_tudien_du_an'] = [
+        (sy in set(csvnom.get(l, []))) if (l and sy and len(l) == 1) else ''
+        for l, sy in zip(lab_s, syl_s)]
 
     # sửa riêng cho lệch codepoint: đề xuất = chữ của mã unicode
     m = df['loi_hinh_thuc'] == 'unicode không khớp label'
@@ -231,6 +275,7 @@ def main(use_internet=True):
         df.loc[m, 'sua_thanh'] = df.loc[m, 'unicode'].map(from_uni)
 
     # ---------------- thống kê ----------------
+    uniq_lab = set(x for x in lab_s if len(x) == 1)
     vc = df['ket_luan'].value_counts()
     n_true = int((df['dung_sai'] == True).sum())
     n_false = int((df['dung_sai'] == False).sum())
@@ -241,6 +286,19 @@ def main(use_internet=True):
         ('Số chữ Hán Nôm khác nhau', int(lab_s[lab_s != ''].nunique())),
         ('Số âm tiết khác nhau', int(syl_s[syl_s != ''].nunique())),
         ('Số cặp (chữ, âm) khác nhau', len(pair_n)),
+        ('', ''),
+        ('Từ điển: âm Hán Việt (han_raw)', '%d chữ' % len(hv)),
+        ('Từ điển: âm Nôm dùng làm căn cứ', '%d chữ (rime%s + Unihan)' % (
+            len(nom), ' + CSV' if csv_as_verdict else '')),
+        ('   riêng CSV QuocNgu_SinoNom', '%d chữ' % len(csvnom)),
+        ('   riêng Unihan kVietnamese', '%d chữ' % len(uh)),
+        ('CSV QuocNgu_SinoNom (dự án)', '%d chữ — %s' % (
+            len(csvnom), 'DÙNG làm căn cứ' if csv_as_verdict
+            else 'CHỈ tham khảo, không làm căn cứ (tránh vòng tròn)')),
+        ('Từ điển: nghĩa tiếng Việt (kanji.json)', '%d chữ' % len(ng.detail)),
+        ('Độ phủ trên chữ của bộ nhãn', '%d/%d chữ (%.1f%%)' % (
+            len(uniq_lab & (set(hv) | set(nom) | set(ng.detail))), len(uniq_lab),
+            100 * len(uniq_lab & (set(hv) | set(nom) | set(ng.detail))) / max(len(uniq_lab), 1))),
         ('', ''),
         ('dung_sai = TRUE  (giải thích được)', '%d  (%.2f%%)' % (n_true, 100 * n_true / n)),
         ('dung_sai = FALSE (nghi sai)', '%d  (%.2f%%)' % (n_false, 100 * n_false / n)),
@@ -258,6 +316,14 @@ def main(use_internet=True):
                       '%d / %d / %d  (tổng %d)' % ((sub['dung_sai'] == True).sum(),
                                                    (sub['dung_sai'] == False).sum(),
                                                    (sub['dung_sai'] == '').sum(), c)))
+    ok_csv = df['co_trong_tudien_du_an'] == True
+    stats.append(('', ''))
+    stats.append(('Cặp có trong lexicon của chính dự án',
+                  '%d/%d dòng có chữ (%.1f%%)' % (
+                      int(ok_csv.sum()), int((lab_s != '').sum()),
+                      100 * ok_csv.sum() / max((lab_s != '').sum(), 1))))
+    stats.append(('   trong đó bị đánh FALSE',
+                  '%d — pipeline tự khẳng định, nguồn ngoài bác' % int((ok_csv & (df['dung_sai'] == False)).sum())))
     st = pd.DataFrame(stats, columns=['chi_tieu', 'gia_tri'])
 
     # sheet cặp sai, gộp theo cặp để rà tay cho nhanh
@@ -277,4 +343,6 @@ def main(use_internet=True):
 
 
 if __name__ == '__main__':
-    main(use_internet='--offline' not in sys.argv)
+    main(use_internet='--offline' not in sys.argv,
+         use_unihan='--no-unihan' not in sys.argv,
+         csv_as_verdict='--csv-as-verdict' in sys.argv)

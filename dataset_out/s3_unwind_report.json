@@ -1,21 +1,21 @@
 {
-  "n_rows": 82780,
+  "n_rows": 83239,
   "readmitted_to_gold": 0,
   "confusion_demoted_after_unwind": 0,
   "confusion_demoted_by_pair": {},
-  "silver_renamed": 6331,
-  "review_reason_renamed": 10725,
+  "silver_renamed": 0,
+  "review_reason_renamed": 0,
   "tier_before": {
-    "GOLD": 52142,
-    "REVIEW": 13938,
-    "SYLLABLE": 10369,
-    "SILVER": 6331
+    "GOLD": 51922,
+    "SYLLABLE": 18404,
+    "REVIEW": 12871,
+    "QUARANTINE": 42
   },
   "tier_after": {
-    "GOLD": 52142,
-    "REVIEW": 13938,
-    "SYLLABLE": 10369,
-    "SILVER_uncalibrated": 6331
+    "GOLD": 51922,
+    "SYLLABLE": 18404,
+    "REVIEW": 12871,
+    "QUARANTINE": 42
   },
   "evidence": {
     "arcface_retrain_error_auc": 0.577,

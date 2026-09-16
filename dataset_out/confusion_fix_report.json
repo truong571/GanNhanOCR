@@ -1,29 +1,25 @@
 {
   "n_fixes": 1,
-  "total_demoted": 2011,
+  "total_demoted": 0,
   "tier_before": {
-    "GOLD": 53604,
-    "REVIEW": 11927,
-    "SYLLABLE": 10369,
-    "SILVER": 6880
+    "GOLD": 51922,
+    "SYLLABLE": 18404,
+    "REVIEW": 12871,
+    "QUARANTINE": 42
   },
   "tier_after": {
-    "GOLD": 52142,
-    "REVIEW": 13938,
-    "SYLLABLE": 10369,
-    "SILVER": 6331
+    "GOLD": 51922,
+    "SYLLABLE": 18404,
+    "REVIEW": 12871,
+    "QUARANTINE": 42
   },
   "fixes": [
     {
       "syllable": "người",
       "label": "㝵",
       "to_tier": "REVIEW",
-      "demoted": 2011,
-      "by_book": {
-        "stt2": 750,
-        "stt4": 647,
-        "stt11": 614
-      },
+      "demoted": 0,
+      "by_book": {},
       "reason": "systematic_confusion_nguoi_3775"
     }
   ],

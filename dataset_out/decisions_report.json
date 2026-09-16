@@ -1,0 +1,103 @@
+{
+  "path": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/config/decisions.yaml",
+  "corpus_readings": {
+    "n": 8,
+    "da_ky": 3,
+    "cho_ky": 5,
+    "ids_da_ky": [
+      "cr_7121_vồ",
+      "cr_50e5_nhiều",
+      "cr_4fc2_hế"
+    ],
+    "ids_cho_ky": [
+      "cr_51dc_lăm",
+      "cr_5eea_lăm",
+      "cr_793c_lê",
+      "cr_5ee9_lăm",
+      "cr_51db_lăm"
+    ]
+  },
+  "di_the": {
+    "n": 14,
+    "da_ky": 13,
+    "cho_ky": 1,
+    "ids_da_ky": [
+      "dt_4e8a_4e8b",
+      "dt_4e9c_4e9e",
+      "dt_5225_522b",
+      "dt_57a9_580a",
+      "dt_5b90_5b9c",
+      "dt_5b9e_5b9f",
+      "dt_5e84_5e92",
+      "dt_5ee9_5eea",
+      "dt_5fb3_5fb7",
+      "dt_6bce_6bcf",
+      "dt_6c92_6ca1",
+      "dt_70ba_7232_stt4",
+      "dt_70dd_84b8"
+    ],
+    "ids_cho_ky": [
+      "dt_5171_5176"
+    ]
+  },
+  "lop_nham": {
+    "n": 1,
+    "da_ky": 1,
+    "cho_ky": 0,
+    "ids_da_ky": [
+      "nguoi_2029A_vs_346B"
+    ],
+    "ids_cho_ky": []
+  },
+  "khoa_o": {
+    "cells": {
+      "path": "config/qd01_cells.csv",
+      "exists": true
+    },
+    "decisions": {
+      "path": "config/qd01a_decisions.csv",
+      "exists": true
+    }
+  },
+  "n_cho_ky": 6,
+  "ap": {
+    "corpus_readings": {
+      "cr_7121_vồ": 73,
+      "cr_50e5_nhiều": 67,
+      "cr_4fc2_hế": 10
+    },
+    "di_the": {
+      "dt_5fb3_5fb7|stt2": 120,
+      "dt_4e9c_4e9e|stt2": 3,
+      "dt_5e84_5e92|stt2": 14,
+      "dt_57a9_580a|stt2": 13,
+      "dt_6c92_6ca1|stt2": 46,
+      "dt_6bce_6bcf|stt2": 8,
+      "dt_4e8a_4e8b|stt2": 24,
+      "dt_5b9e_5b9f|stt2": 1,
+      "dt_5225_522b|stt2": 3,
+      "dt_5fb3_5fb7|stt4": 185,
+      "dt_5ee9_5eea|stt4": 30,
+      "dt_5b90_5b9c|stt4": 13,
+      "dt_70ba_7232_stt4|stt4": 54,
+      "dt_6c92_6ca1|stt4": 88,
+      "dt_4e9c_4e9e|stt4": 8,
+      "dt_5225_522b|stt4": 38,
+      "dt_57a9_580a|stt4": 7,
+      "dt_5e84_5e92|stt4": 1,
+      "dt_4e8a_4e8b|stt4": 1,
+      "dt_6c92_6ca1|stt11": 5,
+      "dt_5e84_5e92|stt11": 326,
+      "dt_4e9c_4e9e|stt11": 23,
+      "dt_70dd_84b8|stt11": 8,
+      "dt_5fb3_5fb7|stt11": 3,
+      "dt_5225_522b|stt11": 41,
+      "dt_5b90_5b9c|stt11": 3,
+      "dt_6bce_6bcf|stt11": 4,
+      "dt_4e8a_4e8b|stt11": 2,
+      "dt_5b9e_5b9f|stt11": 9,
+      "dt_57a9_580a|stt11": 1
+    },
+    "lop_nham_review": 10
+  }
+}

@@ -1,7 +1,7 @@
 # BẢNG SỐ LIỆU CHÍNH THỨC
 
 <!-- AUTO:HEADER:START -->
-**Bộ nhãn sinh ngày**: 2026-09-16 · **Commit chạm bộ nhãn gần nhất**: `bff2a3bd28` · **Bộ nhãn**: `dataset_out/labels_final.csv` (83.239 dòng)
+**Bộ nhãn sinh ngày**: 2026-09-16 · **Commit chạm bộ nhãn gần nhất**: `08e954752b` · **Bộ nhãn**: `dataset_out/labels_final.csv` (83.239 dòng)
 <!-- AUTO:HEADER:END -->
 
 > **QUY TẮC BẤT DI BẤT DỊCH**: mọi con số trong luận văn (mọi chương, mọi bảng, mọi slide) **chỉ

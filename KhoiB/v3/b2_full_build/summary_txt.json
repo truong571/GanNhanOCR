@@ -1,0 +1,160 @@
+{
+  "pages": 448,
+  "total_pairs": 83239,
+  "tiers": {
+    "GOLD": 51958,
+    "REVIEW": 12871,
+    "SYLLABLE": 18410
+  },
+  "syllable_promoted": 0,
+  "syllable_tu_silver": 0,
+  "rules": {
+    "s1_inter_s2_direct": 46369,
+    "no_context": 12657,
+    "syl_ctx:tone": 224,
+    "corpus_reading:cr_7121_vồ": 73,
+    "syl_ctx:bigram": 9741,
+    "syl_ctx:corpus4": 8445,
+    "quyet_dinh_nguoi:qd01_cell_lock": 2012,
+    "s1_inter_s2_similar": 2967,
+    "s1_inter_s2_direct_am_sua_dau": 408,
+    "s1_inter_s2_direct_lowp": 52,
+    "not_plausible": 188,
+    "corpus_reading:cr_50e5_nhiều": 67,
+    "low_posterior": 16,
+    "lop_nham:nguoi_2029A_vs_346B": 10,
+    "corpus_reading:cr_4fc2_hế": 10
+  },
+  "luat_moi": {
+    "s1_inter_s2_direct_am_sua_dau": 408,
+    "  trong đó từ REVIEW": 40,
+    "  trong đó từ SILVER": 368,
+    "s1_inter_s2_similar_cot_lech": 0,
+    "s1_inter_s2_similar_nguoc": 0,
+    "am_da_quyet": [
+      "người"
+    ]
+  },
+  "char_classes": 1332,
+  "two_pass": true,
+  "anchor_cap": 2.0,
+  "n_anchor_pairs": 24466,
+  "visual_emission": {
+    "enabled": false,
+    "requested": false
+  },
+  "pass1b": {
+    "n_cols": 4030,
+    "n_pair_keys": 14015,
+    "n_match_ops1": 83242,
+    "n_match_ops2": 83239,
+    "n_match_changed": 1721,
+    "n_band_touched": 3,
+    "n_p_register_ge_0.8": 82302
+  },
+  "box_rule": "syl_index",
+  "detector_thr": 0.2,
+  "detector_xmargin": 0.25,
+  "n_locked_cols_qd01": 1640,
+  "lock_scope": "col",
+  "lock_shift": {},
+  "count_source": {
+    "equal_qn": 35524,
+    "conflict": 4347,
+    "legacy_locked_col": 34679,
+    "equal_ocr": 8689
+  },
+  "box_source": {
+    "detector": 46644,
+    "midpoint": 1796,
+    "legacy_locked_col": 32667,
+    "qd01_locked": 2012,
+    "split": 120
+  },
+  "usable_char": 51958,
+  "usable_total": 70368,
+  "pass1c": {
+    "enabled": true,
+    "tier_v3": {
+      "CHAR_A": 47549,
+      "REVIEW": 12937,
+      "SYL": 19443,
+      "CHAR_B": 3310
+    },
+    "tier_v3_final": {
+      "CHAR_A": 47956,
+      "REVIEW": 12897,
+      "SYL": 19075,
+      "CHAR_B": 3311
+    },
+    "l1": {
+      "doi": 408,
+      "giu_goc_thua": 110,
+      "hoa": 136
+    },
+    "qd01": {
+      "n_cells_in_build": 2014,
+      "n_locked": 2012,
+      "n_bo": 2,
+      "n_excluded_ngoai_cells": 12,
+      "n_cells_file": 2014,
+      "n_decisions_file": 14,
+      "n_pending_rows": 0,
+      "n_bbox_eq_cu": 2012,
+      "n_md5_eq_cu": 0,
+      "n_locked_total": 2012,
+      "dat_locked_pending": true
+    },
+    "nguoi_ngoai_khoa": {
+      "n": 277,
+      "lop_nham_review": 10
+    },
+    "flank_gold": {
+      "1": 40346,
+      "0": 17682,
+      "2": 25211
+    },
+    "decisions": {
+      "path": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/config/decisions.yaml",
+      "corpus_readings_ap": {
+        "cr_7121_vồ": 73,
+        "cr_50e5_nhiều": 67,
+        "cr_4fc2_hế": 10
+      },
+      "di_the_ap": {
+        "dt_5fb3_5fb7|stt2": 120,
+        "dt_4e9c_4e9e|stt2": 3,
+        "dt_5e84_5e92|stt2": 14,
+        "dt_57a9_580a|stt2": 13,
+        "dt_6c92_6ca1|stt2": 46,
+        "dt_6bce_6bcf|stt2": 8,
+        "dt_4e8a_4e8b|stt2": 24,
+        "dt_5b9e_5b9f|stt2": 1,
+        "dt_5225_522b|stt2": 3,
+        "dt_5fb3_5fb7|stt4": 185,
+        "dt_5ee9_5eea|stt4": 30,
+        "dt_5b90_5b9c|stt4": 13,
+        "dt_70ba_7232_stt4|stt4": 54,
+        "dt_6c92_6ca1|stt4": 88,
+        "dt_4e9c_4e9e|stt4": 8,
+        "dt_5225_522b|stt4": 38,
+        "dt_57a9_580a|stt4": 7,
+        "dt_5e84_5e92|stt4": 1,
+        "dt_4e8a_4e8b|stt4": 1,
+        "dt_6c92_6ca1|stt11": 5,
+        "dt_5e84_5e92|stt11": 326,
+        "dt_4e9c_4e9e|stt11": 23,
+        "dt_70dd_84b8|stt11": 8,
+        "dt_5fb3_5fb7|stt11": 3,
+        "dt_5225_522b|stt11": 41,
+        "dt_5b90_5b9c|stt11": 3,
+        "dt_6bce_6bcf|stt11": 4,
+        "dt_4e8a_4e8b|stt11": 2,
+        "dt_5b9e_5b9f|stt11": 9,
+        "dt_57a9_580a|stt11": 1
+      },
+      "lop_nham_review": 10,
+      "n_label_canonical_ne_label": 1082
+    }
+  }
+}

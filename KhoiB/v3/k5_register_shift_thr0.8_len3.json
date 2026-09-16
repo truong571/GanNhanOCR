@@ -1,0 +1,66 @@
+{
+ "thr": 0.8,
+ "min_run": 3,
+ "n_runs": 114,
+ "n_cols": 110,
+ "n_cells": 404,
+ "run_len_hist": {
+  "4": 26,
+  "3": 71,
+  "5": 15,
+  "6": 2
+ },
+ "cells_by_tier": {
+  "GOLD": 267,
+  "SYLLABLE": 104,
+  "REVIEW": 33
+ },
+ "cells_by_tier_v3": {
+  "CHAR_A": 249,
+  "SYL": 105,
+  "REVIEW": 33,
+  "CHAR_B": 17
+ },
+ "cells_usable": 371,
+ "cells_qd01_locked": 8,
+ "cells_by_box_source": {
+  "detector": 251,
+  "legacy_locked_col": 123,
+  "midpoint": 22,
+  "qd01_locked": 8
+ },
+ "cols_by_box_source_majority": {
+  "detector": 68,
+  "legacy_locked_col": 36,
+  "midpoint": 6
+ },
+ "cols_n_det_ne_n_ocr": 47,
+ "cells_by_book": {
+  "stt11": 147,
+  "stt2": 114,
+  "stt4": 143
+ },
+ "vi_du_stt11_page_0126_c6": [
+  {
+   "nom_idx": "10",
+   "syllable": "chúa",
+   "argmax": "đức",
+   "max_prob": 0.825092,
+   "tier": "GOLD"
+  },
+  {
+   "nom_idx": "11",
+   "syllable": "trời",
+   "argmax": "chúa",
+   "max_prob": 0.893499,
+   "tier": "SYLLABLE"
+  },
+  {
+   "nom_idx": "12",
+   "syllable": "đã",
+   "argmax": "trời",
+   "max_prob": 0.865956,
+   "tier": "SYLLABLE"
+  }
+ ]
+}

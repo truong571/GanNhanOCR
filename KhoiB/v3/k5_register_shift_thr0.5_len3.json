@@ -1,0 +1,99 @@
+{
+ "thr": 0.5,
+ "min_run": 3,
+ "n_runs": 444,
+ "n_cols": 405,
+ "n_cells": 1755,
+ "run_len_hist": {
+  "6": 30,
+  "3": 233,
+  "5": 47,
+  "4": 108,
+  "7": 9,
+  "9": 3,
+  "8": 11,
+  "11": 1,
+  "10": 2
+ },
+ "cells_by_tier": {
+  "GOLD": 1132,
+  "SYLLABLE": 466,
+  "REVIEW": 157
+ },
+ "cells_by_tier_v3": {
+  "CHAR_A": 1055,
+  "SYL": 474,
+  "REVIEW": 157,
+  "CHAR_B": 69
+ },
+ "cells_usable": 1598,
+ "cells_qd01_locked": 35,
+ "cells_by_box_source": {
+  "detector": 1012,
+  "midpoint": 65,
+  "legacy_locked_col": 643,
+  "qd01_locked": 35
+ },
+ "cols_by_box_source_majority": {
+  "detector": 238,
+  "legacy_locked_col": 154,
+  "midpoint": 13
+ },
+ "cols_n_det_ne_n_ocr": 153,
+ "cells_by_book": {
+  "stt11": 589,
+  "stt2": 506,
+  "stt4": 660
+ },
+ "vi_du_stt11_page_0126_c6": [
+  {
+   "nom_idx": "6",
+   "syllable": "lành",
+   "argmax": "người",
+   "max_prob": 0.749331,
+   "tier": "GOLD"
+  },
+  {
+   "nom_idx": "7",
+   "syllable": "vì",
+   "argmax": "lành",
+   "max_prob": 0.978177,
+   "tier": "GOLD"
+  },
+  {
+   "nom_idx": "8",
+   "syllable": "chưng",
+   "argmax": "vì",
+   "max_prob": 0.924736,
+   "tier": "GOLD"
+  },
+  {
+   "nom_idx": "9",
+   "syllable": "đức",
+   "argmax": "chưng",
+   "max_prob": 0.707895,
+   "tier": "SYLLABLE"
+  },
+  {
+   "nom_idx": "10",
+   "syllable": "chúa",
+   "argmax": "đức",
+   "max_prob": 0.825092,
+   "tier": "GOLD"
+  },
+  {
+   "nom_idx": "11",
+   "syllable": "trời",
+   "argmax": "chúa",
+   "max_prob": 0.893499,
+   "tier": "SYLLABLE"
+  },
+  {
+   "nom_idx": "12",
+   "syllable": "đã",
+   "argmax": "trời",
+   "max_prob": 0.865956,
+   "tier": "SYLLABLE"
+  }
+ ]
+}

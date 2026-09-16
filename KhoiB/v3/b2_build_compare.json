@@ -1,0 +1,491 @@
+{
+  "n_rows": {
+    "txt": 83239,
+    "vis": 83239
+  },
+  "summary_visual_emission": {
+    "enabled": true,
+    "models_dir": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/KhoiB/v3/p_visual_oof_v3_results/models",
+    "lam": 0.25,
+    "gap_vis": 8.0,
+    "cap": 12.0,
+    "neutral_p": 0.5,
+    "n_cols": 4030,
+    "n_boxes": 84190,
+    "n_cut_fail": 2,
+    "n_cols_changed_vs_text": 235,
+    "n_pairs_changed_vs_text": 806,
+    "n_p_visual_syl": 79692
+  },
+  "pairs_only_txt": 403,
+  "pairs_only_vis": 403,
+  "cells_same_nom_idx_diff_syl_idx": 293,
+  "cells_tier_v3_changed": 68,
+  "cells_tier_changed": 47,
+  "tier_v3_change_matrix": {
+    "REVIEW->SYL": 22,
+    "CHAR_B->CHAR_A": 11,
+    "SYL->CHAR_B": 2,
+    "CHAR_A->CHAR_B": 11,
+    "SYL->REVIEW": 5,
+    "REVIEW->CHAR_B": 3,
+    "CHAR_B->REVIEW": 9,
+    "CHAR_A->REVIEW": 2,
+    "CHAR_A->SYL": 1,
+    "REVIEW->CHAR_A": 1,
+    "CHAR_B->SYL": 1
+  },
+  "tier_change_matrix": {
+    "REVIEW->SYLLABLE": 22,
+    "SYLLABLE->GOLD": 2,
+    "SYLLABLE->REVIEW": 5,
+    "REVIEW->GOLD": 4,
+    "GOLD->SYLLABLE": 3,
+    "GOLD->REVIEW": 11
+  },
+  "columns_with_pair_change": 235,
+  "tier_v3_txt": {
+    "REVIEW": 12897,
+    "CHAR_A": 47956,
+    "SYL": 19075,
+    "CHAR_B": 3311
+  },
+  "tier_v3_vis": {
+    "REVIEW": 12884,
+    "CHAR_A": 47954,
+    "SYL": 19095,
+    "CHAR_B": 3306
+  },
+  "tier_txt": {
+    "REVIEW": 12871,
+    "GOLD": 51958,
+    "SYLLABLE": 18410
+  },
+  "tier_vis": {
+    "REVIEW": 12858,
+    "GOLD": 51950,
+    "SYLLABLE": 18431
+  },
+  "usable_txt": 70368,
+  "usable_vis": 70381,
+  "pass1b_txt": {
+    "n_cols": 4030,
+    "n_pair_keys": 14015,
+    "n_match_ops1": 83242,
+    "n_match_ops2": 83239,
+    "n_match_changed": 1721,
+    "n_band_touched": 3,
+    "n_p_register_ge_0.8": 82302
+  },
+  "pass1b_vis": {
+    "n_cols": 4030,
+    "n_pair_keys": 14015,
+    "n_match_ops1": 83242,
+    "n_match_ops2": 83239,
+    "n_match_changed": 2105,
+    "n_band_touched": 3,
+    "n_p_register_ge_0.8": 82500
+  },
+  "n_pages": {
+    "txt": 448,
+    "vis": 448
+  },
+  "changed_cells_sample": [
+    {
+      "key": "stt11|page_0010|6|15",
+      "tier_v3_txt": "SYL",
+      "tier_v3_vis": "SYL",
+      "syl_txt": "làm",
+      "syl_vis": "ấy",
+      "ocr_char": "人",
+      "p_visual_syl_vis": "0.8859"
+    },
+    {
+      "key": "stt11|page_0010_p0028|3|1",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "na",
+      "syl_vis": "du",
+      "ocr_char": "街",
+      "p_visual_syl_vis": "0.0004"
+    },
+    {
+      "key": "stt11|page_0010_p0028|3|2",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "du",
+      "syl_vis": "ở",
+      "ocr_char": "衣",
+      "p_visual_syl_vis": "0.0003"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|11",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "thánh",
+      "syl_vis": "nhà",
+      "ocr_char": "沙",
+      "p_visual_syl_vis": "0.0"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|12",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "ấy",
+      "syl_vis": "thánh",
+      "ocr_char": "𰙔",
+      "p_visual_syl_vis": "0.0011"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|13",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "ong",
+      "syl_vis": "ấy",
+      "ocr_char": "噀",
+      "p_visual_syl_vis": "0.0032"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|14",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "thánh",
+      "syl_vis": "ong",
+      "ocr_char": "綿",
+      "p_visual_syl_vis": "0.0005"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|15",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "bê",
+      "syl_vis": "thánh",
+      "ocr_char": "穌",
+      "p_visual_syl_vis": "0.0"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|16",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "na",
+      "syl_vis": "bê",
+      "ocr_char": "麻",
+      "p_visual_syl_vis": "0.0"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|17",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "du",
+      "syl_vis": "na",
+      "ocr_char": "盃",
+      "p_visual_syl_vis": "0.0"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|18",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "chép",
+      "syl_vis": "du",
+      "ocr_char": "末",
+      "p_visual_syl_vis": "0.0004"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|19",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "truyện",
+      "syl_vis": "chép",
+      "ocr_char": "奴",
+      "p_visual_syl_vis": ""
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|20",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "người",
+      "syl_vis": "truyện",
+      "ocr_char": "几",
+      "p_visual_syl_vis": "0.0"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|21",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "và",
+      "syl_vis": "người",
+      "ocr_char": "制",
+      "p_visual_syl_vis": "0.0003"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|22",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "khen",
+      "syl_vis": "và",
+      "ocr_char": "丕",
+      "p_visual_syl_vis": "0.0042"
+    },
+    {
+      "key": "stt11|page_0010_p0028|4|23",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "lăm",
+      "syl_vis": "khen",
+      "ocr_char": "生",
+      "p_visual_syl_vis": "0.0003"
+    },
+    {
+      "key": "stt11|page_0010_p0028|6|20",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "lô",
+      "syl_vis": "viết",
+      "ocr_char": "早",
+      "p_visual_syl_vis": "0.103"
+    },
+    {
+      "key": "stt11|page_0010_p0028|7|7",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "thành",
+      "syl_vis": "mi",
+      "ocr_char": "次",
+      "p_visual_syl_vis": "0.0001"
+    },
+    {
+      "key": "stt11|page_0010_p0028|7|8",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "mi",
+      "syl_vis": "long",
+      "ocr_char": "举",
+      "p_visual_syl_vis": "0.0003"
+    },
+    {
+      "key": "stt11|page_0010_p0028|7|9",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "long",
+      "syl_vis": "là",
+      "ocr_char": "共",
+      "p_visual_syl_vis": "0.0"
+    },
+    {
+      "key": "stt11|page_0010_p0028|7|10",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "là",
+      "syl_vis": "gương",
+      "ocr_char": "朝",
+      "p_visual_syl_vis": "0.0001"
+    },
+    {
+      "key": "stt11|page_0010_p0028|7|11",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "gương",
+      "syl_vis": "các",
+      "ocr_char": "朱",
+      "p_visual_syl_vis": "0.0023"
+    },
+    {
+      "key": "stt11|page_0010_p0028|7|12",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "các",
+      "syl_vis": "thầy",
+      "ocr_char": "固",
+      "p_visual_syl_vis": "0.0004"
+    },
+    {
+      "key": "stt11|page_0022|2|0",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "ở",
+      "syl_vis": "kẻ",
+      "ocr_char": "觧",
+      "p_visual_syl_vis": "0.0002"
+    },
+    {
+      "key": "stt11|page_0030|1|22",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "nguyện",
+      "syl_vis": "lời",
+      "ocr_char": "對",
+      "p_visual_syl_vis": "0.038"
+    },
+    {
+      "key": "stt11|page_0040|7|10",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "có",
+      "syl_vis": "dỗ",
+      "ocr_char": "譜",
+      "p_visual_syl_vis": "0.0003"
+    },
+    {
+      "key": "stt11|page_0046|3|5",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "vì",
+      "syl_vis": "chưng",
+      "ocr_char": "与",
+      "p_visual_syl_vis": "0.0005"
+    },
+    {
+      "key": "stt11|page_0060|9|14",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "SYL",
+      "syl_txt": "đến",
+      "syl_vis": "đã",
+      "ocr_char": "色",
+      "p_visual_syl_vis": "0.001"
+    },
+    {
+      "key": "stt11|page_0060|9|21",
+      "tier_v3_txt": "CHAR_B",
+      "tier_v3_vis": "CHAR_B",
+      "syl_txt": "mà",
+      "syl_vis": "nữa",
+      "ocr_char": "女",
+      "p_visual_syl_vis": "0.0849"
+    },
+    {
+      "key": "stt11|page_0064|2|18",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "SYL",
+      "syl_txt": "một",
+      "syl_vis": "là",
+      "ocr_char": "要",
+      "p_visual_syl_vis": "0.0016"
+    },
+    {
+      "key": "stt11|page_0066|5|22",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "la",
+      "syl_vis": "họp",
+      "ocr_char": "吏",
+      "p_visual_syl_vis": "0.0001"
+    },
+    {
+      "key": "stt11|page_0070|2|21",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "chứng",
+      "syl_vis": "làm",
+      "ocr_char": "途",
+      "p_visual_syl_vis": "0.404"
+    },
+    {
+      "key": "stt11|page_0072|4|20",
+      "tier_v3_txt": "CHAR_B",
+      "tier_v3_vis": "CHAR_B",
+      "syl_txt": "đền",
+      "syl_vis": "xin",
+      "ocr_char": "嗔",
+      "p_visual_syl_vis": "0.0"
+    },
+    {
+      "key": "stt11|page_0072|8|17",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "hai",
+      "syl_vis": "1032",
+      "ocr_char": "呫",
+      "p_visual_syl_vis": ""
+    },
+    {
+      "key": "stt11|page_0072|8|18",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "1032",
+      "syl_vis": "năm",
+      "ocr_char": "衅",
+      "p_visual_syl_vis": "0.9071"
+    },
+    {
+      "key": "stt11|page_0080|7|5",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "7",
+      "syl_vis": "năm",
+      "ocr_char": "靜",
+      "p_visual_syl_vis": "0.9448"
+    },
+    {
+      "key": "stt11|page_0088|2|40",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "nào",
+      "syl_vis": "dành",
+      "ocr_char": "理",
+      "p_visual_syl_vis": ""
+    },
+    {
+      "key": "stt11|page_0088|7|9",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "có",
+      "syl_vis": "và",
+      "ocr_char": "景",
+      "p_visual_syl_vis": "0.7497"
+    },
+    {
+      "key": "stt11|page_0096|8|1",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "trên",
+      "syl_vis": "phép",
+      "ocr_char": "浩",
+      "p_visual_syl_vis": "0.4757"
+    },
+    {
+      "key": "stt11|page_0098|9|7",
+      "tier_v3_txt": "REVIEW",
+      "tier_v3_vis": "REVIEW",
+      "syl_txt": "nước",
+      "syl_vis": "on",
+      "ocr_char": "温",
+      "p_visual_syl_vis": ""
+    }
+  ],
+  "p_visual_syl_by_tier_v3": {
+    "CHAR_A": {
+      "n": 47954,
+      "n_has_p": 46858,
+      "p50": 0.4675,
+      "pct_ge_0.9": 0.1452,
+      "pct_lt_0.05": 0.2043
+    },
+    "CHAR_B": {
+      "n": 3306,
+      "n_has_p": 3275,
+      "p50": 0.4046,
+      "pct_ge_0.9": 0.1192,
+      "pct_lt_0.05": 0.2178
+    },
+    "REVIEW": {
+      "n": 12884,
+      "n_has_p": 10662,
+      "p50": 0.0907,
+      "pct_ge_0.9": 0.0451,
+      "pct_lt_0.05": 0.3566
+    },
+    "SYL": {
+      "n": 19095,
+      "n_has_p": 18897,
+      "p50": 0.4687,
+      "pct_ge_0.9": 0.1437,
+      "pct_lt_0.05": 0.2018
+    }
+  },
+  "argmax_eq_syl_p_ge_0.9_by_tier_v3": {
+    "CHAR_A": 6961,
+    "CHAR_B": 394,
+    "REVIEW": 581,
+    "SYL": 2744
+  }
+}

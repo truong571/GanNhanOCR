@@ -1,0 +1,148 @@
+{
+ "ngay": "2026-09-16",
+ "viec": "B-5 khoá ô thay khoá cột (DANH_MUC_SUA_DOI_CUOI §1B)",
+ "ma": {
+  "build_dataset.py": "--lock-scope {col,cell,cell_fallback} (mặc định col, KHÔNG đổi), --pages <csv>; apply_lock_shift (IoU>=0,5 -> midpoint, box_source=shifted_by_lock); apply_lock_fallback (cột lùi legacy khi ô khoá lộ hộp lệch); sidecar $out/qd01_lock_boxes.csv + lock_shift.csv",
+  "align_production.py": "align_page(legacy_also_columns=...) -> col_state['legacy_boxes']",
+  "selftest": "phase1_engine_selftest 250/250; col mặc định tái lập byte-identical trên 60 trang"
+ },
+ "thoi_gian": {
+  "p60_no_crops_s": {
+   "col": 42.1,
+   "cell": 40.2,
+   "cell_fallback": 39.9
+  },
+  "full_co_crop_s": {
+   "cell": 414.5,
+   "cell_fallback": 405.3
+  }
+ },
+ "p60": {
+  "trang": 60,
+  "o_khoa": 513,
+  "o": 11467,
+  "usable": 8584,
+  "cell": {
+   "o_doi_bbox": 1568,
+   "usable_doi_bbox": 1129,
+   "shifted_by_lock": 12,
+   "AE1_trung_byte": 0,
+   "IoU05_cung_cot": 6,
+   "IoU05_cot_ke": 17,
+   "bbox_eq_cu": "513/513",
+   "detector_share_usable": 0.978
+  },
+  "col": {
+   "AE1": 0,
+   "IoU05_cung_cot": 0,
+   "IoU05_cot_ke": 5,
+   "detector_share_usable": 0.361
+  },
+  "cell_fallback": {
+   "cot_lui": 32,
+   "o_lui": 623,
+   "IoU05_cung_cot": 0,
+   "IoU05_cot_ke": 17,
+   "detector_share_usable": 0.927,
+   "cot_lui_bbox_eq_col": "672/672"
+  }
+ },
+ "full": {
+  "trang": 448,
+  "o": 83239,
+  "usable": 70368,
+  "tier_giong_v3": "100%",
+  "col_v3": {
+   "AE1": 0,
+   "F1_rows_grp": [
+    40,
+    20
+   ],
+   "MD5DUP_rows_grp": [
+    3,
+    1
+   ],
+   "detector_qd01_share_usable": 0.585,
+   "IoU05_cung_cot": 0,
+   "IoU05_cot_ke": 22
+  },
+  "cell": {
+   "o_doi_bbox": 7704,
+   "usable_doi_bbox": 6411,
+   "shifted_by_lock": 40,
+   "shifted_cung_cot": 38,
+   "shifted_cot_ke": 2,
+   "trung_byte_truoc_doi": 29,
+   "AE1": 0,
+   "F1_rows_grp": [
+    98,
+    49
+   ],
+   "MD5DUP_rows_grp": [
+    3,
+    1
+   ],
+   "IoU05_cung_cot": 29,
+   "IoU05_cot_ke": 58,
+   "bbox_eq_cu": "2012/2012",
+   "md5_eq_cu": "2012/2012",
+   "o_khoa_trong_defect": 0,
+   "o_khong_khoa_md5_eq_khoa": 0,
+   "detector_qd01_share_usable": 0.968
+  },
+  "cell_fallback": {
+   "cot_lui": 111,
+   "o_lui": 2313,
+   "usable_lui": 1988,
+   "o_lui_bbox_md5_eq_v3": "2313/2313",
+   "shifted_by_lock_con_lai": 1,
+   "o_doi_bbox": 6390,
+   "usable_doi_bbox": 5316,
+   "AE1": 0,
+   "F1_rows_grp": [
+    88,
+    44
+   ],
+   "MD5DUP_rows_grp": [
+    3,
+    1
+   ],
+   "IoU05_cung_cot": 0,
+   "IoU05_cot_ke": 52,
+   "bbox_eq_cu": "2012/2012",
+   "md5_eq_cu": "2012/2012",
+   "detector_qd01_share_usable": 0.943
+  }
+ },
+ "hop_3_nhanh_tren_o_khoa": {
+  "n": 2012,
+  "bbox_eq_cu_byte": [
+   1555,
+   0.773
+  ],
+  "IoU_ge_0.5": [
+   1895,
+   0.942
+  ],
+  "IoU_lt_0.5": [
+   117,
+   0.058
+  ],
+  "lech_dung_1_o": 48,
+  "theo_count_source_IoU_lt_0.5": {
+   "equal_qn": "100/1608 (6,2%)",
+   "equal_ocr": "13/282 (4,6%)",
+   "conflict": "4/122 (3,3%)"
+  },
+  "cot_co_o_khoa_lech": "109/1638",
+  "P_B_dung_khi_A_dung": [
+   0.959,
+   774
+  ],
+  "P_B_dung_khi_A_sai": [
+   0.667,
+   48
+  ]
+ },
+ "ket_luan": "KHÔNG đổi mặc định sang cell thuần: điều kiện hình thức đạt (AE-1 0, bbox/md5 QĐ-01 2012/2012) nhưng dời midpoint tạo 29 cặp IoU>=0,5 cùng cột (dây chuyền lệch 1 ô) và F1 40->98 dòng. cell_fallback: 0 cặp cùng cột, F1 88, detector 94,3%, 111 cột lùi legacy == v3 byte; là ứng viên nếu chấp nhận F1 +48 dòng và 5.316 ô usable đổi bbox (Khối C phải có tầng box_source=detector trong cột từng khoá)."
+}

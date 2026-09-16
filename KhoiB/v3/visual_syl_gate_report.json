@@ -1,0 +1,144 @@
+{
+  "labels": "dataset_out/labels_final.csv",
+  "oof": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/KhoiB/v3/p_visual_oof_v3_results/p_visual_oof_v3.csv",
+  "thr_main": 0.9,
+  "thr_loose": 0.8,
+  "rule": "visual_syl_gate",
+  "doi_nhan": false,
+  "available": true,
+  "labels_md5": "1a2d8e0ca0a1199f11ff514135051c15",
+  "oof_labels_md5": "1a2d8e0ca0a1199f11ff514135051c15",
+  "labels_md5_match": true,
+  "n_labels": 83239,
+  "n_oof": 83239,
+  "n_joined": 83239,
+  "n_syllable_mismatch": 0,
+  "review": {
+    "n_tier_v3_review": 12897,
+    "n_already_usable_qd01": 36,
+    "n_not_plausible_or_rule": 188,
+    "n_review_not_joined": 0,
+    "n_review_syl_outside_classes": 2199,
+    "n_eligible": 10662,
+    "n_argmax_eq_syl": 5808,
+    "n_gate_0.9": 1025,
+    "n_gate_0.8": 1827,
+    "p_quantiles_eligible": {
+      "0.5": 0.1923,
+      "0.9": 0.8961,
+      "0.95": 0.9472,
+      "0.99": 0.9855
+    }
+  },
+  "review_by": {
+    "book": {
+      "stt11": {
+        "eligible": 3105,
+        "gate_0.9": 265,
+        "gate_0.8": 487
+      },
+      "stt2": {
+        "eligible": 3909,
+        "gate_0.9": 357,
+        "gate_0.8": 640
+      },
+      "stt4": {
+        "eligible": 3648,
+        "gate_0.9": 403,
+        "gate_0.8": 700
+      }
+    },
+    "tier_goc": {
+      "(rỗng)": {
+        "eligible": 10662,
+        "gate_0.9": 1025,
+        "gate_0.8": 1827
+      }
+    },
+    "rule": {
+      "low_posterior": {
+        "eligible": 16,
+        "gate_0.9": 4,
+        "gate_0.8": 6
+      },
+      "no_context": {
+        "eligible": 10646,
+        "gate_0.9": 1021,
+        "gate_0.8": 1821
+      }
+    },
+    "syllable_top20_gate_main": {
+      "một": 50,
+      "ra": 32,
+      "vua": 29,
+      "hai": 26,
+      "thầy": 25,
+      "là": 22,
+      "sau": 20,
+      "phải": 17,
+      "nước": 17,
+      "cả": 16,
+      "đi": 16,
+      "chịu": 16,
+      "thì": 16,
+      "làm": 15,
+      "và": 13,
+      "mẹ": 13,
+      "nhà": 13,
+      "đoạn": 12,
+      "ta": 12,
+      "le": 12
+    }
+  },
+  "far_char_a": {
+    "dinh_nghia": {
+      "a": "p_kề ≥ thr ∧ p_mình < 0,5",
+      "b": "argmax == âm kề ∧ p_kề ≥ thr (điều kiện cổng áp cho nhãn sai)",
+      "mau_so": "ô CHAR_A có ≥1 âm kề (syl_idx∓1 cùng cột) khác âm mình và ∈ lớp"
+    },
+    "n_char_a_joined": 47033,
+    "a_09": {
+      "n": 678,
+      "den": 46717,
+      "rate": 0.014512918209645311,
+      "wilson95": [
+        0.01347,
+        0.01564
+      ]
+    },
+    "a_08": {
+      "n": 1248,
+      "den": 46717,
+      "rate": 0.026714044138108184,
+      "wilson95": [
+        0.02529,
+        0.02822
+      ]
+    },
+    "b_09": {
+      "n": 678,
+      "den": 46717,
+      "rate": 0.014512918209645311,
+      "wilson95": [
+        0.01347,
+        0.01564
+      ]
+    },
+    "b_08": {
+      "n": 1248,
+      "den": 46717,
+      "rate": 0.026714044138108184,
+      "wilson95": [
+        0.02529,
+        0.02822
+      ]
+    }
+  },
+  "char_a_gate_recall": {
+    "gate_0.9": 11871,
+    "gate_0.8": 18927,
+    "n": 47033
+  },
+  "candidates_csv": "KhoiB/v3/visual_syl_candidates.csv",
+  "n_candidates_rows": 1827
+}

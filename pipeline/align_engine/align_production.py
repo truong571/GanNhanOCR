@@ -638,7 +638,8 @@ def _pair_new(cluster: dict, syllables: list[str], qn_to_nom, similar,
 def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                qn_to_nom: dict, similar: dict, mode: str,
                reseg_mode: str = "midpoint", encoder=None,
-               box_rule: str = "syl_index", locked_columns=None) -> dict | None:
+               box_rule: str = "syl_index", locked_columns=None,
+               legacy_also_columns=None) -> dict | None:
     """Align one page in the given mode. Returns per-page record with pairs.
 
     reseg_mode (only used when mode != 'old'): 'midpoint' (default) | 'valley_n' |
@@ -649,7 +650,10 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
     DETECTOR_THR/±DETECTOR_XMARGIN + assign_boxes 3 nhánh; 'legacy' = trọn gói luật cũ
     (thr 0,3, ±0,5w, _pick_reseg) tái lập bộ cũ. locked_columns = tập line_id (cột QN)
     có ô khoá QĐ-01 trên trang này: cột ấy chạy trọn gói luật cũ dù box_rule=syl_index
-    (box_source='legacy_locked_col').
+    (box_source='legacy_locked_col'). legacy_also_columns (B-5, --lock-scope cell*):
+    tập line_id chạy luật MỚI như thường nhưng tính THÊM hộp trọn gói luật cũ vào
+    col_state['legacy_boxes'] (theo nom_idx) để PASS 1c có thể lùi cả cột về luật cũ
+    khi ô khoá QĐ-01 cho thấy hộp 3 nhánh lệch.
 
     Kết quả (mode='new') còn có `col_states` (flow N3g) — mỗi cột một dict
     {line_id, cluster, syllables (sau normalize_column), syllable_ocr (VietOCR
@@ -666,6 +670,7 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
     page_boxes = None
     legacy_page_boxes = None
     locked_columns = set(locked_columns or ())
+    legacy_also_columns = set(legacy_also_columns or ())
     if reseg_mode in ("valley_guarded", "detector"):
         import cv2 as _cv2
         page_bgr = _cv2.imread(str(data_dir / "pages" / f"{page_name}.png"), _cv2.IMREAD_COLOR)
@@ -679,7 +684,7 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
         page_boxes = detector.boxes_for_page(page_bgr)   # all char boxes, once per page
         if box_rule == "legacy":
             legacy_page_boxes = page_boxes
-        elif locked_columns:
+        elif locked_columns or legacy_also_columns:
             # cột có ô khoá QĐ-01: hộp ở ngưỡng cũ 0,3 (lọc lại từ lần chạy 0,2 — cùng tập)
             legacy_page_boxes = _legacy_page_boxes(page_boxes, thr, page_bgr)
         seg_backend = "detector_centernet_v1"
@@ -729,10 +734,18 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                 j = p["syl_idx"]
                 p["syllable_raw"] = syllables[j]
                 p["syllable_ocr"] = syllable_ocr[j] if len(syllable_ocr) == len(syllables) else ""
+            legacy_boxes = None
+            if (line_id in legacy_also_columns and col_rule == "syl_index"
+                    and reseg_mode == "detector" and legacy_page_boxes is not None):
+                # B-5: hộp trọn gói luật cũ (thr 0,3, ±0,5w, ép đếm + _monotone_assign)
+                # của cùng cột — theo nom_idx, không phụ thuộc đường ghép
+                legacy_boxes = _pick_reseg(cluster, syllables, binary, reseg_mode, encoder,
+                                           page_bgr, detector, legacy_page_boxes)
             col_states.append({
                 "line_id": line_id, "cluster": cluster, "syllables": syllables,
                 "syllable_ocr": syllable_ocr, "matched": matched,
                 "reseg_boxes": reseg_boxes, "ops1": ops1,
+                "legacy_boxes": legacy_boxes,     # B-5: chỉ khác None ở cột legacy_also_columns
                 **box_info,          # A-6: G, cb, n_ocr, n_qn, n_det, count/box_source, box_rule
             })
             # anchored flag: a pair flanked by a confirmed neighbour. Its LOCAL

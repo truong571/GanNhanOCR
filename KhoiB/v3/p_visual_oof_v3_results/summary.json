@@ -1,0 +1,263 @@
+{
+ "generation": "v3",
+ "smoke": false,
+ "labels": "labels_final.csv",
+ "labels_md5": "1a2d8e0ca0a1199f11ff514135051c15",
+ "crops": "crops_v3.npz",
+ "n_cells": 83239,
+ "n_ok": 83239,
+ "n_pages": 448,
+ "n_classes": 804,
+ "classes_source": "âm có ≥5 ô tier∈['GOLD', 'SYLLABLE'] trên toàn bộ (không dùng split)",
+ "min_count": 5,
+ "fold_formula": "int(hashlib.md5(f\"{book}|{page}\".encode()).hexdigest(), 16) % 5",
+ "pages_per_fold": {
+  "0": 80,
+  "1": 85,
+  "2": 88,
+  "3": 104,
+  "4": 91
+ },
+ "train_tiers": [
+  "GOLD",
+  "SYLLABLE"
+ ],
+ "epochs": 15,
+ "bs": 256,
+ "lr": 0.002,
+ "seed": 0,
+ "device": "cuda",
+ "amp_fp16": true,
+ "torch": "2.10.0+cu128",
+ "total_time_min": 22.57,
+ "mean_val_top1": 0.775,
+ "mean_val_top5": 0.918,
+ "folds": [
+  {
+   "fold": 0,
+   "pages": 80,
+   "train_cells": 56773,
+   "val_cells": 12403,
+   "pred_cells": 14948,
+   "val_top1": 0.7739,
+   "val_top5": 0.918,
+   "time_sec": 268.4
+  },
+  {
+   "fold": 1,
+   "pages": 85,
+   "train_cells": 56178,
+   "val_cells": 12998,
+   "pred_cells": 15639,
+   "val_top1": 0.7821,
+   "val_top5": 0.9211,
+   "time_sec": 267.1
+  },
+  {
+   "fold": 2,
+   "pages": 88,
+   "train_cells": 55559,
+   "val_cells": 13617,
+   "pred_cells": 16491,
+   "val_top1": 0.7726,
+   "val_top5": 0.921,
+   "time_sec": 266.5
+  },
+  {
+   "fold": 3,
+   "pages": 104,
+   "train_cells": 53006,
+   "val_cells": 16170,
+   "pred_cells": 19414,
+   "val_top1": 0.7808,
+   "val_top5": 0.9198,
+   "time_sec": 261.6
+  },
+  {
+   "fold": 4,
+   "pages": 91,
+   "train_cells": 55188,
+   "val_cells": 13988,
+   "pred_cells": 16747,
+   "val_top1": 0.7654,
+   "val_top5": 0.9101,
+   "time_sec": 265.8
+  }
+ ],
+ "by_fold_oof": {
+  "0": {
+   "n_total": 14948,
+   "n_in_classes": 14347,
+   "top1": 0.7405,
+   "top5": 0.8884,
+   "p_syl_p50": 0.6482,
+   "p_syl_p10": 0.0096,
+   "pct_p_syl_lt_0_05": 16.38,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 22.77
+  },
+  "1": {
+   "n_total": 15639,
+   "n_in_classes": 15002,
+   "top1": 0.749,
+   "top5": 0.8912,
+   "p_syl_p50": 0.6506,
+   "p_syl_p10": 0.0103,
+   "pct_p_syl_lt_0_05": 15.93,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 23.45
+  },
+  "2": {
+   "n_total": 16491,
+   "n_in_classes": 15806,
+   "top1": 0.7443,
+   "top5": 0.8966,
+   "p_syl_p50": 0.6469,
+   "p_syl_p10": 0.0137,
+   "pct_p_syl_lt_0_05": 15.87,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 23.4
+  },
+  "3": {
+   "n_total": 19414,
+   "n_in_classes": 18625,
+   "top1": 0.7515,
+   "top5": 0.8941,
+   "p_syl_p50": 0.6513,
+   "p_syl_p10": 0.012,
+   "pct_p_syl_lt_0_05": 15.81,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 23.69
+  },
+  "4": {
+   "n_total": 16747,
+   "n_in_classes": 16109,
+   "top1": 0.7343,
+   "top5": 0.8832,
+   "p_syl_p50": 0.6269,
+   "p_syl_p10": 0.0086,
+   "pct_p_syl_lt_0_05": 16.81,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 22.48
+  }
+ },
+ "by_tier_v3": {
+  "CHAR_A": {
+   "n_total": 47956,
+   "n_in_classes": 47033,
+   "top1": 0.7731,
+   "top5": 0.9177,
+   "p_syl_p50": 0.6978,
+   "p_syl_p10": 0.0237,
+   "pct_p_syl_lt_0_05": 13.17,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 25.24
+  },
+  "CHAR_B": {
+   "n_total": 3311,
+   "n_in_classes": 3280,
+   "top1": 0.7619,
+   "top5": 0.9018,
+   "p_syl_p50": 0.6407,
+   "p_syl_p10": 0.0165,
+   "pct_p_syl_lt_0_05": 14.79,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 22.23
+  },
+  "REVIEW": {
+   "n_total": 12897,
+   "n_in_classes": 10698,
+   "top1": 0.5462,
+   "top5": 0.717,
+   "p_syl_p50": 0.1959,
+   "p_syl_p10": 0.0004,
+   "pct_p_syl_lt_0_05": 35.61,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 9.63
+  },
+  "SYL": {
+   "n_total": 19075,
+   "n_in_classes": 18878,
+   "top1": 0.7813,
+   "top5": 0.9203,
+   "p_syl_p50": 0.6958,
+   "p_syl_p10": 0.0255,
+   "pct_p_syl_lt_0_05": 12.77,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 25.88
+  }
+ },
+ "by_tier": {
+  "GOLD": {
+   "n_total": 51922,
+   "n_in_classes": 50969,
+   "top1": 0.7745,
+   "top5": 0.9177,
+   "p_syl_p50": 0.6976,
+   "p_syl_p10": 0.0239,
+   "pct_p_syl_lt_0_05": 13.13,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 25.09
+  },
+  "QUARANTINE": {
+   "n_total": 42,
+   "n_in_classes": 41,
+   "top1": 0.3902,
+   "top5": 0.439,
+   "p_syl_p50": 0.0015,
+   "p_syl_p10": 0.0,
+   "pct_p_syl_lt_0_05": 58.54,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 7.32
+  },
+  "REVIEW": {
+   "n_total": 12871,
+   "n_in_classes": 10672,
+   "top1": 0.5452,
+   "top5": 0.7165,
+   "p_syl_p50": 0.1936,
+   "p_syl_p10": 0.0004,
+   "pct_p_syl_lt_0_05": 35.69,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 9.64
+  },
+  "SYLLABLE": {
+   "n_total": 18404,
+   "n_in_classes": 18207,
+   "top1": 0.7766,
+   "top5": 0.9188,
+   "p_syl_p50": 0.6893,
+   "p_syl_p10": 0.0237,
+   "pct_p_syl_lt_0_05": 13.05,
+   "pct_argmax_dung_va_max_prob_ge_0_9": 25.79
+  }
+ },
+ "e2b": {
+  "dinh_nghia": "AUC P(âm v3 | crop) của ô CHAR_A (đúng) vs P(âm ô kề syl_idx±1 | crop) của cùng ô (sai); loại kề cùng âm",
+  "n_right": 47033,
+  "n_wrong": 87431,
+  "n_wrong_prev": 43672,
+  "n_wrong_next": 43759,
+  "n_ke_cung_am_bo": 58,
+  "auc": 0.9446,
+  "auc_prev": 0.9405,
+  "auc_next": 0.9487,
+  "pct_right_p_lt_0_05": 13.17,
+  "pct_wrong_p_lt_0_05": 91.05,
+  "theo_fold": {
+   "0": 0.9434,
+   "1": 0.9471,
+   "2": 0.9487,
+   "3": 0.9445,
+   "4": 0.9396
+  }
+ },
+ "b3_gate_review": {
+  "review_co_p": 12897,
+  "argmax_bang_am_v3": 5843,
+  "qua_cong_0_9": 1030,
+  "qua_cong_0_8": 1846
+ },
+ "n_syl_ngoai_lop": 3350,
+ "n_syl_ngoai_lop_theo_tier_v3": {
+  "CHAR_A": 923,
+  "CHAR_B": 31,
+  "REVIEW": 2199,
+  "SYL": 197
+ },
+ "outputs": [
+  "classes.json",
+  "models/fold{0..4}.pt",
+  "probs_oof.npz",
+  "p_visual_oof_v3.csv",
+  "summary.json"
+ ]
+}

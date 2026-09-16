@@ -1,0 +1,155 @@
+{
+  "pages": 60,
+  "total_pairs": 11467,
+  "tiers": {
+    "GOLD": 7241,
+    "REVIEW": 2883,
+    "SYLLABLE": 1343
+  },
+  "syllable_promoted": 0,
+  "syllable_tu_silver": 0,
+  "rules": {
+    "s1_inter_s2_direct": 6411,
+    "no_context": 2855,
+    "quyet_dinh_nguoi:qd01_cell_lock": 513,
+    "syl_ctx:corpus4": 696,
+    "syl_ctx:tone": 67,
+    "syl_ctx:bigram": 580,
+    "s1_inter_s2_similar": 257,
+    "not_plausible": 26,
+    "corpus_reading:cr_50e5_nhiều": 9,
+    "s1_inter_s2_direct_am_sua_dau": 33,
+    "s1_inter_s2_direct_lowp": 4,
+    "corpus_reading:cr_7121_vồ": 12,
+    "corpus_reading:cr_4fc2_hế": 2,
+    "lop_nham:nguoi_2029A_vs_346B": 2
+  },
+  "luat_moi": {
+    "s1_inter_s2_direct_am_sua_dau": 33,
+    "  trong đó từ REVIEW": 7,
+    "  trong đó từ SILVER": 26,
+    "s1_inter_s2_similar_cot_lech": 0,
+    "s1_inter_s2_similar_nguoc": 0,
+    "am_da_quyet": [
+      "người"
+    ]
+  },
+  "char_classes": 704,
+  "two_pass": true,
+  "anchor_cap": 2.0,
+  "n_anchor_pairs": 2037,
+  "pass1b": {
+    "n_cols": 540,
+    "n_pair_keys": 3521,
+    "n_match_ops1": 11467,
+    "n_match_ops2": 11467,
+    "n_match_changed": 142,
+    "n_band_touched": 0,
+    "n_p_register_ge_0.8": 11338
+  },
+  "box_rule": "syl_index",
+  "detector_thr": 0.2,
+  "detector_xmargin": 0.25,
+  "n_locked_cols_qd01": 1640,
+  "lock_scope": "cell_fallback",
+  "lock_shift": {
+    "n_locked": 513,
+    "n_exact_eq": 9,
+    "n_shifted": 12,
+    "n_shifted_same_col": 12,
+    "fallback_n_cols_lock": 367,
+    "fallback_n_cols_fallback": 32,
+    "fallback_n_cols_fallback_lech": 32,
+    "fallback_n_cols_fallback_doi": 11,
+    "fallback_n_cells_fallback": 623,
+    "fallback_n_cells_was_shifted": 12
+  },
+  "count_source": {
+    "equal_ocr": 1605,
+    "equal_qn": 8519,
+    "conflict": 671,
+    "legacy_locked_col": 672
+  },
+  "box_source": {
+    "detector": 10084,
+    "qd01_locked": 513,
+    "split": 15,
+    "midpoint": 232,
+    "legacy_locked_col": 623
+  },
+  "usable_char": 7241,
+  "usable_total": 8584,
+  "pass1c": {
+    "enabled": true,
+    "tier_v3": {
+      "CHAR_A": 6699,
+      "REVIEW": 2915,
+      "SYL": 1523,
+      "CHAR_B": 330
+    },
+    "tier_v3_final": {
+      "CHAR_A": 6731,
+      "REVIEW": 2908,
+      "SYL": 1497,
+      "CHAR_B": 331
+    },
+    "l1": {
+      "doi": 33,
+      "giu_goc_thua": 6,
+      "hoa": 26
+    },
+    "qd01": {
+      "n_cells_in_build": 513,
+      "n_locked": 513,
+      "n_excluded_ngoai_cells": 1,
+      "n_cells_file": 2014,
+      "n_decisions_file": 14,
+      "n_pending_rows": 0,
+      "n_bbox_eq_cu": 513,
+      "n_md5_eq_cu": 0,
+      "n_locked_total": 513,
+      "dat_locked_pending": true
+    },
+    "nguoi_ngoai_khoa": {
+      "n": 42,
+      "lop_nham_review": 2
+    },
+    "flank_gold": {
+      "1": 5533,
+      "2": 3615,
+      "0": 2319
+    },
+    "decisions": {
+      "path": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/config/decisions.yaml",
+      "corpus_readings_ap": {
+        "cr_50e5_nhiều": 9,
+        "cr_7121_vồ": 12,
+        "cr_4fc2_hế": 2
+      },
+      "di_the_ap": {
+        "dt_6bce_6bcf|stt2": 2,
+        "dt_6c92_6ca1|stt2": 9,
+        "dt_5fb3_5fb7|stt2": 15,
+        "dt_4e9c_4e9e|stt2": 1,
+        "dt_4e8a_4e8b|stt2": 3,
+        "dt_5e84_5e92|stt2": 2,
+        "dt_5225_522b|stt2": 1,
+        "dt_5fb3_5fb7|stt4": 18,
+        "dt_6c92_6ca1|stt4": 20,
+        "dt_70ba_7232_stt4|stt4": 6,
+        "dt_5ee9_5eea|stt4": 6,
+        "dt_4e9c_4e9e|stt4": 1,
+        "dt_5b90_5b9c|stt4": 1,
+        "dt_5225_522b|stt4": 6,
+        "dt_57a9_580a|stt4": 1,
+        "dt_5e84_5e92|stt11": 59,
+        "dt_5225_522b|stt11": 5,
+        "dt_5b90_5b9c|stt11": 1,
+        "dt_5fb3_5fb7|stt11": 1,
+        "dt_4e9c_4e9e|stt11": 1
+      },
+      "lop_nham_review": 2,
+      "n_label_canonical_ne_label": 159
+    }
+  }
+}

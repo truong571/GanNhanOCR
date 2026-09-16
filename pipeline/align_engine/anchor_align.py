@@ -91,7 +91,9 @@ def realign_column(nom_chars: list, syllables: list[str],
                    qn_to_nom: dict[str, list[str]],
                    similar_dict: dict[str, list[str]] | None = None,
                    band_slack: int = BAND_SLACK,
-                   cost_fn=None) -> list[dict]:
+                   cost_fn=None, cost_ij=None,
+                   cost_del: float | None = None,
+                   cost_ins: float | None = None) -> list[dict]:
     """Align one column's Nôm chars to its QN syllables.
 
     Args:
@@ -103,6 +105,12 @@ def realign_column(nom_chars: list, syllables: list[str],
         cost_fn: callable (ocr_char, syllable) -> float ghi đè chi phí thay thế
                  (vd. neo ngữ liệu, phát xạ ảnh); None = substitution_cost.
                  Chỉ đổi ĐƯỜNG GHÉP; cờ 'confirmed' vẫn do is_confirmed quyết.
+        cost_ij: B-2 (DANH_MUC 1B, visual_emission): callable (i, j, ocr_char,
+                 syllable) -> float — chi phí thay thế THEO CHỈ SỐ (phát xạ ảnh
+                 của hộp i cho âm j cộng vào chi phí văn bản). Ưu tiên hơn cost_fn
+                 khi cả hai được truyền. None = dùng cost_fn/substitution_cost.
+        cost_del, cost_ins: ghi đè COST_DEL/COST_INS (B-2: khe + λ·gap_vis, như
+                 lab/tham_dinh_2026-09-16/dp_vis5.py:63). None = hằng mô-đun.
 
     Returns:
         Ordered list of ops, each a dict:
@@ -128,6 +136,12 @@ def realign_column(nom_chars: list, syllables: list[str],
     bt = [[None] * (n + 1) for _ in range(m + 1)]
     dp[0][0] = 0.0
     _cost = cost_fn or (lambda c, s: substitution_cost(c, s, qn_to_nom, similar_dict))
+    if cost_ij is not None:                     # B-2: chi phí theo chỉ số (i, j)
+        _cost_ij = cost_ij
+    else:
+        _cost_ij = lambda i, j, c, s: _cost(c, s)      # noqa: E731
+    c_del = COST_DEL if cost_del is None else float(cost_del)
+    c_ins = COST_INS if cost_ins is None else float(cost_ins)
 
     for i in range(m + 1):
         for j in range(n + 1):
@@ -138,17 +152,17 @@ def realign_column(nom_chars: list, syllables: list[str],
             best, op = INF, None
             # diagonal: match nom[i-1] with syl[j-1]
             if i > 0 and j > 0 and dp[i - 1][j - 1] < INF:
-                c = dp[i - 1][j - 1] + _cost(chars[i - 1], syllables[j - 1])
+                c = dp[i - 1][j - 1] + _cost_ij(i - 1, j - 1, chars[i - 1], syllables[j - 1])
                 if c < best:
                     best, op = c, "M"
             # up: delete nom[i-1] (extra Nôm box, no syllable)
             if i > 0 and dp[i - 1][j] < INF:
-                c = dp[i - 1][j] + COST_DEL
+                c = dp[i - 1][j] + c_del
                 if c < best:
                     best, op = c, "D"
             # left: insert syl[j-1] (Nôm OCR missed a glyph)
             if j > 0 and dp[i][j - 1] < INF:
-                c = dp[i][j - 1] + COST_INS
+                c = dp[i][j - 1] + c_ins
                 if c < best:
                     best, op = c, "I"
             dp[i][j], bt[i][j] = best, op
@@ -219,13 +233,16 @@ def posterior_matches(nom_chars: list, syllables: list[str],
                       qn_to_nom: dict[str, list[str]],
                       similar_dict: dict[str, list[str]] | None = None,
                       T: float = 1.0, cost_fn=None,
-                      band_slack: int = BAND_SLACK) -> dict[tuple[int, int], float]:
+                      band_slack: int = BAND_SLACK, cost_ij=None,
+                      cost_del: float | None = None,
+                      cost_ins: float | None = None) -> dict[tuple[int, int], float]:
     """{(i, j): P(ghép nom i ↔ âm j)} bằng forward–backward trên đúng lưới NW có
     băng của realign_column, trọng số exp(−cost/T). Port từ
     lab/gan_nhan_2026-09-13/thuc_nghiem.py:118-173 (RA_SOAT_GAN_NHAN §4); T=1,0
     vì chi phí CALIB đã là nat. PHẢI truyền cùng cost_fn với realign_column để
     p đo đúng đường Viterbi (argmax theo hàng == cặp Viterbi; Σ_j p(i,j) ≤ 1,
-    phần còn lại là P(del i))."""
+    phần còn lại là P(del i)). cost_ij/cost_del/cost_ins (B-2): cùng nghĩa và
+    PHẢI cùng giá trị với realign_column."""
     m, n = len(nom_chars), len(syllables)
     if m == 0 or n == 0:
         return {}
@@ -233,13 +250,19 @@ def posterior_matches(nom_chars: list, syllables: list[str],
     band = abs(m - n) + max(1, band_slack)
     NEG = -math.inf
     _cost = cost_fn or (lambda c, s: substitution_cost(c, s, qn_to_nom, similar_dict))
+    if cost_ij is not None:
+        _cost_ij = cost_ij
+    else:
+        _cost_ij = lambda i, j, c, s: _cost(c, s)      # noqa: E731
     cache: dict[tuple[int, int], float] = {}
 
     def sc(i, j):
         if (i, j) not in cache:
-            cache[(i, j)] = -_cost(chars[i], syllables[j]) / T
+            cache[(i, j)] = -_cost_ij(i, j, chars[i], syllables[j]) / T
         return cache[(i, j)]
-    d, ins = -COST_DEL / T, -COST_INS / T
+    c_del = COST_DEL if cost_del is None else float(cost_del)
+    c_ins = COST_INS if cost_ins is None else float(cost_ins)
+    d, ins = -c_del / T, -c_ins / T
     F = [[NEG] * (n + 1) for _ in range(m + 1)]
     F[0][0] = 0.0
     for i in range(m + 1):

@@ -96,7 +96,7 @@ def r3_no_rng() -> tuple[bool, str]:
         if not base.is_dir():
             continue
         for f in sorted(base.rglob("*.py")):
-            if f.name.startswith("selftest") or "/lab/" in str(f):
+            if f.name.startswith("selftest") or f.name.endswith("_selftest.py") or "/lab/" in str(f):
                 continue
             for i, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
                 code = line.split("#", 1)[0]

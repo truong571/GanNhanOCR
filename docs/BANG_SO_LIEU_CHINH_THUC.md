@@ -102,7 +102,7 @@ Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('datase
 | **Trang cho đủ 9 cột có nhãn** | **445/448** |
 | Lớp ký tự phân biệt (mọi tier có nhãn) | 1.332 |
 | **Lớp trong bộ giao nộp** | **1.331** |
-| **Selftest** | **1035 passed, 0 failed** |
+| **Selftest** | **1083 passed, 0 failed** |
 <!-- AUTO:PHAM_VI:END -->
 
 ### 2.4 Vá lỗi (bước 4–6)

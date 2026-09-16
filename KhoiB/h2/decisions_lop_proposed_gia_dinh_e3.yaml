@@ -1,0 +1,1491 @@
+# QUYẾT ĐỊNH THEO LỚP — người ký, máy chỉ nạp/kiểm/thi hành (A-8, flow N5f/N5h/N5i).
+# Nạp bởi pipeline/decisions.py (schema + xuất xứ); build_dataset PASS 1c thi hành.
+#
+# 🔴 CHỈ MỤC `trang_thai: da_ky` VÀ `xuat_xu` trỏ tới TỆP CÓ THẬT mới được áp.
+#    `cho_ky` = ứng viên máy sinh (pipeline/tools/sinh_decisions.py), chỉ được ĐẾM trong
+#    decisions_report.json. Máy KHÔNG ký thay người; KHÔNG tự chọn `chuan`.
+#
+# corpus_readings: (ocr_char, syllable_raw) là cách đọc thật của ngữ liệu dù từ điển không có
+#   -> GOLD, rule corpus_reading:<id>, dict_support 'corpus'; KHÔNG vào qn_to_nom, KHÔNG làm neo.
+#   Ứng viên = ô L1 (755) mà cổng 2-gram ÂM–ÂM LOO ủng hộ âm GỐC, nhóm ≥ 5 ô.
+# di_the: hai mã Unicode cùng một hình -> cột label_canonical (label KHÔNG đổi).
+#   `quan_sat` ghi CẢ HAI mã, `so_o` đếm từng mã; người ký điền `chuan` (∈ quan_sat) +
+#   `quy_tac` (da_so_ngu_lieu | unicode) + `xuat_xu`; `book: null` = mọi sách.
+# lop_nham: ô NGOÀI khoá QĐ-01, âm `syllable`, nhãn máy == `ocr` -> `den` (REVIEW).
+# khoa_o: đường dẫn khoá QĐ-01 (build đọc theo --qd01-cells/--qd01a-decisions).
+
+# ---- H2-lite (pipeline/tools/apply_lop_decisions.py) ĐỀ XUẤT — chưa chép vào config/ ----
+corpus_readings:
+- id: cr_7121_vồ
+  ocr_char: 無
+  unicode: U+7121
+  syllable_raw: vồ
+  syllable_l1: vô
+  book: null
+  so_o: 69
+  ghi_chu: 'L1 nhóm (無, vồ->vô) 70 ô: 2-gram ủng hộ gốc 69 / đổi 0 / hoà 1; theo sách (ủng hộ gốc) stt11 10, stt2
+    27, stt4 32'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: cr_50e5_nhiều
+  ocr_char: 僥
+  unicode: U+50E5
+  syllable_raw: nhiều
+  syllable_l1: nhiêu
+  book: null
+  so_o: 62
+  ghi_chu: 'L1 nhóm (僥, nhiều->nhiêu) 67 ô: 2-gram ủng hộ gốc 62 / đổi 0 / hoà 5; theo sách (ủng hộ gốc) stt2 59,
+    stt4 3'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: cr_51dc_lăm
+  ocr_char: 凜
+  unicode: U+51DC
+  syllable_raw: lăm
+  syllable_l1: lắm
+  book: null
+  so_o: 28
+  ghi_chu: 'L1 nhóm (凜, lăm->lắm) 74 ô: 2-gram ủng hộ gốc 28 / đổi 31 / hoà 15; theo sách (ủng hộ gốc) stt11 24,
+    stt2 2, stt4 2'
+  xuat_xu: ''
+  trang_thai: cho_ky
+- id: cr_5eea_lăm
+  ocr_char: 廪
+  unicode: U+5EEA
+  syllable_raw: lăm
+  syllable_l1: lắm
+  book: null
+  so_o: 18
+  ghi_chu: 'L1 nhóm (廪, lăm->lắm) 36 ô: 2-gram ủng hộ gốc 18 / đổi 12 / hoà 6; theo sách (ủng hộ gốc) stt2 11, stt4
+    7'
+  xuat_xu: ''
+  trang_thai: cho_ky
+- id: cr_793c_lê
+  ocr_char: 礼
+  unicode: U+793C
+  syllable_raw: lê
+  syllable_l1: lễ
+  book: null
+  so_o: 11
+  ghi_chu: 'L1 nhóm (礼, lê->lễ) 47 ô: 2-gram ủng hộ gốc 11 / đổi 27 / hoà 9; theo sách (ủng hộ gốc) stt11 5, stt2
+    3, stt4 3'
+  xuat_xu: ''
+  trang_thai: cho_ky
+- id: cr_4fc2_hế
+  ocr_char: 係
+  unicode: U+4FC2
+  syllable_raw: hế
+  syllable_l1: hề
+  book: null
+  so_o: 9
+  ghi_chu: 'L1 nhóm (係, hế->hề) 10 ô: 2-gram ủng hộ gốc 9 / đổi 0 / hoà 1; theo sách (ủng hộ gốc) stt11 4, stt2
+    1, stt4 4'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: cr_5ee9_lăm
+  ocr_char: 廩
+  unicode: U+5EE9
+  syllable_raw: lăm
+  syllable_l1: lắm
+  book: null
+  so_o: 9
+  ghi_chu: 'L1 nhóm (廩, lăm->lắm) 14 ô: 2-gram ủng hộ gốc 9 / đổi 4 / hoà 1; theo sách (ủng hộ gốc) stt2 1, stt4
+    8'
+  xuat_xu: ''
+  trang_thai: cho_ky
+- id: cr_51db_lăm
+  ocr_char: 凛
+  unicode: U+51DB
+  syllable_raw: lăm
+  syllable_l1: lắm
+  book: null
+  so_o: 6
+  ghi_chu: 'L1 nhóm (凛, lăm->lắm) 8 ô: 2-gram ủng hộ gốc 6 / đổi 2 / hoà 0; theo sách (ủng hộ gốc) stt11 1, stt2
+    3, stt4 2'
+  xuat_xu: ''
+  trang_thai: cho_ky
+di_the:
+- id: dt_4e8a_4e8b
+  quan_sat:
+  - 亊
+  - 事
+  unicode:
+    亊: U+4E8A
+    事: U+4E8B
+  chuan: 事
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    亊: 28
+    事: 974
+  kiem_unicode: Unihan:kSemanticVariant
+  ghi_chu: 'E3: (stt2, sự) 事/亊 MOT nB=25. Đếm ô có label theo sách: stt2: 亊 25 / 事 276; stt4: 亊 1 / 事 370; stt11:
+    亊 2 / 事 328'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_4e9c_4e9e
+  quan_sat:
+  - 亜
+  - 亞
+  unicode:
+    亜: U+4E9C
+    亞: U+4E9E
+  chuan: 亞
+  book: null
+  quy_tac: unicode
+  so_o:
+    亜: 48
+    亞: 9
+  kiem_unicode: shinjitai/CJK-compat (máy đề xuất, không có trong Unihan_Variants lẫn tài liệu)
+  ghi_chu: 'E3: (stt11, a) 亜/亞 MOT nB=9. Đếm ô có label theo sách: stt2: 亜 3 / 亞 0; stt4: 亜 9 / 亞 0; stt11: 亜 36
+    / 亞 9'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5171_5176
+  quan_sat:
+  - 共
+  - 其
+  unicode:
+    共: U+5171
+    其: U+5176
+  chuan: ''
+  book: null
+  quy_tac: unicode
+  so_o:
+    共: 828
+    其: 303
+  kiem_unicode: KHÔNG phải dị thể Unicode — E3 đo một hình, N5j hoãn tới khi có xuat_xu
+  ghi_chu: 'E3: (stt11, cùng) 共/其 MOT nB=23, (stt2, cùng) 共/其 MOT nB=58, (stt4, cùng) 共/其 MOT nB=77. Đếm ô có label
+    theo sách: stt2: 共 310 / 其 124; stt4: 共 210 / 其 114; stt11: 共 308 / 其 65'
+  xuat_xu: ''
+  trang_thai: cho_ky
+- id: dt_5225_522b
+  quan_sat:
+  - 別
+  - 别
+  unicode:
+    別: U+5225
+    别: U+522B
+  chuan: 别
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    別: 84
+    别: 147
+  kiem_unicode: Unihan:kSimplifiedVariant+kTraditionalVariant
+  ghi_chu: 'E3: (stt11, biết) 别/別 MOT nB=41, (stt4, biết) 别/別 mo nB=38. Đếm ô có label theo sách: stt2: 別 4 / 别
+    59; stt4: 別 39 / 别 42; stt11: 別 41 / 别 46'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_57a9_580a
+  quan_sat:
+  - 垩
+  - 堊
+  unicode:
+    垩: U+57A9
+    堊: U+580A
+  chuan: 垩
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    垩: 576
+    堊: 23
+  kiem_unicode: Unihan:kSimplifiedVariant+kTraditionalVariant
+  ghi_chu: 'E3: (stt2, thánh) 垩/堊 MOT nB=13. Đếm ô có label theo sách: stt2: 垩 214 / 堊 15; stt4: 垩 0 / 堊 7; stt11:
+    垩 362 / 堊 1'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5b90_5b9c
+  quan_sat:
+  - 宐
+  - 宜
+  unicode:
+    宐: U+5B90
+    宜: U+5B9C
+  chuan: 宜
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    宐: 17
+    宜: 162
+  kiem_unicode: Unihan:kSemanticVariant
+  ghi_chu: 'E3: (stt4, nghe) 宜/宐 MOT nB=14. Đếm ô có label theo sách: stt2: 宐 0 / 宜 47; stt4: 宐 14 / 宜 47; stt11:
+    宐 3 / 宜 68'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5b9e_5b9f
+  quan_sat:
+  - 实
+  - 実
+  unicode:
+    实: U+5B9E
+    実: U+5B9F
+  chuan: 实
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    实: 57
+    実: 12
+  kiem_unicode: shinjitai/CJK-compat (máy đề xuất, không có trong Unihan_Variants lẫn tài liệu)
+  ghi_chu: 'E3: (stt11, thật) 实/実 MOT nB=11. Đếm ô có label theo sách: stt2: 实 15 / 実 1; stt4: 实 2 / 実 0; stt11:
+    实 40 / 実 11'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5e84_5e92
+  quan_sat:
+  - 庄
+  - 庒
+  unicode:
+    庄: U+5E84
+    庒: U+5E92
+  chuan: 庄
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    庄: 709
+    庒: 352
+  kiem_unicode: danh_sach_DANH_MUC_A-8 (không có trong Unihan_Variants)
+  ghi_chu: 'E3: (stt11, chăng) 庒/庄 MOT nB=65, (stt11, chẳng) 庒/庄 MOT nB=14, (stt2, chăng) 庄/庒 MOT nB=14. Đếm ô có
+    label theo sách: stt2: 庄 275 / 庒 18; stt4: 庄 354 / 庒 1; stt11: 庄 80 / 庒 333'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5ee9_5eea
+  quan_sat:
+  - 廩
+  - 廪
+  unicode:
+    廩: U+5EE9
+    廪: U+5EEA
+  chuan: 廪
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    廩: 46
+    廪: 84
+  kiem_unicode: Unihan:kSimplifiedVariant+kTraditionalVariant
+  ghi_chu: 'E3: (stt4, lắm) 廪/廩 MOT nB=39. Đếm ô có label theo sách: stt2: 廩 1 / 廪 32; stt4: 廩 45 / 廪 50; stt11:
+    廩 0 / 廪 2'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5fb3_5fb7
+  quan_sat:
+  - 徳
+  - 德
+  unicode:
+    徳: U+5FB3
+    德: U+5FB7
+  chuan: 德
+  book: null
+  quy_tac: unicode
+  so_o:
+    徳: 313
+    德: 163
+  kiem_unicode: danh_sach_DANH_MUC_A-8 (không có trong Unihan_Variants)
+  ghi_chu: 'E3: (stt2, đức) 徳/德 MOT nB=31, (stt4, đức) 徳/德 MOT nB=127. Đếm ô có label theo sách: stt2: 徳 122 / 德
+    31; stt4: 徳 187 / 德 131; stt11: 徳 4 / 德 1'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_6bce_6bcf
+  quan_sat:
+  - 毎
+  - 每
+  unicode:
+    毎: U+6BCE
+    每: U+6BCF
+  chuan: 每
+  book: null
+  quy_tac: unicode
+  so_o:
+    毎: 12
+    每: 203
+  kiem_unicode: shinjitai/CJK-compat (máy đề xuất, không có trong Unihan_Variants lẫn tài liệu)
+  ghi_chu: 'E3: (stt2, mọi) 每/毎 MOT nB=8. Đếm ô có label theo sách: stt2: 毎 8 / 每 56; stt4: 毎 0 / 每 67; stt11: 毎
+    4 / 每 80'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_6c92_6ca1
+  quan_sat:
+  - 沒
+  - 没
+  unicode:
+    沒: U+6C92
+    没: U+6CA1
+  chuan: 沒
+  book: null
+  quy_tac: unicode
+  so_o:
+    沒: 25
+    没: 170
+  kiem_unicode: Unihan:kSimplifiedVariant+kSpecializedSemanticVariant+kTraditionalVariant
+  ghi_chu: 'E3: (stt4, một) 没/沒 MOT nB=18. Đếm ô có label theo sách: stt2: 沒 0 / 没 63; stt4: 沒 24 / 没 101; stt11:
+    沒 1 / 没 6'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_70ba_7232_stt4
+  quan_sat:
+  - 為
+  - 爲
+  unicode:
+    為: U+70BA
+    爲: U+7232
+  chuan: 爲
+  book: stt4
+  quy_tac: unicode
+  so_o:
+    為: 55
+    爲: 173
+  kiem_unicode: Unihan:kSemanticVariant
+  ghi_chu: 'E3: (stt2, vì) 為/爲 HAI nB=15, (stt4, vì) 爲/為 MOT nB=33. Đếm ô có label theo sách: stt4: 為 55 / 爲 173'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_70dd_84b8
+  quan_sat:
+  - 烝
+  - 蒸
+  unicode:
+    烝: U+70DD
+    蒸: U+84B8
+  chuan: 烝
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    烝: 21
+    蒸: 9
+  kiem_unicode: Unihan:kSemanticVariant
+  ghi_chu: 'E3: (stt11, chưng) 烝/蒸 MOT nB=8. Đếm ô có label theo sách: stt2: 烝 4 / 蒸 1; stt4: 烝 0 / 蒸 0; stt11:
+    烝 17 / 蒸 8'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+lop_nham:
+- id: nguoi_2029A_vs_346B
+  syllable: người
+  ocr: 㝵
+  unicode: U+3775
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+  ghi_chu: 'N5h: ô ''người'' ngoài khoá QĐ-01 mang nhãn 㝵 -> REVIEW; ô 𠊚 giữ GOLD'
+- id: ln_thì_5bfa_6642_stt11
+  syllable: thì
+  ocr: 寺
+  unicode: U+5BFA
+  den: 時
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L023_stt11_thì_6642_5bfa: ghi đè 寺->時 theo sách; ô ngoài khoá 13 (GOLD 13); E3 MOT'
+  book: stt11
+- id: ln_thì_5bfa_6642_stt4
+  syllable: thì
+  ocr: 寺
+  unicode: U+5BFA
+  den: 時
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L001_stt4_thì_6642_5bfa: ghi đè 寺->時 theo sách; ô ngoài khoá 135 (GOLD 135); E3 MOT'
+  book: stt4
+- id: ln_chăng_751f_5e84_stt4
+  syllable: chăng
+  ocr: 生
+  unicode: U+751F
+  den: 庄
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L002_stt4_chăng_5e84_751f: ghi đè 生->庄 theo sách; ô ngoài khoá 99 (GOLD 99); E3 MOT'
+  book: stt4
+- id: ln_cùng_5176_5171
+  syllable: cùng
+  ocr: 其
+  unicode: U+5176
+  den: 共
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L003_stt4_cùng_5171_5176, L004_stt2_cùng_5171_5176, L010_stt11_cùng_5171_5176: ghi đè 其->共
+    theo sách; ô ngoài khoá 157 (GOLD 157); E3 MOT'
+- id: ln_bỏ_25677_88dc_stt11
+  syllable: bỏ
+  ocr: 𥙷
+  unicode: U+25677
+  den: 補
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L015_stt11_bỏ_88dc_25677: ghi đè 𥙷->補 theo sách; ô ngoài khoá 19 (GOLD 19); E3 MOT'
+  book: stt11
+- id: ln_bỏ_25677_88dc_stt2
+  syllable: bỏ
+  ocr: 𥙷
+  unicode: U+25677
+  den: 補
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L005_stt2_bỏ_88dc_25677: ghi đè 𥙷->補 theo sách; ô ngoài khoá 36 (GOLD 36); E3 MOT'
+  book: stt2
+- id: ln_một_8511_6ca1_stt2
+  syllable: một
+  ocr: 蔑
+  unicode: U+8511
+  den: 没
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L006_stt2_một_6ca1_8511: ghi đè 蔑->没 theo sách; ô ngoài khoá 34 (GOLD 34); E3 MOT'
+  book: stt2
+- id: ln_con_665c_6606_stt4
+  syllable: con
+  ocr: 晜
+  unicode: U+665C
+  den: 昆
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L007_stt4_con_6606_665c: ghi đè 晜->昆 theo sách; ô ngoài khoá 34 (GOLD 34); E3 MOT'
+  book: stt4
+- id: ln_xin_55d4_771f_stt11
+  syllable: xin
+  ocr: 嗔
+  unicode: U+55D4
+  den: 真
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L008_stt11_xin_771f_55d4: ghi đè 嗔->真 theo sách; ô ngoài khoá 25 (GOLD 25); E3 MOT'
+  book: stt11
+- id: ln_xin_55d4_771f_stt4
+  syllable: xin
+  ocr: 嗔
+  unicode: U+55D4
+  den: 真
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L032_stt4_xin_771f_55d4: ghi đè 嗔->真 theo sách; ô ngoài khoá 10 (GOLD 10); E3 MOT'
+  book: stt4
+- id: ln_lắm_51dc_5eea_stt4
+  syllable: lắm
+  ocr: 凜
+  unicode: U+51DC
+  den: 廪
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L009_stt4_lắm_5eea_51dc: ghi đè 凜->廪 theo sách; ô ngoài khoá 24 (GOLD 24); E3 MOT'
+  book: stt4
+- id: ln_lấy_22b26_793c_stt11
+  syllable: lấy
+  ocr: 𢬦
+  unicode: U+22B26
+  den: 礼
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L011_stt11_lấy_793c_22b26: ghi đè 𢬦->礼 theo sách; ô ngoài khoá 22 (GOLD 22); E3 MOT'
+  book: stt11
+- id: ln_giờ_5f90_9664_stt2
+  syllable: giờ
+  ocr: 徐
+  unicode: U+5F90
+  den: 除
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L012_stt2_giờ_9664_5f90: ghi đè 徐->除 theo sách; ô ngoài khoá 22 (GOLD 22); E3 MOT'
+  book: stt2
+- id: ln_linh_3691_7075_stt11
+  syllable: linh
+  ocr: 㚑
+  unicode: U+3691
+  den: 灵
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L013_stt11_linh_7075_3691: ghi đè 㚑->灵 theo sách; ô ngoài khoá 20 (GOLD 20); E3 MOT'
+  book: stt11
+- id: ln_phải_6c9b_4f02_stt4
+  syllable: phải
+  ocr: 沛
+  unicode: U+6C9B
+  den: 伂
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L014_stt4_phải_4f02_6c9b: ghi đè 沛->伂 theo sách; ô ngoài khoá 20 (GOLD 20); E3 MOT'
+  book: stt4
+- id: ln_nói_5185_5450
+  syllable: nói
+  ocr: 内
+  unicode: U+5185
+  den: 呐
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L016_stt2_nói_5450_5185, L055_stt11_nói_5450_5185, L078_stt4_nói_5450_5185: ghi đè 内->呐
+    theo sách; ô ngoài khoá 31 (GOLD 31); E3 MOT'
+- id: ln_như_8304_5982_stt4
+  syllable: như
+  ocr: 茄
+  unicode: U+8304
+  den: 如
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L017_stt4_như_5982_8304: ghi đè 茄->如 theo sách; ô ngoài khoá 19 (GOLD 19); E3 MOT'
+  book: stt4
+- id: ln_lắm_5eea_51dc_stt2
+  syllable: lắm
+  ocr: 廪
+  unicode: U+5EEA
+  den: 凜
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L018_stt2_lắm_51dc_5eea: ghi đè 廪->凜 theo sách; ô ngoài khoá 17 (GOLD 17); E3 MOT'
+  book: stt2
+- id: ln_được_6642_7279
+  syllable: được
+  ocr: 時
+  unicode: U+6642
+  den: 特
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L019_stt2_được_7279_6642, L026_stt4_được_7279_6642, L036_stt11_được_7279_6642: ghi đè 時->特
+    theo sách; ô ngoài khoá 38 (GOLD 38); E3 MOT'
+- id: ln_liền_84ee_9023_stt2
+  syllable: liền
+  ocr: 蓮
+  unicode: U+84EE
+  den: 連
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L024_stt2_liền_9023_84ee: ghi đè 蓮->連 theo sách; ô ngoài khoá 12 (GOLD 12); E3 MOT'
+  book: stt2
+- id: ln_liền_84ee_9023_stt4
+  syllable: liền
+  ocr: 蓮
+  unicode: U+84EE
+  den: 連
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L020_stt4_liền_9023_84ee: ghi đè 蓮->連 theo sách; ô ngoài khoá 17 (GOLD 17); E3 MOT'
+  book: stt4
+- id: ln_đến_4e14_65e6_stt11
+  syllable: đến
+  ocr: 且
+  unicode: U+4E14
+  den: 旦
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L021_stt11_đến_65e6_4e14: ghi đè 且->旦 theo sách; ô ngoài khoá 15 (GOLD 15); E3 MOT'
+  book: stt11
+- id: ln_một_6bb3_6ca1_stt4
+  syllable: một
+  ocr: 殳
+  unicode: U+6BB3
+  den: 没
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L022_stt4_một_6ca1_6bb3: ghi đè 殳->没 theo sách; ô ngoài khoá 15 (GOLD 15); E3 MOT'
+  book: stt4
+- id: ln_đã_4e5f_340c_stt2
+  syllable: đã
+  ocr: 也
+  unicode: U+4E5F
+  den: 㐌
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L025_stt2_đã_340c_4e5f: ghi đè 也->㐌 theo sách; ô ngoài khoá 12 (GOLD 12); E3 MOT'
+  book: stt2
+- id: ln_đã_4e5f_340c_stt4
+  syllable: đã
+  ocr: 也
+  unicode: U+4E5F
+  den: 㐌
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L039_stt4_đã_340c_4e5f: ghi đè 也->㐌 theo sách; ô ngoài khoá 8 (GOLD 8); E3 MOT'
+  book: stt4
+- id: ln_cả_54ff_7ad2_stt11
+  syllable: cả
+  ocr: 哿
+  unicode: U+54FF
+  den: 竒
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L027_stt11_cả_7ad2_54ff: ghi đè 哿->竒 theo sách; ô ngoài khoá 11 (GOLD 11); E3 MOT'
+  book: stt11
+- id: ln_phải_4f02_6c9b_stt2
+  syllable: phải
+  ocr: 伂
+  unicode: U+4F02
+  den: 沛
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L028_stt2_phải_6c9b_4f02: ghi đè 伂->沛 theo sách; ô ngoài khoá 11 (GOLD 11); E3 MOT'
+  book: stt2
+- id: ln_hồn_584a_9b42_stt11
+  syllable: hồn
+  ocr: 塊
+  unicode: U+584A
+  den: 魂
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L029_stt11_hồn_9b42_584a: ghi đè 塊->魂 theo sách; ô ngoài khoá 10 (GOLD 10); E3 MOT'
+  book: stt11
+- id: ln_một_8511_66f4_stt11
+  syllable: một
+  ocr: 蔑
+  unicode: U+8511
+  den: 更
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L030_stt11_một_66f4_8511: ghi đè 蔑->更 theo sách; ô ngoài khoá 10 (GOLD 10); E3 MOT'
+  book: stt11
+- id: ln_được_6301_7279_stt2
+  syllable: được
+  ocr: 持
+  unicode: U+6301
+  den: 特
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L031_stt2_được_7279_6301: ghi đè 持->特 theo sách; ô ngoài khoá 10 (GOLD 10); E3 MOT'
+  book: stt2
+- id: ln_được_6301_7279_stt4
+  syllable: được
+  ocr: 持
+  unicode: U+6301
+  den: 特
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L033_stt4_được_7279_6301: ghi đè 持->特 theo sách; ô ngoài khoá 10 (GOLD 10); E3 MOT'
+  book: stt4
+- id: ln_lần_5404_541d
+  syllable: lần
+  ocr: 各
+  unicode: U+5404
+  den: 吝
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L034_stt11_lần_541d_5404, L093_stt4_lần_541d_5404, L111_stt2_lần_541d_5404: ghi đè 各->吝
+    theo sách; ô ngoài khoá 16 (GOLD 16); E3 MOT'
+- id: ln_nhà_8304_8339_stt11
+  syllable: nhà
+  ocr: 茄
+  unicode: U+8304
+  den: 茹
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L035_stt11_nhà_8339_8304: ghi đè 茄->茹 theo sách; ô ngoài khoá 9 (GOLD 9); E3 MOT'
+  book: stt11
+- id: ln_ai_5509_57c3_stt2
+  syllable: ai
+  ocr: 唉
+  unicode: U+5509
+  den: 埃
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L037_stt2_ai_57c3_5509: ghi đè 唉->埃 theo sách; ô ngoài khoá 9 (GOLD 9); E3 MOT'
+  book: stt2
+- id: ln_ai_5509_57c3_stt4
+  syllable: ai
+  ocr: 唉
+  unicode: U+5509
+  den: 埃
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L090_stt4_ai_57c3_5509: ghi đè 唉->埃 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt4
+- id: ln_khăn_5dfe_4e2d_stt11
+  syllable: khăn
+  ocr: 巾
+  unicode: U+5DFE
+  den: 中
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L082_stt11_khăn_4e2d_5dfe: ghi đè 巾->中 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt11
+- id: ln_khăn_5dfe_4e2d_stt2
+  syllable: khăn
+  ocr: 巾
+  unicode: U+5DFE
+  den: 中
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L038_stt2_khăn_4e2d_5dfe: ghi đè 巾->中 theo sách; ô ngoài khoá 8 (GOLD 8); E3 MOT'
+  book: stt2
+- id: ln_đến_4f46_65e6_stt4
+  syllable: đến
+  ocr: 但
+  unicode: U+4F46
+  den: 旦
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L040_stt4_đến_65e6_4f46: ghi đè 但->旦 theo sách; ô ngoài khoá 8 (GOLD 8); E3 MOT'
+  book: stt4
+- id: ln_một_6b81_6ca1_stt4
+  syllable: một
+  ocr: 殁
+  unicode: U+6B81
+  den: 没
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L041_stt4_một_6ca1_6b81: ghi đè 殁->没 theo sách; ô ngoài khoá 7 (GOLD 7); E3 MOT'
+  book: stt4
+- id: ln_về_885b_275f1_stt2
+  syllable: về
+  ocr: 衛
+  unicode: U+885B
+  den: 𧗱
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L042_stt2_về_275f1_885b: ghi đè 衛->𧗱 theo sách; ô ngoài khoá 6 (GOLD 6); E3 MOT'
+  book: stt2
+- id: ln_lắm_51db_5eea_stt2
+  syllable: lắm
+  ocr: 凛
+  unicode: U+51DB
+  den: 廪
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L043_stt2_lắm_5eea_51db: ghi đè 凛->廪 theo sách; ô ngoài khoá 5 (GOLD 5); E3 MOT'
+  book: stt2
+- id: ln_ngày_2321c_6642_stt11
+  syllable: ngày
+  ocr: 𣈜
+  unicode: U+2321C
+  den: 時
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L044_stt11_ngày_6642_2321c: ghi đè 𣈜->時 theo sách; ô ngoài khoá 1 (GOLD 1); E3 MOT'
+  book: stt11
+- id: ln_chăng_751f_review_stt2
+  syllable: chăng
+  ocr: 生
+  unicode: U+751F
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L045_stt2_chăng_5e84_751f: mờ -> 生 về REVIEW; ô ngoài khoá 37 (GOLD 37); E3 mo'
+  book: stt2
+- id: ln_xin_771f_review_stt2
+  syllable: xin
+  ocr: 真
+  unicode: U+771F
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L046_stt2_xin_55d4_771f: mờ -> 真 về REVIEW; ô ngoài khoá 37 (GOLD 37); E3 mo'
+  book: stt2
+- id: ln_xin_586b_review_stt4
+  syllable: xin
+  ocr: 填
+  unicode: U+586B
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L047_stt4_xin_771f_586b: mờ -> 填 về REVIEW; ô ngoài khoá 20 (GOLD 20); E3 mo'
+  book: stt4
+- id: ln_nhà_5982_review_stt2
+  syllable: nhà
+  ocr: 如
+  unicode: U+5982
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L048_stt2_nhà_8339_5982: mờ -> 如 về REVIEW; ô ngoài khoá 17 (GOLD 17); E3 mo'
+  book: stt2
+- id: ln_càng_5f37_review_stt2
+  syllable: càng
+  ocr: 強
+  unicode: U+5F37
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L049_stt2_càng_5f3a_5f37: mờ -> 強 về REVIEW; ô ngoài khoá 14 (GOLD 14); E3 mo'
+  book: stt2
+- id: ln_trên_84ee_review_stt2
+  syllable: trên
+  ocr: 蓮
+  unicode: U+84EE
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L050_stt2_trên_9023_84ee: mờ -> 蓮 về REVIEW; ô ngoài khoá 11 (GOLD 11); E3 mo'
+  book: stt2
+- id: ln_để_3873_review_stt2
+  syllable: để
+  ocr: 㡳
+  unicode: U+3873
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L051_stt2_để_5e95_3873: mờ -> 㡳 về REVIEW; ô ngoài khoá 11 (GOLD 11); E3 mo'
+  book: stt2
+- id: ln_tốt_7aa3_review_stt4
+  syllable: tốt
+  ocr: 窣
+  unicode: U+7AA3
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L052_stt4_tốt_5352_7aa3: mờ -> 窣 về REVIEW; ô ngoài khoá 11 (GOLD 11); E3 mo'
+  book: stt4
+- id: ln_thờ_870d_review_stt2
+  syllable: thờ
+  ocr: 蜍
+  unicode: U+870D
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L053_stt2_thờ_9664_870d: mờ -> 蜍 về REVIEW; ô ngoài khoá 10 (GOLD 10); E3 mo'
+  book: stt2
+- id: ln_ngày_2321c_review_stt2
+  syllable: ngày
+  ocr: 𣈜
+  unicode: U+2321C
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L054_stt2_ngày_6642_2321c: mờ -> 𣈜 về REVIEW; ô ngoài khoá 6 (GOLD 6); E3 mo'
+  book: stt2
+- id: ln_ma_9b54_9ebb_stt2
+  syllable: ma
+  ocr: 魔
+  unicode: U+9B54
+  den: 麻
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L056_stt2_ma_9ebb_9b54: ghi đè 魔->麻 theo sách; ô ngoài khoá 7 (GOLD 7); E3 —'
+  book: stt2
+- id: ln_càng_5f37_5f3a_stt11
+  syllable: càng
+  ocr: 強
+  unicode: U+5F37
+  den: 强
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L070_stt11_càng_5f3a_5f37: ghi đè 強->强 theo sách; ô ngoài khoá 5 (GOLD 5); E3 —'
+  book: stt11
+- id: ln_càng_5f37_5f3a_stt4
+  syllable: càng
+  ocr: 強
+  unicode: U+5F37
+  den: 强
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L057_stt4_càng_5f3a_5f37: ghi đè 強->强 theo sách; ô ngoài khoá 7 (GOLD 7); E3 —'
+  book: stt4
+- id: ln_nói_5436_5450_stt11
+  syllable: nói
+  ocr: 吶
+  unicode: U+5436
+  den: 呐
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L058_stt11_nói_5450_5436: ghi đè 吶->呐 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt11
+- id: ln_rút_690a_637d_stt11
+  syllable: rút
+  ocr: 椊
+  unicode: U+690A
+  den: 捽
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L059_stt11_rút_637d_690a: ghi đè 椊->捽 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt11
+- id: ln_tôi_7815_788e_stt11
+  syllable: tôi
+  ocr: 砕
+  unicode: U+7815
+  den: 碎
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L060_stt11_tôi_788e_7815: ghi đè 砕->碎 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt11
+- id: ln_tôi_7815_788e_stt2
+  syllable: tôi
+  ocr: 砕
+  unicode: U+7815
+  den: 碎
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L063_stt2_tôi_788e_7815: ghi đè 砕->碎 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt2
+- id: ln_khỏi_7470_584a_stt11
+  syllable: khỏi
+  ocr: 瑰
+  unicode: U+7470
+  den: 塊
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L099_stt11_khỏi_584a_7470: ghi đè 瑰->塊 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt11
+- id: ln_khỏi_7470_584a_stt2
+  syllable: khỏi
+  ocr: 瑰
+  unicode: U+7470
+  den: 塊
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L061_stt2_khỏi_584a_7470: ghi đè 瑰->塊 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt2
+- id: ln_mình_201ee_547d_stt2
+  syllable: mình
+  ocr: 𠇮
+  unicode: U+201EE
+  den: 命
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L062_stt2_mình_547d_201ee: ghi đè 𠇮->命 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt2
+- id: ln_câu_62d8_67b8_stt4
+  syllable: câu
+  ocr: 拘
+  unicode: U+62D8
+  den: 枸
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L064_stt4_câu_67b8_62d8: ghi đè 拘->枸 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt4
+- id: ln_có_540c_56fa_stt4
+  syllable: có
+  ocr: 同
+  unicode: U+540C
+  den: 固
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L065_stt4_có_56fa_540c: ghi đè 同->固 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt4
+- id: ln_cả_7ad2_54ff_stt4
+  syllable: cả
+  ocr: 竒
+  unicode: U+7AD2
+  den: 哿
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L066_stt4_cả_54ff_7ad2: ghi đè 竒->哿 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt4
+- id: ln_liệt_5217_70c8_stt4
+  syllable: liệt
+  ocr: 列
+  unicode: U+5217
+  den: 烈
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L067_stt4_liệt_70c8_5217: ghi đè 列->烈 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt4
+- id: ln_tuổi_6b73_6b72_stt4
+  syllable: tuổi
+  ocr: 歳
+  unicode: U+6B73
+  den: 歲
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L068_stt4_tuổi_6b72_6b73: ghi đè 歳->歲 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt4
+- id: ln_tô_9165_7a4c_stt4
+  syllable: tô
+  ocr: 酥
+  unicode: U+9165
+  den: 穌
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L069_stt4_tô_7a4c_9165: ghi đè 酥->穌 theo sách; ô ngoài khoá 6 (GOLD 6); E3 —'
+  book: stt4
+- id: ln_lành_4ee4_51b7
+  syllable: lành
+  ocr: 令
+  unicode: U+4EE4
+  den: 冷
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L071_stt2_lành_51b7_4ee4, L101_stt11_lành_51b7_4ee4, L117_stt4_lành_51b7_4ee4: ghi đè 令->冷
+    theo sách; ô ngoài khoá 11 (GOLD 11); E3 —'
+- id: ln_lắm_51db_51dc_stt2
+  syllable: lắm
+  ocr: 凛
+  unicode: U+51DB
+  den: 凜
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L072_stt2_lắm_51dc_51db: ghi đè 凛->凜 theo sách; ô ngoài khoá 5 (GOLD 5); E3 —'
+  book: stt2
+- id: ln_rừng_68f1_7a1c_stt2
+  syllable: rừng
+  ocr: 棱
+  unicode: U+68F1
+  den: 稜
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L073_stt2_rừng_7a1c_68f1: ghi đè 棱->稜 theo sách; ô ngoài khoá 5 (GOLD 5); E3 —'
+  book: stt2
+- id: ln_tuổi_6b72_6b73_stt2
+  syllable: tuổi
+  ocr: 歲
+  unicode: U+6B72
+  den: 歳
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L074_stt2_tuổi_6b73_6b72: ghi đè 歲->歳 theo sách; ô ngoài khoá 5 (GOLD 5); E3 —'
+  book: stt2
+- id: ln_khăn_4e2d_5dfe_stt4
+  syllable: khăn
+  ocr: 中
+  unicode: U+4E2D
+  den: 巾
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L075_stt4_khăn_5dfe_4e2d: ghi đè 中->巾 theo sách; ô ngoài khoá 5 (GOLD 5); E3 —'
+  book: stt4
+- id: ln_là_53f7_7f85_stt4
+  syllable: là
+  ocr: 号
+  unicode: U+53F7
+  den: 羅
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L076_stt4_là_7f85_53f7: ghi đè 号->羅 theo sách; ô ngoài khoá 5 (GOLD 5); E3 —'
+  book: stt4
+- id: ln_mô_6478_6a21_stt4
+  syllable: mô
+  ocr: 摸
+  unicode: U+6478
+  den: 模
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L077_stt4_mô_6a21_6478: ghi đè 摸->模 theo sách; ô ngoài khoá 5 (GOLD 5); E3 —'
+  book: stt4
+- id: ln_sa_6284_6c99_stt4
+  syllable: sa
+  ocr: 抄
+  unicode: U+6284
+  den: 沙
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L079_stt4_sa_6c99_6284: ghi đè 抄->沙 theo sách; ô ngoài khoá 5 (GOLD 5); E3 —'
+  book: stt4
+- id: ln_câu_67b8_62d8_stt11
+  syllable: câu
+  ocr: 枸
+  unicode: U+67B8
+  den: 拘
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L080_stt11_câu_62d8_67b8: ghi đè 枸->拘 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt11
+- id: ln_dối_5bf9_5bfe_stt11
+  syllable: dối
+  ocr: 对
+  unicode: U+5BF9
+  den: 対
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L081_stt11_dối_5bfe_5bf9: ghi đè 对->対 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt11
+- id: ln_dối_5bf9_5bfe_stt4
+  syllable: dối
+  ocr: 对
+  unicode: U+5BF9
+  den: 対
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L091_stt4_dối_5bfe_5bf9: ghi đè 对->対 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt4
+- id: ln_ma_9ebb_9b54_stt11
+  syllable: ma
+  ocr: 麻
+  unicode: U+9EBB
+  den: 魔
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L083_stt11_ma_9b54_9ebb: ghi đè 麻->魔 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt11
+- id: ln_tra_67e5_67fb_stt11
+  syllable: tra
+  ocr: 查
+  unicode: U+67E5
+  den: 査
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L084_stt11_tra_67fb_67e5: ghi đè 查->査 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt11
+- id: ln_ai_6328_57c3_stt2
+  syllable: ai
+  ocr: 挨
+  unicode: U+6328
+  den: 埃
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L085_stt2_ai_57c3_6328: ghi đè 挨->埃 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt2
+- id: ln_bạc_767d_6cca_stt2
+  syllable: bạc
+  ocr: 白
+  unicode: U+767D
+  den: 泊
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L086_stt2_bạc_6cca_767d: ghi đè 白->泊 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt2
+- id: ln_lên_84ee_9023_stt2
+  syllable: lên
+  ocr: 蓮
+  unicode: U+84EE
+  den: 連
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L087_stt2_lên_9023_84ee: ghi đè 蓮->連 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt2
+- id: ln_lộc_7984_797f_stt2
+  syllable: lộc
+  ocr: 禄
+  unicode: U+7984
+  den: 祿
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L088_stt2_lộc_797f_7984: ghi đè 禄->祿 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt2
+- id: ln_trước_7567_7565_stt2
+  syllable: trước
+  ocr: 畧
+  unicode: U+7567
+  den: 略
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L089_stt2_trước_7565_7567: ghi đè 畧->略 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt2
+- id: ln_liên_84ee_9023_stt2
+  syllable: liên
+  ocr: 蓮
+  unicode: U+84EE
+  den: 連
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L109_stt2_liên_9023_84ee: ghi đè 蓮->連 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt2
+- id: ln_liên_84ee_9023_stt4
+  syllable: liên
+  ocr: 蓮
+  unicode: U+84EE
+  den: 連
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L092_stt4_liên_9023_84ee: ghi đè 蓮->連 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt4
+- id: ln_tay_816e_601d_stt4
+  syllable: tay
+  ocr: 腮
+  unicode: U+816E
+  den: 思
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L094_stt4_tay_601d_816e: ghi đè 腮->思 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt4
+- id: ln_thành_6210_57ce_stt4
+  syllable: thành
+  ocr: 成
+  unicode: U+6210
+  den: 城
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L095_stt4_thành_57ce_6210: ghi đè 成->城 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt4
+- id: ln_trên_84ee_9023_stt4
+  syllable: trên
+  ocr: 蓮
+  unicode: U+84EE
+  den: 連
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L096_stt4_trên_9023_84ee: ghi đè 蓮->連 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt4
+- id: ln_đã_62d6_340c_stt2
+  syllable: đã
+  ocr: 拖
+  unicode: U+62D6
+  den: 㐌
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L114_stt2_đã_340c_62d6: ghi đè 拖->㐌 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt2
+- id: ln_đã_62d6_340c_stt4
+  syllable: đã
+  ocr: 拖
+  unicode: U+62D6
+  den: 㐌
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L097_stt4_đã_340c_62d6: ghi đè 拖->㐌 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt4
+- id: ln_đẹp_8449_67bc_stt4
+  syllable: đẹp
+  ocr: 葉
+  unicode: U+8449
+  den: 枼
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L098_stt4_đẹp_67bc_8449: ghi đè 葉->枼 theo sách; ô ngoài khoá 4 (GOLD 4); E3 —'
+  book: stt4
+- id: ln_làm_722a_4e44_stt11
+  syllable: làm
+  ocr: 爪
+  unicode: U+722A
+  den: 乄
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L100_stt11_làm_4e44_722a: ghi đè 爪->乄 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt11
+- id: ln_phạt_7f78_7f70_stt11
+  syllable: phạt
+  ocr: 罸
+  unicode: U+7F78
+  den: 罰
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L102_stt11_phạt_7f70_7f78: ghi đè 罸->罰 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt11
+- id: ln_rừng_697c_68f1_stt11
+  syllable: rừng
+  ocr: 楼
+  unicode: U+697C
+  den: 棱
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L103_stt11_rừng_68f1_697c: ghi đè 楼->棱 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt11
+- id: ln_sau_697c_5a04_stt11
+  syllable: sau
+  ocr: 楼
+  unicode: U+697C
+  den: 娄
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L104_stt11_sau_5a04_697c: ghi đè 楼->娄 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt11
+- id: ln_chước_65ae_65ab_stt2
+  syllable: chước
+  ocr: 斮
+  unicode: U+65AE
+  den: 斫
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L105_stt2_chước_65ab_65ae: ghi đè 斮->斫 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt2
+- id: ln_cùng_62f1_5171_stt2
+  syllable: cùng
+  ocr: 拱
+  unicode: U+62F1
+  den: 共
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L106_stt2_cùng_5171_62f1: ghi đè 拱->共 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt2
+- id: ln_cả_7ad2_5947_stt2
+  syllable: cả
+  ocr: 竒
+  unicode: U+7AD2
+  den: 奇
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L107_stt2_cả_5947_7ad2: ghi đè 竒->奇 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt2
+- id: ln_gọi_2819d_5672_stt2
+  syllable: gọi
+  ocr: 𨆝
+  unicode: U+2819D
+  den: 噲
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L108_stt2_gọi_5672_2819d: ghi đè 𨆝->噲 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt2
+- id: ln_liệt_70c8_5217_stt2
+  syllable: liệt
+  ocr: 烈
+  unicode: U+70C8
+  den: 列
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L110_stt2_liệt_5217_70c8: ghi đè 烈->列 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt2
+- id: ln_ru_6cb9_7531_stt2
+  syllable: ru
+  ocr: 油
+  unicode: U+6CB9
+  den: 由
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L112_stt2_ru_7531_6cb9: ghi đè 油->由 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt2
+- id: ln_thưa_758e_8e08_stt2
+  syllable: thưa
+  ocr: 疎
+  unicode: U+758E
+  den: 踈
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L113_stt2_thưa_8e08_758e: ghi đè 疎->踈 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt2
+- id: ln_cô_4f30_59d1_stt4
+  syllable: cô
+  ocr: 估
+  unicode: U+4F30
+  den: 姑
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L115_stt4_cô_59d1_4f30: ghi đè 估->姑 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt4
+- id: ln_hãy_77e3_5509_stt4
+  syllable: hãy
+  ocr: 矣
+  unicode: U+77E3
+  den: 唉
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L116_stt4_hãy_5509_77e3: ghi đè 矣->唉 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt4
+- id: ln_lâu_5a04_697c_stt4
+  syllable: lâu
+  ocr: 娄
+  unicode: U+5A04
+  den: 楼
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L118_stt4_lâu_697c_5a04: ghi đè 娄->楼 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt4
+- id: ln_ma_6469_9b54_stt4
+  syllable: ma
+  ocr: 摩
+  unicode: U+6469
+  den: 魔
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L119_stt4_ma_9b54_6469: ghi đè 摩->魔 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt4
+- id: ln_mừng_7700_660e_stt4
+  syllable: mừng
+  ocr: 眀
+  unicode: U+7700
+  den: 明
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L120_stt4_mừng_660e_7700: ghi đè 眀->明 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt4
+- id: ln_nhiêu_50e5_9952_stt4
+  syllable: nhiêu
+  ocr: 僥
+  unicode: U+50E5
+  den: 饒
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L121_stt4_nhiêu_9952_50e5: ghi đè 僥->饒 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt4
+- id: ln_ru_7531_6cb9_stt4
+  syllable: ru
+  ocr: 由
+  unicode: U+7531
+  den: 油
+  pham_vi: ngoai_khoa
+  xuat_xu: ''
+  trang_thai: cho_ky
+  ghi_chu: 'H2-lite lớp L122_stt4_ru_6cb9_7531: ghi đè 由->油 theo sách; ô ngoài khoá 3 (GOLD 3); E3 —'
+  book: stt4
+khoa_o:
+  cells: config/qd01_cells.csv
+  decisions: config/qd01a_decisions.csv

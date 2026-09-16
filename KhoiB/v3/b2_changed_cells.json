@@ -1,0 +1,267 @@
+{
+ "pairs_only_txt": 403,
+ "pairs_only_vis": 403,
+ "cols_changed": 235,
+ "cols_n_ocr_ne_n_qn": 216,
+ "destroyed_by_tier_v3_txt": {
+  "SYL": 17,
+  "REVIEW": 362,
+  "CHAR_B": 20,
+  "CHAR_A": 4
+ },
+ "created_by_tier_v3_vis": {
+  "SYL": 36,
+  "REVIEW": 350,
+  "CHAR_B": 14,
+  "CHAR_A": 3
+ },
+ "destroyed_usable_txt": 41,
+ "created_usable_vis": 53,
+ "destroyed_dict_pair_CHAR_AB": 24,
+ "created_dict_pair_CHAR_AB": 17,
+ "p_visual_new_pairs_p50": 0.0245,
+ "p_visual_new_pairs_pct_ge_0.5": 0.2283,
+ "p_visual_new_pairs_pct_ge_0.9": 0.0521,
+ "cells_same_nom_idx_diff_syl_idx": 293,
+ "cells_resyl_usable_txt": 29,
+ "cells_resyl_usable_both": 19,
+ "cells_resyl_usable_both_by_tier_txt": {
+  "SYLLABLE": 7,
+  "GOLD": 12
+ },
+ "cells_resyl_qd01_locked_txt": 1,
+ "qd01_locked": {
+  "txt": 2012,
+  "vis": 2011
+ },
+ "qd01_pending_vis": [
+  {
+   "book": "stt11",
+   "page": "page_0126",
+   "column": "6",
+   "nom_idx": "5",
+   "syl_idx": "5",
+   "ocr_char": "昇",
+   "syllable": "là",
+   "tier": "SYLLABLE",
+   "p_visual_syl": "0.9421",
+   "visual_argmax": "là",
+   "visual_max_p": "0.9421"
+  }
+ ],
+ "usable": {
+  "txt": 70368,
+  "vis": 70381
+ },
+ "resyl_usable_both_sample": [
+  {
+   "k": "stt11|page_0010|6|15",
+   "ocr": "人",
+   "syl_txt": "làm",
+   "syl_vis": "ấy",
+   "tier_txt": "SYLLABLE",
+   "tier_vis": "SYLLABLE",
+   "p_vis": "0.8859",
+   "argmax": "ấy",
+   "max_p": "0.8859"
+  },
+  {
+   "k": "stt11|page_0060|9|21",
+   "ocr": "女",
+   "syl_txt": "mà",
+   "syl_vis": "nữa",
+   "tier_txt": "GOLD",
+   "tier_vis": "GOLD",
+   "p_vis": "0.0849",
+   "argmax": "nữ",
+   "max_p": "0.1012"
+  },
+  {
+   "k": "stt11|page_0072|4|20",
+   "ocr": "嗔",
+   "syl_txt": "đền",
+   "syl_vis": "xin",
+   "tier_txt": "GOLD",
+   "tier_vis": "GOLD",
+   "p_vis": "0.0",
+   "argmax": "đến",
+   "max_p": "0.9911"
+  },
+  {
+   "k": "stt11|page_0126|6|5",
+   "ocr": "昇",
+   "syl_txt": "người",
+   "syl_vis": "là",
+   "tier_txt": "GOLD",
+   "tier_vis": "SYLLABLE",
+   "p_vis": "0.9421",
+   "argmax": "là",
+   "max_p": "0.9421"
+  },
+  {
+   "k": "stt11|page_0128|1|8",
+   "ocr": "以",
+   "syl_txt": "làm",
+   "syl_vis": "hay",
+   "tier_txt": "SYLLABLE",
+   "tier_vis": "SYLLABLE",
+   "p_vis": "0.1359",
+   "argmax": "hai",
+   "max_p": "0.1509"
+  },
+  {
+   "k": "stt11|page_0160|6|12",
+   "ocr": "連",
+   "syl_txt": "trên",
+   "syl_vis": "lên",
+   "tier_txt": "GOLD",
+   "tier_vis": "GOLD",
+   "p_vis": "0.8253",
+   "argmax": "lên",
+   "max_p": "0.8253"
+  },
+  {
+   "k": "stt11|page_0168|5|15",
+   "ocr": "爲",
+   "syl_txt": "vi",
+   "syl_vis": "vì",
+   "tier_txt": "GOLD",
+   "tier_vis": "GOLD",
+   "p_vis": "0.0212",
+   "argmax": "của",
+   "max_p": "0.5191"
+  },
+  {
+   "k": "stt11|page_0170|2|1",
+   "ocr": "垩",
+   "syl_txt": "thánh",
+   "syl_vis": "thánh",
+   "tier_txt": "GOLD",
+   "tier_vis": "GOLD",
+   "p_vis": "0.7276",
+   "argmax": "thánh",
+   "max_p": "0.7276"
+  },
+  {
+   "k": "stt2|page_0012|9|7",
+   "ocr": "石",
+   "syl_txt": "vậy",
+   "syl_vis": "làm",
+   "tier_txt": "SYLLABLE",
+   "tier_vis": "SYLLABLE",
+   "p_vis": "0.6823",
+   "argmax": "làm",
+   "max_p": "0.6823"
+  },
+  {
+   "k": "stt2|page_0052|3|15",
+   "ocr": "不",
+   "syl_txt": "vậy",
+   "syl_vis": "làm",
+   "tier_txt": "SYLLABLE",
+   "tier_vis": "SYLLABLE",
+   "p_vis": "0.9418",
+   "argmax": "làm",
+   "max_p": "0.9418"
+  },
+  {
+   "k": "stt2|page_0070|8|15",
+   "ocr": "不",
+   "syl_txt": "vậy",
+   "syl_vis": "làm",
+   "tier_txt": "SYLLABLE",
+   "tier_vis": "SYLLABLE",
+   "p_vis": "0.8744",
+   "argmax": "làm",
+   "max_p": "0.8744"
+  },
+  {
+   "k": "stt2|page_0228|6|1",
+   "ocr": "於",
+   "syl_txt": "nước",
+   "syl_vis": "ở",
+   "tier_txt": "GOLD",
+   "tier_vis": "GOLD",
+   "p_vis": "0.8322",
+   "argmax": "ở",
+   "max_p": "0.8322"
+  },
+  {
+   "k": "stt2|page_0246|1|5",
+   "ocr": "曰",
+   "syl_txt": "viết",
+   "syl_vis": "làm",
+   "tier_txt": "GOLD",
+   "tier_vis": "SYLLABLE",
+   "p_vis": "0.9479",
+   "argmax": "làm",
+   "max_p": "0.9479"
+  },
+  {
+   "k": "stt2|page_0280|4|3",
+   "ocr": "不",
+   "syl_txt": "vậy",
+   "syl_vis": "làm",
+   "tier_txt": "SYLLABLE",
+   "tier_vis": "SYLLABLE",
+   "p_vis": "0.6908",
+   "argmax": "làm",
+   "max_p": "0.6908"
+  },
+  {
+   "k": "stt2|page_0328|4|2",
+   "ocr": "石",
+   "syl_txt": "vậy",
+   "syl_vis": "làm",
+   "tier_txt": "SYLLABLE",
+   "tier_vis": "SYLLABLE",
+   "p_vis": "0.9886",
+   "argmax": "làm",
+   "max_p": "0.9886"
+  },
+  {
+   "k": "stt4|page_0090|4|0",
+   "ocr": "把",
+   "syl_txt": "trả",
+   "syl_vis": "trở",
+   "tier_txt": "GOLD",
+   "tier_vis": "GOLD",
+   "p_vis": "0.1424",
+   "argmax": "trở",
+   "max_p": "0.1424"
+  },
+  {
+   "k": "stt4|page_0252|7|21",
+   "ocr": "事",
+   "syl_txt": "sự",
+   "syl_vis": "sự",
+   "tier_txt": "GOLD",
+   "tier_vis": "GOLD",
+   "p_vis": "0.0622",
+   "argmax": "trong",
+   "max_p": "0.0977"
+  },
+  {
+   "k": "stt4|page_0252|7|22",
+   "ocr": "畧",
+   "syl_txt": "sau",
+   "syl_vis": "trước",
+   "tier_txt": "GOLD",
+   "tier_vis": "GOLD",
+   "p_vis": "0.1202",
+   "argmax": "khỏi",
+   "max_p": "0.2259"
+  },
+  {
+   "k": "stt4|page_0282|1|3",
+   "ocr": "味",
+   "syl_txt": "mùi",
+   "syl_vis": "thì",
+   "tier_txt": "GOLD",
+   "tier_vis": "SYLLABLE",
+   "p_vis": "0.85",
+   "argmax": "thì",
+   "max_p": "0.85"
+  }
+ ]
+}

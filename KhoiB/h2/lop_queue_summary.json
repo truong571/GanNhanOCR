@@ -1,0 +1,63 @@
+{
+ "nguon": {
+  "n_e3": 112,
+  "n_tn_v3": 297,
+  "n_tn_look_v3": 118,
+  "n_cs_hit": 44,
+  "n_gop": 309,
+  "loai": {
+   "di_the_da_ky": 23,
+   "e3_HAI_giu_nguyen": 37,
+   "khong_con_o_gold_v3": 3,
+   "tn_khong_nhin_giong_ngoai_hang_doi": 119,
+   "qd01_nguoi": 2,
+   "corpus_reading_da_ky": 3
+  },
+  "n_hang_doi": 122,
+  "n_ngoai_hang_doi": 119,
+  "o_ngoai_hang_doi": 495
+ },
+ "nhom": {
+  "1": {
+   "lop": 44,
+   "o_thieu_so_gold": 966,
+   "o_da_so_gold": 4694
+  },
+  "2": {
+   "lop": 10,
+   "o_thieu_so_gold": 174,
+   "o_da_so_gold": 414
+  },
+  "3": {
+   "lop": 68,
+   "o_thieu_so_gold": 291,
+   "o_da_so_gold": 2161
+  }
+ },
+ "uoc_luong_ky_toan_bo": {
+  "nhom1_MOT_nham": {
+   "lop": 44,
+   "o_gold": 966,
+   "o_moi_tier_ngoai_khoa": 966
+  },
+  "nhom2_mo_review": {
+   "lop": 10,
+   "o_gold": 174,
+   "o_moi_tier_ngoai_khoa": 174
+  },
+  "nhom3_nham": {
+   "lop": 68,
+   "o_gold": 291,
+   "o_moi_tier_ngoai_khoa": 291
+  },
+  "tong": {
+   "lop": 122,
+   "o_gold": 1431,
+   "o_moi_tier_ngoai_khoa": 1431
+  }
+ },
+ "n_thumb": 2040,
+ "max_crop": 12,
+ "labels_csv": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/dataset_out_v3/labels.csv",
+ "crops": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/KhoiB/v3/crops_v3.npz"
+}

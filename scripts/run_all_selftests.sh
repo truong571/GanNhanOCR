@@ -118,7 +118,14 @@ cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=1035
+# MỐC 2026-09-16 (Khối B K4, B-2/B-3 mã): TỔNG 1083 passed, 0 failed = 1035 + 48.
+#   +35 pipeline.align_engine.visual_emission_selftest (B-2: trung tính log 0,5, kích thước logP, fold đúng
+#       trang == train_oof_cnn_v3, cut() byte-identical với lab, cost_ij/khe, DP+posterior tương thích, thiếu
+#       mô hình không crash / --strict ném). realign_column/posterior_matches thêm cost_ij/cost_del/cost_ins:
+#       mặc định KHÔNG đổi (ops + posterior y hệt HEAD trên 4.029 cột cols.pkl).
+#   +13 pipeline.tools.visual_syl_gate_selftest (B-3: cổng REVIEW→SYL 0,9/0,8 trên khung giả có đáp án, loại
+#       QĐ-01/not_plausible, FAR CHAR_A (a)/(b) + Wilson, thiếu OOF không crash, schema cũ bị chặn).
+BASELINE_PASS=1083
 BASELINE_FAIL=0
 
 MODULES=(
@@ -133,6 +140,8 @@ MODULES=(
   pipeline.decisions_selftest
   pipeline.tools.selftest
   pipeline.lab.selftest
+  pipeline.align_engine.visual_emission_selftest
+  pipeline.tools.visual_syl_gate_selftest
 )
 
 total_pass=0

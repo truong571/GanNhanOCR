@@ -38,7 +38,9 @@ TRACE = ["image", "nom_idx", "syl_idx", "syllable_ocr", "syllable_raw", "tier_v3
          "tier_goc", "rule_goc", "p_register", "dict_support", "context_evidence",
          "l1_support", "l1_tie", "flank_gold", "box_source", "qd01_locked", "qd01_excluded",
          "label_canonical", "crop_quality_flag", "stray_ink", "border_ink", "ink_pct",
-         "crop_w", "crop_h", "seg_flag", "s3_cosine"]
+         "crop_w", "crop_h", "seg_flag", "s3_cosine",
+         # B-2 (--visual-emission): chỉ có khi build bật cờ; tắt cờ -> không ghi (không bịa cột)
+         "p_visual_syl", "visual_fold", "visual_argmax", "visual_max_p"]
 # columns.csv: khoá (book,page,column) + các đại lượng cấp CỘT (giá trị đầu tiên gặp).
 COT_KHOA = ["book", "page", "column"]
 COT_CSV = ["n_ocr", "n_qn", "n_det", "count_source"]

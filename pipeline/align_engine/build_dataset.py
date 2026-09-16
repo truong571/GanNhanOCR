@@ -42,6 +42,7 @@ import csv
 import glob
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -67,6 +68,7 @@ from pipeline.align_engine.consensus import (                         # noqa: E4
     AM_DA_QUYET, am_da_quyet, chuan_am, decide_label)
 from pipeline.align_engine.bbox_fix import tighten_box, carve_neighbor_ink  # noqa: E402
 from pipeline.align_engine import tier_v3 as tv3                      # noqa: E402
+from pipeline.align_engine.visual_emission import load_page_gray as vis_load_gray  # noqa: E402  (B-2; torch nạp lười)
 from pipeline import decisions as dcs                                 # noqa: E402
 
 
@@ -147,14 +149,23 @@ def anchored_cost_fn(pair_pages, here, qn_to_nom, similar, anchor_cap=None,
 
 
 def realign_with_anchors(chars, syllables, qn_to_nom, similar, pair_pages, here,
-                         anchor_cap=None):
+                         anchor_cap=None, vis=None):
     """DP lượt 2 + posterior cùng cost_fn (N4b, N4c). Trả (ops2, post, band_touched,
     n_anchored) với n_anchored = số cặp match lượt 2 mà neo THẬT SỰ hạ chi phí
     (cost_fn < substitution_cost, tức cặp ngoài từ điển được ngữ liệu neo — "ô được
-    neo" N4a); cặp confirmed (0,0) có khoá trong pair_pages KHÔNG tính."""
+    neo" N4a); cặp confirmed (0,0) có khoá trong pair_pages KHÔNG tính.
+
+    vis (B-2, --visual-emission): (emitter, logP) với logP (m × n) từ
+    visual_emission.VisualEmitter.emission → cost_ij = cost_fn + λ·min(−logP, CAP),
+    khe = COST_DEL/INS + λ·GAP_VIS; posterior CÙNG chi phí. None = văn bản thuần."""
     cost_fn = anchored_cost_fn(pair_pages, here, qn_to_nom, similar, anchor_cap)
-    ops2 = aa.realign_column(chars, syllables, qn_to_nom, similar, cost_fn=cost_fn)
-    post = aa.posterior_matches(chars, syllables, qn_to_nom, similar, T=1.0, cost_fn=cost_fn)
+    kw = {}
+    if vis is not None:
+        emitter, logP = vis
+        c_del, c_ins = emitter.gap_costs()
+        kw = {"cost_ij": emitter.make_cost_ij(cost_fn, logP), "cost_del": c_del, "cost_ins": c_ins}
+    ops2 = aa.realign_column(chars, syllables, qn_to_nom, similar, cost_fn=cost_fn, **kw)
+    post = aa.posterior_matches(chars, syllables, qn_to_nom, similar, T=1.0, cost_fn=cost_fn, **kw)
     touched = aa.band_touched(ops2, len(chars), len(syllables))
     n_anch = 0
     for o in ops2:
@@ -410,6 +421,8 @@ RULE_QD01_PENDING = "quyet_dinh_nguoi:pending"
 RULE_QD01A = "quyet_dinh_nguoi:qd01a"
 RULE_LOP_NHAM = "lop_nham:nguoi_2029A_vs_346B"
 # cột cờ/chẩn đoán A-7 — mặc định DÀY (0 cho cờ, '' cho chuỗi) ở cả hai đường chạy
+# B-2 (--visual-emission): cột sidecar thêm vào CUỐI labels.csv chỉ khi bật cờ
+FIELDS_B2 = ["p_visual_syl", "visual_fold", "visual_argmax", "visual_max_p"]
 FIELDS_1C = {"tier_v3": "", "dict_support": "", "context_evidence": "", "l1_support": 0,
              "l1_tie": 0, "flank_gold": 0, "qd01_locked": 0, "qd01_excluded": 0,
              "am_da_quyet_ngoai_khoa": 0, "tier_goc": "", "rule_goc": ""}
@@ -517,6 +530,9 @@ def apply_qd01_lock(records, cells, decisions, colmap, built_pages, seg_backend_
         r["qd01_locked"] = 1
         bcu = _parse_bbox(cell.get("bbox_cu"))
         if bcu:
+            # B-5: giữ hộp build gán TRƯỚC khi khoá (đo luật hộp trên ô người đã xem)
+            r["_bbox_truoc_lock"] = list(r["bbox"]) if r.get("bbox") else None
+            r["_box_source_truoc_lock"] = r.get("box_source", "")
             r["bbox"] = bcu
             r["box_source"] = "qd01_locked"
             r["_prev_bbox_cu"] = _parse_bbox(cell.get("prev_bbox_cu"))
@@ -624,6 +640,131 @@ def apply_qd01_lock(records, cells, decisions, colmap, built_pages, seg_backend_
     return st, pending
 
 
+def _iou(a, b) -> float:
+    """IoU hai hộp [x1,y1,x2,y2]; 0 nếu thiếu."""
+    if not a or not b:
+        return 0.0
+    ix = max(0, min(a[2], b[2]) - max(a[0], b[0]))
+    iy = max(0, min(a[3], b[3]) - max(a[1], b[1]))
+    inter = ix * iy
+    if inter <= 0:
+        return 0.0
+    ua = (a[2] - a[0]) * (a[3] - a[1]) + (b[2] - b[0]) * (b[3] - b[1]) - inter
+    return inter / ua if ua > 0 else 0.0
+
+
+# col = trọn cột legacy (mặc định); cell = khoá ô + dời hàng xóm về midpoint; cell_fallback =
+# như cell nhưng cột mà ô khoá cho thấy hộp 3 nhánh lệch (IoU(hộp 3 nhánh, bbox_cu) < SHIFT_IOU
+# hoặc có hàng xóm trùng) thì LÙI cả cột về trọn gói luật cũ (legacy_locked_col)
+LOCK_SCOPES = ("col", "cell", "cell_fallback")
+SHIFT_IOU = 0.5          # B-5: hộp mới của hàng xóm trùng bbox_cu ô khoá (IoU >= 0,5) -> midpoint
+
+
+def apply_lock_shift(records, colmap, iou_thr=SHIFT_IOU):
+    """B-5 (DANH_MUC 1B, --lock-scope cell): SAU khoá QĐ-01, ô hàng xóm (cùng cột hoặc
+    cột kề ±1, cùng trang) KHÔNG khoá mà hộp mới trùng `bbox_cu` của ô khoá (IoU >=
+    iou_thr) thì về hộp midpoint cũ của chính nó (`_reseg_column(cluster)[nom_idx]`,
+    colmap[...]['mid']) với box_source='shifted_by_lock' — để census AE-1/MD5_DUP không
+    cách ly cả hai. Ô pending QĐ-01 (`_qd01_pending`) không dời (người phải nhìn hộp
+    mới). Trả Counter: n_locked, n_shifted, n_shifted_same_col, n_shifted_adj_col,
+    n_exact_eq (hộp trùng đúng byte), n_locked_locked (hai ô khoá trùng nhau — có sẵn
+    trong bộ cũ, không dời), n_no_mid (không có midpoint -> giữ), n_still_overlap
+    (sau dời vẫn IoU >= thr — báo cáo)."""
+    st = Counter()
+    by_page = defaultdict(list)
+    for r in records:
+        if r.get("bbox"):
+            by_page[(r["book"], r["page"])].append(r)
+    for (book, page), recs in by_page.items():
+        locked = [r for r in recs if r.get("qd01_locked") and r.get("box_source") == "qd01_locked"]
+        if not locked:
+            continue
+        by_col = defaultdict(list)
+        for r in recs:
+            by_col[int(r["column"])].append(r)
+        for L in locked:
+            st["n_locked"] += 1
+            bcu = L["bbox"]
+            cL = int(L["column"])
+            for c in (cL - 1, cL, cL + 1):
+                for r in by_col.get(c, ()):
+                    if r is L or not r.get("bbox"):
+                        continue
+                    iou = _iou(r["bbox"], bcu)
+                    if iou < iou_thr:
+                        continue
+                    if r.get("qd01_locked"):
+                        st["n_locked_locked"] += 1
+                        continue
+                    if r.get("_qd01_pending"):
+                        st["n_pending_overlap"] += 1
+                        continue
+                    if r.get("box_source") == "shifted_by_lock":
+                        st["n_already_shifted"] += 1
+                        continue
+                    st["n_exact_eq"] += int(list(r["bbox"]) == list(bcu))
+                    col = colmap.get((book, page, c))
+                    mid = (col or {}).get("mid")
+                    ni = r.get("nom_idx", "")
+                    if not mid or ni == "" or int(ni) >= len(mid):
+                        st["n_no_mid"] += 1
+                        continue
+                    r["_bbox_truoc_shift"] = list(r["bbox"])
+                    r["bbox"] = list(mid[int(ni)])
+                    r["box_source"] = "shifted_by_lock"
+                    st["n_shifted"] += 1
+                    st["n_shifted_same_col" if c == cL else "n_shifted_adj_col"] += 1
+                    if _iou(r["bbox"], bcu) >= iou_thr:
+                        st["n_still_overlap"] += 1
+    return st
+
+
+def apply_lock_fallback(records, colmap, iou_thr=SHIFT_IOU):
+    """B-5 (--lock-scope cell_fallback): cột có ô khoá QĐ-01 mà (i) hộp 3 nhánh của chính
+    ô khoá lệch bbox_cu (IoU < iou_thr) hoặc (ii) có hàng xóm cùng cột đã bị dời
+    (shifted_by_lock) -> mọi ô KHÔNG khoá trong cột về hộp trọn gói luật cũ
+    colmap[...]['legacy_boxes'][nom_idx], box_source = count_source = 'legacy_locked_col'.
+    Ô khoá giữ bbox_cu. Trả Counter n_cols_lock, n_cols_fallback (+ lý do), n_cells_fallback."""
+    st = Counter()
+    by_col = defaultdict(list)
+    for r in records:
+        if r.get("nom_idx", "") != "":
+            by_col[(r["book"], r["page"], int(r["column"]))].append(r)
+    for key, recs in by_col.items():
+        locks = [r for r in recs if r.get("qd01_locked") and r.get("box_source") == "qd01_locked"]
+        if not locks:
+            continue
+        st["n_cols_lock"] += 1
+        lech = any(r.get("_bbox_truoc_lock") is not None
+                   and _iou(r["_bbox_truoc_lock"], r["bbox"]) < iou_thr for r in locks)
+        doi = any(r.get("box_source") == "shifted_by_lock" for r in recs)
+        if not (lech or doi):
+            continue
+        lb = (colmap.get(key) or {}).get("legacy_boxes")
+        if not lb:
+            st["n_cols_no_legacy"] += 1
+            continue
+        st["n_cols_fallback"] += 1
+        st["n_cols_fallback_lech"] += int(lech)
+        st["n_cols_fallback_doi"] += int(doi)
+        for r in recs:
+            if r.get("qd01_locked") or r.get("_qd01_pending"):
+                if r.get("qd01_locked"):
+                    r["count_source"] = "legacy_locked_col"      # như col: cột đi luật cũ
+                continue
+            ni = int(r["nom_idx"])
+            if ni >= len(lb) or lb[ni] is None:
+                st["n_cells_no_box"] += 1
+                continue
+            if r.get("box_source") == "shifted_by_lock":
+                st["n_cells_was_shifted"] += 1
+            r["_bbox_truoc_fallback"] = list(r["bbox"]) if r.get("bbox") else None
+            r["bbox"] = list(lb[ni])
+            r["box_source"] = r["count_source"] = "legacy_locked_col"
+            st["n_cells_fallback"] += 1
+    return st
+
+
 def apply_nguoi_ngoai_khoa(records, lop_nham=None):
     """N5h: ô âm 'người' KHÔNG khoá — nhãn v3 == 㝵 -> REVIEW `lop_nham:...` (nhãn xoá);
     còn lại giữ tier_v3, cờ am_da_quyet_ngoai_khoa=1 để mẻ chấm ưu tiên. KHÔNG chốt
@@ -704,6 +845,10 @@ def _record(book, page, page_png, idx, p, dec, s3, seg_backend) -> dict:
         # A-6 (N4d/N4e): số đếm cột (n_* và count_source sang columns.csv ở S9) + nguồn hộp
         "n_ocr": p.get("n_ocr", ""), "n_qn": p.get("n_qn", ""), "n_det": p.get("n_det", ""),
         "count_source": p.get("count_source", ""), "box_source": p.get("box_source", ""),
+        # B-2 (--visual-emission): P(âm ghép | crop hộp OCR thô) out-of-fold; '' khi tắt cờ,
+        # âm ∉ lớp hoặc hộp không cắt được. CHỈ ĐO — không quyết tier.
+        "p_visual_syl": p.get("p_visual_syl", ""), "visual_fold": p.get("visual_fold", ""),
+        "visual_argmax": p.get("visual_argmax", ""), "visual_max_p": p.get("visual_max_p", ""),
         # A-7 (PASS 1c): cột chẩn đoán/cờ, mặc định dày; PASS 1c ghi đè trên đường v3
         **FIELDS_1C,
     }
@@ -789,6 +934,15 @@ def main():
                     help="khoá QĐ-01 (N0d): cột chứa ô khoá chạy trọn gói luật hộp cũ; "
                          "PASS 1c khoá từng ô theo nom_idx (A-2/A-7); "
                          "'none' = không khoá gì (CHỈ để thí nghiệm)")
+    # B-5 (DANH_MUC 1B): phạm vi khoá QĐ-01. col (mặc định) = cột chứa ô khoá chạy trọn
+    # gói luật hộp cũ (legacy_locked_col); cell = cột chạy 3 nhánh bình thường, riêng ô
+    # khoá dùng bbox/prev/next_cu, hàng xóm trùng hộp (IoU >= SHIFT_IOU) về midpoint
+    # (box_source=shifted_by_lock). THÍ NGHIỆM — mặc định KHÔNG đổi.
+    ap.add_argument("--lock-scope", default="col", choices=list(LOCK_SCOPES),
+                    help="B-5: col (mặc định, trọn cột legacy) | cell (khoá từng ô + dời hàng xóm) "
+                         "| cell_fallback (cell + lùi cả cột về legacy khi ô khoá lộ hộp lệch)")
+    ap.add_argument("--pages", default="",
+                    help="thí nghiệm: CSV có cột book,page (mã sách stt*) — chỉ build các trang này")
     ap.add_argument("--qd01a-decisions", default=str(REPO / "config" / "qd01a_decisions.csv"),
                     help="phán quyết người cho ô QĐ-01 trôi + 12 ô A-3 (N5g); thiếu tệp = rỗng")
     ap.add_argument("--decisions", default=str(REPO / "config" / "decisions.yaml"),
@@ -800,6 +954,17 @@ def main():
                          "opt-in experiments — see seg_valley_n_ab.py / seg_smart_ab.py). "
                          "valley_guarded needs the encoder (auto-loaded). detector uses a trained "
                          "char_detector/detector.pt (Kaggle; falls back to midpoint if absent).")
+    # B-2 (DANH_MUC 1B): phát xạ ảnh trong DP PASS 1b. MẶC ĐỊNH TẮT — chỉ đo/sidecar, không đổi
+    # tier. Cần models/fold0..4.pt của B-1' (Kaggle); thiếu -> cảnh báo rõ, chạy văn bản thuần
+    # (--strict thì dừng). Tham số λ/gap/cap/neutral_p đọc config step2.visual_emission, CLI ghi đè.
+    ap.add_argument("--visual-emission", action=argparse.BooleanOptionalAction, default=False,
+                    help="B-2: cộng λ·min(−logP, cap) (CNN âm tiết OOF, hộp OCR thô) vào chi phí DP "
+                         "PASS 1b + posterior cùng chi phí; ghi p_visual_syl (mặc định TẮT)")
+    ap.add_argument("--visual-models", default=None,
+                    help="thư mục fold0..4.pt (mặc định: KhoiB/v3/p_visual_oof_v3_results/models rồi KhoiB/v3/models)")
+    ap.add_argument("--visual-lambda", type=float, default=None, help="λ (mặc định config, 0,25)")
+    ap.add_argument("--visual-gap", type=float, default=None, help="khe ảnh cộng vào COST_DEL/INS ×λ (mặc định 8)")
+    ap.add_argument("--visual-cap", type=float, default=None, help="trần −logP (mặc định 12)")
     args = ap.parse_args()
 
     out = Path(args.out)
@@ -850,10 +1015,17 @@ def main():
         print(f"  [hộp] luật = syl_index | thr = {ap_mod.DETECTOR_THR} | biên x = "
               f"±{ap_mod.DETECTOR_XMARGIN}w | cột có ô khoá QĐ-01 chạy luật cũ: "
               f"{sum(len(v) for v in locked_cols.values()):,} cột / "
-              f"{len(locked_cols):,} trang", flush=True)
+              f"{len(locked_cols):,} trang | lock-scope = {args.lock_scope}"
+              + (" (cột KHÔNG chạy legacy; khoá từng ô + dời hàng xóm)" if args.lock_scope == "cell" else ""),
+              flush=True)
     else:
         print(f"  [hộp] luật = legacy TRỌN GÓI (thr {ap_mod.LEGACY_DETECTOR_THR}, biên x "
               f"±{ap_mod.LEGACY_DETECTOR_XMARGIN}w, ép đếm + _monotone_assign)", flush=True)
+    pages_sel: set | None = None
+    if args.pages:
+        with open(args.pages, encoding="utf-8", newline="") as f:
+            pages_sel = {(row["book"], row["page"]) for row in csv.DictReader(f)}
+        print(f"  [thí nghiệm] --pages {args.pages}: chỉ build {len(pages_sel)} trang", flush=True)
     # Trần chi phí neo ngữ liệu (PASS 1b): config step2.anchor_cap ghi đè hằng engine;
     # gán ngược vào engine để lab đọc `anchor_align.ANCHOR_CAP` thấy đúng giá trị chạy.
     anchor_cap = float(_s2.get("anchor_cap", aa.ANCHOR_CAP))
@@ -863,6 +1035,28 @@ def main():
               f">= {ANCHOR_MIN_OTHER_PAGES} trang khác (LOO)", flush=True)
     else:
         print("  [đệ quy] --no-two-pass: đường cũ (tier ngay trong PASS 1, không neo)", flush=True)
+    # B-2: emitter ảnh (chỉ khi --visual-emission và --two-pass). Nạp lười theo fold trang.
+    vis_em = None
+    _vcfg = _s2.get("visual_emission") or {}
+    vis_params = {"lam": float(_vcfg.get("lambda", 0.25) if args.visual_lambda is None else args.visual_lambda),
+                  "gap_vis": float(_vcfg.get("gap", 8.0) if args.visual_gap is None else args.visual_gap),
+                  "cap": float(_vcfg.get("cap", 12.0) if args.visual_cap is None else args.visual_cap),
+                  "neutral_p": float(_vcfg.get("neutral_p", 0.5))}
+    if args.visual_emission:
+        from pipeline.align_engine.visual_emission import VisualEmitter
+        if not args.two_pass:
+            raise SystemExit("[B-2] --visual-emission cần PASS 1b (--two-pass); bỏ --no-two-pass.")
+        try:
+            vis_em = VisualEmitter(models_dir=args.visual_models or _vcfg.get("models_dir"),
+                                   strict=bool(args.strict), **vis_params)
+        except FileNotFoundError as e:
+            raise SystemExit(f"[B-2 STRICT] {e}") from e
+        if vis_em.available:
+            print(f"  [B-2] phát xạ ảnh trong DP BẬT | {vis_em.describe()}", flush=True)
+        else:
+            print(f"  [B-2] --visual-emission nhưng KHÔNG SẴN SÀNG -> chạy VĂN BẢN THUẦN, "
+                  f"p_visual_syl để trống. Lý do: {vis_em.reason}", flush=True)
+            vis_em = None
     qn_to_nom = load_qn_to_nom(str(REPO / paths["qn_to_nom_dict"]))
     qn_dict_set = set(qn_to_nom.keys())
     # từ điển NGƯỢC {chữ Nôm: [âm QN từ điển công nhận]} — L1 cần nó để biết một
@@ -927,11 +1121,18 @@ def main():
         print(f"[align] {book}: {len(trans)} pages ...", flush=True)
         for pi, tf in enumerate(trans):
             page = Path(tf).stem
+            if pages_sel is not None and (_book_code(book), page) not in pages_sel:
+                continue
             try:
+                # B-5 scope=cell: KHÔNG truyền cột khoá -> mọi cột đi 3 nhánh syl_index;
+                # ô khoá lấy bbox_cu ở PASS 1c (apply_qd01_lock) rồi apply_lock_shift.
                 rec = align_page(page, data_dir, qn_dict_set, qn_to_nom, similar, "new",
                                  reseg_mode=args.reseg, encoder=reseg_encoder,
                                  box_rule=args.box_rule,
-                                 locked_columns=locked_cols.get((_book_code(book), page)))
+                                 locked_columns=(None if args.lock_scope != "col"
+                                                 else locked_cols.get((_book_code(book), page))),
+                                 legacy_also_columns=(locked_cols.get((_book_code(book), page))
+                                                      if args.lock_scope != "col" else None))
             except DetectorUnavailableError:
                 # KHÔNG nuốt: thiếu detector mà vẫn chạy tiếp = lặng lẽ tách chữ bằng
                 # trung điểm cho TOÀN BỘ corpus. Phải dừng hẳn.
@@ -958,6 +1159,7 @@ def main():
     # ---------- PASS 1b: đệ quy hai lượt (flow N4a–N4c) ----------
     n_anchor_pairs = 0          # số cặp lượt 2 được neo LOO hạ chi phí thật (N4a "ô được neo")
     n_pairs_ops1 = n_pairs_ops2 = n_pairs_changed = n_cols_1b = n_band_touched = 0
+    n_cols_vis = n_cols_vis_changed = n_pairs_vis_changed = 0     # B-2
     pair_pages = {}
     if args.two_pass:
         # N4a: pair_pages từ MỌI match lượt 1 (không chỉ confirmed) — LOO theo (book, page)
@@ -979,11 +1181,30 @@ def main():
         for bookc, page, page_png, rec in page_states:
             here = (bookc, page)
             page_pairs = []
+            # B-2: ảnh xám trang nạp 1 lần; hộp phát xạ = hộp OCR thô của cluster (có sẵn lúc DP)
+            vis_gray = None
+            if vis_em is not None:
+                vis_gray = vis_load_gray(page_png)
+                if vis_gray is None:
+                    print(f"   [B-2 warn] {bookc}/{page}: không đọc được ảnh -> văn bản thuần", flush=True)
             for cs in rec["col_states"]:
                 chars, syllables = cs["cluster"]["chars"], cs["syllables"]
-                # N4b + N4c: DP lại với cost_fn neo + posterior CÙNG cost_fn
+                vis, vinfo = None, None
+                if vis_em is not None and vis_gray is not None:
+                    _boxes = [c.get("bbox") for c in chars]
+                    logP, vinfo = vis_em.emission(vis_gray, _boxes, syllables, bookc, page)
+                    vis = (vis_em, logP)
+                    n_cols_vis += 1
+                # N4b + N4c: DP lại với cost_fn neo + posterior CÙNG cost_fn (+ ảnh nếu B-2)
                 ops2, post, touched, n_anch = realign_with_anchors(
-                    chars, syllables, qn_to_nom, similar, pair_pages, here, anchor_cap)
+                    chars, syllables, qn_to_nom, similar, pair_pages, here, anchor_cap, vis=vis)
+                if vis is not None:
+                    _ops_txt = realign_with_anchors(chars, syllables, qn_to_nom, similar,
+                                                    pair_pages, here, anchor_cap)[0]
+                    _mt = {(o["nom_idx"], o["syl_idx"]) for o in _ops_txt if o["op"] == "match"}
+                    _mv = {(o["nom_idx"], o["syl_idx"]) for o in ops2 if o["op"] == "match"}
+                    n_pairs_vis_changed += len(_mt ^ _mv)
+                    n_cols_vis_changed += int(_mt != _mv)
                 n_cols_1b += 1
                 n_anchor_pairs += n_anch
                 n_band_touched += int(touched)
@@ -1018,6 +1239,13 @@ def main():
                         "n_ocr": cs.get("n_ocr", ""), "n_qn": cs.get("n_qn", ""),
                         "n_det": cs.get("n_det", ""), "count_source": count_source,
                         "box_source": box_source[i] if box_source else "",
+                        # B-2: '' khi tắt cờ / âm ∉ lớp / hộp không cắt được
+                        **({"p_visual_syl": (round(float(math.exp(logP[i, j])), 4)
+                                             if vinfo["syl_in_classes"][j] and vinfo["argmax"][i] != "" else ""),
+                            "visual_fold": vinfo["fold"], "visual_argmax": vinfo["argmax"][i],
+                            "visual_max_p": (round(float(vinfo["max_p"][i]), 4)
+                                             if vinfo["argmax"][i] != "" else "")}
+                           if vinfo is not None else {}),
                     })
                 # anchored: cặp kề một cặp confirmed (cùng định nghĩa align_page:532-536)
                 conf = [q["confirmed"] for q in col_pairs]
@@ -1038,12 +1266,17 @@ def main():
               f"{n_pairs_ops2:,} | cặp đổi (hiệu đối xứng) {n_pairs_changed:,} | "
               f"ô được neo LOO {n_anchor_pairs:,} | cột chạm biên băng {n_band_touched:,}",
               flush=True)
+        if vis_em is not None:
+            print(f"  [B-2] phát xạ ảnh: {n_cols_vis:,} cột | hộp {vis_em.n_boxes:,} (không cắt được "
+                  f"{vis_em.n_cut_fail:,}) | cột đổi đường ghép so với văn bản thuần {n_cols_vis_changed:,} "
+                  f"| cặp đổi (hiệu đối xứng) {n_pairs_vis_changed:,}", flush=True)
 
     # ---------- PASS 1c (A-7, flow N5a–N5h): tier_v3 + L1 có cổng + khoá QĐ-01 ----------
     n_l1_moi = n_l1_nang = n_l1_giu = n_l1_hoa = n_l3 = 0
     n_promoted = n_tu_silver = 0
     cross_v3 = Counter()
     qd01_st, qd01_pending = Counter(), []
+    lock_shift_st = Counter()
     n_lop_nham = n_nguoi_ngoai = 0
     cells = decisions = {}
     n_cr, n_dt = Counter(), Counter()          # A-8: ô áp corpus_readings / di_the theo id
@@ -1059,7 +1292,11 @@ def main():
                        "boxes": cs.get("boxes2") or cs.get("reseg_boxes"),
                        "box_source": cs.get("box_source2") or cs.get("box_source"),
                        "count_source": cs.get("count_source2") or cs.get("count_source", ""),
-                       "n_ocr": cs.get("n_ocr", ""), "n_qn": cs.get("n_qn", ""), "n_det": cs.get("n_det", "")}
+                       "n_ocr": cs.get("n_ocr", ""), "n_qn": cs.get("n_qn", ""), "n_det": cs.get("n_det", ""),
+                       # B-5: hộp midpoint cũ theo nom_idx (đích dời của apply_lock_shift) +
+                       # hộp trọn gói luật cũ (chỉ cột khoá, scope cell*) cho apply_lock_fallback
+                       "mid": ap_mod._reseg_column(cs["cluster"]),
+                       "legacy_boxes": cs.get("legacy_boxes")}
                 colmap[(bookc, page, cs["line_id"])] = col
         corpus = tv3.CorpusStats(cols, qn_to_nom, similar)
         # N5b–N5d: feats + p -> tier_v3 -> tier/rule/label (chốt is_plausible trước)
@@ -1106,6 +1343,23 @@ def main():
             # không dừng build (spec N5g) — ghi summary + in đỏ để đối soát
             print(f"  [QĐ-01] 🔴 locked + pending + bo + khac = {n_acc} ≠ {n_cells_b} ô khoá "
                   "trong build", flush=True)
+        # B-5 (--lock-scope cell): hàng xóm trùng bbox_cu ô khoá -> midpoint (shifted_by_lock)
+        if args.lock_scope != "col":
+            lock_shift_st = apply_lock_shift(records, colmap)
+            print(f"  [B-5 khoá ô] ô khoá {lock_shift_st['n_locked']:,} | hàng xóm dời về midpoint "
+                  f"{lock_shift_st['n_shifted']:,} (cùng cột {lock_shift_st['n_shifted_same_col']}, "
+                  f"cột kề {lock_shift_st['n_shifted_adj_col']}; trùng đúng byte {lock_shift_st['n_exact_eq']}) "
+                  f"| khoá–khoá trùng {lock_shift_st['n_locked_locked']} | pending trùng "
+                  f"{lock_shift_st['n_pending_overlap']} | không có midpoint {lock_shift_st['n_no_mid']} "
+                  f"| sau dời vẫn trùng {lock_shift_st['n_still_overlap']}", flush=True)
+            if args.lock_scope == "cell_fallback":
+                fb = apply_lock_fallback(records, colmap)
+                lock_shift_st.update({f"fallback_{k}": v for k, v in fb.items()})
+                print(f"  [B-5 lùi cột] cột khoá {fb['n_cols_lock']:,} | lùi về legacy "
+                      f"{fb['n_cols_fallback']:,} cột (ô khoá lệch {fb['n_cols_fallback_lech']}, "
+                      f"có hàng xóm dời {fb['n_cols_fallback_doi']}) | ô đổi hộp {fb['n_cells_fallback']:,} "
+                      f"(trong đó đã dời {fb['n_cells_was_shifted']}) | không có legacy "
+                      f"{fb['n_cols_no_legacy']} cột", flush=True)
         # N5h: 'người' ngoài khoá — chỉ hạ ô nhãn v3 == 㝵; không chốt AM_DA_QUYET bao trùm
         # A-8: lop_nham đọc từ decisions.yaml (mục da_ky); --decisions none -> không hạ ô nào
         n_lop_nham, n_nguoi_ngoai = apply_nguoi_ngoai_khoa(
@@ -1289,6 +1543,8 @@ def main():
                 **{k: r.get(k, v) for k, v in FIELDS_1C.items()},
                 # A-8 (N5i): mã chuẩn theo bảng dị thể người ký; = label khi chưa ký
                 "label_canonical": r.get("label_canonical", r["label"]),
+                # B-2: chỉ ghi khi --visual-emission (fields thêm cột ở cuối; tắt cờ -> bỏ qua)
+                **({k: r.get(k, "") for k in FIELDS_B2} if vis_em is not None else {}),
             })
 
     # ---------- QĐ-01: đối chiếu hộp/md5 + qd01a_pending.csv (N5g, N7) ----------
@@ -1321,6 +1577,37 @@ def main():
               f"{sum(1 for x in qd01_pending if x['ly_do'] == 'qd01a_chua_quyet')} ô QĐ-01a chờ người)",
               flush=True)
 
+    # B-5: hộp build gán cho ô khoá TRƯỚC khi ghi đè bbox_cu (đo luật hộp trên ô người đã xem)
+    if args.two_pass and cells:
+        with open(out / "qd01_lock_boxes.csv", "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=["book", "page", "column", "nom_idx", "syl_idx", "bbox_cu",
+                                              "bbox_truoc_lock", "iou", "box_source_truoc_lock",
+                                              "count_source", "n_ocr", "n_qn", "n_det"])
+            w.writeheader()
+            for r in sorted((r for r in records if r.get("qd01_locked") and r.get("_bbox_truoc_lock") is not None),
+                            key=lambda x: (x["book"], x["page"], int(x["column"]), int(x["nom_idx"]))):
+                w.writerow({"book": r["book"], "page": r["page"], "column": r["column"], "nom_idx": r["nom_idx"],
+                            "syl_idx": r.get("syl_idx", ""), "bbox_cu": json.dumps(r["bbox"]),
+                            "bbox_truoc_lock": json.dumps(r["_bbox_truoc_lock"]),
+                            "iou": f"{_iou(r['bbox'], r['_bbox_truoc_lock']):.3f}",
+                            "box_source_truoc_lock": r.get("_box_source_truoc_lock", ""),
+                            "count_source": r.get("count_source", ""), "n_ocr": r.get("n_ocr", ""),
+                            "n_qn": r.get("n_qn", ""), "n_det": r.get("n_det", "")})
+    # B-5 (--lock-scope cell*): liệt kê ô hàng xóm đã dời (đối soát, không vào labels.csv)
+    if args.lock_scope != "col":
+        sh = [r for r in records if r.get("box_source") == "shifted_by_lock"]
+        with open(out / "lock_shift.csv", "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=["book", "page", "column", "nom_idx", "syl_idx", "tier",
+                                              "syllable", "bbox_truoc", "bbox_sau", "image"])
+            w.writeheader()
+            for r in sorted(sh, key=lambda x: (x["book"], x["page"], int(x["column"]), int(x["nom_idx"]))):
+                w.writerow({"book": r["book"], "page": r["page"], "column": r["column"],
+                            "nom_idx": r["nom_idx"], "syl_idx": r.get("syl_idx", ""), "tier": r["tier"],
+                            "syllable": r.get("syllable", ""),
+                            "bbox_truoc": json.dumps(r.get("_bbox_truoc_shift")),
+                            "bbox_sau": json.dumps(r.get("bbox")), "image": r.get("_image", "")})
+        print(f"  [B-5 khoá ô] shifted_by_lock -> {out / 'lock_shift.csv'} ({len(sh)} dòng)", flush=True)
+
     # ---------- write manifest + summary ----------
     fields = ["image", "book", "page", "column", "ocr_char", "syllable", "label",
               "unicode", "label_level", "tier", "rule", "s3_cosine", "ink_pct",
@@ -1337,6 +1624,10 @@ def main():
               # đặt TRƯỚC khối FIELDS_1C để FIELDS_1C vẫn ở cuối (selftest A-6/A-7 bám chuỗi)
               "label_canonical",
               *FIELDS_1C.keys()]
+    if vis_em is not None:
+        # B-2: cột sidecar ở CUỐI, chỉ khi bật cờ -> tắt cờ thì labels.csv y hệt trước. Qua
+        # remediate/export (pandas/fieldnames) tới labels_final.csv rồi labels_trace.csv.
+        fields += FIELDS_B2
     with open(out / "labels.csv", "w", encoding="utf-8", newline="") as f:
         # T6.b — SẮP DÒNG THEO KHOÁ CANON TRƯỚC KHI GHI.
         # build_dataset duyệt `for b in config["books"]` KHÔNG sắp, nên thứ tự sách
@@ -1351,6 +1642,14 @@ def main():
             r.pop("_sort", None)
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader(); w.writerows(labels)
+    if vis_em is not None:
+        # B-2: sidecar riêng cùng số dòng/thứ tự labels.csv (khoá image + book,page,column,nom_idx)
+        _vf = ["image", "book", "page", "column", "nom_idx", "syl_idx", "syllable", "tier", "tier_v3", *FIELDS_B2]
+        with open(out / "labels_trace_visual.csv", "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=_vf, extrasaction="ignore")
+            w.writeheader(); w.writerows(labels)
+        print(f"  [B-2] {out / 'labels_trace_visual.csv'} ({len(labels):,} dòng; p_visual_syl có giá trị: "
+              f"{sum(1 for r in labels if r.get('p_visual_syl', '') != ''):,})", flush=True)
 
     tiers = Counter(r["tier"] for r in records)
     char_classes = len(set(r["label"] for r in records if r["label_level"] == "char" and r["label"]))
@@ -1370,6 +1669,14 @@ def main():
         "two_pass": bool(args.two_pass),
         "anchor_cap": anchor_cap,
         "n_anchor_pairs": n_anchor_pairs,
+        # B-2: phát xạ ảnh trong DP (chỉ đo; 'unavailable' = bật cờ nhưng thiếu mô hình)
+        "visual_emission": ({"enabled": True, "models_dir": str(vis_em.models_dir), **vis_params,
+                             "n_cols": n_cols_vis, "n_boxes": vis_em.n_boxes, "n_cut_fail": vis_em.n_cut_fail,
+                             "n_cols_changed_vs_text": n_cols_vis_changed,
+                             "n_pairs_changed_vs_text": n_pairs_vis_changed,
+                             "n_p_visual_syl": sum(1 for r in records if r.get("p_visual_syl", "") != "")}
+                            if vis_em is not None else
+                            {"enabled": False, "requested": bool(args.visual_emission)}),
         "pass1b": {"n_cols": n_cols_1b, "n_pair_keys": len(pair_pages),
                    "n_match_ops1": n_pairs_ops1, "n_match_ops2": n_pairs_ops2,
                    "n_match_changed": n_pairs_changed, "n_band_touched": n_band_touched,
@@ -1383,6 +1690,9 @@ def main():
         "detector_xmargin": (ap_mod.LEGACY_DETECTOR_XMARGIN if args.box_rule == "legacy"
                              else ap_mod.DETECTOR_XMARGIN),
         "n_locked_cols_qd01": sum(len(v) for v in locked_cols.values()),
+        # B-5: phạm vi khoá + thống kê dời hàng xóm (chỉ khác rỗng khi --lock-scope cell)
+        "lock_scope": args.lock_scope,
+        "lock_shift": {k: int(v) for k, v in lock_shift_st.items()},
         "count_source": dict(Counter(r.get("count_source", "") for r in records)),
         "box_source": dict(Counter(r.get("box_source", "") for r in records)),
         "usable_char": tiers["GOLD"] + tiers["SILVER"],

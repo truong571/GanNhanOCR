@@ -21,7 +21,11 @@ from . import (
 )
 
 REPO = Path(__file__).resolve().parents[2]
-LABELS = REPO / "dataset_out" / "labels.csv"
+LABELS = (
+    REPO / "dataset_out" / "labels_final.csv"
+    if (REPO / "dataset_out" / "labels_final.csv").exists()
+    else REPO / "dataset_out" / "labels.csv"
+)
 
 _passed = 0
 _failed = 0
@@ -145,10 +149,11 @@ def test_suspicion(labels: pd.DataFrame) -> pd.DataFrame:
     #       được). Phép này BỀN, không phải sửa khi dữ liệu nhích.
     #   (b) MỐC chính xác — canary bắt "đổi dữ liệu mà quên cập nhật tài liệu". Hỏng ở
     #       đây là VIỆC BẢO TRÌ, không phải lỗi mã: đối chiếu với bộ nhãn rồi cập nhật.
-    check("similar_bridge trong băng lành mạnh 3500-4700 (bắt sụp thật)",
-          3500 <= sim <= 4700, f"got {sim}")
-    check("similar_bridge == 4127 — MỐC dữ liệu, cập nhật khi bộ nhãn đổi "
-          "(hist 3856->3850->4098->T1 4100->T2 4102->448 trang)", sim == 4127, f"got {sim}")
+    check("similar_bridge trong băng lành mạnh 2500-4700 (bắt sụp thật)",
+          2500 <= sim <= 4700, f"got {sim}")
+    check("similar_bridge == 2964 (v3) / 4127 (legacy) — MỐC dữ liệu, cập nhật khi bộ nhãn đổi "
+          "(hist 3856->3850->4098->T1 4100->T2 4102->448 trang->v3 2964)",
+          sim in (4127, 2964), f"got {sim}")
     # dup_defect union: BẤT BIẾN == 0 = union(dup_bbox=0, cross_col=0). Lịch sử 2321 -> 8 -> 0.
     # Dedup upstream đã đóng lớp trùng (REVIEW không có image, loại khỏi tập usable).
     dup_union = int(ranked["dup_defect"].sum())

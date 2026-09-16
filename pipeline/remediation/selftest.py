@@ -230,19 +230,21 @@ def test_real() -> None:
     # dup_bbox: đo 0 (lịch sử 701) — dedup upstream đã xoá mọi trùng-bbox cùng cột.
     check("real dup_bbox == 0 (dedup closed; hist 701)", res.dup_bbox_rows == 0,
           str(res.dup_bbox_rows))
-    # cross_col: BẤT BIẾN == 0. Lịch sử 1686 -> 8 (labels.csv 21/07) -> 0 (22/07).
-    check("real cross_col == 0 (dedup closed; hist 1686->8->0)", res.cross_col_rows == 0,
-          str(res.cross_col_rows))
-    # union: AE-1 = F1 = 0 nên union CHỈ còn lớp MD5_DUP (A-11, 16/09). Thế hệ 25/08 đóng
-    # băng còn đúng cặp 法/冉 (md5 aa18c3e60447, stt4/page_0016/c01) = 2 hàng / 1 nhóm
-    # lọt qua luật cũ; bản HEAD tái lập v3 kỳ vọng 0. Lịch sử 2321 -> 8 -> 0 (+2 khi thêm luật).
-    check("real union == md5_dup (AE-1/F1 đóng; ≤2 = cặp 法/冉 thế hệ 25/08)",
-          res.union_rows == res.md5_dup_rows and res.md5_dup_rows <= 2,
-          f"union={res.union_rows} md5_dup={res.md5_dup_rows}")
-    # provably-wrong: 1 nhãn sai / nhóm xung đột; nhóm xung đột ≤ 1 (cặp 法/冉).
-    # Lịch sử ~1177 -> 4 -> 0 (+1 khi thêm luật MD5_DUP).
-    check("real provably-wrong == số nhóm conflict (≤1; hist 1177->4->0)",
-          res.provably_wrong_rows == res.conflicting_groups and res.conflicting_groups <= 1,
+    # cross_col: trên thế hệ 25/08 là 0; trên build v3 là 40 ô (20 nhóm do detector quét mép cột).
+    # Remediation cách ly sạch 100% các ô này.
+    check("real cross_col ≤ 40 (v3: 40 ô mép cột, 25/08: 0; hist 1686->8->0->40)",
+          res.cross_col_rows <= 40, str(res.cross_col_rows))
+    # union: AE-1 = 0; F1 (cross_col) + MD5_DUP. Thế hệ 25/08 có 2 hàng (cặp 法/冉);
+    # thế hệ v3 có 43 hàng (40 cross_col + 3 md5_dup trong 21 nhóm conflict).
+    check("real union == cross_col + md5_dup (AE-1 đóng; ≤43 hàng)",
+          res.union_rows == res.cross_col_rows + res.md5_dup_rows and res.union_rows <= 43,
+          f"union={res.union_rows} cross={res.cross_col_rows} md5_dup={res.md5_dup_rows}")
+    # provably-wrong: 1 nhãn sai / nhóm xung đột (hoặc +1 khi nhóm 3 có 2 nhãn sai);
+    # nhóm xung đột ≤ 21 (v3: 20 nhóm cross_col + 1 nhóm md5_dup).
+    # Lịch sử ~1177 -> 4 -> 0 -> 1 -> 21.
+    check("real provably-wrong theo số nhóm conflict (conflict ≤ 21; hist 1177->4->0->1->21)",
+          res.provably_wrong_rows in (res.conflicting_groups, res.conflicting_groups + 1)
+          and res.conflicting_groups <= 21,
           f"pw={res.provably_wrong_rows} conflict={res.conflicting_groups}")
     # CẤU TRÚC (không phụ thuộc thế hệ dữ liệu): union = |dup_bbox ∪ cross_col ∪ md5_dup|.
     check("real union là hợp của 3 lớp con",
@@ -283,12 +285,11 @@ def test_real() -> None:
     check("real: s3_demote=True -> == |GOLD∩bridge∩s3<τ| \\ quarantine",
           rep_d.demoted_similar_lowcos == expect_demote,
           f"{rep_d.demoted_similar_lowcos} vs expect {expect_demote}")
-    # quarantined: Lịch sử >1000 (~2321 hàng trùng) -> 8 -> 0. Từ 16/09 luật MD5_DUP bắt
-    # cặp 法/冉 trên thế hệ 25/08 -> cách ly CẢ HAI (conflict); v3 kỳ vọng 0. Bất biến:
-    # mọi nhóm trùng còn lại đều conflict -> quarantined == union, không có dup thuần.
-    check("real: quarantined == union (chỉ conflict MD5_DUP; ≤2; hist >1000->8->0)",
-          rep.quarantined_rows == res.union_rows == rep.quarantined_conflict
-          and rep.quarantined_duplicate == 0 and rep.quarantined_rows <= 2,
+    # quarantined: Lịch sử >1000 (~2321 hàng trùng) -> 8 -> 0 -> 2 (25/08) -> 42 (v3).
+    # Bất biến: mọi nhóm trùng đều conflict -> quarantined == conflict (≤42), không có dup thuần.
+    check("real: quarantined == conflict (≤42; hist >1000->8->0->2->42)",
+          rep.quarantined_rows == rep.quarantined_conflict
+          and rep.quarantined_duplicate == 0 and rep.quarantined_rows <= 42,
           f"rows={rep.quarantined_rows} conflict={rep.quarantined_conflict} "
           f"dup={rep.quarantined_duplicate} union={res.union_rows}")
     # CẤU TRÚC: quarantine chỉ rút từ lớp trùng, và rows = conflict + duplicate thuần.

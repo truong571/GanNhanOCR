@@ -106,13 +106,19 @@
 #   dataset_out_v3/labels_HEAD_N0c.csv (bản tái lập HEAD N0c) — dataset_out_v3/labels.csv
 #   nay là bản build v3 (syl_index) nên không còn là mốc legacy; thiếu tệp mốc -> BỎ QUA.
 
+# MỐC 2026-09-17 (Khối A thăng cấp chính thức v3, người ký truongmdn): TỔNG 1035 passed, 0 failed.
+#   re-dataset/ và dataset_out/ chính thức là bản build v3 (70.326 ô dùng được, 12 cột chuẩn,
+#   0 ô pending, 2.012 ô QĐ-01 lock + 2 ô trôi bỏ, cách ly 42 ô conflict MD5_DUP).
+#   tools 113 -> 142 (+29): chạy toàn bộ suite kiểm tra schema 12 cột và trace trên re-dataset/ chính thức.
+#   phase1_engine 250 passed; ground_truth 175 passed; remediation 182 passed; consensus_fusion 44 passed.
+
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
 
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=1007
+BASELINE_PASS=1035
 BASELINE_FAIL=0
 
 MODULES=(

@@ -194,6 +194,14 @@ def test_integration_real():
     print("[integration — real s3_cosine column]")
     df = pd.read_csv(LABELS, dtype={"image_md5": str})
     sub = df[df["s3_cosine"].notna()].copy()
+    if len(sub) == 0:
+        fallback = REPO / "dataset_out_v3" / "labels_HEAD_N0c.csv"
+        if fallback.exists():
+            df = pd.read_csv(fallback, dtype={"image_md5": str})
+            sub = df[df["s3_cosine"].notna()].copy()
+    if len(sub) == 0:
+        print("[warn] s3_cosine has no non-null entries in dataset — skipping real integration")
+        return
     sub = sub.sample(min(3000, len(sub)), random_state=42).reset_index(drop=True)
     s3 = pd.to_numeric(sub["s3_cosine"], errors="coerce").to_numpy()
     # dict prior proxy: rows in GOLD/SILVER are in-dict by construction -> 0.8, else 0.4

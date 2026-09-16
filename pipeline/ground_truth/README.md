@@ -139,11 +139,47 @@ Lưu ý 90,2% là sát ngưỡng 90%: phần thiếu là 6.809 hàng tier SYLLAB
 tiết chứ không phải chữ đơn nên **không thể** chấm S3 theo thiết kế. Nếu dân số usable đổi
 thành phần, PPI có thể tụt xuống dưới ngưỡng và tự bỏ qua trở lại — đó là hành vi đúng.
 
+## Khối C (16/09/2026) — mẻ mù hai câu trên `labels_final.csv`
+
+Hai module riêng vì schema verdict khác hẳn mẻ cũ (hai câu Q1/Q2, HAI PHA, dwell, lịch sử, mồi, lặp ẩn):
+
+```bash
+$PY -m pipeline.ground_truth.make_khoi_c_batch            # 1.279 lượt / 5 phiên -> dataset_out/human_audit/khoi_c_2026-09-16/
+$PY -m pipeline.ground_truth.make_khoi_c_batch --pilot    # + pilot_50.html (50 lượt, ô KHÔNG trùng mẻ chính, khoá riêng)
+$PY -m pipeline.ground_truth.estimate_khoi_c --pilot      # C-1: mồi / κ nội tại / dwell -> <batch>/pilot_report.md
+$PY -m pipeline.ground_truth.estimate_khoi_c              # C-3: docs/KET_QUA_KHOI_C_<ngày>.md + .json
+$PY -m pipeline.ground_truth.estimate_khoi_c --simulate DIR --sim-noise 0.05   # verdict GIẢ LẬP để kiểm (source=simulated)
+```
+
+Mẻ (seed 20260916, tất định — hai lần dựng byte-identical): MAIN 600 (24 tầng tier_v3 × lớp cột × box_source,
+trọng số N_h/n_h) · T1 300 ô qua cổng B-3 (100/sách) · T2 100 ô = 24 chuỗi trượt nguyên · T3 19 B-2 + 30/117 B-5 ·
+T4 45 mồi dương (SRS phân tầng theo tier_v3 trên 2.012 ô QĐ-01, CÓ trọng số → tầng "QĐ-01") + 45 mồi âm ·
+T6 40/283 ô 'người' chưa khoá · T5 100 lặp ẩn phân tầng (MAIN 65 · T1 15 · T2 20). Giao diện **hai pha**: Q1 được
+trả lời khi mọi ô còn trông y hệt nhau (crop · ngữ cảnh · ÂM); MÃ + glyph tham chiếu chỉ lộ sau đó; verdict ghi
+`q1_blind` (câu trả lời mù) tách với `q1` (cuối) và `n_q1_change_after_reveal`. Vì sao: phê bình C3 16/09 chỉ ra
+"chưa có mã (chỉ hỏi Q1)" hiện ngay từ đầu = lộ nhóm SYL/REVIEW/T1 (425/1.064 ô), và glyph tham chiếu là gợi ý
+riêng cho ô CHAR ở Q1 → precision Q1 hai nhóm không đo cùng điều kiện.
+
+`estimate_khoi_c` đo: (a) toàn vẹn — sha256(`_khoa/KHOA.jsonl`) == `manifest.batch_sha256`,
+sha256(`labels_final.csv`) == lúc rút mẫu, mọi `item_id` có trong khoá, `has_code` (HTML) == `has_q2` (khoá),
+verdict `source ≠ "human"` bị loại, verdict không có `q1_blind` → báo động; (b) ô mồi (dương QĐ-01: đạt ⇔ Q1 = `dung`,
+Q2 chỉ đếm "nhất quán QĐ-01" vì mã 𠊚 nhận ra được; âm: `sai_am|sai_crop` / `sai`), báo động < 90 %; (c) κ Cohen
+Q1 (4 mức) / Q2 (3 mức) trên ô lặp ẩn + KTC 95 % bootstrap (seed cố định) + đồng thuận thô (Wilson) + ma trận +
+tách theo tầng gốc, dwell p10/p50/p90, cờ < 1,5 s, số Q1 đổi sau khi lộ mã; (d) precision Q1 / Q2 / Q1∧Q2 theo tầng
+(Wilson) và theo tier_v3 (Horvitz–Thompson với `stratum_N`, FPC), GOLD = CHAR_A ∪ CHAR_B, USABLE = GOLD ∪ SYL
+(68.314 ô ngoài QĐ-01), QD01 (2.012), USABLE_RE_DATASET = USABLE ∪ QD01 = đúng 70.326 ô `re-dataset/labels.csv`,
+`khong_ro` loại khỏi mẫu số; (e) T1 cổng B-3: cận trên Clopper–Pearson một phía 95 % của tỉ lệ lỗi (0/300 → 1,0 %,
+≤ 3/300 → ≤ 2,6 %), đủ điều kiện thêm rule `visual_syl_gate` ⇔ ≤ 3 %; (f) T2 chuỗi trượt (≥ 50 % ô `sai_am` → đề
+xuất hạ theo chuỗi), T3-B2 (âm cũ / âm mới đúng), T3-B5 (hộp khoá QĐ-01 đúng crop?), T6 'người' chưa khoá (HT về 283).
+KHÔNG ghi `BANG_SO_LIEU`. Hướng dẫn người chấm: `docs/HUONG_DAN_CHAM_KHOI_C_2026-09-16.md`; phê bình + thiết kế
+chốt: `docs/BAO_CAO_KHOI_C_CHUAN_BI_2026-09-16.md`.
+
 ## Thống kê (stats.py) — đối chiếu độc lập trong selftest
 
-`wilson_ci` · `clopper_pearson_ci` · `cp_lower_bound` (một phía) · `acceptance_plan`
+`wilson_ci` · `clopper_pearson_ci` · `cp_lower_bound` / `cp_upper_bound` (một phía) · `acceptance_plan`
 (tái lập đúng n=846, c=17 cho p0=0.97) · `required_n_for_halfwidth` · `ppi_mean_ci`
-(Angelopoulos et al. 2023) · `stratified_mean_ci` (có FPC).
+(Angelopoulos et al. 2023) · `stratified_mean_ci` (có FPC) · `cohens_kappa` (hạng mục bất kỳ; đối chiếu
+với `report_combined.cohens_kappa` trong selftest).
 
 ## Test
 

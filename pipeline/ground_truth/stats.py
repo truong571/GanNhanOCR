@@ -30,6 +30,7 @@ __all__ = [
     "PPIResult",
     "ppi_mean_ci",
     "stratified_mean_ci",
+    "cohens_kappa",
 ]
 
 
@@ -308,3 +309,43 @@ def stratified_mean_ci(
     z = _z(conf, two_sided=True)
     half = z * float(np.sqrt(var))
     return (point, max(0.0, point - half), min(1.0, point + half))
+
+
+# --------------------------------------------------------------------------- #
+# Inter/intra-rater agreement
+# --------------------------------------------------------------------------- #
+def cohens_kappa(pairs: list[tuple[str, str]], categories: tuple[str, ...] | None = None) -> dict:
+    """Cohen's kappa cho hai lần chấm trên cùng ô, với bộ hạng mục BẤT KỲ.
+
+    `categories` cố định thứ tự ma trận (mặc định: mọi giá trị gặp trong `pairs`, sắp xếp).
+    Cặp có giá trị ngoài `categories` bị bỏ qua và đếm vào `n_dropped`. Trả về kappa,
+    đồng thuận thô (po), đồng thuận kỳ vọng (pe) và ma trận `a->b` (chỉ ô khác 0).
+    Tổng quát hoá `report_combined.cohens_kappa` (vốn cố định 3 hạng mục verdict cũ);
+    selftest đối chiếu hai hàm trên cùng dữ liệu.
+    """
+    if categories is None:
+        categories = tuple(sorted({str(a) for a, _ in pairs} | {str(b) for _, b in pairs}))
+    cats = list(categories)
+    idx = {c: i for i, c in enumerate(cats)}
+    m = [[0] * len(cats) for _ in cats]
+    dropped = 0
+    for a, b in pairs:
+        if a in idx and b in idx:
+            m[idx[a]][idx[b]] += 1
+        else:
+            dropped += 1
+    n = sum(sum(r) for r in m)
+    if n == 0:
+        return {"n": 0, "n_dropped": dropped, "kappa": None, "observed_agreement": None,
+                "expected_agreement": None, "matrix": {}, "categories": cats}
+    po = sum(m[i][i] for i in range(len(cats))) / n
+    row = [sum(r) / n for r in m]
+    col = [sum(m[i][j] for i in range(len(cats))) / n for j in range(len(cats))]
+    pe = sum(row[i] * col[i] for i in range(len(cats)))
+    kappa = (po - pe) / (1 - pe) if pe < 1 else 1.0
+    return {
+        "n": n, "n_dropped": dropped, "kappa": float(kappa), "observed_agreement": float(po),
+        "expected_agreement": float(pe),
+        "matrix": {f"{a}->{b}": m[idx[a]][idx[b]] for a in cats for b in cats if m[idx[a]][idx[b]]},
+        "categories": cats,
+    }

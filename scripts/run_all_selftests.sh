@@ -125,7 +125,26 @@ PY="${PY:-.venv/bin/python}"
 #       mặc định KHÔNG đổi (ops + posterior y hệt HEAD trên 4.029 cột cols.pkl).
 #   +13 pipeline.tools.visual_syl_gate_selftest (B-3: cổng REVIEW→SYL 0,9/0,8 trên khung giả có đáp án, loại
 #       QĐ-01/not_plausible, FAR CHAR_A (a)/(b) + Wilson, thiếu OOF không crash, schema cũ bị chặn).
-BASELINE_PASS=1083
+# MỐC 2026-09-16 (Khối C C-1, mẻ mù hai câu): TỔNG 1097 passed, 0 failed = 1083 + 14.
+#   +14 pipeline.ground_truth.selftest::test_khoi_c_batch (make_khoi_c_batch: chain_ids tách chuỗi trượt,
+#       check_blind bỏ payload base64, id UUID tất định theo seed và KHÔNG dẫn xuất từ image, mồi dương =
+#       QĐ-01 / mồi âm hiển thị âm-mã ô kề syl_idx±1, HTML phiên không rò tầng + đủ Q1/Q2 có ngưỡng 1/3).
+# MỐC 2026-09-16 (Khối C C-2/C-3, ước lượng): TỔNG 1126 passed, 0 failed = 1097 + 29.
+#   +29 pipeline.ground_truth.selftest::test_estimate_khoi_c (estimate_khoi_c trên KHOA tổng hợp 8 tầng + verdict
+#       GIẢ LẬP có đáp án gieo: stats.cohens_kappa == report_combined; nguồn ≠ human bị loại; toàn vẹn sha256
+#       KHOA/labels + id lạ + trùng id giữ bản mới; mồi 3/3 rồi rớt 1/3 -> báo động; κ = 1 rồi lệch 1/6;
+#       dwell cờ < 1,5 s khớp đếm tay; precision/HT CHAR_A, GOLD khớp stratified_mean_ci tính tay; khong_ro loại
+#       khỏi mẫu số; SYL không suy HT Q2; T1 0/150 -> CP 1,98 % đủ điều kiện, 5/150 -> không; T2 chuỗi hạ;
+#       T3-B2 3 lớp; B-5 HT 117; labels đổi -> báo động; nhiễu 5 %; --pilot không có precision).
+# MỐC 2026-09-16 (Khối C C3 phê bình, vá lộ tầng): TỔNG 1140 passed, 0 failed = 1126 + 14.
+#   +14 ground_truth.selftest (khoi_c): mồi dương = SRS phân tầng theo tier_v3 trên 2.012 ô QĐ-01 CÓ trọng số;
+#       T6 'người' chưa khoá (N = dân số đầy đủ, w = N/n, không lấy ô đã dùng); lặp ẩn PHÂN TẦNG theo (tang, tier_v3)
+#       tất định, lap_tang giữ tầng gốc; HTML HAI PHA (mã/glyph chỉ lộ sau Q1, chặn Q2 khi chưa lộ, xuất q1_blind +
+#       n_q1_change_after_reveal, pha 1 không in 'chưa có mã'); _nguoi_leak_stats; ước lượng: κ có KTC bootstrap +
+#       tách theo tầng gốc, mồi dương đạt theo Q1 (Q2 chỉ đếm nhất quán QĐ-01), pooled QD01 + USABLE_RE_DATASET
+#       (dân số = re-dataset) khớp tính tay, T6 HT, q1_blind ưu tiên hơn q1 cuối (đổi 30 % sau lộ mã không đổi
+#       precision), verdict thế hệ cũ không có q1_blind -> báo động.
+BASELINE_PASS=1140
 BASELINE_FAIL=0
 
 MODULES=(
@@ -167,7 +186,7 @@ done
 
 echo "----------------------------------------------------------------"
 printf "%-38s %s\n" "TỔNG" "$total_pass passed, $total_fail failed"
-printf "%-38s %s\n" "MỐC 2026-09-16 (S12)" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
+printf "%-38s %s\n" "MỐC 2026-09-16 (C3)" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
 echo "================================================================"
 
 if [ "$total_pass" -eq "$BASELINE_PASS" ] && [ "$total_fail" -eq "$BASELINE_FAIL" ]; then

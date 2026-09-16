@@ -16,8 +16,9 @@ import pandas as pd
 from scipy.stats import beta, binom, norm
 
 from . import (
-    audit_grid, estimate as est_mod, make_confusion_batch, make_gold_batch,
-    make_retest_batch, report_combined, s3_signals, sampling, stats, suspicion,
+    audit_grid, estimate as est_mod, estimate_khoi_c as ekc, make_confusion_batch, make_gold_batch,
+    make_khoi_c_batch as kc, make_retest_batch, report_combined, s3_signals, sampling,
+    stats, suspicion,
 )
 
 REPO = Path(__file__).resolve().parents[2]
@@ -950,6 +951,420 @@ def test_interrater() -> None:
             check("thiếu orig_verdict -> báo lỗi rõ", True)
 
 
+def test_khoi_c_batch() -> None:
+    """Khối C (16/09): mẻ mù hai câu — các hàm thuần phải tất định và KHÔNG rò tầng."""
+    print("[khoi_c · mẻ mù hai câu]")
+    # 1. chuỗi trượt: liền nom_idx cùng (book,page,column,shift) mới là một chuỗi
+    k5 = pd.DataFrame({
+        "book": ["b"] * 8, "page": ["p"] * 8, "column": ["1"] * 5 + ["2"] * 3,
+        "shift": ["1"] * 3 + ["-1"] * 2 + ["1"] * 3,
+        "nom_idx": ["3", "4", "5", "8", "9", "1", "2", "7"],
+    })
+    cid = kc.chain_ids(k5)
+    check("chuỗi tách theo shift và theo khoảng trống nom_idx", cid.nunique() == 4, str(cid.tolist()))
+    check("hai ô liền nhau cùng shift vào cùng chuỗi", cid[0] == cid[1] == cid[2] and cid[3] == cid[4])
+
+    # 2. check_blind: chuỗi cấm nằm TRONG base64 không tính, nằm NGOÀI thì bắt
+    inner = 'x<img src="data:image/png;base64,QUJDtierRUVFgold/">'
+    check("chuỗi cấm bên trong payload base64 được bỏ qua", kc.check_blind(inner) == {})
+    check("chuỗi cấm ngoài payload bị bắt", kc.check_blind(inner + "<b>tier</b>") == {"tier": 1})
+
+    # 3. id mù: tất định theo seed, 12 hex, KHÔNG dẫn xuất từ image
+    rows = pd.DataFrame({"tang": ["MAIN"] * 3, "key": ["k1", "k2", "k3"],
+                         "image": ["gold/a.png", "gold/b.png", "gold/c.png"]})
+    a = kc.assign_ids(rows, 1)["item_id"].tolist()
+    b = kc.assign_ids(rows, 1)["item_id"].tolist()
+    c = kc.assign_ids(rows, 2)["item_id"].tolist()
+    import hashlib as _h
+    check("id tất định theo seed", a == b and a != c)
+    check("id 12 hex, duy nhất", all(len(x) == 12 for x in a) and len(set(a)) == 3)
+    check("id không phải sha1(image) như sampling cũ",
+          all(x != _h.sha1(im.encode()).hexdigest()[:12] for x, im in zip(a, rows["image"])))
+
+    # 4. mồi âm: hiển thị ÂM/MÃ của ô kề — phải KHÁC âm và mã thật; mồi dương = QĐ-01
+    n = 12
+    df = pd.DataFrame({
+        "book": ["stt2"] * n, "page": ["page_0001"] * n, "column": ["1"] * n,
+        "nom_idx": [str(i) for i in range(n)], "syl_idx": [str(i) for i in range(n)],
+        "syllable": [f"am{i}" for i in range(n)], "label": [chr(0x4E00 + i) for i in range(n)],
+        "unicode": [f"U+{0x4E00 + i:04X}" for i in range(n)],
+        "tier": ["GOLD"] * n, "tier_v3": ["CHAR_A"] * n, "rule": ["r"] * n,
+        "box_source": ["detector"] * n, "count_source": ["equal_qn"] * n,
+        "n_ocr": ["12"] * n, "n_qn": ["12"] * n, "n_det": ["12"] * n,
+        "qd01_locked": ["1", "1", "1"] + ["0"] * (n - 3),
+        "bbox": ["[0, 0, 10, 10]"] * n, "image": [f"gold/{i}.png" for i in range(n)],
+        "image_md5": ["x"] * n, "crop_quality_flag": ["ok"] * n,
+    })
+    df["key"] = df.apply(kc._key, axis=1)
+    df["col_class"], df["box_class"] = "eq", "detector"
+    out, cells = kc.draw_t4_decoys(df, set(), seed=7, n_pos=3, n_neg=4)
+    neg = out[out["tang"] == "T4_MOI_AM"]
+    pos = out[out["tang"] == "T4_MOI_DUONG"]
+    check("mồi dương = đúng các ô QĐ-01, đáp án dung/dung",
+          len(pos) == 3 and (pos["qd01_locked"] == "1").all()
+          and (pos["decoy_q1"] == "dung").all() and (pos["decoy_q2"] == "dung").all())
+    check("mồi dương là SRS phân tầng theo tier_v3 CÓ trọng số (stratum_N = dân số QĐ-01, w = N/n)",
+          (pos["stratum"] == "T4|moi_duong|CHAR_A").all() and (pos["stratum_N"] == 3).all()
+          and (pos["design_weight"] == 1.0).all()
+          and any(c["stratum"] == "T4|moi_duong|CHAR_A" and c["N_h"] == 3 for c in cells))
+    check("mồi âm KHÔNG có trọng số (chủ đích)", neg["design_weight"].isna().all())
+    check("mồi âm hiển thị âm & mã KHÁC ô thật, đáp án sai_am/sai",
+          len(neg) == 4 and (neg["shown_syllable"] != neg["syllable"]).all()
+          and (neg["shown_label"] != neg["label"]).all()
+          and (neg["decoy_q1"] == "sai_am").all() and (neg["decoy_q2"] == "sai").all())
+    nb_ok = all(abs(int(r.decoy_from_key.split("|")[-1]) - int(r.nom_idx)) == 1 for r in neg.itertuples())
+    check("ô kề đúng nghĩa syl_idx±1 cùng cột", nb_ok)
+    check("mồi âm không lấy ô QĐ-01 làm ô thật", (neg["qd01_locked"] == "0").all())
+
+    # 4b. T6 'người' chưa khoá: chỉ ô syllable=người, qd01=0, có bbox; N = dân số đầy đủ; w = N/n
+    df6 = df.copy()
+    df6.loc[df6.index[3:9], "syllable"] = "người"          # 6 ô 'người' không khoá (idx 3..8), 3 ô QĐ-01 ở 0..2
+    t6, c6 = kc.draw_t6_nguoi(df6, {df6["key"].iloc[3]}, seed=7, n=4)
+    check("T6: 4 ô 'người' chưa khoá, không lấy ô đã dùng, stratum_N = 6 (dân số đầy đủ), w = 1,5",
+          len(t6) == 4 and (t6["syllable"] == "người").all() and (t6["qd01_locked"] == "0").all()
+          and df6["key"].iloc[3] not in set(t6["key"]) and (t6["stratum_N"] == 6).all()
+          and abs(float(t6["design_weight"].iloc[0]) - 1.5) < 1e-12 and c6[0]["N_h"] == 6)
+
+    # 4c. lặp ẩn PHÂN TẦNG theo (tang, tier_v3): đúng số mỗi ô, id mới, repeat_of trỏ về gốc, lap_tang giữ tầng gốc
+    rows_all = pd.concat([out.assign(item_id=[f"{i:012x}" for i in range(len(out))]),
+                          t6.assign(item_id=[f"{i + 100:012x}" for i in range(len(t6))])])
+    rep = kc.add_hidden_repeats(rows_all, seed=3, alloc={("T4_MOI_DUONG", "CHAR_A"): 2, ("T6_NGUOI", None): 3})
+    check("lặp ẩn phân tầng: 2 + 3 = 5 ô, tang=T5_LAP, lap_tang = tầng gốc, id mới, repeat_of ∈ gốc",
+          len(rep) == 5 and (rep["tang"] == "T5_LAP").all()
+          and rep["lap_tang"].value_counts().to_dict() == {"T6_NGUOI": 3, "T4_MOI_DUONG": 2}
+          and not set(rep["item_id"]) & set(rows_all["item_id"]) and set(rep["repeat_of"]) <= set(rows_all["item_id"]))
+    rep2 = kc.add_hidden_repeats(rows_all, seed=3, alloc={("T4_MOI_DUONG", "CHAR_A"): 2, ("T6_NGUOI", None): 3})
+    check("lặp ẩn tất định theo seed", rep["item_id"].tolist() == rep2["item_id"].tolist()
+          and rep["repeat_of"].tolist() == rep2["repeat_of"].tolist())
+
+    # 5. HTML phiên: không rò, đủ item, đủ hai câu, và hàng không mã thì bỏ Q2 ở phía JS
+    items = [{"id": "abc123def456", "crop": "data:image/png;base64,QUJD", "cw": 10, "ch": 12,
+              "ctx": "", "ref": "", "syl": "người", "code": "𠊚", "uni": "U+2029A"},
+             {"id": "0123456789ab", "crop": "data:image/png;base64,QUJD", "cw": 10, "ch": 12,
+              "ctx": "", "ref": "", "syl": "là", "code": "", "uni": ""}]
+    html_txt = kc.render_session_html(items, "KC-TEST-S1", "Khối C · thử", "verdicts_KC-TEST-S1.jsonl")
+    check("HTML phiên không chứa chuỗi rò tầng", kc.check_blind(html_txt) == {}, str(kc.check_blind(html_txt)))
+    check("HTML mang đủ item và hai bộ câu hỏi",
+          "abc123def456" in html_txt and "0123456789ab" in html_txt
+          and '"sai_crop"' in html_txt and '"khong_ro"' in html_txt and "Q2 ·" in html_txt)
+    check("lựa chọn Q1 có định nghĩa ngưỡng 1/3 chữ", "1/3" in html_txt)
+    # 5b. HAI PHA: mã/glyph chỉ hiện sau Q1; Q2 bị chặn khi chưa lộ; verdict có q1_blind + đếm đổi sau lộ
+    check("HTML hai pha: có thông báo pha 1, chặn Q2 khi chưa lộ mã, xuất q1_blind / n_q1_change_after_reveal",
+          "hiện sau khi" in html_txt and "!revealed(r)" in html_txt and "q1_blind: r.q1_blind" in html_txt
+          and "n_q1_change_after_reveal" in html_txt and "after_reveal" in html_txt and "dwell_q1_ms" in html_txt)
+    check("HTML pha 1 KHÔNG in sẵn 'chưa có mã' cho ô không mã (chỉ lộ sau Q1 qua JS)",
+          "chưa có mã Unicode" not in html_txt)
+    # 5c. thống kê lộ 'người' -> QĐ-01
+    ordr = pd.DataFrame({"shown_syllable": ["người", "người", "là"], "qd01_locked": ["1", "0", "0"],
+                         "shown_label": ["𠊚", "", "羅"]})
+    st = kc._nguoi_leak_stats(ordr)
+    check("_nguoi_leak_stats: 2 ô 'người', 1 QĐ-01, tỉ lệ 0,5, 1 ô 𠊚",
+          st["n_shown_nguoi"] == 2 and st["n_qd01"] == 1 and st["frac_qd01"] == 0.5 and st["n_shown_2029A"] == 1)
+
+
+def _khoi_c_fixture(d: Path) -> tuple[Path, Path, Path]:
+    """KHOA/manifest tổng hợp có đủ 8 tầng, viết đúng schema của make_khoi_c_batch (không cần dữ liệu)."""
+    import hashlib as _h
+    rows = []
+    nid = [0]
+
+    def add(tang, stratum, N, **kw):
+        nid[0] += 1
+        r = {"item_id": f"{nid[0]:012x}", "session": 1 + (nid[0] % 2), "session_id": f"KC-T-S{1 + (nid[0] % 2)}",
+             "audit_order": 0, "tang": tang, "stratum": stratum, "stratum_N": N,
+             "design_weight": None, "repeat_of": None, "book": "stt2", "page": f"page_{nid[0]:04d}",
+             "column": "1", "nom_idx": str(nid[0]), "tier_v3": stratum.split("|")[0], "qd01_locked": "0",
+             "syllable": f"am{nid[0]}", "label": "", "argmax": None, "chain_id": None, "has_q2": False}
+        r.update(kw)
+        rows.append(r)
+        return r["item_id"]
+
+    main_ids = []
+    for st, N, n, q2 in (("CHAR_A|eq|detector", 1000, 10, True), ("CHAR_A|ne|detector", 500, 10, True),
+                         ("CHAR_B|eq|detector", 100, 6, True), ("SYL|eq|detector", 300, 6, False),
+                         ("REVIEW|eq|detector", 200, 4, False)):
+        for i in range(n):
+            main_ids.append(add("MAIN", st, N, design_weight=N / n, has_q2=q2 or (st.startswith("SYL") and i == 0),
+                                label="字" if (q2 or (st.startswith("SYL") and i == 0)) else ""))
+    for b, N in (("stt2", 400), ("stt4", 350)):
+        for _ in range(75):
+            add("T1_GATE", f"T1|gate09|{b}", N, tier_v3="REVIEW", design_weight=N / 75, book=b)
+    for cid, n, qd in (("c#1", 3, 1), ("c#2", 4, 0)):
+        for i in range(n):
+            add("T2_CHAIN", "T2|chain", 404, tier_v3="SYL", chain_id=cid, argmax="thế",
+                qd01_locked="1" if (qd and i == 0) else "0", has_q2=(i == 0), label="字" if i == 0 else "")
+    add("T3_B2", "T3|b2", 3, tier_v3="CHAR_B", design_weight=1.0, syllable="trên", argmax="lên", has_q2=True, label="連")
+    add("T3_B2", "T3|b2", 3, tier_v3="SYL", design_weight=1.0, syllable="vậy", argmax="làm")
+    add("T3_B2", "T3|b2", 3, tier_v3="CHAR_B", design_weight=1.0, syllable="sự", argmax="sự", has_q2=True, label="事")
+    for _ in range(4):
+        add("T3_B5", "T3|b5", 117, tier_v3="CHAR_A", design_weight=117 / 4, qd01_locked="1", has_q2=True, label="𠊚")
+    # mồi dương = tầng QĐ-01 có trọng số (2 tầng phụ: CHAR_A 2/40, SYL 1/10) -> dân số QĐ-01 = 50
+    for _ in range(2):
+        add("T4_MOI_DUONG", "T4|moi_duong|CHAR_A", 40, tier_v3="CHAR_A", qd01_locked="1", has_q2=True, label="𠊚",
+            design_weight=20.0, decoy_q1="dung", decoy_q2="dung", syllable="người")
+    add("T4_MOI_DUONG", "T4|moi_duong|SYL", 10, tier_v3="SYL", qd01_locked="1", has_q2=True, label="𠊚",
+        design_weight=10.0, decoy_q1="dung", decoy_q2="dung", syllable="người")
+    for _ in range(3):
+        add("T4_MOI_AM", "T4|moi_am", None, tier_v3="CHAR_A", has_q2=True, label="施", decoy_q1="sai_am", decoy_q2="sai")
+    for _ in range(4):
+        add("T6_NGUOI", "T6|nguoi_chua_khoa", 20, tier_v3="SYL", design_weight=5.0, syllable="người")
+    by_id = {r["item_id"]: r for r in rows}
+    t1_ids = [r["item_id"] for r in rows if r["tang"] == "T1_GATE"][:2]
+    t2_ids = [r["item_id"] for r in rows if r["tang"] == "T2_CHAIN"][:2]
+    for oid in main_ids[:6] + t1_ids + t2_ids:
+        o = by_id[oid]
+        add("T5_LAP", "__repeat__", None, tier_v3=o["tier_v3"], repeat_of=oid, has_q2=o["has_q2"], label=o["label"],
+            lap_tang=o["tang"])
+    for i, r in enumerate(rows):
+        r["audit_order"] = i
+    labels = d / "labels_final.csv"
+    labels.write_text("image,label\na.png,字\n", encoding="utf-8")
+    lsha = _h.sha256(labels.read_bytes()).hexdigest()
+    kd = d / "_khoa"
+    kd.mkdir()
+    khoa = kd / "KHOA.jsonl"
+    khoa.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in rows) + "\n", encoding="utf-8")
+    bsha = _h.sha256(khoa.read_bytes()).hexdigest()
+    man = kd / "manifest.jsonl"
+    man.write_text("\n".join(json.dumps({
+        "item_id": r["item_id"], "session": r["session"], "session_id": r["session_id"],
+        "audit_order": r["audit_order"], "tang": r["tang"], "stratum": r["stratum"], "stratum_N": r["stratum_N"],
+        "design_weight": r["design_weight"], "repeat_of": r["repeat_of"], "has_q2": r["has_q2"],
+        "labels_sha256": lsha, "labels_path": "labels_final.csv", "batch_sha256": bsha, "seed": 1})
+        for r in rows) + "\n", encoding="utf-8")
+    (d / "plan.json").write_text(json.dumps({"sessions": [
+        {"session": 1, "session_id": "KC-T-S1", "verdict_file": "verdicts_KC-T-S1.jsonl"},
+        {"session": 2, "session_id": "KC-T-S2", "verdict_file": "verdicts_KC-T-S2.jsonl"}]}), encoding="utf-8")
+    return khoa, man, labels
+
+
+def test_estimate_khoi_c() -> None:
+    """Khối C (C-3): ước lượng từ verdict — kiểm bằng verdict GIẢ LẬP có đáp án gieo sẵn."""
+    print("[khoi_c · ước lượng (estimate_khoi_c)]")
+    # 0. κ tổng quát trong stats == κ 3 hạng mục của report_combined trên cùng dữ liệu 5/9
+    pairs = [("correct", "correct")] * 5 + [("correct", "wrong_label"), ("wrong_label", "correct"),
+                                            ("unsure", "unsure"), ("wrong_label", "wrong_label")]
+    check("stats.cohens_kappa khớp report_combined.cohens_kappa",
+          approx(stats.cohens_kappa(pairs, report_combined.VERDICT_ORDER)["kappa"],
+                 report_combined.cohens_kappa(pairs)["kappa"], 1e-12))
+    check("κ = 1 khi đồng thuận tuyệt đối, 0 khi độc lập",
+          stats.cohens_kappa([("a", "a"), ("b", "b")], ("a", "b"))["kappa"] == 1.0
+          and approx(stats.cohens_kappa([("a", "a"), ("a", "b"), ("b", "a"), ("b", "b")], ("a", "b"))["kappa"], 0.0))
+
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        khoa, man, labels = _khoi_c_fixture(d)
+        kh = ekc.load_jsonl(khoa)
+        err = {"CHAR_A": 0.2, "CHAR_B": 0.3, "SYL": 0.25, "REVIEW": 0.5, "T1_GATE": 0.0,
+               "T2_CHAIN": 0.6, "T3_B2": 0.5, "T3_B5": 0.25}
+        q2e = {"CHAR_A": 0.1, "CHAR_B": 0.2, "SYL": 0.0, "REVIEW": 0.0, "T3_B5": 0.0, "T2_CHAIN": 0.0, "T3_B2": 0.0}
+        v0, truth = ekc.simulate_verdicts(kh, seed=3, noise=0.0, err=err, q2_err=q2e)
+        sim_dir = d / "sim0"
+        sim_dir.mkdir()
+        for sid, g in v0.groupby("session_id"):
+            recs = [{k: (None if (isinstance(x, float) and np.isnan(x)) else x) for k, x in r.items()}
+                    for r in g.to_dict("records")]
+            (sim_dir / f"verdicts_{sid}.jsonl").write_text(
+                "\n".join(json.dumps(r, ensure_ascii=False) for r in recs) + "\n", encoding="utf-8")
+        files = sorted(sim_dir.glob("verdicts*.jsonl"))
+
+        # 1. nguồn không phải người bị loại mặc định
+        v_h, info_h = ekc.load_verdicts(files)
+        check("verdict source=simulated bị LOẠI mặc định (0 nạp, đếm bỏ)",
+              v_h.empty and info_h["n_skipped_ai"] == len(kh))
+        rep_h = ekc.build(d, files, labels)
+        check("không verdict -> báo động rõ, không crash", "không có verdict nào" in " ".join(rep_h["alarms"]))
+
+        # 2. nạp + toàn vẹn (noise 0, người lý tưởng)
+        rep = ekc.build(d, files, labels, include_ai=True)
+        it = rep["integrity"]
+        check("toàn vẹn: batch_sha256 + labels_sha256 khớp, 0 id lạ, 0 lệch has_code, chấm đủ",
+              it["batch_sha256_ok"] and it["labels_sha256_ok"] and it["n_unknown_id"] == 0
+              and it["n_has_code_mismatch"] == 0 and it["n_graded"] == len(kh) and not rep["alarms"], str(rep["alarms"]))
+
+        # 3. ô mồi 100 %, κ = 1, dwell khớp bảng sự thật
+        dcy = rep["decoys"]
+        check("mồi: dương 3/3, âm 3/3, không báo động",
+              dcy["pos"]["n_pass"] == 3 and dcy["neg"]["n_pass"] == 3 and not dcy["alarm"])
+        rp = rep["repeats"]
+        check("lặp ẩn: 10 cặp (6 MAIN + 2 T1 + 2 T2), κ Q1 = 1, đồng thuận 100 %, KTC bootstrap = [1; 1], tách theo tầng gốc",
+              rp["n_pairs"] == 10 and rp["q1"]["kappa"] == 1.0 and rp["q1"]["observed_agreement"] == 1.0
+              and rp["q1"]["ci_boot"] == (1.0, 1.0)
+              and set(rp["by_lap_tang"]) == {"MAIN", "T1_GATE", "T2_CHAIN"} and rp["by_lap_tang"]["MAIN"]["n"] == 6)
+        check("mồi dương đạt theo Q1; Q2 chỉ đếm 'nhất quán QĐ-01'",
+              "q2_dung_nhat_quan_qd01" in dcy["pos"] and dcy["pos"]["q2_dung_nhat_quan_qd01"] == 3
+              and "Q1 == dung" in dcy["pos_rule"])
+        check("Q1 dùng = q1_blind (verdict giả lập thế hệ hai pha)", rep["q1_source"].startswith("q1_blind")
+              and rep["dwell"]["n_q1_changed_after_reveal"] == 0)
+        dw = rep["dwell"]
+        exp_fast = int((truth["dwell_ms"] < ekc.DWELL_FLAG_MS).sum())
+        check("dwell: số ô < 1,5 s bằng đếm trực tiếp trên bảng sự thật, p50 tính được",
+              dw["n_flag_fast"] == exp_fast and dw["n_with_dwell"] == len(kh) and dw["p50_s"] > 0)
+
+        # 4. precision theo tier khớp bảng sự thật; HT khớp tính tay
+        tr = truth.merge(kh[["item_id", "stratum", "stratum_N", "tier_v3", "has_q2"]], on="item_id")
+        mm = tr[tr["tang"] == "MAIN"]
+        okA = mm[mm["tier_v3"] == "CHAR_A"]
+        kA, nA = int((okA["truth_q1"] == "dung").sum()), len(okA)
+        pa = rep["precision"]["tiers"]["CHAR_A"]["q1"]
+        check("CHAR_A Q1: n_ok/n_scored đúng bằng sự thật gieo", pa["n_ok"] == kA and pa["n_scored"] == nA, f"{pa}")
+        trip = [(int(g["stratum_N"].iloc[0]), len(g), int((g["truth_q1"] == "dung").sum()))
+                for _, g in okA.groupby("stratum")]
+        pt, lo, hi = stats.stratified_mean_ci(trip)
+        check("CHAR_A Q1 HT == stratified_mean_ci tính tay từ (N_h, n_h, k_h)",
+              approx(pa["weighted_precision"], pt, 1e-12) and approx(pa["weighted_ci"][0], lo, 1e-12))
+        q2A = rep["precision"]["tiers"]["CHAR_A"]["q2"]
+        check("CHAR_A Q2: n_ok đúng sự thật", q2A["n_ok"] == int((okA["truth_q2"] == "dung").sum()))
+        gold = mm[mm["tier_v3"].isin(("CHAR_A", "CHAR_B"))]
+        tripG = [(int(g["stratum_N"].iloc[0]), len(g), int((g["truth_q1"] == "dung").sum()))
+                 for _, g in gold.groupby("stratum")]
+        pg = rep["precision"]["pooled"]["GOLD"]["q1"]
+        check("GOLD = CHAR_A+CHAR_B: HT trên 3 tầng khớp tính tay",
+              pg["n_strata"] == 3 and approx(pg["weighted_precision"], stats.stratified_mean_ci(tripG)[0], 1e-12))
+        syl = rep["precision"]["tiers"]["SYL"]
+        check("SYL: Q2 chỉ 1/6 ô có mã -> ghi chú, KHÔNG suy HT cho Q2",
+              "q2_note" in syl and "weighted_precision" not in syl["q2"] and syl["q2"]["n_scored"] == 1)
+        pq = rep["precision"]["pooled"]["QD01"]
+        pu = rep["precision"]["pooled"]["USABLE_RE_DATASET"]
+        tq = tr[tr["tang"] == "T4_MOI_DUONG"]
+        tripQ = [(int(g["stratum_N"].iloc[0]), len(g), int((g["truth_q1"] == "dung").sum())) for _, g in tq.groupby("stratum")]
+        tripU = [(int(g["stratum_N"].iloc[0]), len(g), int((g["truth_q1"] == "dung").sum()))
+                 for _, g in pd.concat([mm[mm["tier_v3"].isin(("CHAR_A", "CHAR_B", "SYL"))], tq]).groupby("stratum")]
+        check("QĐ-01 = tầng mồi dương có N_h (dân số 50, 2 tầng); USABLE_RE_DATASET = USABLE ∪ QĐ-01 (dân số 1950) khớp tính tay",
+              pq["q1"]["population_N"] == 50 and pq["q1"]["n_strata"] == 2
+              and pu["q1"]["population_N"] == 1000 + 500 + 100 + 300 + 50
+              and approx(pu["q1"]["weighted_precision"], stats.stratified_mean_ci(tripU)[0], 1e-12)
+              and approx(pq["q1"]["weighted_precision"], stats.stratified_mean_ci(tripQ)[0], 1e-12))
+        t6 = rep["t6_nguoi"]
+        t6t = tr[tr["tang"] == "T6_NGUOI"]
+        check("T6 'người' chưa khoá: n = 4, HT về dân số 20, precision = sự thật gieo",
+              t6["n_audited"] == 4 and t6["population_N"] == 20
+              and approx(t6["precision"], (t6t["truth_q1"] == "dung").mean(), 1e-12))
+
+        # 5. T1: 0/150 lỗi -> cận trên CP 1,98 % -> đủ điều kiện; 5 lỗi -> không
+        t1 = rep["t1_gate"]
+        check("T1: 0/150 lỗi -> cận trên CP một phía = 1,98 % ≤ 3 % -> ĐỦ điều kiện",
+              t1["n_err"] == 0 and t1["n_scored"] == 150 and approx(t1["err_upper_cp95"], 0.019773, 1e-5)
+              and t1["eligible"] is True)
+        # 6. T2 / T3 khớp sự thật
+        t2 = rep["t2_chains"]
+        exp_dem = 0
+        for cid, g in tr[tr["tang"] == "T2_CHAIN"].merge(kh[["item_id", "chain_id"]], on="item_id").groupby("chain_id"):
+            exp_dem += int((g["truth_q1"] == "sai_am").mean() >= 0.5)
+        check("T2: số chuỗi đề xuất hạ (≥ 50 % sai_am) khớp sự thật; ghi âm == argmax",
+              t2["n_chains"] == 2 and t2["n_chains_demote"] == exp_dem
+              and t2["n_sai_am_matches_argmax"] == t2["n_sai_am_wrote"] == t2["q1_counts"]["sai_am"])
+        b5 = rep["t3"]["b5"]
+        b5t = tr[tr["tang"] == "T3_B5"]
+        check("T3-B5: hộp khoá đúng = k/n sự thật, HT về 117 ô",
+              approx(b5["hop_khoa_dung"], (b5t["truth_q1"] == "dung").mean(), 1e-12) and b5["population_N"] == 117)
+
+        # 7. can thiệp có chủ đích vào verdict: mồi rớt, lặp lệch, khong_ro, B-2, id lạ, trùng, labels đổi
+        v1 = v0.copy()
+        b2ids = kh[kh["tang"] == "T3_B2"]["item_id"].tolist()
+        # verdict hai pha: ước lượng đọc q1_blind -> can thiệp phải đổi CẢ q1 lẫn q1_blind
+        v1.loc[v1["item_id"] == b2ids[0], ["q1", "q1_blind", "q1_am"]] = ["sai_am", "sai_am", "lên"]   # âm mới đúng
+        v1.loc[v1["item_id"] == b2ids[1], ["q1", "q1_blind", "q1_am"]] = ["dung", "dung", ""]          # âm cũ đúng
+        v1.loc[v1["item_id"] == b2ids[2], ["q1", "q1_blind", "q1_am"]] = ["sai_am", "sai_am", "sự"]    # âm không đổi -> cả hai sai
+        pos_id = kh[kh["tang"] == "T4_MOI_DUONG"]["item_id"].iloc[0]
+        v1.loc[v1["item_id"] == pos_id, ["q1", "q1_blind"]] = "sai_crop"
+        rep_id = kh[kh["tang"] == "T5_LAP"]["item_id"].iloc[0]
+        orig_q1 = v1.loc[v1["item_id"] == rep_id, "q1_blind"].iloc[0]
+        v1.loc[v1["item_id"] == rep_id, ["q1", "q1_blind"]] = "khong_ro" if orig_q1 != "khong_ro" else "dung"
+        a_ids = kh[kh["stratum"] == "CHAR_A|eq|detector"]["item_id"].tolist()
+        v1.loc[v1["item_id"] == a_ids[7], ["q1", "q1_blind"]] = "khong_ro"                          # ô KHÔNG bị lặp
+        t1_ids = kh[kh["tang"] == "T1_GATE"]["item_id"].tolist()[:5]
+        v1.loc[v1["item_id"].isin(t1_ids), ["q1", "q1_blind"]] = "sai_am"
+        t1_reps = kh[kh["repeat_of"].isin(t1_ids)]["item_id"].tolist()                  # bản lặp của ô T1 đổi theo (người nhất quán)
+        v1.loc[v1["item_id"].isin(t1_reps), ["q1", "q1_blind"]] = "sai_am"
+        recs = [{k: (None if (isinstance(x, float) and np.isnan(x)) else x) for k, x in r.items()}
+                for r in v1.to_dict("records")]
+        recs.append(dict(recs[0], item_id="ffffffffffff"))                              # id lạ
+        recs.append(dict(recs[1], q1="khong_ro", q1_blind="khong_ro", exported_at=recs[1]["exported_at"] - 5))  # bản CŨ hơn -> bị bỏ
+        f1 = d / "verdicts_edit.jsonl"
+        f1.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in recs) + "\n", encoding="utf-8")
+        rep1 = ekc.build(d, [f1], labels, include_ai=True)
+        it1 = rep1["integrity"]
+        check("id lạ bị bắt (1) và báo động", it1["n_unknown_id"] == 1 and any("KHÔNG có trong khoá" in a for a in rep1["alarms"]))
+        check("trùng item_id: giữ bản exported_at MỚI nhất (bản cũ khong_ro bị bỏ)",
+              rep1["verdict_input"]["n_dup_item"] == 1
+              and rep1["raw_counts"]["q1"]["khong_ro"] == 1 + int(orig_q1 != "khong_ro"))
+        check("mồi dương rớt 1/3 (Q1 mù = sai_crop) -> độ chính xác 66,7 %, BÁO ĐỘNG",
+              approx(rep1["decoys"]["pos"]["accuracy"], 2 / 3, 1e-12) and rep1["decoys"]["alarm"]
+              and rep1["decoys"]["pos"]["failed_ids"] == [pos_id])
+        check("lặp lệch 1/10 -> κ Q1 < 1, id lệch được liệt kê",
+              rep1["repeats"]["q1"]["kappa"] < 1.0 and rep1["repeats"]["disagree_ids_q1"] == [rep_id])
+        pa1 = rep1["precision"]["tiers"]["CHAR_A"]["q1"]
+        check("khong_ro loại khỏi mẫu số: n_scored giảm 1, n_khong_ro = 1",
+              pa1["n_scored"] == nA - 1 and pa1["n_khong_ro"] == 1)
+        t1b = rep1["t1_gate"]
+        check("T1: 5/150 lỗi -> cận trên CP > 3 % -> CHƯA đủ điều kiện",
+              t1b["n_err"] == 5 and t1b["err_upper_cp95"] > 0.03 and t1b["eligible"] is False)
+        b2 = rep1["t3"]["b2"]["counts"]
+        check("T3-B2: phân loại âm mới đúng / âm cũ đúng / cả hai sai (âm không đổi)",
+              b2["am_moi_dung"] == 1 and b2["am_cu_dung"] == 1 and b2["ca_hai_sai"] == 1)
+        md = ekc.to_markdown(rep1)
+        check("markdown có đủ mục 0-8 và JSON hoá được",
+              all(h in md for h in ("## 0. Toàn vẹn", "## 1. Ô mồi", "## 2. Lặp ẩn", "## 3. Dwell",
+                                    "## 4. Precision", "## 5. T1", "## 6. T2", "## 7. T3"))
+              and json.dumps(ekc._jsonable(rep1), ensure_ascii=False))
+
+        # 7b. hai pha: q1 cuối đổi sau khi lộ mã -> ước lượng vẫn dùng q1_blind; verdict thế hệ cũ -> báo động
+        v7, _ = ekc.simulate_verdicts(kh, seed=3, noise=0.0, err=err, q2_err=q2e, p_change_after_reveal=0.3)  # cùng sự thật seed 3
+        n_ch = int((v7["n_q1_change_after_reveal"] > 0).sum())
+        recs7 = [{k: (None if (isinstance(x, float) and np.isnan(x)) else x) for k, x in r.items()}
+                 for r in v7.to_dict("records")]
+        f7 = d / "verdicts_reveal.jsonl"
+        f7.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in recs7) + "\n", encoding="utf-8")
+        rep7 = ekc.build(d, [f7], labels, include_ai=True)
+        pa7 = rep7["precision"]["tiers"]["CHAR_A"]["q1"]
+        check("đổi Q1 sau khi lộ mã ở 30 % ô có mã: precision CHAR_A KHÔNG đổi (dùng q1_blind), số đổi được đếm",
+              n_ch > 0 and pa7["n_ok"] == pa["n_ok"] and pa7["n_scored"] == pa["n_scored"]
+              and rep7["dwell"]["n_q1_changed_after_reveal"] == n_ch
+              and rep7["dwell"]["n_q1_blind_ne_final"] == n_ch, f"n_ch={n_ch} {rep7['dwell'].get('n_q1_changed_after_reveal')}")
+        old = [{k: x for k, x in r.items() if k not in ("q1_blind", "dwell_q1_ms", "n_q1_change_after_reveal", "revealed_at")}
+               for r in recs7]
+        f8 = d / "verdicts_old.jsonl"
+        f8.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in old) + "\n", encoding="utf-8")
+        rep8 = ekc.build(d, [f8], labels, include_ai=True)
+        check("verdict thế hệ cũ (không q1_blind): dùng q1 cuối + BÁO ĐỘNG 'không mù giữa CHAR và SYL'",
+              rep8["verdict_input"]["n_without_q1_blind"] == len(kh)
+              and any("q1_blind" in a for a in rep8["alarms"]) and rep8["q1_source"].startswith("q1 cuối"))
+
+        # 8. bộ nhãn đổi sau khi rút mẫu -> labels_sha256 SAI + báo động
+        labels.write_text("image,label\na.png,子\n", encoding="utf-8")
+        rep2 = ekc.build(d, files, labels, include_ai=True)
+        check("labels_final.csv đổi -> labels_sha256_ok False + báo động",
+              rep2["integrity"]["labels_sha256_ok"] is False and any("đã đổi" in a for a in rep2["alarms"]))
+
+        # 9. nhiễu 5 %: mồi ≈ 90 % (2 câu × 95 %), κ < 1 nhưng > 0,5, precision lệch sự thật ≤ 10 điểm
+        v5, truth5 = ekc.simulate_verdicts(kh, seed=11, noise=0.05, err=err, q2_err=q2e)
+        f5 = d / "verdicts_n5.jsonl"
+        recs5 = [{k: (None if (isinstance(x, float) and np.isnan(x)) else x) for k, x in r.items()}
+                 for r in v5.to_dict("records")]
+        f5.write_text("\n".join(json.dumps(r, ensure_ascii=False) for r in recs5) + "\n", encoding="utf-8")
+        rep5 = ekc.build(d, [f5], labels if False else None, include_ai=True)
+        n_noisy = int((truth5["truth_q1"] != truth5["ans_q1"]).sum())
+        check("nhiễu 5 %: bộ giả lập thật sự đổi câu trả lời, ước lượng vẫn chạy, κ Q1 trong (0,5; 1]",
+              0 < n_noisy < 0.15 * len(kh) and 0.5 < rep5["repeats"]["q1"]["kappa"] <= 1.0, f"noisy={n_noisy}")
+        pa5 = rep5["precision"]["tiers"]["CHAR_A"]["q1"]
+        t5A = truth5.merge(kh[["item_id", "tier_v3"]], on="item_id")
+        t5A = t5A[(t5A["tang"] == "MAIN") & (t5A["tier_v3"] == "CHAR_A") & (t5A["ans_q1"] != "khong_ro")]
+        check("nhiễu 5 %: precision CHAR_A == đếm trên câu trả lời NHIỄU (không phải sự thật), tỉ lệ nhiễu 1–12 %",
+              pa5["n_ok"] == int((t5A["ans_q1"] == "dung").sum()) and pa5["n_scored"] == len(t5A)
+              and 0.01 <= n_noisy / len(kh) <= 0.12, f"{pa5} noisy={n_noisy}/{len(kh)}")
+        check("không có labels -> labels_sha256_ok None + báo động 'không đối chiếu'",
+              rep5["integrity"]["labels_sha256_ok"] is None and any("không có labels" in a for a in rep5["alarms"]))
+
+        # 10. pilot: dùng KHOA_pilot/manifest_pilot, KHÔNG có precision
+        import shutil
+        shutil.copy(khoa, d / "_khoa" / "KHOA_pilot.jsonl")
+        shutil.copy(man, d / "_khoa" / "manifest_pilot.jsonl")
+        repp = ekc.build(d, files, None, pilot=True, include_ai=True)
+        check("--pilot: báo cáo ngắn (mồi/κ/dwell), không có precision/T1", "precision" not in repp and "decoys" in repp
+              and "Pilot chỉ đo" in ekc.to_markdown(repp))
+
+
 # --------------------------------------------------------------------------- #
 def main() -> int:
     print("=" * 64)
@@ -966,6 +1381,8 @@ def main() -> int:
     test_verdict_dir()
     test_report_combined()
     test_interrater()
+    test_khoi_c_batch()
+    test_estimate_khoi_c()
     if not LABELS.exists():
         print(f"[warn] {LABELS} not found — skipping data-dependent tests")
     else:

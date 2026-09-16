@@ -1,0 +1,502 @@
+{
+  "batch": "khoi_c_2026-09-16",
+  "seed": 20260916,
+  "labels_path": "dataset_out/labels_final.csv",
+  "labels_sha256": "8da7da81fc9c1da271549153d26cef4837cb001ae3e2c3589047c59d2d64ce8b",
+  "batch_sha256_KHOA": "7cb21bafb604d4c92ba81187d9ce5d6550340b331718729e58fbd95aafe0cbf7",
+  "n_items_total": 1279,
+  "n_cells": 1179,
+  "n_repeat": 100,
+  "min_gap_repeat": 100,
+  "repeat_gap_min_observed": 102,
+  "sessions": [
+    {
+      "session": 1,
+      "session_id": "KC20260916-S1",
+      "html": "phien_1.html",
+      "n": 256,
+      "verdict_file": "verdicts_KC20260916-S1.jsonl"
+    },
+    {
+      "session": 2,
+      "session_id": "KC20260916-S2",
+      "html": "phien_2.html",
+      "n": 256,
+      "verdict_file": "verdicts_KC20260916-S2.jsonl"
+    },
+    {
+      "session": 3,
+      "session_id": "KC20260916-S3",
+      "html": "phien_3.html",
+      "n": 256,
+      "verdict_file": "verdicts_KC20260916-S3.jsonl"
+    },
+    {
+      "session": 4,
+      "session_id": "KC20260916-S4",
+      "html": "phien_4.html",
+      "n": 256,
+      "verdict_file": "verdicts_KC20260916-S4.jsonl"
+    },
+    {
+      "session": 5,
+      "session_id": "KC20260916-S5",
+      "html": "phien_5.html",
+      "n": 255,
+      "verdict_file": "verdicts_KC20260916-S5.jsonl"
+    }
+  ],
+  "tang": {
+    "MAIN": 600,
+    "T1_GATE": 300,
+    "T2_CHAIN": 100,
+    "T3_B2": 19,
+    "T3_B5": 30,
+    "T4_MOI_AM": 45,
+    "T4_MOI_DUONG": 45,
+    "T5_LAP": 100,
+    "T6_NGUOI": 40
+  },
+  "strata": [
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_A|eq|detector",
+      "tier_v3": "CHAR_A",
+      "col_class": "eq",
+      "box_class": "detector",
+      "N_h": 19535,
+      "n_h": 125,
+      "design_weight": 156.28
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_A|eq|legacy_locked_col",
+      "tier_v3": "CHAR_A",
+      "col_class": "eq",
+      "box_class": "legacy_locked_col",
+      "N_h": 14685,
+      "n_h": 93,
+      "design_weight": 157.9032
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_A|eq|midpoint_split",
+      "tier_v3": "CHAR_A",
+      "col_class": "eq",
+      "box_class": "midpoint_split",
+      "N_h": 491,
+      "n_h": 5,
+      "design_weight": 98.2
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_A|ne|detector",
+      "tier_v3": "CHAR_A",
+      "col_class": "ne",
+      "box_class": "detector",
+      "N_h": 7149,
+      "n_h": 45,
+      "design_weight": 158.8667
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_A|ne|legacy_locked_col",
+      "tier_v3": "CHAR_A",
+      "col_class": "ne",
+      "box_class": "legacy_locked_col",
+      "N_h": 4390,
+      "n_h": 27,
+      "design_weight": 162.5926
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_A|ne|midpoint_split",
+      "tier_v3": "CHAR_A",
+      "col_class": "ne",
+      "box_class": "midpoint_split",
+      "N_h": 493,
+      "n_h": 5,
+      "design_weight": 98.6
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_B|eq|detector",
+      "tier_v3": "CHAR_B",
+      "col_class": "eq",
+      "box_class": "detector",
+      "N_h": 1242,
+      "n_h": 39,
+      "design_weight": 31.8462
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_B|eq|legacy_locked_col",
+      "tier_v3": "CHAR_B",
+      "col_class": "eq",
+      "box_class": "legacy_locked_col",
+      "N_h": 939,
+      "n_h": 29,
+      "design_weight": 32.3793
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_B|eq|midpoint_split",
+      "tier_v3": "CHAR_B",
+      "col_class": "eq",
+      "box_class": "midpoint_split",
+      "N_h": 29,
+      "n_h": 5,
+      "design_weight": 5.8
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_B|ne|detector",
+      "tier_v3": "CHAR_B",
+      "col_class": "ne",
+      "box_class": "detector",
+      "N_h": 468,
+      "n_h": 14,
+      "design_weight": 33.4286
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_B|ne|legacy_locked_col",
+      "tier_v3": "CHAR_B",
+      "col_class": "ne",
+      "box_class": "legacy_locked_col",
+      "N_h": 303,
+      "n_h": 8,
+      "design_weight": 37.875
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_B|ne|midpoint_split",
+      "tier_v3": "CHAR_B",
+      "col_class": "ne",
+      "box_class": "midpoint_split",
+      "N_h": 36,
+      "n_h": 5,
+      "design_weight": 7.2
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "SYL|eq|detector",
+      "tier_v3": "SYL",
+      "col_class": "eq",
+      "box_class": "detector",
+      "N_h": 7752,
+      "n_h": 61,
+      "design_weight": 127.082
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "SYL|eq|legacy_locked_col",
+      "tier_v3": "SYL",
+      "col_class": "eq",
+      "box_class": "legacy_locked_col",
+      "N_h": 5699,
+      "n_h": 45,
+      "design_weight": 126.6444
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "SYL|eq|midpoint_split",
+      "tier_v3": "SYL",
+      "col_class": "eq",
+      "box_class": "midpoint_split",
+      "N_h": 211,
+      "n_h": 5,
+      "design_weight": 42.2
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "SYL|ne|detector",
+      "tier_v3": "SYL",
+      "col_class": "ne",
+      "box_class": "detector",
+      "N_h": 2965,
+      "n_h": 22,
+      "design_weight": 134.7727
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "SYL|ne|legacy_locked_col",
+      "tier_v3": "SYL",
+      "col_class": "ne",
+      "box_class": "legacy_locked_col",
+      "N_h": 1704,
+      "n_h": 12,
+      "design_weight": 142.0
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "SYL|ne|midpoint_split",
+      "tier_v3": "SYL",
+      "col_class": "ne",
+      "box_class": "midpoint_split",
+      "N_h": 223,
+      "n_h": 5,
+      "design_weight": 44.6
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "REVIEW|eq|detector",
+      "tier_v3": "REVIEW",
+      "col_class": "eq",
+      "box_class": "detector",
+      "N_h": 5196,
+      "n_h": 17,
+      "design_weight": 305.6471
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "REVIEW|eq|legacy_locked_col",
+      "tier_v3": "REVIEW",
+      "col_class": "eq",
+      "box_class": "legacy_locked_col",
+      "N_h": 3678,
+      "n_h": 12,
+      "design_weight": 306.5
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "REVIEW|eq|midpoint_split",
+      "tier_v3": "REVIEW",
+      "col_class": "eq",
+      "box_class": "midpoint_split",
+      "N_h": 197,
+      "n_h": 5,
+      "design_weight": 39.4
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "REVIEW|ne|detector",
+      "tier_v3": "REVIEW",
+      "col_class": "ne",
+      "box_class": "detector",
+      "N_h": 2295,
+      "n_h": 6,
+      "design_weight": 382.5
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "REVIEW|ne|legacy_locked_col",
+      "tier_v3": "REVIEW",
+      "col_class": "ne",
+      "box_class": "legacy_locked_col",
+      "N_h": 1262,
+      "n_h": 5,
+      "design_weight": 252.4
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "REVIEW|ne|midpoint_split",
+      "tier_v3": "REVIEW",
+      "col_class": "ne",
+      "box_class": "midpoint_split",
+      "N_h": 233,
+      "n_h": 5,
+      "design_weight": 46.6
+    },
+    {
+      "tang": "T1_GATE",
+      "stratum": "T1|gate09|stt11",
+      "N_h": 265,
+      "n_h": 100,
+      "design_weight": 2.65,
+      "N_gate_total": 1025
+    },
+    {
+      "tang": "T1_GATE",
+      "stratum": "T1|gate09|stt2",
+      "N_h": 356,
+      "n_h": 100,
+      "design_weight": 3.56,
+      "N_gate_total": 1025
+    },
+    {
+      "tang": "T1_GATE",
+      "stratum": "T1|gate09|stt4",
+      "N_h": 402,
+      "n_h": 100,
+      "design_weight": 4.02,
+      "N_gate_total": 1025
+    },
+    {
+      "tang": "T2_CHAIN",
+      "stratum": "T2|chain",
+      "n_chains": 24,
+      "n_chains_total": 114,
+      "N_h": 404,
+      "n_h": 100,
+      "n_qd01": 8,
+      "run_len_hist": {
+        "3": 4,
+        "4": 13,
+        "5": 6,
+        "6": 1
+      },
+      "design_weight": null
+    },
+    {
+      "tang": "T3_B2",
+      "stratum": "T3|b2",
+      "N_h": 19,
+      "n_h": 19,
+      "design_weight": 1.0
+    },
+    {
+      "tang": "T3_B5",
+      "stratum": "T3|b5",
+      "N_h": 117,
+      "n_h": 30,
+      "design_weight": 3.9
+    },
+    {
+      "tang": "T4_MOI_DUONG",
+      "stratum": "T4|moi_duong|CHAR_A",
+      "tier_v3": "CHAR_A",
+      "N_h": 1180,
+      "n_h": 26,
+      "design_weight": 45.3846,
+      "dap_an": {
+        "q1": "dung",
+        "q2": "dung (theo phán quyết QĐ-01, chỉ đếm)"
+      }
+    },
+    {
+      "tang": "T4_MOI_DUONG",
+      "stratum": "T4|moi_duong|CHAR_B",
+      "tier_v3": "CHAR_B",
+      "N_h": 281,
+      "n_h": 5,
+      "design_weight": 56.2,
+      "dap_an": {
+        "q1": "dung",
+        "q2": "dung (theo phán quyết QĐ-01, chỉ đếm)"
+      }
+    },
+    {
+      "tang": "T4_MOI_DUONG",
+      "stratum": "T4|moi_duong|REVIEW",
+      "tier_v3": "REVIEW",
+      "N_h": 36,
+      "n_h": 3,
+      "design_weight": 12.0,
+      "dap_an": {
+        "q1": "dung",
+        "q2": "dung (theo phán quyết QĐ-01, chỉ đếm)"
+      }
+    },
+    {
+      "tang": "T4_MOI_DUONG",
+      "stratum": "T4|moi_duong|SYL",
+      "tier_v3": "SYL",
+      "N_h": 515,
+      "n_h": 11,
+      "design_weight": 46.8182,
+      "dap_an": {
+        "q1": "dung",
+        "q2": "dung (theo phán quyết QĐ-01, chỉ đếm)"
+      }
+    },
+    {
+      "tang": "T4_MOI_AM",
+      "stratum": "T4|moi_am",
+      "n_h": 45,
+      "dap_an": {
+        "q1": "sai_am",
+        "q2": "sai"
+      },
+      "design_weight": null
+    },
+    {
+      "tang": "T6_NGUOI",
+      "stratum": "T6|nguoi_chua_khoa",
+      "N_h": 283,
+      "n_h": 40,
+      "design_weight": 7.075,
+      "tier_v3_mix": {
+        "CHAR_B": 6,
+        "REVIEW": 6,
+        "SYL": 28
+      },
+      "N_tier_v3": {
+        "CHAR_A": 1,
+        "CHAR_B": 41,
+        "REVIEW": 39,
+        "SYL": 202
+      }
+    }
+  ],
+  "crop_source": {
+    "file": 880,
+    "scan_cut": 399
+  },
+  "missing_ref_glyph": 632,
+  "q2_items": 647,
+  "questions": {
+    "q1": [
+      "dung",
+      "sai_crop",
+      "sai_am",
+      "khong_ro"
+    ],
+    "q2": [
+      "dung",
+      "sai",
+      "khong_ro"
+    ]
+  },
+  "two_phase": {
+    "q1_blind_before_code": true,
+    "note": "MÃ + glyph chỉ lộ sau khi Q1 đã trả lời; verdict ghi q1_blind / q1 / n_q1_change_after_reveal"
+  },
+  "lap_alloc": {
+    "MAIN|CHAR_A": 20,
+    "MAIN|CHAR_B": 15,
+    "MAIN|SYL": 15,
+    "MAIN|REVIEW": 15,
+    "T1_GATE|*": 15,
+    "T2_CHAIN|*": 20
+  },
+  "blind_check": {
+    "patterns": [
+      "gold/",
+      "syllable/",
+      "review/",
+      "tier",
+      "rule",
+      "stt2",
+      "stt4",
+      "stt11",
+      "page_",
+      "CHAR_A",
+      "CHAR_B",
+      "REVIEW",
+      "box_source",
+      "design_weight",
+      "stratum",
+      "qd01",
+      "moi_",
+      "repeat",
+      "gate",
+      "chain",
+      "decoy",
+      "KHOA",
+      "nguoi_chua",
+      "T4_",
+      "T5_",
+      "T6_"
+    ],
+    "leaks": {},
+    "nguoi_shown": {
+      "n_shown_nguoi": 132,
+      "n_qd01": 87,
+      "n_khong_khoa": 45,
+      "frac_qd01": 0.6590909090909091,
+      "n_shown_2029A": 91
+    }
+  },
+  "note_665_syl_co_ma": "tier_v3=SYL nhưng tier=GOLD (665 ô toàn bộ) vẫn có `label` trong bộ giao nộp -> Q2 vẫn hỏi cho các ô đó (đo đúng cái đem nộp)."
+}

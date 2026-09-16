@@ -1,0 +1,134 @@
+{
+  "batch": "khoi_c_2026-09-16",
+  "pilot": true,
+  "seed": 20260917,
+  "labels_path": "dataset_out/labels_final.csv",
+  "labels_sha256": "8da7da81fc9c1da271549153d26cef4837cb001ae3e2c3589047c59d2d64ce8b",
+  "batch_sha256_KHOA": "efb7c119cb1ceb4a6841ef1ea6553ecd6129370d0b62d3635155a7486e556a38",
+  "main_batch_sha256_KHOA": "7cb21bafb604d4c92ba81187d9ce5d6550340b331718729e58fbd95aafe0cbf7",
+  "n_items_total": 50,
+  "n_cells": 45,
+  "n_repeat": 5,
+  "min_gap_repeat": 15,
+  "repeat_gap_min_observed": 15,
+  "disjoint_from_main": true,
+  "sessions": [
+    {
+      "session": 0,
+      "session_id": "KC20260916-PILOT",
+      "html": "pilot_50.html",
+      "n": 50,
+      "verdict_file": "verdicts_KC20260916-PILOT.jsonl"
+    }
+  ],
+  "tang": {
+    "MAIN": 40,
+    "T4_MOI_AM": 3,
+    "T4_MOI_DUONG": 2,
+    "T5_LAP": 5
+  },
+  "strata": [
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_A|pilot",
+      "tier_v3": "CHAR_A",
+      "N_h": 46349,
+      "n_h": 20,
+      "design_weight": 2317.45
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "CHAR_B|pilot",
+      "tier_v3": "CHAR_B",
+      "N_h": 2898,
+      "n_h": 7,
+      "design_weight": 414.0
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "SYL|pilot",
+      "tier_v3": "SYL",
+      "N_h": 18338,
+      "n_h": 10,
+      "design_weight": 1833.8
+    },
+    {
+      "tang": "MAIN",
+      "stratum": "REVIEW|pilot",
+      "tier_v3": "REVIEW",
+      "N_h": 12496,
+      "n_h": 3,
+      "design_weight": 4165.3333
+    },
+    {
+      "tang": "T4_MOI_DUONG",
+      "stratum": "T4|moi_duong|CHAR_A",
+      "tier_v3": "CHAR_A",
+      "N_h": 1180,
+      "n_h": 1,
+      "design_weight": 1180.0,
+      "dap_an": {
+        "q1": "dung",
+        "q2": "dung (theo phán quyết QĐ-01, chỉ đếm)"
+      }
+    },
+    {
+      "tang": "T4_MOI_DUONG",
+      "stratum": "T4|moi_duong|SYL",
+      "tier_v3": "SYL",
+      "N_h": 515,
+      "n_h": 1,
+      "design_weight": 515.0,
+      "dap_an": {
+        "q1": "dung",
+        "q2": "dung (theo phán quyết QĐ-01, chỉ đếm)"
+      }
+    },
+    {
+      "tang": "T4_MOI_AM",
+      "stratum": "T4|moi_am",
+      "n_h": 3,
+      "dap_an": {
+        "q1": "sai_am",
+        "q2": "sai"
+      },
+      "design_weight": null
+    }
+  ],
+  "crop_source": {
+    "file": 46,
+    "scan_cut": 4
+  },
+  "blind_check": {
+    "patterns": [
+      "gold/",
+      "syllable/",
+      "review/",
+      "tier",
+      "rule",
+      "stt2",
+      "stt4",
+      "stt11",
+      "page_",
+      "CHAR_A",
+      "CHAR_B",
+      "REVIEW",
+      "box_source",
+      "design_weight",
+      "stratum",
+      "qd01",
+      "moi_",
+      "repeat",
+      "gate",
+      "chain",
+      "decoy",
+      "KHOA",
+      "nguoi_chua",
+      "T4_",
+      "T5_",
+      "T6_"
+    ],
+    "leaks": {}
+  },
+  "purpose": "C-1: đo dwell / κ nội tại / mồi trước khi chấm thật — KHÔNG trích precision"
+}

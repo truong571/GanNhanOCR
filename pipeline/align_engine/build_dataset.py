@@ -2,13 +2,27 @@
 
 Two passes:
   PASS 1 — align every page (production-faithful: detect_nom_columns_v3 + parse_v5
-           + bbox_fix offset + banded anchored DP + re-segment) and tier each pair
-           via consensus.decide_label.
-  PROMOTE — cross-page-consistent REVIEW "unconfirmed" pairs -> SYLLABLE tier
-           (semantic/nghĩa borrowings the phonetic dict can't contain). [#6]
-  SPLIT  — leakage-safe train/val/test by group=(book,page,column). [#4]
-  PASS 2 — materialize crops (GOLD + SILVER + SYLLABLE; +REVIEW with --crop-review)
-           with per-crop quality columns (ink%, size, md5, seg_flag). [#3,#5]
+           + bbox_fix offset + banded anchored DP + re-segment). Mặc định (--two-pass)
+           chỉ GOM `col_states` theo trang; --no-two-pass giữ đường cũ (tier ngay).
+  PASS 1b— (flow N4a–N4c) `pair_pages` LOO từ MỌI match lượt 1 → DP lại từng cột với
+           cost_fn neo (min(base, ANCHOR_CAP) khi cặp thấy ở ≥2 trang khác) + posterior
+           p_register cùng cost_fn → gán hộp 3 nhánh theo ops lượt 2 (A-6, flow N4d,
+           align_production.assign_boxes; --box-rule legacy = trọn gói luật cũ; cột có
+           ô khoá QĐ-01 luôn chạy luật cũ) → cặp lượt 2 (chưa tier).
+  PASS 1c— (A-7, flow N5a–N5h) tier_v3 NGUYÊN VĂN (tier_v3.py: feats LOO + posterior)
+           thay decide_label + L2 + L3 + L5; chốt is_plausible trước tier; L1 sửa dấu
+           âm CÓ CỔNG 2-gram ÂM–ÂM; KHOÁ QĐ-01 theo (book,page,column,nom_idx)
+           (config/qd01_cells.csv + qd01a_decisions.csv); 'người' ngoài khoá mang
+           nhãn 㝵 -> REVIEW. A-8 (N5f/N5h/N5i): config/decisions.yaml — mục da_ky
+           corpus_readings -> GOLD `corpus_reading:<id>`; lop_nham đọc từ yaml;
+           di_the -> cột `label_canonical` (mặc định = label, cả hai đường chạy).
+           Chỉ ở --two-pass; --no-two-pass giữ đường cũ
+           (decide_label + L1/L3 + PROMOTE) để tái lập bộ 64.525.
+  SPLIT  — [BỎ 16/09, A-10] không chia train/val/test; cần thì tự chia theo trang:
+           int(md5(f'{book}|{page}').hexdigest(),16)%100 <80 train / <90 val / còn lại test.
+  PASS 2 — materialize crops (GOLD + SYLLABLE + ô QĐ-01 pending; +REVIEW with
+           --crop-review); ô khoá QĐ-01 cắt bằng bbox_cu/prev/next_cu; dọn thư mục
+           đích trước khi cắt; per-crop quality columns (ink%, size, md5, seg_flag).
 
 Tiers (label_level separates char- vs syllable-supervision):
   GOLD     label_level=char     dict-confirmed char (direct, or unique similar-bridge)
@@ -28,7 +42,9 @@ import csv
 import glob
 import hashlib
 import json
+import os
 import re
+import shutil
 import sys
 from collections import Counter, defaultdict
 from pathlib import Path
@@ -44,11 +60,14 @@ from core.text.dictionary import (                                    # noqa: E4
     build_nom_to_qn, load_qn_to_nom, load_similarity_dict)
 from core.text.text_utils import is_plausible_qn_syllable, strip_all  # noqa: E402
 from pipeline.align_engine import align_production as ap_mod          # noqa: E402
+from pipeline.align_engine import anchor_align as aa                  # noqa: E402
 from pipeline.align_engine.align_production import (                    # noqa: E402
     DetectorUnavailableError, align_page, preflight_detector)
 from pipeline.align_engine.consensus import (                         # noqa: E402
     AM_DA_QUYET, am_da_quyet, chuan_am, decide_label)
 from pipeline.align_engine.bbox_fix import tighten_box, carve_neighbor_ink  # noqa: E402
+from pipeline.align_engine import tier_v3 as tv3                      # noqa: E402
+from pipeline import decisions as dcs                                 # noqa: E402
 
 
 def _book_code(name: str) -> str:
@@ -85,6 +104,81 @@ L3_MIN_ATTEST = 1      # L3 chỉ đòi cặp (chữ-cầu, âm) ĐÃ TỪNG đ�
 RULE_L1 = "s1_inter_s2_direct_am_sua_dau"
 RULE_L3 = "s1_inter_s2_similar_cot_lech"
 
+# --------------------------------------------------------------------------- #
+# PASS 1b · ĐỆ QUY HAI LƯỢT (flow N4a–N4c). Neo NGỮ LIỆU, không phải neo từ điển.
+# --------------------------------------------------------------------------- #
+# Lượt 1 ghép bằng từ điển. Lượt 2 hạ chi phí một cặp (chữ, âm) xuống ANCHOR_CAP
+# nếu chính cặp ấy đã được lượt 1 ghép ở >= ANCHOR_MIN_OTHER_PAGES TRANG KHÁC
+# (leave-one-out theo (book, page): trang đang xét không tự neo mình). Lấy từ
+# MỌI match lượt 1, KHÔNG chỉ confirmed — nếu chỉ lấy confirmed thì cặp ngoài từ
+# điển không bao giờ được neo và đệ quy vô tác dụng. Trần 2,0 nat (không phải 0) để
+# một cặp neo sai không kéo cả đoạn. Cờ `confirmed` vẫn do từ điển quyết (is_confirmed).
+ANCHOR_CAP = aa.ANCHOR_CAP        # đọc từ engine; config step2.anchor_cap ghi đè (main)
+ANCHOR_MIN_OTHER_PAGES = 2        # cặp phải thấy ở >= ngần này trang KHÁC trang đang xét
+
+
+def build_pair_pages(page_states):
+    """{(ocr_char, âm-thường): {(book, page)}} từ MỌI op 'match' của ops lượt 1.
+
+    `page_states` = [(book_code, page, rec)] với rec["col_states"] từ align_page.
+    """
+    pair_pages: dict[tuple[str, str], set] = defaultdict(set)
+    for book, page, rec in page_states:
+        for cs in rec.get("col_states") or ():
+            for o in cs["ops1"]:
+                if o["op"] == "match" and o.get("ocr_char"):
+                    pair_pages[(o["ocr_char"], str(o["syllable"] or "").lower())].add((book, page))
+    return pair_pages
+
+
+def anchored_cost_fn(pair_pages, here, qn_to_nom, similar, anchor_cap=None,
+                     min_other=ANCHOR_MIN_OTHER_PAGES):
+    """cost_fn(c, s) cho realign_column/posterior_matches của MỘT cột ở trang `here`:
+    min(base, anchor_cap) khi (c, s) thấy ở >= min_other trang khác; else base."""
+    cap = ANCHOR_CAP if anchor_cap is None else anchor_cap
+
+    def cost_fn(c, s):
+        base = aa.substitution_cost(c, s, qn_to_nom, similar)
+        pages = pair_pages.get((c, (s or "").lower()))
+        if pages and len(pages) - (1 if here in pages else 0) >= min_other:
+            return min(base, cap)
+        return base
+    return cost_fn
+
+
+def realign_with_anchors(chars, syllables, qn_to_nom, similar, pair_pages, here,
+                         anchor_cap=None):
+    """DP lượt 2 + posterior cùng cost_fn (N4b, N4c). Trả (ops2, post, band_touched,
+    n_anchored) với n_anchored = số cặp match lượt 2 mà neo THẬT SỰ hạ chi phí
+    (cost_fn < substitution_cost, tức cặp ngoài từ điển được ngữ liệu neo — "ô được
+    neo" N4a); cặp confirmed (0,0) có khoá trong pair_pages KHÔNG tính."""
+    cost_fn = anchored_cost_fn(pair_pages, here, qn_to_nom, similar, anchor_cap)
+    ops2 = aa.realign_column(chars, syllables, qn_to_nom, similar, cost_fn=cost_fn)
+    post = aa.posterior_matches(chars, syllables, qn_to_nom, similar, T=1.0, cost_fn=cost_fn)
+    touched = aa.band_touched(ops2, len(chars), len(syllables))
+    n_anch = 0
+    for o in ops2:
+        if o["op"] != "match" or not o.get("ocr_char"):
+            continue
+        if cost_fn(o["ocr_char"], o["syllable"]) < aa.substitution_cost(
+                o["ocr_char"], o["syllable"], qn_to_nom, similar):
+            n_anch += 1
+    return ops2, post, touched, n_anch
+
+
+def load_locked_columns(path) -> dict[tuple[str, str], set[int]]:
+    """{(book, page): {column}} các cột có ô khoá QĐ-01 (config/qd01_cells.csv, schema
+    N0d: book,page,column,nom_idx,…). A-6 (N4d): cột ấy chạy trọn gói luật hộp cũ để
+    bbox/md5 của ô khoá không đổi VÀ không trộn hộp cũ–mới trong cùng cột (23 cặp trùng
+    bbox -> census AE-1 cách ly cả hai). Tệp rỗng/None -> không khoá cột nào."""
+    locked: dict[tuple[str, str], set[int]] = defaultdict(set)
+    if not path:
+        return locked
+    with open(path, encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            locked[(row["book"], row["page"])].add(int(row["column"]))
+    return locked
+
 
 def gold_direct_anchors(records):
     """{(ocr_char, âm-thường): (số ô, số trang)} trên riêng ô GOLD-TRỰC-TIẾP."""
@@ -104,7 +198,8 @@ def _du_neo(anchors, key, min_occ=ANCHOR_MIN_OCC, min_pages=ANCHOR_MIN_PAGES):
 
 
 def apply_am_sua_dau(records, qn_to_nom, nom_to_qn, anchors,
-                     min_occ=ANCHOR_MIN_OCC, min_pages=ANCHOR_MIN_PAGES):
+                     min_occ=ANCHOR_MIN_OCC, min_pages=ANCHOR_MIN_PAGES,
+                     bigram_syl_pages=None, colmap=None, corpus=None):
     """L1 · SỬA DẤU CỦA ÂM khi chính ocr_char đã có neo GOLD ở âm cùng khung xương.
 
     VietOCR rụng dấu ("den" cho "đến", "ay" cho "ấy") hoặc lệch thanh. Khi âm sai,
@@ -122,8 +217,20 @@ def apply_am_sua_dau(records, qn_to_nom, nom_to_qn, anchors,
 
     `strip_all` gộp cả dấu tạo chữ nên "vua"/"vừa" cùng khung xương — chính vì thế
     ràng buộc neo GOLD (>=5 ô/>=3 trang) là bắt buộc, nó mới là phần mang bằng chứng.
+
+    CỔNG 2-GRAM ÂM–ÂM (A-7, flow N5e) — khi truyền `bigram_syl_pages` (+ `colmap`,
+    `corpus`): âm ứng viên còn phải THẮNG âm gốc về ngữ cảnh dòng QN, đo bằng
+    `tier_v3.syl_bigram_count` (2-gram âm kề trái + phải, LOO trang):
+      · n(âm mới) > n(âm gốc) -> đổi âm, `l1_support` = hiệu (> 0), tier tính lại
+        bằng feats/tier_v3 trên âm mới (direct nên luôn CHAR_A/CHAR_B -> GOLD, rule
+        RULE_L1 — KHÔNG phải `s1_inter_s2_direct` nên không bao giờ làm neo);
+      · hoà -> GIỮ gốc, `l1_tie` = 1;  · thua -> giữ gốc, `l1_support` < 0.
+    `syllable_ocr/syllable_raw` không bao giờ bị đổi (ghi đè bản in đo trên chúng).
+    Không truyền -> hành vi cũ (đường --no-two-pass).
     """
     n_moi = n_nang = 0
+    n_giu = n_hoa = 0
+    v3 = bigram_syl_pages is not None
     for r in records:
         if r["tier"] == "GOLD":
             continue
@@ -132,7 +239,9 @@ def apply_am_sua_dau(records, qn_to_nom, nom_to_qn, anchors,
             continue
         syl = str(r["syllable"]).lower()
         if am_da_quyet(syl):
-            continue            # CHỐT CHẶN: nhường quyền quyết cho glyph_fix (QĐ-01)
+            # L1 không đổi âm đi/đến âm có phán quyết người: khoá QĐ-01 bám theo âm
+            # của DÒNG QN (`syllable_raw`), L1 viết lại `syllable` sẽ làm hai bên lệch.
+            continue
         if ch in qn_to_nom.get(syl, []):
             continue            # đã là GOLD-trực-tiếp, không việc gì tới đây
         khung = strip_all(syl)
@@ -149,14 +258,42 @@ def apply_am_sua_dau(records, qn_to_nom, nom_to_qn, anchors,
                 cands.append(alt)
         if len(cands) != 1:
             continue
+        alt = cands[0]
+        if v3:
+            col = colmap.get((r["book"], r["page"], int(r["column"])))
+            j = r.get("syl_idx", "")
+            if col is None or j == "":
+                continue
+            pg = (r["book"], r["page"])
+            syls = col["syl"]
+            n_new = tv3.syl_bigram_count(bigram_syl_pages, syls, int(j), alt, pg)
+            n_old = tv3.syl_bigram_count(bigram_syl_pages, syls, int(j), syl, pg)
+            r["l1_support"] = n_new - n_old
+            if n_new == n_old:
+                r["l1_tie"] = 1
+                n_hoa += 1
+                continue
+            if n_new < n_old:
+                n_giu += 1
+                continue
         if r["tier"] == "REVIEW":
             n_moi += 1
         else:
-            n_nang += 1          # SILVER (nhãn do S3 quyết) -> GOLD (nhãn do từ điển quyết)
-        r["syllable"] = cands[0]
+            n_nang += 1          # SILVER/SYLLABLE -> GOLD (nhãn do từ điển quyết)
+        r["syllable"] = alt
         r["label"] = ch
         r["tier"] = "GOLD"
         r["rule"] = RULE_L1
+        if v3:
+            # tính lại feats/tier_v3 trên âm mới (không chạy lại DP: p_register giữ)
+            syls2 = list(col["syl"])
+            syls2[int(j)] = alt
+            f = corpus.feats(col["chars"], syls2, int(r["nom_idx"]), int(j), pg)
+            r["tier_v3"] = tv3.tier_v3(f, float(r["p_register"] or 0.0))
+            r["dict_support"] = f["dict_support"]
+            r["context_evidence"] = tv3.context_evidence(f)
+    if v3:
+        return n_moi, n_nang, n_giu, n_hoa
     return n_moi, n_nang
 
 
@@ -171,6 +308,10 @@ def apply_cot_lech_cau_xuoi(records, qn_to_nom, similar_dict, anchors,
     đến từ thống kê ghép đã xác nhận. Hai cái cùng trỏ một chỗ thì đủ.
 
     Chạy SAU L1 và chỉ trên ô còn `diverged_column` — ô L1 đã cứu thì không đụng lại.
+
+    A-7 (N5c): KHÔNG còn gọi trên đường --two-pass — tier_v3 xử lý cầu tự dạng bằng
+    `sim_unique ∧ ngữ cảnh LOO ∧ p ≥ 0,8` (CHAR_B, đo được 110 ô L3 -> 83/22/5). Giữ
+    hàm cho đường --no-two-pass (tái lập bộ 64.525).
     """
     n = 0
     for r in records:
@@ -231,6 +372,10 @@ def syllable_gate(records, unconf, min_occ=SYL_MIN_OCC, min_pages=SYL_MIN_PAGES,
     thì một chữ như 㝵 mất 1.183 ô "người" trong denominator và âm phổ biến THỨ HAI
     của nó bỗng đủ độ thuần, tức chốt chặn lại đẻ ra đúng cái nó định chặn), nhưng
     KHÔNG BAO GIỜ được trả ra làm cặp hợp lệ.
+
+    A-7 (N5c): KHÔNG còn gọi trên đường --two-pass — tầng SYLLABLE do tier_v3 quyết
+    (bigram | corpus4 | tone, LOO trang, p ≥ 0,5); cổng độ-thuần-theo-chữ này không
+    LOO nên tự khẳng định (48 ô hiện hành rớt khi đo lại). Giữ cho --no-two-pass và selftest.
     """
     cnt = defaultdict(Counter)
     pages_of = defaultdict(lambda: defaultdict(set))
@@ -253,6 +398,272 @@ def syllable_gate(records, unconf, min_occ=SYL_MIN_OCC, min_pages=SYL_MIN_PAGES,
     return syl_ok
 
 
+# --------------------------------------------------------------------------- #
+# PASS 1c (A-7, flow N5a–N5h): tier_v3 + khoá QĐ-01 + 'người' ngoài khoá + flank_gold
+# --------------------------------------------------------------------------- #
+NGUOI_2029A = "\U0002029A"        # 𠊚 — nhãn QĐ-01 (KHÔNG phải 𠊛 U+2029B)
+NGUOI_NHAM = "㝵"                  # nhãn máy hay nhầm cho âm 'người' (lop_nham, N5h)
+# A-8: lop_nham đọc từ config/decisions.yaml (mục da_ky); NGUOI_NHAM/RULE_LOP_NHAM chỉ
+# còn là mặc định khi gọi apply_nguoi_ngoai_khoa không truyền danh sách (selftest/đường cũ)
+RULE_QD01_LOCK = "quyet_dinh_nguoi:qd01_cell_lock"
+RULE_QD01_PENDING = "quyet_dinh_nguoi:pending"
+RULE_QD01A = "quyet_dinh_nguoi:qd01a"
+RULE_LOP_NHAM = "lop_nham:nguoi_2029A_vs_346B"
+# cột cờ/chẩn đoán A-7 — mặc định DÀY (0 cho cờ, '' cho chuỗi) ở cả hai đường chạy
+FIELDS_1C = {"tier_v3": "", "dict_support": "", "context_evidence": "", "l1_support": 0,
+             "l1_tie": 0, "flank_gold": 0, "qd01_locked": 0, "qd01_excluded": 0,
+             "am_da_quyet_ngoai_khoa": 0, "tier_goc": "", "rule_goc": ""}
+
+
+def _parse_bbox(s):
+    """'[x1, y1, x2, y2]' -> [int]*4; ''/None -> None."""
+    if s is None:
+        return None
+    s = str(s).strip()
+    if not s:
+        return None
+    return [int(v) for v in json.loads(s)]
+
+
+def _qd01_key(row) -> tuple:
+    return (row["book"], row["page"], int(row["column"]), int(row["nom_idx"]))
+
+
+def load_qd01_cells_full(path) -> dict[tuple, dict]:
+    """{(book,page,column,nom_idx): dòng} của config/qd01_cells.csv (schema N0d)."""
+    if not path or str(path).lower() == "none" or not Path(path).exists():
+        return {}
+    with open(path, encoding="utf-8", newline="") as f:
+        return {_qd01_key(row): row for row in csv.DictReader(f)}
+
+
+def load_qd01a_decisions(path) -> dict[tuple, dict]:
+    """{(book,page,column,nom_idx): dòng} của config/qd01a_decisions.csv — phán quyết
+    người cho ô trôi (quyet ∈ {giu_2029A, bo, khac:<chữ>, '' = chờ người})."""
+    if not path or not Path(path).exists():
+        return {}
+    out = {}
+    with open(path, encoding="utf-8", newline="") as f:
+        for row in csv.DictReader(f):
+            q = (row.get("quyet") or "").strip()
+            if q and q not in ("giu_2029A", "bo") and not q.startswith("khac:"):
+                raise SystemExit(f"[QĐ-01a] quyet không hợp lệ '{q}' ở {row}")
+            row["quyet"] = q
+            out[_qd01_key(row)] = row
+    return out
+
+
+def apply_tier_v3(records, corpus, colmap):
+    """N5b–N5d: feats LOO + p_register -> tier_v3 -> (tier, rule, label). Chốt trước:
+    âm không hợp lý (`is_plausible_qn_syllable`) -> REVIEW `not_plausible`; ô không có
+    ocr_char -> REVIEW `no_context`. Ghi tier_v3/dict_support/context_evidence."""
+    cross = Counter()
+    for r in records:
+        col = colmap[(r["book"], r["page"], int(r["column"]))]
+        i, j = int(r["nom_idx"]), int(r["syl_idx"])
+        pg = (r["book"], r["page"])
+        f = corpus.feats(col["chars"], col["syl"], i, j, pg)
+        p = float(r["p_register"]) if r.get("p_register", "") != "" else 0.0
+        syl = str(r["syllable"]).lower()
+        ch = r["ocr_char"]
+        if not is_plausible_qn_syllable(syl):
+            t, rule, label = "REVIEW", "not_plausible", ""
+        elif not ch:
+            t, rule, label = "REVIEW", "no_context", ""
+        else:
+            t = tv3.tier_v3(f, p)
+            rule = tv3.rule_of(t, f, p)
+            if t == "CHAR_A" or (t == "CHAR_B" and f["direct"]):
+                label = ch
+            elif t == "CHAR_B":
+                label = corpus.bridge_char(ch, syl)      # chữ cầu duy nhất sim(c) ∩ R
+            else:
+                label = ""
+        r["tier"], r["rule"], r["label"] = tv3.TIER_OF[t], rule, label
+        r["tier_v3"] = t
+        r["dict_support"] = f["dict_support"]
+        r["context_evidence"] = tv3.context_evidence(f)
+        cross[t] += 1
+    return cross
+
+
+def apply_qd01_lock(records, cells, decisions, colmap, built_pages, seg_backend_of):
+    """N5g: khoá QĐ-01 theo (book,page,column,nom_idx) TRONG build.
+
+    Với mỗi ô của qd01_cells.csv thuộc trang đã build:
+      (i)   khớp record ∧ (âm dòng QN == 'người' ∨ quyet giu_2029A) -> ghi đè label 𠊚,
+            tier GOLD, rule RULE_QD01_LOCK, qd01_locked=1, bbox=bbox_cu, prev/next cho
+            PASS 2 = prev/next_bbox_cu, box_source=qd01_locked; giữ tier_goc/rule_goc;
+      (ii)  quyet 'bo' -> giữ tier_v3, qd01_excluded=1; quyet 'khac:<chữ>' -> label chữ ấy,
+            GOLD, rule RULE_QD01A, khoá hộp như (i);
+      (iii) khớp nom_idx nhưng âm khác / thành khe / không khớp -> PENDING: rule
+            RULE_QD01_PENDING, qd01_locked=0, tier giữ theo tier_v3 (khe: record tổng
+            hợp tier REVIEW), ép cắt crop bằng cả hộp mới lẫn bbox_cu (`_bbox_cu`).
+    Dòng của qd01a_decisions NGOÀI cells (A-3: 12 ô GOLD 'người' mã ≠ 𠊚): quyet ''/bo
+    -> qd01_excluded=1 (khong_dung_cho); giu_2029A/khac -> áp như trên.
+    Trả (thống kê, danh sách pending cho $out/qd01a_pending.csv).
+    """
+    idx = {(r["book"], r["page"], int(r["column"]), int(r["nom_idx"])): r
+           for r in records if r.get("nom_idx", "") != ""}
+    max_idx = defaultdict(int)
+    for r in records:
+        max_idx[(r["book"], r["page"])] = max(max_idx[(r["book"], r["page"])], int(r["idx"]))
+    st = Counter()
+    pending = []
+
+    def _lock(r, cell, label, rule):
+        r["tier_goc"], r["rule_goc"] = r["tier"], r["rule"]
+        r["label"], r["tier"], r["rule"] = label, "GOLD", rule
+        r["qd01_locked"] = 1
+        bcu = _parse_bbox(cell.get("bbox_cu"))
+        if bcu:
+            r["bbox"] = bcu
+            r["box_source"] = "qd01_locked"
+            r["_prev_bbox_cu"] = _parse_bbox(cell.get("prev_bbox_cu"))
+            r["_next_bbox_cu"] = _parse_bbox(cell.get("next_bbox_cu"))
+            r["_has_prev_next_cu"] = True
+
+    def _pending(r, cell, ly_do):
+        r["tier_goc"], r["rule_goc"] = r["tier"], r["rule"]
+        r["rule"] = RULE_QD01_PENDING
+        r["qd01_locked"] = 0
+        r["_qd01_pending"] = True
+        r["_bbox_cu"] = _parse_bbox(cell.get("bbox_cu"))
+        pending.append({"book": r["book"], "page": r["page"], "column": r["column"],
+                        "nom_idx": r["nom_idx"], "syl_idx": r.get("syl_idx", ""),
+                        "bbox_cu": cell.get("bbox_cu", ""), "bbox_moi": json.dumps(r.get("bbox")),
+                        "syllable_moi": r.get("syllable", ""), "ocr_char": r.get("ocr_char", ""),
+                        "tier_v3": r.get("tier_v3", ""), "tier_goc": r["tier_goc"],
+                        "rule_goc": r["rule_goc"], "ly_do": ly_do, "_rec": r})
+
+    for key, cell in cells.items():
+        if (key[0], key[1]) not in built_pages:
+            continue
+        st["n_cells_in_build"] += 1
+        dec = decisions.get(key)
+        q = dec["quyet"] if dec else ""
+        r = idx.get(key)
+        if r is None:
+            # thành khe (nom_idx không match) hoặc không khớp (cột không có trong build)
+            col = colmap.get(key[:3])
+            khe = col is not None and key[3] < len(col["chars"])
+            st["n_khe" if khe else "n_khong_khop"] += 1
+            bbox_moi = None
+            if khe and col.get("boxes"):
+                bbox_moi = col["boxes"][key[3]]
+            max_idx[key[:2]] += 1
+            r = {
+                "book": key[0], "page": key[1], "column": key[2], "idx": max_idx[key[:2]],
+                "page_png": col["page_png"] if col else "", "ocr_char": (col["chars"][key[3]] if khe else cell.get("ocr_char", "")),
+                "syllable": "", "bbox": bbox_moi or _parse_bbox(cell.get("bbox_cu")),
+                "tier": "REVIEW", "rule": "no_context", "label": "", "s3_cosine": "",
+                "seg_backend": seg_backend_of.get(key[:2], ""), "nom_idx": key[3], "syl_idx": "",
+                "syllable_ocr": "", "syllable_raw": "", "p_register": "", "band_touched": 0,
+                "n_ocr": col["n_ocr"] if col else "", "n_qn": col["n_qn"] if col else "",
+                "n_det": col["n_det"] if col else "", "count_source": col["count_source"] if col else "",
+                "box_source": (col["box_source"][key[3]] if khe and col.get("box_source") else ""),
+                **FIELDS_1C, "tier_v3": "REVIEW",
+            }
+            records.append(r)
+            idx[key] = r
+            if q == "giu_2029A":            # người đã quyết ở QĐ-01a -> khoá dù thành khe
+                _lock(r, cell, NGUOI_2029A, RULE_QD01_LOCK)
+                st["n_locked"] += 1
+            elif q.startswith("khac:"):
+                _lock(r, cell, q[len("khac:"):].strip(), RULE_QD01A)
+                st["n_khac"] += 1
+            elif q == "bo":
+                r["qd01_excluded"] = 1
+                st["n_bo"] += 1
+            else:
+                _pending(r, cell, "khe" if khe else "khong_khop")
+                st["n_pending"] += 1
+            continue
+        am = chuan_am(r.get("syllable_raw") or r.get("syllable"))
+        if q == "giu_2029A" or (not q and am == "người"):
+            _lock(r, cell, NGUOI_2029A, RULE_QD01_LOCK)
+            st["n_locked"] += 1
+        elif q == "bo":
+            r["qd01_excluded"] = 1
+            st["n_bo"] += 1
+        elif q.startswith("khac:"):
+            _lock(r, cell, q[len("khac:"):].strip(), RULE_QD01A)
+            st["n_khac"] += 1
+        else:
+            _pending(r, cell, f"am_khac:{am}")
+            st["n_pending"] += 1
+
+    # QĐ-01a ngoài cells (A-3)
+    for key, dec in decisions.items():
+        if key in cells or (key[0], key[1]) not in built_pages:
+            continue
+        r = idx.get(key)
+        if r is None:
+            st["n_decisions_ngoai_cells_khong_khop"] += 1
+            continue
+        q = dec["quyet"]
+        if q == "giu_2029A":
+            _lock(r, dec, NGUOI_2029A, RULE_QD01_LOCK)
+            st["n_decisions_ngoai_cells_lock"] += 1
+        elif q.startswith("khac:"):
+            _lock(r, dec, q[len("khac:"):].strip(), RULE_QD01A)
+            st["n_decisions_ngoai_cells_khac"] += 1
+        else:
+            r["qd01_excluded"] = 1          # '' (chờ người) hoặc 'bo': khong_dung_cho
+            st["n_excluded_ngoai_cells"] += 1
+            if not q:
+                # chờ người: ép cắt crop (cả bbox_cu nếu khác) để người xem được ở QĐ-01a
+                r["_qd01_pending"] = True
+                r["_bbox_cu"] = _parse_bbox(dec.get("bbox_cu"))
+                pending.append({"book": r["book"], "page": r["page"], "column": r["column"],
+                                "nom_idx": r["nom_idx"], "syl_idx": r.get("syl_idx", ""),
+                                "bbox_cu": dec.get("bbox_cu", ""), "bbox_moi": json.dumps(r.get("bbox")),
+                                "syllable_moi": r.get("syllable", ""), "ocr_char": r.get("ocr_char", ""),
+                                "tier_v3": r.get("tier_v3", ""), "tier_goc": r["tier"],
+                                "rule_goc": r["rule"], "ly_do": "qd01a_chua_quyet", "_rec": r})
+    return st, pending
+
+
+def apply_nguoi_ngoai_khoa(records, lop_nham=None):
+    """N5h: ô âm 'người' KHÔNG khoá — nhãn v3 == 㝵 -> REVIEW `lop_nham:...` (nhãn xoá);
+    còn lại giữ tier_v3, cờ am_da_quyet_ngoai_khoa=1 để mẻ chấm ưu tiên. KHÔNG chốt
+    AM_DA_QUYET bao trùm (mất 243 ô + hạ 49 ô mốc đã ký).
+
+    A-8: `lop_nham` = danh sách mục da_ky của decisions.yaml [{id, syllable, ocr, den}];
+    None -> mặc định một mục ('người', 㝵) với rule RULE_LOP_NHAM (hành vi S7)."""
+    if lop_nham is None:
+        lop_nham = [{"id": RULE_LOP_NHAM.split(":", 1)[1], "syllable": "người",
+                     "ocr": NGUOI_NHAM, "den": "REVIEW"}]
+    nham = {(chuan_am(x["syllable"]), x["ocr"]): x for x in lop_nham}
+    n_nham = n_ngoai = 0
+    for r in records:
+        if r.get("qd01_locked") or chuan_am(r.get("syllable")) not in AM_DA_QUYET:
+            continue
+        if r.get("qd01_excluded"):
+            continue
+        r["am_da_quyet_ngoai_khoa"] = 1
+        n_ngoai += 1
+        x = nham.get((chuan_am(r.get("syllable")), r["label"]))
+        if x is not None:
+            r["tier_goc"], r["rule_goc"] = r["tier"], r["rule"]
+            r["tier"], r["rule"], r["label"] = x["den"], f"{dcs.RULE_LOP_NHAM}:{x['id']}", ""
+            n_nham += 1
+    return n_nham, n_ngoai
+
+
+def compute_flank_gold(records):
+    """N5k: số ô kề (syl_idx ± 1, cùng cột) có tier_v3 == CHAR_A ∈ {0, 1, 2}."""
+    t = {(r["book"], r["page"], int(r["column"]), int(r["syl_idx"])): r.get("tier_v3")
+         for r in records if r.get("syl_idx", "") != ""}
+    for r in records:
+        if r.get("syl_idx", "") == "":
+            r["flank_gold"] = 0
+            continue
+        k = (r["book"], r["page"], int(r["column"]), int(r["syl_idx"]))
+        r["flank_gold"] = sum(1 for d in (-1, 1)
+                              if t.get((k[0], k[1], k[2], k[3] + d)) == "CHAR_A")
+
+
 def maybe_s3(p, page_png, qn_to_nom, vs3):
     if vs3 is None or not p.get("ocr_char"):
         return None
@@ -262,6 +673,40 @@ def maybe_s3(p, page_png, qn_to_nom, vs3):
     if p["ocr_char"] in cands:
         return None
     return vs3.compute(page_png, p.get("bbox"), p["ocr_char"], cands)
+
+
+def _record(book, page, page_png, idx, p, dec, s3, seg_backend) -> dict:
+    """Một bản ghi PASS 1 (một cặp đã tier). Gom một chỗ để đường cũ (--no-two-pass)
+    và PASS 1b ghi CÙNG một schema; 4 cột N4e (syllable_ocr, syllable_raw,
+    p_register, band_touched) ở đường cũ = ''/''/''/0."""
+    return {
+        "book": book, "page": page, "column": p["column"], "idx": idx,
+        "page_png": page_png, "ocr_char": p.get("ocr_char") or "",
+        # Canonical lowercase syllable for ALL tiers (not just SYLLABLE
+        # below): the QN→Nôm dict and decide_label are already case-folded,
+        # so keeping raw OCR case here only fragmented the reading vocabulary
+        # (Nhị/nhị/NHỊ → 3 classes) and inflated the distinct-syllable count.
+        # NFC + modern tone-mark placement are already applied upstream (parse_v5).
+        "syllable": str(p["syllable"]).lower(), "bbox": p.get("bbox"),
+        "tier": dec.tier, "rule": dec.rule_id, "label": dec.label or "",
+        "s3_cosine": round(s3.cosine, 3) if s3 else "",
+        "seg_backend": seg_backend,
+        # N0b: chỉ số ô trong cột Nôm / âm tiết trong dòng QN (từ ops của
+        # anchor_align qua _pair_new) — khoá bền cho đối soát thế hệ.
+        "nom_idx": p.get("nom_idx", ""), "syl_idx": p.get("syl_idx", ""),
+        # N4e: âm VietOCR nguyên văn / âm sau normalize_column / posterior thanh ghi
+        # / cột chạm biên băng — cờ ghi DÀY 0/1 (không để trống -> pandas không ép float).
+        "syllable_ocr": p.get("syllable_ocr", ""),
+        "syllable_raw": p.get("syllable_raw", ""),
+        "p_register": (round(float(p["p_register"]), 4)
+                       if p.get("p_register", "") != "" else ""),
+        "band_touched": int(bool(p.get("band_touched", False))),
+        # A-6 (N4d/N4e): số đếm cột (n_* và count_source sang columns.csv ở S9) + nguồn hộp
+        "n_ocr": p.get("n_ocr", ""), "n_qn": p.get("n_qn", ""), "n_det": p.get("n_det", ""),
+        "count_source": p.get("count_source", ""), "box_source": p.get("box_source", ""),
+        # A-7 (PASS 1c): cột chẩn đoán/cờ, mặc định dày; PASS 1c ghi đè trên đường v3
+        **FIELDS_1C,
+    }
 
 
 def _seg_flag(crop_gray) -> str:
@@ -326,10 +771,29 @@ def main():
                          "into the char above/below in the same column)")
     ap.add_argument("--crop-review", action="store_true",
                     help="also materialize REVIEW crops (kept in labels.csv either way)")
+    # A-5 (flow N4a–N4c): mặc định BẬT. --no-two-pass giữ đường cũ (tier ngay trong
+    # vòng PASS 1, không neo ngữ liệu, không p_register) để tái lập bộ hiện tại.
+    ap.add_argument("--two-pass", action=argparse.BooleanOptionalAction, default=True,
+                    help="PASS 1b: pair_pages LOO + DP lại với ANCHOR_CAP + posterior "
+                         "(mặc định bật; --no-two-pass = đường cũ)")
     # None = LẤY TỪ CONFIG (step2.crop_pad_frac). Truyền --pad chỉ để ghi đè khi thí
     # nghiệm; đường chạy sản xuất phải để cấu hình quyết, nếu không lại tái diễn lớp
     # lỗi "cấu hình khai một đằng, mã chạy một nẻo" mà T4.a tìm ra.
     ap.add_argument("--pad", type=float, default=None)
+    # A-6 (flow N3f/N4d): luật hộp. syl_index = hộp thô thr 0,2 ±0,25w + 3 nhánh theo chỉ
+    # số; legacy = TRỌN GÓI luật cũ (thr 0,3 ±0,5w, ép đếm + _monotone_assign) để tái lập
+    # bộ 64.525 (selftest: bbox khớp 100%). Chỉ có nghĩa với --reseg detector.
+    ap.add_argument("--box-rule", default="syl_index", choices=list(ap_mod.BOX_RULES),
+                    help="luật gán hộp ảnh (A-6): syl_index (mặc định) | legacy (trọn gói cũ)")
+    ap.add_argument("--qd01-cells", default=str(REPO / "config" / "qd01_cells.csv"),
+                    help="khoá QĐ-01 (N0d): cột chứa ô khoá chạy trọn gói luật hộp cũ; "
+                         "PASS 1c khoá từng ô theo nom_idx (A-2/A-7); "
+                         "'none' = không khoá gì (CHỈ để thí nghiệm)")
+    ap.add_argument("--qd01a-decisions", default=str(REPO / "config" / "qd01a_decisions.csv"),
+                    help="phán quyết người cho ô QĐ-01 trôi + 12 ô A-3 (N5g); thiếu tệp = rỗng")
+    ap.add_argument("--decisions", default=str(REPO / "config" / "decisions.yaml"),
+                    help="A-8: quyết định theo lớp (corpus_readings/di_the/lop_nham); chỉ mục "
+                         "da_ky có xuat_xu được áp; 'none' = không áp gì (CHỈ để thí nghiệm)")
     ap.add_argument("--reseg", default="midpoint",
                     choices=["midpoint", "valley_n", "valley_guarded", "detector"],
                     help="column re-segmentation for crop boxes (default midpoint; valley_* are "
@@ -339,9 +803,26 @@ def main():
     args = ap.parse_args()
 
     out = Path(args.out)
+    # HÀNG RÀO: bộ đã đóng băng (dataset_out/.FROZEN) không được build đè — PASS 2 dọn
+    # thư mục crop trước khi cắt. Cùng quy ước với run_pipeline.sh (FROZEN_OVERRIDE=GHIDE).
+    if (out / ".FROZEN").exists() and os.environ.get("FROZEN_OVERRIDE") != "GHIDE":
+        raise SystemExit(f"[build] {out}/.FROZEN tồn tại — không build đè bộ đã đóng băng. "
+                         "Dùng --out <thư mục khác> (DS_OUT) hoặc FROZEN_OVERRIDE=GHIDE nếu CỐ Ý.")
     out.mkdir(parents=True, exist_ok=True)
     config = load_config(args.config)
     paths = config["paths"]
+    # A-8: nạp decisions.yaml NGAY ĐẦU — schema/xuất xứ sai thì dừng trước khi tốn 10 phút align
+    # (tên `qdl` — quyết định lớp — vì `dec` đã là LabelDecision trong vòng PASS 1)
+    qdl = None
+    if str(args.decisions).lower() != "none":
+        qdl = dcs.load(args.decisions)
+        _rep = qdl.report()
+        print(f"  [decisions] {args.decisions}: corpus_readings da_ky {_rep['corpus_readings']['da_ky']}"
+              f"/{_rep['corpus_readings']['n']} | di_the {_rep['di_the']['da_ky']}/{_rep['di_the']['n']} | "
+              f"lop_nham {_rep['lop_nham']['da_ky']}/{_rep['lop_nham']['n']} | chờ ký {_rep['n_cho_ky']} "
+              "(chỉ mục da_ky được áp)", flush=True)
+    else:
+        print("  [decisions] --decisions none: KHÔNG áp corpus_readings/di_the/lop_nham (thí nghiệm)", flush=True)
 
     # --- HÌNH HỌC CẮT ẢNH: cấu hình -> mã (nối 2026-08-25) --------------------
     _s2 = config.get("step2") or {}
@@ -351,6 +832,37 @@ def main():
     ap_mod.BOX_OVERLAP_FRAC = _ov
     print(f"  [hình học] đệm cắt = {args.pad} | biên nới dọc F = {_ov} "
           f"-> hộp cao {1 + 2 * _ov:.2f} × bước lặp", flush=True)
+    # A-6 (N3f): ngưỡng detector + biên x đọc từ config (step2.det_thr / det_xmargin),
+    # gán ngược vào engine như BOX_OVERLAP_FRAC. legacy KHÔNG đọc: trọn gói hằng cũ.
+    locked_cols: dict = {}
+    if args.box_rule == "syl_index":
+        ap_mod.DETECTOR_THR = float(_s2.get("det_thr", ap_mod.DETECTOR_THR))
+        ap_mod.DETECTOR_XMARGIN = float(_s2.get("det_xmargin", ap_mod.DETECTOR_XMARGIN))
+        if args.reseg == "detector":
+            if args.qd01_cells.lower() == "none":
+                print("  [hộp] --qd01-cells none: KHÔNG khoá cột QĐ-01 (thí nghiệm)", flush=True)
+            elif not Path(args.qd01_cells).exists():
+                raise SystemExit(f"[hộp] --box-rule syl_index cần {args.qd01_cells} (khoá QĐ-01, "
+                                 "sinh bằng pipeline/tools/sinh_qd01_cells.py); thiếu tệp thì ô "
+                                 "khoá sẽ đổi hộp/md5 âm thầm. Dùng --qd01-cells none nếu CỐ Ý.")
+            else:
+                locked_cols = load_locked_columns(args.qd01_cells)
+        print(f"  [hộp] luật = syl_index | thr = {ap_mod.DETECTOR_THR} | biên x = "
+              f"±{ap_mod.DETECTOR_XMARGIN}w | cột có ô khoá QĐ-01 chạy luật cũ: "
+              f"{sum(len(v) for v in locked_cols.values()):,} cột / "
+              f"{len(locked_cols):,} trang", flush=True)
+    else:
+        print(f"  [hộp] luật = legacy TRỌN GÓI (thr {ap_mod.LEGACY_DETECTOR_THR}, biên x "
+              f"±{ap_mod.LEGACY_DETECTOR_XMARGIN}w, ép đếm + _monotone_assign)", flush=True)
+    # Trần chi phí neo ngữ liệu (PASS 1b): config step2.anchor_cap ghi đè hằng engine;
+    # gán ngược vào engine để lab đọc `anchor_align.ANCHOR_CAP` thấy đúng giá trị chạy.
+    anchor_cap = float(_s2.get("anchor_cap", aa.ANCHOR_CAP))
+    aa.ANCHOR_CAP = anchor_cap
+    if args.two_pass:
+        print(f"  [đệ quy] PASS 1b bật | ANCHOR_CAP = {anchor_cap} | neo khi cặp thấy ở "
+              f">= {ANCHOR_MIN_OTHER_PAGES} trang khác (LOO)", flush=True)
+    else:
+        print("  [đệ quy] --no-two-pass: đường cũ (tier ngay trong PASS 1, không neo)", flush=True)
     qn_to_nom = load_qn_to_nom(str(REPO / paths["qn_to_nom_dict"]))
     qn_dict_set = set(qn_to_nom.keys())
     # từ điển NGƯỢC {chữ Nôm: [âm QN từ điển công nhận]} — L1 cần nó để biết một
@@ -398,12 +910,13 @@ def main():
         print(f"  [reseg] mode = {args.reseg}", flush=True)
         # FAIL FAST: dựng detector NGAY, trước khi duyệt trang nào. Thiếu checkpoint mà
         # chạy tiếp = lặng lẽ tách chữ bằng trung điểm cho cả 445 trang.
-        _backend = preflight_detector(args.reseg)
+        _backend = preflight_detector(args.reseg, box_rule=args.box_rule)
         print(f"  [reseg] backend thực dùng = {_backend}", flush=True)
 
     # ---------- PASS 1: align all pages, collect records (no crop yet) ----------
     records = []
     pages_done = 0
+    page_states = []        # [(book_code, page, page_png, rec)] — chỉ khi --two-pass
     for b in config["books"]:
         book = b["name"]
         data_dir = data_root / book
@@ -416,7 +929,9 @@ def main():
             page = Path(tf).stem
             try:
                 rec = align_page(page, data_dir, qn_dict_set, qn_to_nom, similar, "new",
-                                 reseg_mode=args.reseg, encoder=reseg_encoder)
+                                 reseg_mode=args.reseg, encoder=reseg_encoder,
+                                 box_rule=args.box_rule,
+                                 locked_columns=locked_cols.get((_book_code(book), page)))
             except DetectorUnavailableError:
                 # KHÔNG nuốt: thiếu detector mà vẫn chạy tiếp = lặng lẽ tách chữ bằng
                 # trung điểm cho TOÀN BỘ corpus. Phải dừng hẳn.
@@ -428,80 +943,236 @@ def main():
                 continue
             pages_done += 1
             page_png = str(data_dir / "pages" / f"{page}.png")
+            if args.two_pass:
+                # N3g: KHÔNG tier trong vòng — chỉ gom trạng thái cột; PASS 1b bên dưới
+                # ghép lại rồi mới gọi maybe_s3/decide_label trên cặp lượt 2.
+                page_states.append((_book_code(book), page, page_png, rec))
+                continue
             for idx, p in enumerate(rec["pairs"]):
                 s3 = maybe_s3(p, page_png, qn_to_nom, vs3) if vs3 else None
                 dec = decide_label(p.get("ocr_char"), p["syllable"], p.get("matched", False),
                                    qn_to_nom, similar, s3=s3, anchored=p.get("anchored", False))
-                records.append({
-                    "book": _book_code(book), "page": page, "column": p["column"], "idx": idx,
-                    "page_png": page_png, "ocr_char": p.get("ocr_char") or "",
-                    # Canonical lowercase syllable for ALL tiers (not just SYLLABLE
-                    # below): the QN→Nôm dict and decide_label are already case-folded,
-                    # so keeping raw OCR case here only fragmented the reading vocabulary
-                    # (Nhị/nhị/NHỊ → 3 classes) and inflated the distinct-syllable count.
-                    # NFC + modern tone-mark placement are already applied upstream (parse_v5).
-                    "syllable": str(p["syllable"]).lower(), "bbox": p.get("bbox"),
-                    "tier": dec.tier, "rule": dec.rule_id, "label": dec.label or "",
-                    "s3_cosine": round(s3.cosine, 3) if s3 else "",
-                    "seg_backend": rec.get("seg_backend", ""),
-                })
+                records.append(_record(_book_code(book), page, page_png, idx, p, dec, s3,
+                                       rec.get("seg_backend", "")))
 
-    # ---------- L1 + L3: neo bằng bằng chứng CẤP NGỮ LIỆU (TRƯỚC khối PROMOTE) ----
-    # Đặt ở đây, không đặt trong decide_label, vì cả hai luật cần thống kê TOÀN NGỮ
-    # LIỆU (cặp nào đã được chứng thực ở GOLD-trực-tiếp) — thứ chỉ có sau PASS 1.
-    # Đặt TRƯỚC PROMOTE vì một ô đã được nâng lên nhãn CHỮ thì không được đồng thời
-    # đi làm nhãn ÂM TIẾT; nếu chạy sau, cùng một ô sẽ vào hai tier.
-    anchors = gold_direct_anchors(records)
-    n_l1_moi, n_l1_nang = apply_am_sua_dau(records, qn_to_nom, nom_to_qn, anchors)
-    n_l3 = apply_cot_lech_cau_xuoi(records, qn_to_nom, similar, anchors)
-    print(f"  [L1 sửa dấu âm] {n_l1_moi + n_l1_nang:,} ô -> GOLD/{RULE_L1} "
-          f"({n_l1_moi:,} từ REVIEW, {n_l1_nang:,} từ SILVER)", flush=True)
-    print(f"  [L3 cột lệch]   {n_l3:,} ô -> GOLD/{RULE_L3}", flush=True)
-    print(f"  [chốt chặn]     âm nhường cho phán quyết người: "
-          f"{sorted(AM_DA_QUYET)} (L1/L2/L3/L5 không chạm)", flush=True)
+    # ---------- PASS 1b: đệ quy hai lượt (flow N4a–N4c) ----------
+    n_anchor_pairs = 0          # số cặp lượt 2 được neo LOO hạ chi phí thật (N4a "ô được neo")
+    n_pairs_ops1 = n_pairs_ops2 = n_pairs_changed = n_cols_1b = n_band_touched = 0
+    pair_pages = {}
+    if args.two_pass:
+        # N4a: pair_pages từ MỌI match lượt 1 (không chỉ confirmed) — LOO theo (book, page)
+        pair_pages = build_pair_pages([(b, pg, r) for b, pg, _png, r in page_states])
+        _pp_json = {f"{c}\t{sy}": sorted(f"{b}/{pg}" for b, pg in pages)
+                    for (c, sy), pages in sorted(pair_pages.items())}
+        json.dump({"anchor_cap": anchor_cap, "min_other_pages": ANCHOR_MIN_OTHER_PAGES,
+                   "n_pair_keys": len(pair_pages),
+                   # cặp có >= min_other trang: neo được ở MỌI trang chưa chứa nó
+                   # (và ở trang chứa nó nếu còn >= min_other trang khác)
+                   "n_keys_ge_min_pages": sum(1 for v in pair_pages.values()
+                                              if len(v) >= ANCHOR_MIN_OTHER_PAGES),
+                   "pair_pages": _pp_json},
+                  open(out / "pair_pages.json", "w", encoding="utf-8"),
+                  ensure_ascii=False, indent=0)
+        print(f"  [PASS 1b] pair_pages: {len(pair_pages):,} cặp (chữ, âm) từ "
+              f"{sum(len(v) for v in pair_pages.values()):,} (cặp, trang) — "
+              f"{out / 'pair_pages.json'}", flush=True)
+        for bookc, page, page_png, rec in page_states:
+            here = (bookc, page)
+            page_pairs = []
+            for cs in rec["col_states"]:
+                chars, syllables = cs["cluster"]["chars"], cs["syllables"]
+                # N4b + N4c: DP lại với cost_fn neo + posterior CÙNG cost_fn
+                ops2, post, touched, n_anch = realign_with_anchors(
+                    chars, syllables, qn_to_nom, similar, pair_pages, here, anchor_cap)
+                n_cols_1b += 1
+                n_anchor_pairs += n_anch
+                n_band_touched += int(touched)
+                m1 = {(o["nom_idx"], o["syl_idx"]) for o in cs["ops1"] if o["op"] == "match"}
+                m2 = {(o["nom_idx"], o["syl_idx"]) for o in ops2 if o["op"] == "match"}
+                n_pairs_ops1 += len(m1); n_pairs_ops2 += len(m2)
+                n_pairs_changed += len(m1 ^ m2)
+                reseg_boxes, syl_ocr = cs["reseg_boxes"], cs["syllable_ocr"]
+                # A-6 (N4d): luật mới gán hộp LẠI theo ops lượt 2 (nhánh a đi theo syl_idx
+                # nên phụ thuộc đường ghép); legacy/legacy_locked_col giữ hộp PASS 1 (theo
+                # nom_idx, không phụ thuộc đường ghép).
+                box_source, count_source = cs.get("box_source"), cs.get("count_source", "")
+                if cs.get("box_rule") == "syl_index":
+                    reseg_boxes, box_source, count_source = ap_mod.assign_boxes(
+                        cs["G"], ops2, cs["n_ocr"], cs["n_qn"], cluster=cs["cluster"],
+                        cb=cs.get("cb"))
+                # PASS 1c (A-7) cần ops CUỐI + hộp cuối của cột (khe QĐ-01 không có record)
+                cs["ops2"], cs["post"], cs["boxes2"] = ops2, post, reseg_boxes
+                cs["box_source2"], cs["count_source2"] = box_source, count_source
+                col_pairs = []
+                for mpair in aa.matched_pairs(ops2):
+                    i, j = mpair["nom_idx"], mpair["syl_idx"]
+                    bbox = reseg_boxes[i] if reseg_boxes else chars[i].get("bbox")
+                    col_pairs.append({
+                        "ocr_char": mpair["ocr_char"], "bbox": bbox,
+                        "syllable": mpair["syllable"], "confirmed": mpair["confirmed"],
+                        "nom_idx": i, "syl_idx": j,
+                        "syllable_raw": syllables[j],
+                        "syllable_ocr": syl_ocr[j] if len(syl_ocr) == len(syllables) else "",
+                        "p_register": post.get((i, j), 0.0), "band_touched": touched,
+                        "column": cs["line_id"], "matched": cs["matched"],
+                        "n_ocr": cs.get("n_ocr", ""), "n_qn": cs.get("n_qn", ""),
+                        "n_det": cs.get("n_det", ""), "count_source": count_source,
+                        "box_source": box_source[i] if box_source else "",
+                    })
+                # anchored: cặp kề một cặp confirmed (cùng định nghĩa align_page:532-536)
+                conf = [q["confirmed"] for q in col_pairs]
+                for k, q in enumerate(col_pairs):
+                    nbr = (k > 0 and conf[k - 1]) or (k + 1 < len(col_pairs) and conf[k + 1])
+                    q["anchored"] = bool(nbr)
+                page_pairs.extend(col_pairs)
+            # A-7: KHÔNG tier ở đây — PASS 1c (tier_v3) quyết; `decide_label` chỉ còn
+            # là chỗ giữ schema (tier/rule bị ghi đè toàn bộ). S3 (nếu nạp) chỉ ghi
+            # s3_cosine để tra, không quyết tier. idx theo trang như cũ.
+            for idx, p in enumerate(page_pairs):
+                s3 = maybe_s3(p, page_png, qn_to_nom, vs3) if vs3 else None
+                dec = decide_label(p.get("ocr_char"), p["syllable"], p.get("matched", False),
+                                   qn_to_nom, similar, s3=None, anchored=p.get("anchored", False))
+                records.append(_record(bookc, page, page_png, idx, p, dec, s3,
+                                       rec.get("seg_backend", "")))
+        print(f"  [PASS 1b] {n_cols_1b:,} cột | match lượt 1 {n_pairs_ops1:,} → lượt 2 "
+              f"{n_pairs_ops2:,} | cặp đổi (hiệu đối xứng) {n_pairs_changed:,} | "
+              f"ô được neo LOO {n_anchor_pairs:,} | cột chạm biên băng {n_band_touched:,}",
+              flush=True)
 
-    # ---------- PROMOTE: cross-page-consistent unconfirmed -> SYLLABLE [#6] ----------
-    # The unconfirmed pool = REVIEW rows with an ocr_char that S1∩S2 didn't confirm.
-    # Without S3 the rule is 'unconfirmed_no_s3'; with S3 ON the S3-failed ones are
-    # 'below_visual_threshold'. Both are eligible for the syllable tier (SILVER
-    # already took the S3-confirmed ones), so SYLLABLE coexists with SILVER.
-    #
-    # L5 · BỂ ĐẦY ĐỦ. "diverged_column" nằm trong bể từ nay. Ba rule dưới đây là
-    # TOÀN BỘ lý do một ô có thể ở REVIEW sau PASS 1, nên tập này = "mọi ô REVIEW
-    # còn ocr_char" = mọi ô có ocr_char ∉ R(âm). Bể cũ thiếu "diverged_column", tức
-    # độ thuần của mỗi chữ được tính trên một MẪU BỊ CẮT theo đúng tiêu chí S3 —
-    # một tín hiệu mà bước s3_unwind đã gỡ quyền quyết (CI của AUC bắt lỗi chứa 0,5).
-    # HỆ QUẢ ĐÚNG, KHÔNG PHẢI HỒI QUY: một số cặp (chữ, âm) đang ở SYLLABLE sẽ RỚT,
-    # vì trên bể đầy đủ độ thuần THẬT của chúng dưới ngưỡng 0,6. Chúng chưa bao giờ
-    # đạt ngưỡng; chỉ là mẫu số bị giấu mất một phần.
-    UNCONF = {"unconfirmed_no_s3", "below_visual_threshold", "diverged_column"}
-    # Case-insensitive gate (fixes the case-split; +~1,131 labels). The promoted row
-    # also stores the canonical lowercase syllable so its target class is not fragmented
-    # into cased variants downstream.
-    syl_ok = syllable_gate(records, UNCONF)
-    n_promoted = 0        # từ REVIEW (nhãn mới hoàn toàn)
-    n_tu_silver = 0       # từ SILVER (đổi nhãn CHỮ do S3 quyết -> nhãn ÂM có bằng chứng)
-    for r in records:
-        syl_l = str(r["syllable"]).lower()
-        if am_da_quyet(syl_l):
-            continue      # CHỐT CHẶN: ô âm "người" phải ở lại REVIEW cho glyph_fix (QĐ-01)
-        if (r["ocr_char"], syl_l) not in syl_ok:
-            continue
-        if r["tier"] == "REVIEW" and r["rule"] in UNCONF:
-            r["tier"], r["rule"] = "SYLLABLE", "nghia_consensus"
-            r["syllable"] = syl_l
-            n_promoted += 1
-        elif r["tier"] == "SILVER":
-            # Ô này đang mang một nhãn CHỮ do S3 quyết. `s3_unwind` sẽ đổi tên tier
-            # thành SILVER_uncalibrated và `export_final_dataset` LOẠI hẳn khỏi bộ
-            # giao nộp — nên nhãn chữ ấy hiện không đi đâu cả. Cổng âm tiết thì có
-            # bằng chứng ĐỘC LẬP với S3 (>=5 ô, >=3 trang, độ thuần >=0,6 trên bể
-            # đầy đủ). Đổi một khẳng định KHÔNG dùng được lấy một khẳng định YẾU HƠN
-            # NHƯNG DÙNG ĐƯỢC. Nhãn chữ bị xoá (giao ước của tier SYLLABLE), nên
-            # xuất xứ nằm ở rule id riêng để đếm lại được, không lẫn vào 'nghia_consensus'.
-            r["tier"], r["rule"], r["label"] = "SYLLABLE", "nghia_consensus_tu_silver", ""
-            r["syllable"] = syl_l
-            n_tu_silver += 1
+    # ---------- PASS 1c (A-7, flow N5a–N5h): tier_v3 + L1 có cổng + khoá QĐ-01 ----------
+    n_l1_moi = n_l1_nang = n_l1_giu = n_l1_hoa = n_l3 = 0
+    n_promoted = n_tu_silver = 0
+    cross_v3 = Counter()
+    qd01_st, qd01_pending = Counter(), []
+    n_lop_nham = n_nguoi_ngoai = 0
+    cells = decisions = {}
+    n_cr, n_dt = Counter(), Counter()          # A-8: ô áp corpus_readings / di_the theo id
+    if args.two_pass:
+        # N5a: thống kê LOO từ ops CUỐI (ops2) của mọi cột; colmap để tra chars/syl/hộp
+        cols = tv3.cols_from_page_states([(b, pg, png, r) for b, pg, png, r in page_states])
+        colmap = {}
+        for (bookc, page, page_png, rec) in page_states:
+            for cs in rec["col_states"]:
+                col = {"book": bookc, "page": page, "column": cs["line_id"], "page_png": page_png,
+                       "chars": [c.get("char") or c.get("ocr_char") or "" for c in cs["cluster"]["chars"]],
+                       "syl": list(cs["syllables"]),
+                       "boxes": cs.get("boxes2") or cs.get("reseg_boxes"),
+                       "box_source": cs.get("box_source2") or cs.get("box_source"),
+                       "count_source": cs.get("count_source2") or cs.get("count_source", ""),
+                       "n_ocr": cs.get("n_ocr", ""), "n_qn": cs.get("n_qn", ""), "n_det": cs.get("n_det", "")}
+                colmap[(bookc, page, cs["line_id"])] = col
+        corpus = tv3.CorpusStats(cols, qn_to_nom, similar)
+        # N5b–N5d: feats + p -> tier_v3 -> tier/rule/label (chốt is_plausible trước)
+        cross_v3 = apply_tier_v3(records, corpus, colmap)
+        print(f"  [PASS 1c] tier_v3: " + " | ".join(f"{k} {cross_v3[k]:,}" for k in
+              ("CHAR_A", "CHAR_B", "SYL", "REVIEW")) + f" | pair_pages {len(corpus.pair_pages):,} "
+              f"| bigram_pages {len(corpus.bigram_pages):,}", flush=True)
+        # N5f (A-8): corpus_readings da_ky -> GOLD `corpus_reading:<id>` TRƯỚC L1 (L1 bỏ qua
+        # GOLD nên không ghi đè âm đã ký); KHÔNG vào qn_to_nom, KHÔNG làm neo (rule khác)
+        n_cr = dcs.apply_corpus_readings(records, qdl)
+        print(f"  [corpus_readings] {sum(n_cr.values()):,} ô -> GOLD/corpus_reading:* "
+              f"({len(n_cr)} mục da_ky" + (": " + ", ".join(f"{k} {v}" for k, v in sorted(n_cr.items()))
+                                          if n_cr else "") + ")", flush=True)
+        # N5e: L1 có cổng 2-gram ÂM–ÂM (từ col_states, LOO); neo chỉ từ CHAR_A
+        # (rule s1_inter_s2_direct — KHÔNG gồm _lowp/corpus_readings)
+        anchors = gold_direct_anchors(records)
+        bigram_syl_pages = tv3.build_bigram_syl_pages(cols)
+        n_l1_moi, n_l1_nang, n_l1_giu, n_l1_hoa = apply_am_sua_dau(
+            records, qn_to_nom, nom_to_qn, anchors, bigram_syl_pages=bigram_syl_pages,
+            colmap=colmap, corpus=corpus)
+        print(f"  [L1 sửa dấu âm] đổi {n_l1_moi + n_l1_nang:,} ô -> GOLD/{RULE_L1} "
+              f"({n_l1_moi:,} từ REVIEW, {n_l1_nang:,} từ SYLLABLE) | giữ gốc (thua) "
+              f"{n_l1_giu:,} | hoà {n_l1_hoa:,} (l1_tie)", flush=True)
+        # L3 (apply_cot_lech_cau_xuoi) và L5 (syllable_gate/PROMOTE) KHÔNG chạy ở đường
+        # này — tier_v3 đã thay (N5c); hàm giữ cho --no-two-pass.
+        # N5g: KHOÁ QĐ-01 theo (book,page,column,nom_idx) + QĐ-01a
+        if args.qd01_cells.lower() != "none":
+            cells = load_qd01_cells_full(args.qd01_cells)
+            decisions = load_qd01a_decisions(args.qd01a_decisions)
+        built_pages = {(b, pg) for b, pg, _png, _r in page_states}
+        seg_backend_of = {(b, pg): r.get("seg_backend", "") for b, pg, _png, r in page_states}
+        qd01_st, qd01_pending = apply_qd01_lock(records, cells, decisions, colmap, built_pages,
+                                                seg_backend_of)
+        n_cells_b = qd01_st["n_cells_in_build"]
+        n_acc = (qd01_st["n_locked"] + qd01_st["n_pending"] + qd01_st["n_bo"] + qd01_st["n_khac"])
+        print(f"  [QĐ-01] ô khoá trong {len(built_pages)} trang build: {n_cells_b:,} / "
+              f"{len(cells):,} tệp | locked {qd01_st['n_locked']:,} | pending "
+              f"{qd01_st['n_pending']:,} (khe {qd01_st['n_khe']}, không khớp "
+              f"{qd01_st['n_khong_khop']}, âm khác {qd01_st['n_pending'] - qd01_st['n_khe'] - qd01_st['n_khong_khop']}) "
+              f"| bo {qd01_st['n_bo']} | khac {qd01_st['n_khac']} | QĐ-01a ngoài khoá: excluded "
+              f"{qd01_st['n_excluded_ngoai_cells']}, lock {qd01_st['n_decisions_ngoai_cells_lock']}, "
+              f"khac {qd01_st['n_decisions_ngoai_cells_khac']}", flush=True)
+        if n_acc != n_cells_b:
+            # không dừng build (spec N5g) — ghi summary + in đỏ để đối soát
+            print(f"  [QĐ-01] 🔴 locked + pending + bo + khac = {n_acc} ≠ {n_cells_b} ô khoá "
+                  "trong build", flush=True)
+        # N5h: 'người' ngoài khoá — chỉ hạ ô nhãn v3 == 㝵; không chốt AM_DA_QUYET bao trùm
+        # A-8: lop_nham đọc từ decisions.yaml (mục da_ky); --decisions none -> không hạ ô nào
+        n_lop_nham, n_nguoi_ngoai = apply_nguoi_ngoai_khoa(
+            records, lop_nham=(qdl.ap_lop_nham() if qdl is not None else []))
+        print(f"  [người ngoài khoá] {n_nguoi_ngoai:,} ô (am_da_quyet_ngoai_khoa=1), trong đó "
+              f"lop_nham -> REVIEW: {n_lop_nham:,} "
+              f"({', '.join(x['id'] for x in (qdl.ap_lop_nham() if qdl is not None else [])) or 'không mục nào'})",
+              flush=True)
+        # N5k
+        compute_flank_gold(records)
+    else:
+        # ---------- L1 + L3: neo bằng bằng chứng CẤP NGỮ LIỆU (TRƯỚC khối PROMOTE) ----
+        # Đặt ở đây, không đặt trong decide_label, vì cả hai luật cần thống kê TOÀN NGỮ
+        # LIỆU (cặp nào đã được chứng thực ở GOLD-trực-tiếp) — thứ chỉ có sau PASS 1.
+        # Đặt TRƯỚC PROMOTE vì một ô đã được nâng lên nhãn CHỮ thì không được đồng thời
+        # đi làm nhãn ÂM TIẾT; nếu chạy sau, cùng một ô sẽ vào hai tier.
+        anchors = gold_direct_anchors(records)
+        n_l1_moi, n_l1_nang = apply_am_sua_dau(records, qn_to_nom, nom_to_qn, anchors)
+        n_l3 = apply_cot_lech_cau_xuoi(records, qn_to_nom, similar, anchors)
+        print(f"  [L1 sửa dấu âm] {n_l1_moi + n_l1_nang:,} ô -> GOLD/{RULE_L1} "
+              f"({n_l1_moi:,} từ REVIEW, {n_l1_nang:,} từ SILVER)", flush=True)
+        print(f"  [L3 cột lệch]   {n_l3:,} ô -> GOLD/{RULE_L3}", flush=True)
+        print(f"  [chốt chặn]     âm nhường cho phán quyết người: "
+              f"{sorted(AM_DA_QUYET)} (L1/L2/L3/L5 không chạm)", flush=True)
+
+        # ---------- PROMOTE: cross-page-consistent unconfirmed -> SYLLABLE [#6] ----------
+        # The unconfirmed pool = REVIEW rows with an ocr_char that S1∩S2 didn't confirm.
+        # Without S3 the rule is 'unconfirmed_no_s3'; with S3 ON the S3-failed ones are
+        # 'below_visual_threshold'. Both are eligible for the syllable tier (SILVER
+        # already took the S3-confirmed ones), so SYLLABLE coexists with SILVER.
+        #
+        # L5 · BỂ ĐẦY ĐỦ. "diverged_column" nằm trong bể từ nay. Ba rule dưới đây là
+        # TOÀN BỘ lý do một ô có thể ở REVIEW sau PASS 1, nên tập này = "mọi ô REVIEW
+        # còn ocr_char" = mọi ô có ocr_char ∉ R(âm). Bể cũ thiếu "diverged_column", tức
+        # độ thuần của mỗi chữ được tính trên một MẪU BỊ CẮT theo đúng tiêu chí S3 —
+        # một tín hiệu mà bước s3_unwind đã gỡ quyền quyết (CI của AUC bắt lỗi chứa 0,5).
+        # HỆ QUẢ ĐÚNG, KHÔNG PHẢI HỒI QUY: một số cặp (chữ, âm) đang ở SYLLABLE sẽ RỚT,
+        # vì trên bể đầy đủ độ thuần THẬT của chúng dưới ngưỡng 0,6. Chúng chưa bao giờ
+        # đạt ngưỡng; chỉ là mẫu số bị giấu mất một phần.
+        UNCONF = {"unconfirmed_no_s3", "below_visual_threshold", "diverged_column"}
+        # Case-insensitive gate (fixes the case-split; +~1,131 labels). The promoted row
+        # also stores the canonical lowercase syllable so its target class is not fragmented
+        # into cased variants downstream.
+        syl_ok = syllable_gate(records, UNCONF)
+        n_promoted = 0        # từ REVIEW (nhãn mới hoàn toàn)
+        n_tu_silver = 0       # từ SILVER (đổi nhãn CHỮ do S3 quyết -> nhãn ÂM có bằng chứng)
+        for r in records:
+            syl_l = str(r["syllable"]).lower()
+            if am_da_quyet(syl_l):
+                continue      # CHỐT CHẶN: ô âm "người" phải ở lại REVIEW cho glyph_fix (QĐ-01)
+            if (r["ocr_char"], syl_l) not in syl_ok:
+                continue
+            if r["tier"] == "REVIEW" and r["rule"] in UNCONF:
+                r["tier"], r["rule"] = "SYLLABLE", "nghia_consensus"
+                r["syllable"] = syl_l
+                n_promoted += 1
+            elif r["tier"] == "SILVER":
+                # Ô này đang mang một nhãn CHỮ do S3 quyết. `s3_unwind` sẽ đổi tên tier
+                # thành SILVER_uncalibrated và `export_final_dataset` LOẠI hẳn khỏi bộ
+                # giao nộp — nên nhãn chữ ấy hiện không đi đâu cả. Cổng âm tiết thì có
+                # bằng chứng ĐỘC LẬP với S3 (>=5 ô, >=3 trang, độ thuần >=0,6 trên bể
+                # đầy đủ). Đổi một khẳng định KHÔNG dùng được lấy một khẳng định YẾU HƠN
+                # NHƯNG DÙNG ĐƯỢC. Nhãn chữ bị xoá (giao ước của tier SYLLABLE), nên
+                # xuất xứ nằm ở rule id riêng để đếm lại được, không lẫn vào 'nghia_consensus'.
+                r["tier"], r["rule"], r["label"] = "SYLLABLE", "nghia_consensus_tu_silver", ""
+                r["syllable"] = syl_l
+                n_tu_silver += 1
 
     # label_level + unicode
     for r in records:
@@ -515,48 +1186,41 @@ def main():
         else:
             r["label_level"], r["unicode"] = "", ""
 
-    # ---------- SPLIT: RỜI NHAU THEO TRANG ------------------------------------
-    # Trước 2026-08-25 nhóm theo (sách, trang, CỘT). Đo được: 0/3.985 cột nằm ở hai
-    # phía — sạch theo đơn vị của chính nó — NHƯNG 360/444 TRANG có cột rơi vào các
-    # phía khác nhau. Hai cột cạnh nhau trên cùng một trang dùng chung ván khắc, chung
-    # mực, chung lần quét, nên mô hình học DIỆN MẠO TRANG rồi được chấm lại trên chính
-    # trang đó -> mọi chỉ số là CẬN TRÊN, không phải hiệu năng trên trang chưa từng thấy.
-    # Đây là câu phản biện chắc chắn bị hỏi, nên chia theo TRANG.
-    def split_of(group: str) -> str:
-        h = int(hashlib.md5(group.encode()).hexdigest(), 16) % 100
-        return "train" if h < 80 else ("val" if h < 90 else "test")
-    for r in records:
-        r["split_group"] = f"{r['book']}|{r['page']}"
-        r["split"] = split_of(r["split_group"])
+    # N5i (A-8): label_canonical = label cho MỌI ô (cả hai đường chạy); mục di_the da_ky
+    # (chuan người ký) ghi mã chuẩn vào cột này — KHÔNG đổi `label` (hình quan sát)
+    n_dt = dcs.apply_di_the(records, qdl)
+    print(f"  [di_the] label_canonical ≠ label: {sum(n_dt.values()):,} ô"
+          + (" (" + ", ".join(f"{k} {v}" for k, v in sorted(n_dt.items())) + ")" if n_dt else
+             " (chưa có mục di_the da_ky)"), flush=True)
 
-    # VÌ SAO BỎ LUẬT "ép nhóm chứa lớp singleton vào train":
-    # ở mức CỘT nó chỉ chạm 375/4.003 cột (9,4%). Ở mức TRANG, 261/445 trang (58,7%)
-    # chứa ít nhất một lớp chỉ-xuất-hiện-một-lần -> giữ luật này sẽ ép 59,1% số ô vào
-    # train và phá nát chia tách. Bóp méo chia tách để chỉ số đẹp là đánh đổi SAI.
-    #
-    # Thay vào đó: chia TRUNG THỰC, rồi ghi giới hạn thành DỮ LIỆU. Cột `label_in_train`
-    # cho biết lớp chữ của ô này có mặt trong train hay không; ai đánh giá thì lọc theo
-    # nó, thay vì để chỉ số im lặng vô định.
-    ccnt = Counter(r["label"] for r in records if r["label_level"] == "char" and r["label"])
-    train_classes = {r["label"] for r in records
-                     if r["split"] == "train" and r["label_level"] == "char" and r["label"]}
-    for r in records:
-        if r["label_level"] == "char" and r["label"]:
-            r["label_in_train"] = "1" if r["label"] in train_classes else "0"
-        else:
-            r["label_in_train"] = ""
-    _n_unseen = sum(1 for r in records if r.get("label_in_train") == "0")
-    print(f"  [split] rời nhau theo TRANG | ô có lớp chữ KHÔNG có trong train: "
-          f"{_n_unseen:,} (đánh giá phải lọc bằng label_in_train)", flush=True)
+    # ---------- SPLIT: [BỎ 16/09 — A-10 giai đoạn 2] ----------------------------
+    # Không chia train/val/test nữa (ràng buộc bộ giao nộp 16/09). Ba cột cũ là hàm thuần
+    # của (book,page): split_group == book|page, split == int(md5(book|page),16)%100
+    # (<80 train, <90 val, còn lại test), label_in_train = lớp có trong train — ai cần thì
+    # tự tính lại từ công thức (README ghi). Lý do chia theo TRANG (không theo cột) và lý do
+    # bỏ luật "ép nhóm singleton vào train" xem git log -S "RỜI NHAU THEO TRANG".
+    # S3 đã TẮT nên proto-index GOLD∧train cũng không cần (rebuild_proto_index ngoài flow).
 
     # ---------- PASS 2: materialize crops + quality columns [#3,#5] ----------
+    # A-7/N7: crop_tiers = GOLD + SYLLABLE (+ SILVER: 0 ô ở đường v3 vì S3 không quyết)
+    # + MỌI ô QĐ-01 pending (người phải nhìn được cả hộp mới lẫn bbox_cu).
     crop_tiers = {"GOLD", "SILVER", "SYLLABLE"} | ({"REVIEW"} if args.crop_review else set())
+    if not args.no_crops:
+        # dọn thư mục đích TRƯỚC khi cắt (chỉ trong $out): tránh tệp mồ côi của lần chạy
+        # trước lẫn vào bộ giao nộp (25/08: silver/ 4.490 + syllable/ 1.674 tệp mồ côi)
+        for d in ("gold", "silver", "syllable", "review"):
+            if (out / d).is_dir():
+                shutil.rmtree(out / d)
     by_page = defaultdict(list)
     for r in records:
         by_page[r["page_png"]].append(r)
     labels = []
+
+    def _can_cat(r) -> bool:
+        return r["tier"] in crop_tiers or bool(r.get("_qd01_pending"))
+
     for png, recs in by_page.items():
-        need = (not args.no_crops) and any(r["tier"] in crop_tiers for r in recs)
+        need = (not args.no_crops) and png and any(_can_cat(r) for r in recs)
         img = cv2.imread(png, cv2.IMREAD_COLOR) if need else None
         gray_full = (cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                     if img is not None and not args.no_carve else None)
@@ -577,13 +1241,27 @@ def main():
 
         for r in recs:
             img_rel = q = None
-            if img is not None and r["tier"] in crop_tiers:
+            if img is not None and _can_cat(r):
                 fn = f"{r['book']}_{r['page']}_c{r['column']:02d}_{r['idx']:03d}.png"
+                # N7: ô khoá QĐ-01 cắt bằng bbox_cu + prev/next_bbox_cu (md5 phụ thuộc cả
+                # hộp hàng xóm qua carve) -> md5 tất định, không phụ thuộc hộp mới của láng giềng
+                if r.get("_has_prev_next_cu"):
+                    pv, nx = r.get("_prev_bbox_cu"), r.get("_next_bbox_cu")
+                else:
+                    pv, nx = r.get("_prev_bbox"), r.get("_next_bbox")
                 q = save_crop(img, gray_full, r.get("bbox"), args.pad, out / r["tier"].lower() / fn,
-                              tighten=not args.no_tighten,
-                              prev_bbox=r.get("_prev_bbox"), next_bbox=r.get("_next_bbox"))
+                              tighten=not args.no_tighten, prev_bbox=pv, next_bbox=nx)
                 if q:
                     img_rel = f"{r['tier'].lower()}/{fn}"
+                if r.get("_qd01_pending") and r.get("_bbox_cu") and r["_bbox_cu"] != r.get("bbox"):
+                    # ép cắt thêm crop theo bbox_cu để người đối chiếu (qd01a_pending.csv)
+                    fn_cu = fn[:-4] + "_cu.png"
+                    q_cu = save_crop(img, gray_full, r["_bbox_cu"], args.pad,
+                                     out / r["tier"].lower() / fn_cu, tighten=not args.no_tighten,
+                                     prev_bbox=r.get("_prev_bbox"), next_bbox=r.get("_next_bbox"))
+                    if q_cu:
+                        r["_image_cu"] = f"{r['tier'].lower()}/{fn_cu}"
+            r["_image"], r["_md5"] = img_rel or "", q["md5"] if q else ""
             labels.append({
                 # khoá sắp xếp, KHÔNG ghi ra CSV (xem `fields`) — chỉ để T6.b
                 "_sort": (r["book"], r["page"], int(r["column"]), int(r["idx"])),
@@ -594,21 +1272,71 @@ def main():
                 # backend tách ký tự THỰC DÙNG — không có cột này thì một lần rơi về
                 # midpoint sẽ không để lại dấu vết nào trong bộ nhãn (KHỐI 1.3).
                 "seg_backend": r.get("seg_backend", ""),
-                "label_in_train": r.get("label_in_train", ""),
                 "ink_pct": q["ink"] if q else "", "crop_w": q["w"] if q else "",
                 "crop_h": q["h"] if q else "", "image_md5": q["md5"] if q else "",
                 "seg_flag": q["seg"] if q else "",
                 "s3_cosine": r.get("s3_cosine", ""),
-                "split": r["split"], "split_group": r["split_group"],
                 "bbox": json.dumps(r.get("bbox")),
+                "nom_idx": r.get("nom_idx", ""), "syl_idx": r.get("syl_idx", ""),
+                "syllable_ocr": r.get("syllable_ocr", ""),
+                "syllable_raw": r.get("syllable_raw", ""),
+                "p_register": r.get("p_register", ""),
+                "band_touched": r.get("band_touched", 0),
+                "n_ocr": r.get("n_ocr", ""), "n_qn": r.get("n_qn", ""),
+                "n_det": r.get("n_det", ""), "count_source": r.get("count_source", ""),
+                "box_source": r.get("box_source", ""),
+                # A-7 (PASS 1c): tier_v3 + chẩn đoán + cờ QĐ-01 (dày 0/1)
+                **{k: r.get(k, v) for k, v in FIELDS_1C.items()},
+                # A-8 (N5i): mã chuẩn theo bảng dị thể người ký; = label khi chưa ký
+                "label_canonical": r.get("label_canonical", r["label"]),
             })
+
+    # ---------- QĐ-01: đối chiếu hộp/md5 + qd01a_pending.csv (N5g, N7) ----------
+    n_bbox_eq_cu = n_md5_eq_cu = n_locked_total = 0
+    if args.two_pass and cells:
+        for r in records:
+            if not r.get("qd01_locked"):
+                continue
+            key = (r["book"], r["page"], int(r["column"]), int(r["nom_idx"]))
+            cell = cells.get(key) or decisions.get(key) or {}
+            n_locked_total += 1
+            n_bbox_eq_cu += (r.get("bbox") == _parse_bbox(cell.get("bbox_cu")))
+            n_md5_eq_cu += bool(r.get("_md5")) and r.get("_md5") == cell.get("image_md5_cu", "")
+        print(f"  [QĐ-01] bbox == bbox_cu: {n_bbox_eq_cu}/{n_locked_total} (bắt buộc đủ) | "
+              f"md5 == md5_cu: {n_md5_eq_cu}/{n_locked_total}"
+              + ("" if args.no_crops else " (kỳ vọng đủ; lệch -> QĐ-01a lý do 'carve')"), flush=True)
+        if n_bbox_eq_cu != n_locked_total:
+            print(f"  [QĐ-01] 🔴 {n_locked_total - n_bbox_eq_cu} ô khoá có bbox ≠ bbox_cu", flush=True)
+        pend_fields = ["book", "page", "column", "nom_idx", "syl_idx", "bbox_cu", "bbox_moi",
+                       "syllable_moi", "ocr_char", "tier_v3", "tier_goc", "rule_goc", "ly_do",
+                       "image", "image_cu"]
+        with open(out / "qd01a_pending.csv", "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=pend_fields)
+            w.writeheader()
+            for row in sorted(qd01_pending, key=lambda x: (x["book"], x["page"], int(x["column"]), int(x["nom_idx"]))):
+                rr = row.pop("_rec")
+                row["image"], row["image_cu"] = rr.get("_image", ""), rr.get("_image_cu", "")
+                w.writerow(row)
+        print(f"  [QĐ-01] pending -> {out / 'qd01a_pending.csv'} ({len(qd01_pending)} dòng, gồm "
+              f"{sum(1 for x in qd01_pending if x['ly_do'] == 'qd01a_chua_quyet')} ô QĐ-01a chờ người)",
+              flush=True)
 
     # ---------- write manifest + summary ----------
     fields = ["image", "book", "page", "column", "ocr_char", "syllable", "label",
               "unicode", "label_level", "tier", "rule", "s3_cosine", "ink_pct",
-              "crop_w", "crop_h", "image_md5", "seg_flag", "split", "split_group",
-              "label_in_train", "bbox",
-              "seg_backend"]
+              "crop_w", "crop_h", "image_md5", "seg_flag", "bbox",
+              "seg_backend",
+              # N0b: hai cột mới ở CUỐI để giữ nguyên thứ tự cột cũ
+              "nom_idx", "syl_idx",
+              # N4e (A-5): âm nguyên văn / âm sau chuẩn hoá / posterior / cờ biên băng
+              "syllable_ocr", "syllable_raw", "p_register", "band_touched",
+              # A-6 (N4d): số đếm cột + nguồn hộp (n_*/count_source -> columns.csv ở S9)
+              "n_ocr", "n_qn", "n_det", "count_source", "box_source",
+              # A-7 (PASS 1c): tier_v3 + chẩn đoán + cờ QĐ-01 — mọi cờ DÀY 0/1
+              # A-8 (N5i): mã chuẩn theo decisions.yaml mục di_the (= label khi chưa ký);
+              # đặt TRƯỚC khối FIELDS_1C để FIELDS_1C vẫn ở cuối (selftest A-6/A-7 bám chuỗi)
+              "label_canonical",
+              *FIELDS_1C.keys()]
     with open(out / "labels.csv", "w", encoding="utf-8", newline="") as f:
         # T6.b — SẮP DÒNG THEO KHOÁ CANON TRƯỚC KHI GHI.
         # build_dataset duyệt `for b in config["books"]` KHÔNG sắp, nên thứ tự sách
@@ -625,7 +1353,6 @@ def main():
         w.writeheader(); w.writerows(labels)
 
     tiers = Counter(r["tier"] for r in records)
-    splits = Counter((r["tier"], r["split"]) for r in records if r["label_level"])
     char_classes = len(set(r["label"] for r in records if r["label_level"] == "char" and r["label"]))
     summary = {
         "pages": pages_done, "total_pairs": len(records),
@@ -639,12 +1366,59 @@ def main():
                          sum(1 for r in records if r["rule"] == "s1_inter_s2_similar_nguoc"),
                      "am_da_quyet": sorted(AM_DA_QUYET)},
         "char_classes": char_classes,
+        # A-5 (flow N4a–N4c): đệ quy hai lượt
+        "two_pass": bool(args.two_pass),
+        "anchor_cap": anchor_cap,
+        "n_anchor_pairs": n_anchor_pairs,
+        "pass1b": {"n_cols": n_cols_1b, "n_pair_keys": len(pair_pages),
+                   "n_match_ops1": n_pairs_ops1, "n_match_ops2": n_pairs_ops2,
+                   "n_match_changed": n_pairs_changed, "n_band_touched": n_band_touched,
+                   "n_p_register_ge_0.8": sum(1 for r in records
+                                              if r.get("p_register", "") != ""
+                                              and r["p_register"] >= 0.8)},
+        # A-6: luật hộp + phân bố nguồn đếm/nguồn hộp (theo Ô; theo CỘT đếm từ labels)
+        "box_rule": args.box_rule,
+        "detector_thr": (ap_mod.LEGACY_DETECTOR_THR if args.box_rule == "legacy"
+                         else ap_mod.DETECTOR_THR),
+        "detector_xmargin": (ap_mod.LEGACY_DETECTOR_XMARGIN if args.box_rule == "legacy"
+                             else ap_mod.DETECTOR_XMARGIN),
+        "n_locked_cols_qd01": sum(len(v) for v in locked_cols.values()),
+        "count_source": dict(Counter(r.get("count_source", "") for r in records)),
+        "box_source": dict(Counter(r.get("box_source", "") for r in records)),
         "usable_char": tiers["GOLD"] + tiers["SILVER"],
         "usable_total": tiers["GOLD"] + tiers["SILVER"] + tiers["SYLLABLE"],
-        "split_counts": {f"{t}/{s}": n for (t, s), n in sorted(splits.items())},
+        # A-7 (PASS 1c): tier_v3 + L1 có cổng + khoá QĐ-01 + 'người' ngoài khoá
+        "pass1c": {
+            "enabled": bool(args.two_pass),
+            "tier_v3": dict(cross_v3),
+            "tier_v3_final": dict(Counter(r.get("tier_v3", "") for r in records)),
+            "l1": {"doi": n_l1_moi + n_l1_nang, "giu_goc_thua": n_l1_giu, "hoa": n_l1_hoa},
+            "qd01": {**{k: int(v) for k, v in qd01_st.items()},
+                     "n_cells_file": len(cells), "n_decisions_file": len(decisions),
+                     "n_pending_rows": len(qd01_pending),
+                     "n_bbox_eq_cu": n_bbox_eq_cu, "n_md5_eq_cu": n_md5_eq_cu,
+                     "n_locked_total": n_locked_total,
+                     "dat_locked_pending": bool(
+                         qd01_st["n_locked"] + qd01_st["n_pending"] + qd01_st["n_bo"]
+                         + qd01_st["n_khac"] == qd01_st["n_cells_in_build"])},
+            "nguoi_ngoai_khoa": {"n": n_nguoi_ngoai, "lop_nham_review": n_lop_nham},
+            "flank_gold": dict(Counter(r.get("flank_gold", 0) for r in records)),
+            # A-8: số ô áp theo mục da_ky + số ô label_canonical ≠ label
+            "decisions": {"path": (str(args.decisions) if qdl is not None else "none"),
+                          "corpus_readings_ap": dict(n_cr), "di_the_ap": dict(n_dt),
+                          "lop_nham_review": n_lop_nham,
+                          "n_label_canonical_ne_label": sum(
+                              1 for r in records if r.get("label_canonical", r["label"]) != r["label"])},
+        },
     }
     json.dump(summary, open(out / "summary.json", "w", encoding="utf-8"),
               ensure_ascii=False, indent=2)
+    # A-8: decisions_report.json — đếm áp/chờ ký từng mục (mục cho_ky CHỈ được báo cáo)
+    if qdl is not None:
+        json.dump(qdl.report(applied={"corpus_readings": dict(n_cr), "di_the": dict(n_dt),
+                                      "lop_nham_review": n_lop_nham}),
+                  open(out / "decisions_report.json", "w", encoding="utf-8"),
+                  ensure_ascii=False, indent=2)
 
     print("\n" + "=" * 64)
     print(f" DATASET -> {out}")
@@ -652,8 +1426,14 @@ def main():
     print(f" pages {pages_done} | pairs {len(records)} | char classes {char_classes}")
     for t in ("GOLD", "SILVER", "SYLLABLE", "REVIEW"):
         print(f"   {t:9s}: {tiers.get(t, 0)}")
-    print(f" SYLLABLE promoted from REVIEW: {n_promoted}")
-    print(f" SYLLABLE chuyển từ SILVER (L5): {n_tu_silver}")
+    if args.two_pass:
+        print(f" tier_v3: " + " | ".join(f"{k} {summary['pass1c']['tier_v3_final'].get(k, 0)}"
+                                        for k in ("CHAR_A", "CHAR_B", "SYL", "REVIEW")))
+        print(f" QĐ-01: locked {qd01_st['n_locked']} | pending {qd01_st['n_pending']} | "
+              f"bbox==cu {n_bbox_eq_cu}/{n_locked_total}")
+    else:
+        print(f" SYLLABLE promoted from REVIEW: {n_promoted}")
+        print(f" SYLLABLE chuyển từ SILVER (L5): {n_tu_silver}")
     print(f" USABLE char-level (GOLD+SILVER): {summary['usable_char']}  | "
           f"+syllable: {summary['usable_total']}")
     print(f" manifest: {out}/labels.csv  ({len(fields)} cột)")

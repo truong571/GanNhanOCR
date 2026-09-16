@@ -22,11 +22,20 @@ Hiệu lực có ở LẦN BUILD KẾ TIẾP (nguyên mẫu được cache theo 
 
     python -m pipeline.tools.rebuild_proto_index
     python -m pipeline.tools.rebuild_proto_index --check   # exit 1 nếu lệch thế hệ
+
+KHÔNG NẰM TRONG FLOW v3 (A-10 giai đoạn 2, 16/09)
+-------------------------------------------------
+S3 đã TẮT (`run_pipeline.sh` không còn `--use-s3`) và bộ nhãn v3 KHÔNG còn cột `split`, nên
+công cụ này không được gọi trong `run_pipeline.sh` lẫn `check_consistency.sh` nữa (tệp giữ
+lại để tái lập thế hệ ≤25/08). Cần dựng lại chỉ mục trên labels không có `split` thì DÙNG
+TAY với `--split-hash`: split được tính lại đúng công thức cũ
+`int(md5(f'{book}|{page}').hexdigest(),16)%100` (<80 train / <90 val / còn lại test).
 """
 from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import re
 import sys
 from pathlib import Path
@@ -35,6 +44,19 @@ REPO = Path(__file__).resolve().parents[2]
 LABELS = REPO / "dataset_out" / "labels_final.csv"
 INDEX = REPO / "pipeline" / "align_engine" / "data" / "index.csv"
 FIELDS = ["path", "label", "unicode", "split", "source"]
+
+
+def split_hash(book: str, page: str) -> str:
+    """Công thức chia theo trang cũ (build_dataset ≤25/08) — dùng khi labels không có `split`."""
+    h = int(hashlib.md5(f"{book}|{page}".encode()).hexdigest(), 16) % 100
+    return "train" if h < 80 else ("val" if h < 90 else "test")
+
+
+def _split_of(r: dict, use_hash: bool) -> str:
+    """split của một dòng labels: cột `split` nếu có, hoặc tính lại bằng hash khi --split-hash."""
+    if use_hash or "split" not in r:
+        return split_hash(r.get("book", ""), r.get("page", ""))
+    return r.get("split", "")
 
 
 def current_books(labels: Path = LABELS) -> set[str]:
@@ -55,7 +77,7 @@ def generation_of(index: Path = INDEX) -> set[str]:
     return out
 
 
-def split_lech(labels: Path = LABELS, index: Path = INDEX) -> tuple[int, int]:
+def split_lech(labels: Path = LABELS, index: Path = INDEX, use_hash: bool = False) -> tuple[int, int]:
     """(số nguyên mẫu gắn train mà NAY thuộc val/test, tổng nguyên mẫu train).
 
     Phép kiểm thế hệ cũ chỉ so TIỀN TỐ SÁCH, nên nó mù với việc đổi ĐỊNH NGHĨA split.
@@ -69,7 +91,7 @@ def split_lech(labels: Path = LABELS, index: Path = INDEX) -> tuple[int, int]:
     now: dict[tuple[str, str], str] = {}
     with open(labels, encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
-            now.setdefault((r.get("book", ""), r.get("page", "")), r.get("split", ""))
+            now.setdefault((r.get("book", ""), r.get("page", "")), _split_of(r, use_hash))
     # `_p####` là hậu tố tách trang trùng số (step1_extract) — phải nuốt cả nó, nếu không
     # `page_0010_p0028` bị cắt thành `page_0010` và quy sai về trang khác.
     pat = re.compile(r"/([a-z]+\d+)_(page_\d+(?:_p\d+)?)")
@@ -85,16 +107,19 @@ def split_lech(labels: Path = LABELS, index: Path = INDEX) -> tuple[int, int]:
     return lech, tong
 
 
-def build_rows(labels: Path = LABELS, src_root: Path = REPO / "dataset_out") -> list[dict]:
+def build_rows(labels: Path = LABELS, src_root: Path = REPO / "dataset_out",
+               use_hash: bool = False) -> list[dict]:
     """Crop GOLD split=train có ảnh THẬT trên đĩa.
 
     Chỉ lấy `split == 'train'`: nguyên mẫu phải rời khỏi val/test, nếu không phép đánh giá
     giữ-lại ở Bước 3 sẽ tự chấm điểm cho mình (chú thích ở visual_signal.py:180-184).
+    Labels v3 không có cột `split` -> phải truyền use_hash (cờ --split-hash), nếu không
+    mọi dòng bị lọc và chỉ mục RỖNG ÂM THẦM (đúng bẫy `:97` mà DANH_MUC §3 cảnh báo).
     """
     rows = []
     with open(labels, encoding="utf-8") as fh:
         for r in csv.DictReader(fh):
-            if r.get("tier") != "GOLD" or r.get("split") != "train":
+            if r.get("tier") != "GOLD" or _split_of(r, use_hash) != "train":
                 continue
             img, lab = r.get("image"), r.get("label")
             if not img or not lab or not (src_root / img).exists():
@@ -112,7 +137,17 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--out", default=str(INDEX))
     ap.add_argument("--check", action="store_true",
                     help="chỉ kiểm thế hệ, KHÔNG ghi; exit 1 nếu lệch")
+    ap.add_argument("--split-hash", action="store_true",
+                    help="labels không có cột split (v3): tính lại bằng md5(book|page)%%100")
     args = ap.parse_args(argv)
+
+    # v3: labels không có cột split -> TỪ CHỐI chạy mù (index rỗng âm thầm), đòi --split-hash
+    with open(args.labels, encoding="utf-8") as fh:
+        _cols = next(csv.reader(fh), [])
+    if "split" not in _cols and not args.split_hash:
+        print(f"[proto-index] 🔴 {args.labels} KHÔNG có cột `split` (thế hệ v3, A-10). Công cụ này "
+              f"nằm ngoài flow v3; muốn dùng tay thì thêm --split-hash.", file=sys.stderr)
+        return 1
 
     want = current_books(Path(args.labels))
     have = generation_of(Path(args.out))
@@ -122,7 +157,7 @@ def main(argv: list[str] | None = None) -> int:
                   f"bộ nhãn dùng {sorted(want)} — giao nhau = 0.\n"
                   f"    chạy: python -m pipeline.tools.rebuild_proto_index", file=sys.stderr)
             return 1
-        lech, tong = split_lech(Path(args.labels), Path(args.out))
+        lech, tong = split_lech(Path(args.labels), Path(args.out), use_hash=args.split_hash)
         if lech:
             print(f"[proto-index] LỆCH CHIA TÁCH: {lech:,}/{tong:,} nguyên mẫu "
                   f"({100*lech/tong:.1f}%) gắn split=train nhưng trang của chúng NAY là "
@@ -133,7 +168,7 @@ def main(argv: list[str] | None = None) -> int:
               f"chia tách khớp ({tong:,} nguyên mẫu train, 0 rò)")
         return 0
 
-    rows = build_rows(Path(args.labels))
+    rows = build_rows(Path(args.labels), use_hash=args.split_hash)
     out = Path(args.out)
     out.parent.mkdir(parents=True, exist_ok=True)
     with open(out, "w", encoding="utf-8", newline="") as fh:

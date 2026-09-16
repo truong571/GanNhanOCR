@@ -53,3 +53,15 @@ Không còn đường máy nào. Đó là lý do khối này được đưa cho 
 
 Thêm quyết định mới thì thêm một mục `QĐ-nn` ở đây **và** một khối trong
 `config/quyet_dinh_glyph.yaml` trỏ `xuat_xu` về tệp này. Không có mục ở đây thì module từ chối chạy.
+
+---
+
+## Phụ lục a — Phán quyết QĐ-01a và ký bảng quy ước (2026-09-17)
+
+| | |
+|---|---|
+| **Người quyết** | truongmdn (chủ nhiệm đề tài) |
+| **Ngày** | 2026-09-17 |
+| **Đã nhìn gì** | Xem trực tiếp các trang HTML kiểm tra crop: `dataset_out_v3/ky/qd01a_review.html`, `dataset_out_v3/ky/di_the_review.html`, `dataset_out_v3/ky/corpus_readings_review.html` |
+| **Nội dung** | 1. **QĐ-01a (14 ô):** Phán quyết 14/14 ô `bo` (bỏ khỏi lớp người cưỡng bức; 2 ô trôi lệch âm sang `mà`/`con` và 12 ô mã ≠ 𠊚 độc lập kiểm FALSE).<br>2. **Dị thể (14 mục):** Ký chuẩn 13/14 cặp; hoãn mục `dt_5171_5176` (共/其 "cùng") cho Khối B-4.<br>3. **Corpus readings (8 mục):** Ký 3 mục áp đảo (`cr_7121_vồ`, `cr_50e5_nhiều`, `cr_4fc2_hế`); 5 mục còn lại giữ `cho_ky`. |
+

@@ -1,0 +1,44 @@
+{
+  "n_cells": 82780,
+  "n_classes": 706,
+  "n_folds": 5,
+  "total_time_min": 19.96,
+  "mean_val_top1": 0.7697,
+  "folds": [
+    {
+      "fold": 0,
+      "val_cells": 13834,
+      "val_top1": 0.7723001301142114,
+      "train_cells": 49195,
+      "time_sec": 231.89232850074768
+    },
+    {
+      "fold": 1,
+      "val_cells": 10790,
+      "val_top1": 0.7616311399443929,
+      "train_cells": 52239,
+      "time_sec": 243.40341591835022
+    },
+    {
+      "fold": 2,
+      "val_cells": 12331,
+      "val_top1": 0.7698483496877788,
+      "train_cells": 50698,
+      "time_sec": 239.3769989013672
+    },
+    {
+      "fold": 3,
+      "val_cells": 13916,
+      "val_top1": 0.7651624029893648,
+      "train_cells": 49113,
+      "time_sec": 234.2664873600006
+    },
+    {
+      "fold": 4,
+      "val_cells": 12158,
+      "val_top1": 0.779404507320283,
+      "train_cells": 50871,
+      "time_sec": 239.07526564598083
+    }
+  ]
+}

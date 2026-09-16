@@ -27,6 +27,26 @@ def check(name: str, cond: bool, detail: str = "") -> None:
         print(f"  FAIL {name}  {detail}")
 
 
+def _ds_out() -> Path:
+    """Thư mục làm việc: dataset_out/ hoặc $DS_OUT (quy ước run_pipeline.sh N0a)."""
+    import os
+    return REPO / os.environ.get("DS_OUT", "dataset_out")
+
+
+def _ds_dir() -> Path:
+    """Thư mục GIAO NỘP: dataset/ (đã nạp phán quyết) rồi re-dataset/ (đem chấm).
+
+    Ghim cứng "dataset" làm 18 test tự bỏ qua sau lần chạy đầu — đúng lỗi vừa vá ở
+    update_bang_so_lieu. Bản thử nghiệm DS_OUT=dataset_out_v3 -> $DS_OUT/{dataset,re-dataset}
+    (run_pipeline.sh:78-81), để kiểm schema 12 cột trước khi bộ v3 thay bộ thật.
+    """
+    root = _ds_out() if _ds_out() != REPO / "dataset_out" else REPO
+    for d in ("dataset", "re-dataset"):
+        if (root / d / "labels.csv").exists():
+            return root / d
+    return root / "re-dataset"
+
+
 def _frame(pairs):
     return pd.DataFrame({"ocr_char": [c for c, _ in pairs],
                          "syllable": [s for _, s in pairs],
@@ -234,17 +254,17 @@ def test_variant_table() -> None:
 
 
 def test_dataset_docs() -> None:
-    """Tài liệu bộ giao nộp: số ĐỌC TỪ nhãn, và KHÔNG bịa lai lịch thư tịch."""
+    """Tài liệu bộ giao nộp: số ĐỌC TỪ nhãn, KHÔNG bịa lai lịch thư tịch, và schema 12 cột.
+
+    Từ 16/09 (A-9/A-10 giai đoạn 1) `labels.csv` giao nộp cố định 12 cột, không split,
+    kèm sidecar labels_trace.csv + columns.csv. Bộ thế hệ cũ (≤25/08, 30+ cột, đang đóng
+    băng ở re-dataset/) chỉ chạy phần kiểm không phụ thuộc schema — chạy
+    `DS_OUT=dataset_out_v3 python -m pipeline.tools.selftest` để kiểm bản mới.
+    """
     from pathlib import Path as _P
     REPO = _P(__file__).resolve().parents[2]
     print("[tài liệu bộ giao nộp]")
-    # Đầu ra có HAI chỗ: dataset/ (đã nạp phán quyết) hoặc re-dataset/ (đem chấm).
-    # Ghim cứng "dataset" làm 18 test tự bỏ qua sau lần chạy đầu — đúng lỗi vừa vá ở
-    # update_bang_so_lieu, và test cũng dính.
-    ds = REPO / "dataset"
-    if not (ds / "labels.csv").exists():
-        ds = REPO / "re-dataset"
-
+    ds = _ds_dir()
     if not (ds / "labels.csv").exists():
         print("  [bỏ qua] chưa có bộ giao nộp"); return
     for n in ("README.md", "DATASHEET.md", "NGUON_THU_TICH.md", "LICENSE.md"):
@@ -252,27 +272,75 @@ def test_dataset_docs() -> None:
     rd = (ds / "README.md").read_text(encoding="utf-8")
     import csv as _csv
     rows = list(_csv.DictReader(open(ds / "labels.csv", encoding="utf-8")))
+    hdr = list(rows[0].keys()) if rows else []
     nchar = sum(1 for r in rows if (r.get("label") or "").strip())
     check(f"README nêu đúng số nhãn ký tự ({nchar:,})", f"{nchar:,}" in rd)
     check("README CẢNH BÁO đừng gộp hai loại nhãn", "Đừng phát biểu" in rd)
     ng = (ds / "NGUON_THU_TICH.md").read_text(encoding="utf-8")
     check("lai lịch để TRỐNG chứ không bịa", "⬜ CHƯA ĐIỀN" in ng)
-    # HỒI QUY: README từng khẳng định "chia tách theo TRANG, không trang nào ở hai phía"
-    # trong khi ĐO ĐƯỢC 360/444 trang có cột ở nhiều phía. Tài liệu nói dối về dữ liệu.
-    # README phải mô tả ĐÚNG trạng thái ĐO ĐƯỢC, không phải ý định của mã.
-    import csv as _c0, collections as _c1
-    _rows = list(_c0.DictReader(open(ds / "labels.csv", encoding="utf-8")))
-    _pg = _c1.defaultdict(set)
-    for _r in _rows:
-        _pg[(_r.get("book"), _r.get("page"))].add(_r.get("split", ""))
-    _leak = sum(1 for v in _pg.values() if len(v) > 1)
-    if _leak == 0:
-        check("0 rò rỉ -> README nói RỜI NHAU THEO TRANG", "rời nhau theo TRANG" in rd)
+
+    # ---- SCHEMA 12 CỘT (16/09) ----------------------------------------------------
+    # HỒI QUY cũ: README từng khẳng định "chia tách theo TRANG, không trang nào ở hai phía"
+    # trong khi ĐO ĐƯỢC 360/444 trang có cột ở nhiều phía. Nay bộ giao nộp KHÔNG chia
+    # train/val/test nữa (ràng buộc 16/09) nên README phải nói đúng điều đó và ghi công
+    # thức hash cũ cho ai cần tự chia theo trang.
+    from pipeline.export_final_dataset import GIAO_NOP, TRACE
+    the_he_moi = hdr == GIAO_NOP
+    if not the_he_moi:
+        print(f"  [thế hệ cũ] {ds.relative_to(REPO)}/labels.csv có {len(hdr)} cột (bộ ≤25/08 "
+              f"đang đóng băng) — bỏ qua phép kiểm schema 12 cột; kiểm bản mới bằng "
+              f"DS_OUT=dataset_out_v3")
     else:
-        check(f"{_leak} trang rò rỉ -> README phải CẢNH BÁO", "CÓ RÒ RỈ" in rd)
-        check("README nói rõ chỉ số là CẬN TRÊN", "CẬN TRÊN" in rd)
-    if any("label_in_train" in r for r in _rows[:1]):
-        check("có cột label_in_train -> README phải nêu", "label_in_train" in rd)
+        check("labels.csv đúng 12 cột, đúng thứ tự GIAO_NOP", hdr == GIAO_NOP, str(hdr))
+        _bo = {"split", "split_group", "label_in_train", "label_level", "usable_image",
+               "page_cot_lech", "seg_backend", "readmitted_from_s3_demotion"}
+        check("không còn cột đã bỏ (split/label_level/usable_image/page_cot_lech…)",
+              not (_bo & set(hdr)), str(_bo & set(hdr)))
+        check("image là khoá chính (không trùng)", len({r["image"] for r in rows}) == len(rows))
+        check("tier chỉ GOLD/SILVER/SYLLABLE", {r["tier"] for r in rows} <= {"GOLD", "SILVER", "SYLLABLE"},
+              str({r["tier"] for r in rows}))
+        check("SYLLABLE <=> label rỗng (label_level suy được từ tier)",
+              all((r["tier"] == "SYLLABLE") == (not r["label"].strip()) for r in rows))
+        # sidecar labels_trace.csv: cùng số dòng, cùng thứ tự image, chỉ cột trong TRACE
+        tp = ds / "labels_trace.csv"
+        check("có labels_trace.csv", tp.exists())
+        if tp.exists():
+            tr = list(_csv.DictReader(open(tp, encoding="utf-8")))
+            th = list(tr[0].keys()) if tr else []
+            check("trace cùng số dòng và cùng thứ tự `image`",
+                  [r["image"] for r in tr] == [r["image"] for r in rows],
+                  f"{len(tr):,} vs {len(rows):,}")
+            check("trace chỉ gồm cột trong TRACE, đúng thứ tự",
+                  th == [c for c in TRACE if c in th], str(th))
+            check("trace có crop_quality_flag (thay usable_image)", "crop_quality_flag" in th)
+            for c in ("l1_tie", "qd01_locked", "qd01_excluded", "flank_gold"):
+                if c in th:
+                    check(f"trace cột cờ {c} ghi DÀY (không rỗng, không '1.0')",
+                          {r[c] for r in tr} <= {"0", "1", "2"}, str(sorted({r[c] for r in tr}))[:40])
+        # columns.csv: khoá book,page,column, phủ mọi cột của labels.csv
+        cp = ds / "columns.csv"
+        check("có columns.csv", cp.exists())
+        if cp.exists():
+            co = list(_csv.DictReader(open(cp, encoding="utf-8")))
+            ch = list(co[0].keys()) if co else []
+            check("columns.csv bắt đầu bằng khoá book,page,column", ch[:3] == ["book", "page", "column"], str(ch))
+            _k = {(r["book"], r["page"], r["column"]) for r in co}
+            check("columns.csv không trùng khoá", len(_k) == len(co))
+            _lab = {(r["book"], r["page"], r["column"]) for r in rows}
+            check(f"columns.csv phủ mọi cột của labels.csv ({len(_lab):,})", _lab <= _k,
+                  f"thiếu {len(_lab - _k)}")
+        check("README nói KHÔNG chia train/val/test", "Không chia train/val/test" in rd)
+        check("README ghi công thức hash cũ để ai cần tự chia theo trang",
+              "% 100" in rd and "md5" in rd and "< 80" in rd and "< 90" in rd)
+        check("README KHÔNG còn hứa 'rời nhau theo TRANG' / cột split",
+              "rời nhau theo TRANG" not in rd and "`split` / `split_group`" not in rd)
+        check("README mô tả đủ 12 cột", all(f"| `{c}` |" in rd for c in GIAO_NOP))
+        check("README nêu labels_trace.csv và columns.csv",
+              "labels_trace.csv" in rd and "columns.csv" in rd)
+        _syl = sum(1 for r in rows if not (r.get("label") or "").strip())
+        if _syl:
+            check("README cảnh báo lọc lớp-có-trong-train trong phạm vi GOLD (khỏi vứt SYLLABLE)",
+                  'tier == "GOLD"' in rd and "vứt" in rd)
 
     # ---- HỒI QUY 2026-08-25: DATASHEET nói NGƯỢC README, và chốt chặn không hề đọc nó ----
     # Test cũ chỉ soi biến `rd` (=README) rồi báo 10/10 xanh, trong khi DATASHEET cùng thư
@@ -282,41 +350,20 @@ def test_dataset_docs() -> None:
     # đọc trước khi dùng" mà run_pipeline.sh chỉ người đọc tới. Bộ giao nộp tự mâu thuẫn.
     dsh = (ds / "DATASHEET.md").read_text(encoding="utf-8")
     check("DATASHEET không còn chuỗi ghim cứng '360/444'", "360/444" not in dsh)
-    check("DATASHEET không mâu thuẫn README về mức chia tách",
-          ("CỘT, không phải TRANG" in dsh) == (_leak > 0))
+    if the_he_moi:
+        check("DATASHEET không mâu thuẫn README: nói KHÔNG chia train/val/test",
+              "Không chia train/val/test" in dsh and "label_in_train" not in dsh)
+        check("DATASHEET không còn nhắc cột đã bỏ (usable_image/page_cot_lech)",
+              "usable_image" not in dsh and "page_cot_lech" not in dsh)
     import re as _re
     _so_muc = _re.findall(r"^(\d+)\. \*\*", dsh, _re.M)
     check("DATASHEET không đánh trùng số mục", len(_so_muc) == len(set(_so_muc)),
           f"trùng: {[x for x in set(_so_muc) if _so_muc.count(x) > 1]}")
-    _lab = [r["label"] for r in _rows if (r.get("label") or "").strip()]
+    _lab = [r["label"] for r in rows if (r.get("label") or "").strip()]
     _ngoai = sum(1 for c in _lab if not ("\u4e00" <= c <= "\u9fff"))
     _pct = f"{100*_ngoai/len(_lab):.2f}".replace(".", ",")
     check(f"DATASHEET nêu tỷ lệ ngoài CJK ĐO ĐƯỢC ({_pct}%)", f"{_pct}%" in dsh,
           "còn ghim cứng 1,63%?" if "1,63%" in dsh else "không thấy số đo")
-
-    # ---- HỒI QUY: README từng bảo "lọc label_in_train == 1" cho CẢ bộ ----
-    # Cột này RỖNG ở mọi dòng tầng SYLLABLE, nên điều kiện đó vứt luôn chúng: 7.070 dòng
-    # chứ không phải 159. README phải nói rõ phạm vi.
-    _syl = sum(1 for r in _rows if not (r.get("label") or "").strip())
-    if _syl and any("label_in_train" in r for r in _rows[:1]):
-        check("README cảnh báo lọc label_in_train vứt nhầm tầng SYLLABLE",
-              'label_level == "char"' in rd and "vứt" in rd)
-
-    # ---- HỒI QUY: label_in_train phải đúng TRÊN CHÍNH BỘ NÀY ----
-    # build_dataset tính cột này ở Bước 3 trên cả 82k hàng (GOLD+SILVER+REVIEW) rồi đóng
-    # băng; bộ giao nộp chỉ có GOLD+SYLLABLE, và confusion-fix còn hạ 1.988 GOLD sau đó.
-    # Đo được 31 ô bị gắn SAI là "lớp có trong train". Nay tính lại ở bước xuất.
-    _tr = {r["label"] for r in _rows if r.get("split") == "train"
-           and r.get("label_level") == "char" and (r.get("label") or "").strip()}
-    _sai = sum(1 for r in _rows
-               if r.get("label_level") == "char" and (r.get("label") or "").strip()
-               and r.get("label_in_train") != ("1" if r["label"] in _tr else "0"))
-    check("label_in_train khớp chính bộ giao nộp (0 ô lệch)", _sai == 0, f"{_sai} ô lệch")
-    import csv as _csv, collections as _c
-    rows = list(_csv.DictReader(open(ds / "labels.csv", encoding="utf-8")))
-    pg = _c.defaultdict(set)
-    for r in rows:
-        pg[(r["book"], r["page"])].add(r.get("split", ""))
 
     check("nói rõ vì sao để trống", "cố ý để trống" in ng.lower() or "bịa" in ng)
 
@@ -393,38 +440,57 @@ def test_step1_khong_mat_trang() -> None:
 
 
 def test_co_trang_lech_cot() -> None:
-    """Trang không đủ 9 cột phải được GẮN CỜ, và cờ phải đếm trên TOÀN BỘ hàng.
+    """Trang không đủ 9 cột phải được NÊU RA, và phải đếm trên TOÀN BỘ hàng.
 
     Bố cục ván khắc luôn 9 cột. Lần chạy 2026-08-25 lộ ra 3 trang thiếu cột, trong đó
     stt4/page_0110 có OCR Nôm ĐỦ 9 cột nhưng chỉ 8 cột sống tới bước ghép — nên phép kiểm
-    "9 cột" chạy sau extract (đếm cột OCR Nôm) cho nó đi qua. Cờ ở bước xuất là chỗ duy
-    nhất nhìn được cả hai phía.
+    "9 cột" chạy sau extract (đếm cột OCR Nôm) cho nó đi qua. Bước xuất là chỗ duy nhất
+    nhìn được cả hai phía.
+
+    Từ 16/09 (schema 12 cột) cờ `page_cot_lech` KHÔNG còn trong labels.csv: danh sách trang
+    suy từ `columns.csv` (dựng trên all_rows) và phải khớp CHÍNH XÁC với labels_final.csv.
+    Thế hệ cũ (≤25/08) vẫn kiểm cột `page_cot_lech` như trước.
 
     BẪY: nếu đếm cột trên hàng ĐÃ LỌC (bộ giao nộp bỏ REVIEW/SILVER) thì một trang lành
     có nguyên một cột rơi vào REVIEW sẽ bị đếm hụt và mang tiếng oan. Phải đếm trên all_rows.
     """
     import csv as _csv, collections as _cl
     print("[cờ trang lệch cột]")
-    ds = REPO / "dataset"
-    if not (ds / "labels.csv").exists():
-        ds = REPO / "re-dataset"
-    full = REPO / "dataset_out" / "labels_final.csv"
+    ds = _ds_dir()
+    full = _ds_out() / "labels_final.csv"
     if not (ds / "labels.csv").exists() or not full.exists():
         print("  [bỏ qua] chưa có bộ giao nộp"); return
     rows = list(_csv.DictReader(open(ds / "labels.csv", encoding="utf-8")))
-    check("bộ giao nộp có cột page_cot_lech", "page_cot_lech" in (rows[0] if rows else {}))
-    if "page_cot_lech" not in (rows[0] if rows else {}):
-        return
-    check("giá trị chỉ '0'/'1'", {r["page_cot_lech"] for r in rows} <= {"0", "1"})
-
     cot_full: dict = {}
     for r in _csv.DictReader(open(full, encoding="utf-8")):
         cot_full.setdefault((r["book"], r["page"]), set()).add(r["column"])
     that_lech = {k for k, v in cot_full.items() if len(v) != 9}
-    co_co = {(r["book"], r["page"]) for r in rows if r["page_cot_lech"] == "1"}
-    check("cờ khớp CHÍNH XÁC tập trang thiếu cột (đếm trên toàn bộ hàng)",
-          co_co == (that_lech & {(r["book"], r["page"]) for r in rows}),
-          f"cờ {sorted(co_co)} vs thật {sorted(that_lech)}")
+    trang_pub = {(r["book"], r["page"]) for r in rows}
+
+    if "page_cot_lech" in (rows[0] if rows else {}):
+        # thế hệ cũ
+        check("giá trị chỉ '0'/'1'", {r["page_cot_lech"] for r in rows} <= {"0", "1"})
+        co_co = {(r["book"], r["page"]) for r in rows if r["page_cot_lech"] == "1"}
+        check("cờ khớp CHÍNH XÁC tập trang thiếu cột (đếm trên toàn bộ hàng)",
+              co_co == (that_lech & trang_pub), f"cờ {sorted(co_co)} vs thật {sorted(that_lech)}")
+    else:
+        cp = ds / "columns.csv"
+        check("schema 12 cột: có columns.csv để suy trang thiếu cột", cp.exists())
+        if not cp.exists():
+            return
+        pg = _cl.defaultdict(set)
+        for r in _csv.DictReader(open(cp, encoding="utf-8")):
+            pg[(r["book"], r["page"])].add(r["column"])
+        tu_cot = {k for k, v in pg.items() if len(v) != 9} & trang_pub
+        check("columns.csv dựng trên TOÀN BỘ hàng (khớp labels_final.csv từng cột)",
+              {k: v for k, v in pg.items()} == cot_full,
+              f"{len(pg)} vs {len(cot_full)} trang")
+        check("trang thiếu cột suy từ columns.csv khớp CHÍNH XÁC labels_final.csv",
+              tu_cot == (that_lech & trang_pub), f"columns {sorted(tu_cot)} vs thật {sorted(that_lech)}")
+        for b_, pg_ in sorted(tu_cot):
+            for f, ten in ((ds / "README.md", "README"), (ds / "DATASHEET.md", "DATASHEET")):
+                check(f"{ten} nêu đích danh trang thiếu cột {b_}/{pg_}",
+                      f"{b_}/{pg_}" in f.read_text(encoding="utf-8"))
 
     # BẪY đếm trên hàng đã lọc: dựng một trang lành có 9 cột nhưng chỉ 8 cột lọt bộ xuất
     all_rows = [{"book": "b", "page": "p", "column": str(i), "tier": "GOLD"} for i in range(1, 9)]
@@ -436,8 +502,8 @@ def test_co_trang_lech_cot() -> None:
     check("đếm trên hàng đã lọc -> gắn cờ OAN (bẫy đã tránh)", sai is True)
 
     for f, ten in ((ds / "README.md", "README"), (ds / "DATASHEET.md", "DATASHEET")):
-        check(f"{ten} có nêu page_cot_lech",
-              "page_cot_lech" in f.read_text(encoding="utf-8"))
+        check(f"{ten} có nêu trang không đủ 9 cột",
+              "không đủ 9 cột" in f.read_text(encoding="utf-8"))
 
 
 def test_run_pipeline_grep_dem() -> None:
@@ -470,9 +536,7 @@ def test_xlsx_khong_bi_excel_an_kieu() -> None:
     import csv as _csv
     from pipeline.tools import make_xlsx as mx
     print("[xlsx trung thực với csv]")
-    ds = REPO / "dataset"
-    if not (ds / "labels.csv").exists():
-        ds = REPO / "re-dataset"
+    ds = _ds_dir()
     src, dst = ds / "labels.csv", ds / "labels.xlsx"
     if not src.exists() or not dst.exists():
         print("  [bỏ qua] chưa có bộ giao nộp / chưa dựng xlsx"); return
@@ -499,10 +563,21 @@ def test_xlsx_khong_bi_excel_an_kieu() -> None:
             if ("" if v is None else str(v)) != a[c]:
                 lech += 1
     check("0 ô lệch trên mọi cột CHUỖI", lech == 0, f"{lech} ô")
-    lit = {str(r[i["label_in_train"]]) for r in xl if r[i["label_in_train"]] is not None}
-    check("label_in_train KHÔNG bị hoá số ('1.0')", lit <= {"0", "1"}, str(sorted(lit))[:50])
-    cw = {str(r[i["crop_w"]]) for r in xl if r[i["crop_w"]]}
-    check("crop_w không có đuôi '.0'", not any("." in v for v in cw), str(sorted(cw)[:3]))
+    # cột cờ/số-dạng-chuỗi của từng thế hệ: ≤25/08 có label_in_train/crop_w trong labels.csv;
+    # 12 cột (16/09) thì image_md5 ('0000e5…' dễ mất số 0 đầu) và bbox ('[…]') phải nguyên.
+    if "label_in_train" in i:
+        lit = {str(r[i["label_in_train"]]) for r in xl if r[i["label_in_train"]] is not None}
+        check("label_in_train KHÔNG bị hoá số ('1.0')", lit <= {"0", "1"}, str(sorted(lit))[:50])
+    if "crop_w" in i:
+        cw = {str(r[i["crop_w"]]) for r in xl if r[i["crop_w"]]}
+        check("crop_w không có đuôi '.0'", not any("." in v for v in cw), str(sorted(cw)[:3]))
+    if "image_md5" in i:
+        md = [str(r[i["image_md5"]]) for r in xl if r[i["image_md5"]] is not None]
+        check("image_md5 giữ đủ 12 hex (không mất số 0 đầu / không hoá số)",
+              all(len(v) == 12 for v in md), str([v for v in md if len(v) != 12][:3]))
+    if "bbox" in i:
+        check("bbox giữ nguyên chuỗi '[x1, y1, x2, y2]'",
+              all(str(r[i["bbox"]]).startswith("[") for r in xl))
     nan = [r for r in rows if str(r["syllable"]).lower() == "nan"]
     if nan:
         gnan = [r for r in xl if str(r[i["syllable"]]).lower() == "nan"]
@@ -544,6 +619,80 @@ def test_batch_by_rule() -> None:
               "ẢNH TRẮNG" in h or "ẢNH BỊ CẮT" in h)
 
 
+def test_doi_soat_the_he_v3() -> None:
+    """A-13 (N15 B1–B8): khối v3 của doi_soat_the_he trên dữ liệu giả có đáp án.
+
+    Dựng 2 cột × 12 chữ Nôm ở cả hai đời, rồi chèn đúng MỘT ca cho mỗi lớp: đổi ghép
+    (syl_idx), ô mất, ô mới, bbox đổi, md5 đổi, GOLD→REVIEW, L1 đổi/thua/hoà, khe giả,
+    lệch chéo, QĐ-01 (locked + hàng xóm đổi). Mỗi số đo phải bằng đúng số ca đã chèn.
+    """
+    print("[tools.doi_soat_the_he v3]")
+    import json, tempfile
+    from pipeline.tools import doi_soat_the_he as D
+
+    def bbox(i):
+        return json.dumps([100, 100 + 110 * i, 200, 200 + 110 * i])
+
+    def cot(col, n, tier="GOLD", rule="s1_inter_s2_direct"):
+        rows = []
+        for i in range(n):
+            rows.append({"book": "b", "page": "p", "column": str(col), "nom_idx": str(i), "syl_idx": str(i),
+                         "tier": tier, "rule": rule, "label": chr(0x4E00 + i), "syllable": f"a{i}",
+                         "bbox": bbox(i), "image_md5": f"m{col}{i:02d}", "ocr_char": chr(0x4E00 + i)})
+        return rows
+    cu = pd.DataFrame(cot(1, 12) + cot(2, 12))
+    moi = pd.DataFrame(cot(1, 12) + cot(2, 12))
+    for c, v in (("count_source", "equal_qn"), ("box_source", "detector"), ("l1_support", "0"),
+                 ("l1_tie", "0"), ("tier_v3", "CHAR_A"), ("n_ocr", "12"), ("n_qn", "12"),
+                 ("syllable_ocr", ""), ("qd01_locked", "0"), ("qd01_excluded", "0")):
+        moi[c] = v
+    moi["syllable_ocr"] = moi["syllable"]
+    m = moi.set_index(["column", "nom_idx"])
+    # B2: cột 1 nom 3 ghép sang âm khác (syl_idx 3 -> 4)
+    m.loc[("1", "3"), "syl_idx"] = "4"
+    # B3: cột 1 nom 11 MẤT (xoá), cột 2 thêm nom 12 MỚI
+    # B4/B5: cột 2 nom 2 bbox + md5 đổi (usable)
+    m.loc[("2", "2"), "bbox"] = json.dumps([101, 320, 201, 420]); m.loc[("2", "2"), "image_md5"] = "zz"
+    # B7: cột 2 nom 5 GOLD -> REVIEW
+    m.loc[("2", "5"), "tier"] = "REVIEW"; m.loc[("2", "5"), "rule"] = "no_context"; m.loc[("2", "5"), "label"] = ""
+    # B8: cột 2 nom 6 L1 đổi (support 2), nom 7 thua (-1), nom 8 hoà (tie)
+    m.loc[("2", "6"), "rule"] = D.RULE_L1; m.loc[("2", "6"), "l1_support"] = "2"; m.loc[("2", "6"), "syllable"] = "á6"
+    m.loc[("2", "7"), "l1_support"] = "-1"
+    m.loc[("2", "8"), "l1_tie"] = "1"
+    # khe giả: cột 1 mất nom 11 -> 11 ô ghép < n_ocr 12 (n_ocr == n_qn == 12 >= 10); lệch chéo = nom 3
+    moi = m.reset_index()
+    moi = moi[~((moi["column"] == "1") & (moi["nom_idx"] == "11"))]
+    moi = pd.concat([moi, pd.DataFrame([{**moi.iloc[-1].to_dict(), "column": "2", "nom_idx": "12", "syl_idx": "12",
+                                          "bbox": bbox(12), "image_md5": "new", "tier": "SYLLABLE",
+                                          "rule": "syl_ctx:bigram", "label": ""}])], ignore_index=True)
+    # QĐ-01: cột 2 nom 9 khoá; hàng xóm prev đúng, next (nom 10) trong bản mới đổi bbox
+    moi.loc[(moi["column"] == "2") & (moi["nom_idx"] == "9"), ["rule", "label", "qd01_locked"]] = \
+        ["quyet_dinh_nguoi:qd01_cell_lock", "𠊚", "1"]
+    moi.loc[(moi["column"] == "2") & (moi["nom_idx"] == "10"), "bbox"] = json.dumps([100, 1205, 200, 1305])
+    qd = pd.DataFrame([{"book": "b", "page": "p", "column": "2", "nom_idx": "9", "label": "𠊚",
+                        "bbox_cu": bbox(9), "prev_bbox_cu": bbox(8), "next_bbox_cu": bbox(10),
+                        "image_md5_cu": "m209"}])
+    with tempfile.TemporaryDirectory() as td:
+        L, R = D.doi_soat_v3(cu, moi, qd, Path(td))
+        check("B1 ghép/mất/mới = 23/1/1", (R["n_ghep"], R["n_mat"], R["n_moi"]) == (23, 1, 1), str((R["n_ghep"], R["n_mat"], R["n_moi"])))
+        check("B2 đổi ghép đúng 1 ô GOLD", R["b2_doi_ghep"] == {"GOLD": 1}, str(R["b2_doi_ghep"]))
+        check("B3 GOLD mất 1", R["b3_gold_mat"] == 1)
+        check("B4 bbox đổi 2 (1 usable + hàng xóm QĐ-01)", R["b4_bbox_doi"] == 2 and R["b4_bbox_doi_usable"] == 2, str(R["b4_bbox_doi"]))
+        check("B5 md5 đổi 1 usable, QĐ-01 0", R["b5_md5_doi_usable"] == 1 and R["b5_md5_doi_qd01"] == 0)
+        check("B5a hàng xóm: prev khớp, next khác", R["b5a"]["prev_khac"] == 0 and R["b5a"]["next_khac"] == 1, str(R["b5a"]))
+        check("B7 GOLD→REVIEW 1, rule direct", R["b7_tong"] == 1 and R["b7_rule_cu"] == {"s1_inter_s2_direct": 1})
+        check("B8 đổi/thua/hoà = 1/1/1, ghi đè 0",
+              R["b8"].get("đổi (l1_support > 0)") == 1 and R["b8"].get("giữ gốc (thua)") == 1
+              and R["b8"].get("hoà (giữ gốc)") == 1 and R["b8_ghi_de"] == 0, str(R["b8"]))
+        check("khe giả 1/2 cột, lệch chéo 1", R["khe_gia_cot"] == 1 and R["khe_gia_tren"] == 2 and R["lech_cheo"] == 1,
+              str((R["khe_gia_cot"], R["khe_gia_tren"], R["lech_cheo"])))
+        check("usable cũ 24 -> mới 23", R["usable_cu"] == 24 and R["usable_moi"] == 23)
+        check("CSV chi tiết được ghi", all((Path(td) / f).exists() for f in
+                                           ("B2_doi_am_ghep.csv", "B3_o_mat.csv", "B5_md5_doi.csv", "B7_gold_sang_review.csv")))
+        bkv = D.bang_ky_vong(R, None)
+        check("bảng kỳ vọng có dòng usable + B8 ghi đè", any("Ô dùng được" in l for l in bkv) and any("ghi đè bản in" in l for l in bkv))
+
+
 def main() -> int:
     print("=" * 64)
     print("TOOLS SELFTEST")
@@ -562,6 +711,7 @@ def main() -> int:
     test_run_pipeline_grep_dem()
     test_xlsx_khong_bi_excel_an_kieu()
     test_batch_by_rule()
+    test_doi_soat_the_he_v3()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

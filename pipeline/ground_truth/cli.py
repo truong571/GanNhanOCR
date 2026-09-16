@@ -143,6 +143,7 @@ def cmd_grid(args) -> None:
         font_path=paths["font"],
         with_context=not args.no_context,
         batch_size=args.batch_size,
+        labels_path=args.labels,        # A-14: manifest ghi sha256 của tệp nhãn đã rút mẫu
     )
     print(f"[grid] {json.dumps(res, ensure_ascii=False, indent=2)}")
 

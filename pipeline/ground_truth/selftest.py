@@ -245,6 +245,34 @@ def test_grid(sample: pd.DataFrame) -> None:
             check("manifest carries hidden fields",
                   all(k in manifest[0] for k in ("tier", "rule", "stratum", "label")))
             check("manifest has design_weight", "design_weight" in manifest[0])
+            check("manifest KHÔNG có labels_sha256 khi không truyền labels_path",
+                  "labels_sha256" not in manifest[0])
+        # A-14: labels_path -> sha256 của tệp nhãn đã rút mẫu ghi vào TỪNG dòng manifest
+        # (bộ đem đo = bộ đem nộp, so được với CHECKSUMS.txt bằng máy)
+        lp = td / "labels_fake.csv"
+        lp.write_text("image,tier\nx.png,GOLD\n", encoding="utf-8")
+        import hashlib
+        want = hashlib.sha256(lp.read_bytes()).hexdigest()
+        res2 = audit_grid.build_audit(
+            sample=small, dataset_dir=REPO / "dataset_out", prepared_dir=REPO / "prepared",
+            fd_dir=REPO / "gannhanocr-fd", out_html=td / "audit2.html",
+            out_manifest=td / "manifest2.jsonl", qn_dict=None,
+            font_path=REPO / "font_diffusion/fonts/NomNaTong-Regular.ttf",
+            with_context=False, labels_path=lp)
+        man2 = [json.loads(l) for l in (td / "manifest2.jsonl").read_text().splitlines() if l.strip()]
+        check("labels_sha256 trả về đúng sha256 của labels_path", res2["labels_sha256"] == want)
+        check("mọi dòng manifest mang labels_sha256 + labels_path",
+              bool(man2) and all(m.get("labels_sha256") == want and m.get("labels_path") == str(lp)
+                                 for m in man2))
+        try:
+            audit_grid.build_audit(
+                sample=small, dataset_dir=REPO / "dataset_out", prepared_dir=REPO / "prepared",
+                fd_dir=REPO / "gannhanocr-fd", out_html=td / "audit3.html",
+                out_manifest=td / "manifest3.jsonl", with_context=False,
+                labels_path=td / "khong_ton_tai.csv")
+            check("labels_path không tồn tại -> FileNotFoundError", False)
+        except FileNotFoundError:
+            check("labels_path không tồn tại -> FileNotFoundError", True)
 
 
 # --------------------------------------------------------------------------- #

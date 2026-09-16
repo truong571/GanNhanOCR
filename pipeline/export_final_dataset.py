@@ -5,9 +5,16 @@ Gọi bởi run_pipeline.sh sau bước remediate. XOÁ SẠCH --out trước kh
 thư mục đó LUÔN LÀ bản mới nhất của lần chạy gần nhất — không cộng dồn qua các
 lần chạy trước.
 
+SCHEMA GIAO NỘP (A-9/A-10, DANH_MUC_SUA_DOI_CUOI_2026-09-16 §2-§3, từ 16/09):
+    labels.csv        12 cột CỐ ĐỊNH (whitelist GIAO_NOP) — không split/label_in_train,
+                      không cột chẩn đoán. Nội bộ `dataset_out/labels_final.csv` giữ đủ cột.
+    labels_trace.csv  sidecar chẩn đoán, CÙNG số dòng/thứ tự, khoá `image`
+                      (chỉ ghi cột CÓ trong nguồn — thế hệ cũ thiếu tier_v3/p_register…).
+    columns.csv       một dòng mỗi cột (book,page,column): n_ocr, n_qn, n_det, count_source.
+
 Usage:
     python3 pipeline/export_final_dataset.py \
-        --labels dataset_out/labels_remediated.csv --src-root dataset_out --out dataset
+        --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset
 """
 from __future__ import annotations
 
@@ -19,6 +26,22 @@ from collections import Counter
 from pathlib import Path
 
 USABLE_TIERS = {"GOLD", "SILVER", "SYLLABLE"}
+
+# 12 cột giao nộp — thứ tự cố định. Bỏ hẳn (hàm thuần của cột khác, xem §2): label_level
+# (= f(tier)), usable_image (= f(crop_quality_flag)), page_cot_lech (suy từ columns.csv),
+# split/split_group/label_in_train (bỏ chia train/val/test — README ghi công thức hash cũ),
+# seg_backend (1 giá trị -> summary.json), readmitted_from_s3_demotion (rỗng toàn bộ).
+GIAO_NOP = ["image", "book", "page", "column", "ocr_char", "syllable", "label",
+            "unicode", "tier", "rule", "bbox", "image_md5"]
+# Sidecar labels_trace.csv: chỉ những cột có mặt trong nguồn được ghi (không bịa cột rỗng).
+TRACE = ["image", "nom_idx", "syl_idx", "syllable_ocr", "syllable_raw", "tier_v3",
+         "tier_goc", "rule_goc", "p_register", "dict_support", "context_evidence",
+         "l1_support", "l1_tie", "flank_gold", "box_source", "qd01_locked", "qd01_excluded",
+         "label_canonical", "crop_quality_flag", "stray_ink", "border_ink", "ink_pct",
+         "crop_w", "crop_h", "seg_flag", "s3_cosine"]
+# columns.csv: khoá (book,page,column) + các đại lượng cấp CỘT (giá trị đầu tiên gặp).
+COT_KHOA = ["book", "page", "column"]
+COT_CSV = ["n_ocr", "n_qn", "n_det", "count_source"]
 
 
 def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
@@ -42,6 +65,12 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
     if not rows:
         print("[export] 0 dòng usable (GOLD/SILVER/SYLLABLE) trong "
               f"{labels_path} — không ghi gì vào {out_root}.", file=sys.stderr)
+        return 1
+    # Cột giao nộp thiếu trong nguồn -> LỖI trước khi xoá gì, không âm thầm ghi rỗng:
+    # schema cố định 12 cột là cả mục đích của whitelist.
+    _thieu = [c for c in GIAO_NOP if c not in fieldnames]
+    if _thieu:
+        print(f"[export] {labels_path} THIẾU cột giao nộp bắt buộc: {_thieu}", file=sys.stderr)
         return 1
 
     # XOÁ SẠCH RỒI GHI LẠI — nhưng CHỈ xoá thứ do chính bước này sinh ra.
@@ -74,68 +103,69 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
         shutil.copy2(src, dst)
         n_copied += 1
 
-    # GẮN CỜ ẢNH DÙNG ĐƯỢC — PHẢI ĐẶT TRƯỚC KHI GHI.
-    # Lỗi thật 2026-08-25: khối này từng nằm SAU w.writerows(), nên CSV ra cột RỖNG
-    # trong khi log vẫn báo "424 ô" — log TRẤN AN SAI, còn đội chấm thì không nhận được
-    # cảnh báo nào. Đó là cả mục đích của cột này.
-    for r in rows:
-        r["usable_image"] = "0" if r.get("crop_quality_flag") in ("blank", "truncated") else "1"
+    # CỜ ẢNH DÙNG ĐƯỢC: KHÔNG còn là cột (usable_image = f(crop_quality_flag), §2). Vẫn
+    # đếm để log — lỗi thật 2026-08-25 là cột rỗng mà log vẫn trấn an "424 ô"; nay cờ sống
+    # ở labels_trace.csv (crop_quality_flag), người chấm lọc `blank`/`truncated` ở đó.
+    _nbad = sum(1 for r in rows if r.get("crop_quality_flag") in ("blank", "truncated"))
 
-    # GẮN CỜ TRANG KHÔNG ĐỦ 9 CỘT. Bố cục ván khắc LUÔN 9 cột, nên thiếu cột là dấu hiệu
-    # phép ghép cột Nôm<->Quốc ngữ trên trang đó có thể đã trượt.
-    # Cờ này chỉ nói MỘT sự việc đo được (trang không đủ 9 cột), KHÔNG kết luận nhãn sai —
-    # trong 3 trang bắt được, stt4/page_0252 có REVIEW 19% ≈ mức chung 17,9% nên nhiều khả
-    # năng lành, còn stt4/page_0110 (68%) và stt11/page_0010_p0028 (70%) thì hỏng thật.
-    # Tỷ lệ REVIEW in kèm bên dưới để người đọc tự phân định.
-    # Đáng chú ý: phép kiểm "9 cột" chạy sau extract ĐẾM CỘT OCR NÔM nên nó cho
-    # stt4/page_0110 đi qua (Nôm đủ 9) dù chỉ 8 cột sống sót tới bước ghép. Đây là chỗ
-    # duy nhất bắt được cả hai phía.
-    # Đếm trên TOÀN BỘ hàng (all_rows) chứ không phải hàng đã lọc — bộ giao nộp bỏ REVIEW
-    # nên một trang lành mà cả cột rơi vào REVIEW sẽ bị đếm hụt và mang tiếng oan.
+    # TRANG KHÔNG ĐỦ 9 CỘT. Bố cục ván khắc LUÔN 9 cột, nên thiếu cột là dấu hiệu phép ghép
+    # cột Nôm<->Quốc ngữ trên trang đó có thể đã trượt. Cờ chỉ nói MỘT sự việc đo được, KHÔNG
+    # kết luận nhãn sai — trong 3 trang bắt được ở lần 25/08, stt4/page_0252 có REVIEW 19% ≈
+    # mức chung 17,9% nên nhiều khả năng lành, còn stt4/page_0110 (68%) và
+    # stt11/page_0010_p0028 (70%) thì hỏng thật. Tỷ lệ REVIEW in kèm để người đọc tự phân định.
+    # Phép kiểm "9 cột" chạy sau extract ĐẾM CỘT OCR NÔM nên cho stt4/page_0110 đi qua (Nôm đủ
+    # 9) dù chỉ 8 cột sống sót tới bước ghép — đây là chỗ duy nhất bắt được cả hai phía.
+    # Đếm trên TOÀN BỘ hàng (all_rows), không phải hàng đã lọc — bộ giao nộp bỏ REVIEW nên
+    # một trang lành mà cả cột rơi vào REVIEW sẽ bị đếm hụt và mang tiếng oan.
+    # Từ 16/09 KHÔNG ghi cột page_cot_lech nữa: columns.csv (dựng từ all_rows) đủ để
+    # make_dataset_docs suy lại danh sách trang; ở đây chỉ log.
     _cot_theo_trang: dict[tuple, set] = {}
     for r in all_rows:
         _cot_theo_trang.setdefault((r.get("book"), r.get("page")), set()).add(r.get("column"))
     _trang_lech = {k for k, v in _cot_theo_trang.items() if len(v) != 9}
-    for r in rows:
-        r["page_cot_lech"] = "1" if (r.get("book"), r.get("page")) in _trang_lech else "0"
-    _n_lech = sum(1 for r in rows if r["page_cot_lech"] == "1")
+    _n_lech = sum(1 for r in rows if (r.get("book"), r.get("page")) in _trang_lech)
 
-    # TÍNH LẠI label_in_train TRÊN ĐÚNG BỘ ĐƯỢC CÔNG BỐ.
-    # build_dataset tính cột này ở Bước 3 trên TOÀN BỘ 82k hàng — GOLD + SILVER + REVIEW
-    # gộp lại — rồi đóng băng. Nhưng bộ giao nộp chỉ có GOLD + SYLLABLE, và giữa hai mốc
-    # đó confusion-fix còn hạ 1.988 hàng GOLD xuống REVIEW. Hệ quả: một lớp chữ chỉ còn
-    # sống trong SILVER/REVIEW của phía train vẫn bị ghi là "có trong train", nên ô val/test
-    # mang lớp đó KHÔNG được cảnh báo. Đo được 31 hàng sai (cột ghi 128, số thật 159).
-    # Đây là cột người ta lọc để đánh giá, nên sai ở đây là chỉ số sai mà không ai biết.
-    _train_lop = {r["label"] for r in rows
-                  if r.get("split") == "train" and r.get("label_level") == "char" and r.get("label")}
-    _sua = 0
-    for r in rows:
-        moi = ("1" if r["label"] in _train_lop else "0") \
-            if (r.get("label_level") == "char" and r.get("label")) else ""
-        if moi != r.get("label_in_train"):
-            _sua += 1
-        r["label_in_train"] = moi
-    _unseen = sum(1 for r in rows if r["label_in_train"] == "0")
+    # BỎ split/split_group/label_in_train (A-10 giai đoạn 1): ba cột là hàm thuần của
+    # (book,page) — split_group == book|page, split == int(md5(book|page),16)%100 — nên
+    # không mất thông tin; ai cần tự chia theo trang bằng công thức ghi trong README.
+    # Khối "tính lại label_in_train trên đúng bộ được công bố" (25/08) xoá theo.
 
+    # labels.csv — ĐÚNG 12 cột, đúng thứ tự GIAO_NOP (cột thiếu đã chặn ở trên, trước khi xoá).
     with open(out_root / "labels.csv", "w", encoding="utf-8", newline="") as f:
-        for _c in ("usable_image", "page_cot_lech"):
-            if _c not in fieldnames:
-                fieldnames = list(fieldnames) + [_c]
-        w = csv.DictWriter(f, fieldnames=fieldnames)
+        w = csv.DictWriter(f, fieldnames=GIAO_NOP, extrasaction="ignore")
         w.writeheader()
         w.writerows(rows)
+
+    # labels_trace.csv — cùng số dòng/thứ tự, khoá `image`; chỉ cột có trong nguồn.
+    _trace_cols = [c for c in TRACE if c in fieldnames]
+    with open(out_root / "labels_trace.csv", "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=_trace_cols, extrasaction="ignore")
+        w.writeheader()
+        w.writerows(rows)
+
+    # columns.csv — một dòng mỗi cột (book,page,column) trên TOÀN BỘ hàng (kể cả cột chỉ
+    # có REVIEW): n_ocr/n_qn/n_det là sự thật cấp cột, không phụ thuộc tier; và nhờ đủ cột
+    # mới suy được trang thiếu cột. Giá trị = dòng ĐẦU TIÊN gặp của cột đó.
+    _cot_csv = [c for c in COT_CSV if c in fieldnames]
+    _cot_seen: dict[tuple, dict] = {}
+    for r in all_rows:
+        k = tuple(r.get(c, "") for c in COT_KHOA)
+        if k not in _cot_seen:
+            _cot_seen[k] = {**{c: r.get(c, "") for c in COT_KHOA},
+                            **{c: r.get(c, "") for c in _cot_csv}}
+    with open(out_root / "columns.csv", "w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=COT_KHOA + _cot_csv)
+        w.writeheader()
+        w.writerows(_cot_seen.values())
 
     tiers = Counter(r["tier"] for r in rows)
     # TÁCH BẠCH HAI LOẠI NHÃN (2026-08-25, sau phản biện hội đồng). Gộp GOLD+SYLLABLE
     # thành một con số là THỔI SỐ: tầng SYLLABLE có cột `label` RỖNG — nó chỉ ghi ÂM
     # Quốc ngữ, KHÔNG gán chữ Nôm nào. Sản phẩm gán nhãn CẤP KÝ TỰ chỉ là phần GOLD.
-    # GẮN CỜ ẢNH DÙNG ĐƯỢC (2026-08-25). Đo được 424 ô có ảnh hỏng (34+330 GOLD, 6+54
-    # SYLLABLE) vẫn nằm trong bộ giao nộp. KHÔNG loại chúng: nhãn có thể vẫn ĐÚNG dù
-    # ảnh hỏng, và loại đi sẽ đổi số + phá chuỗi băm. Thay vào đó gắn cờ để (a) người
-    # chấm biết bỏ qua chiều ẢNH thay vì chấm nhầm thành "nhãn sai", (b) người huấn
-    # luyện mô hình lọc được.
-    _nbad = sum(1 for r in rows if r["usable_image"] == "0")
+    # ẢNH HỎNG (2026-08-25). Đo được 424 ô có ảnh hỏng (34+330 GOLD, 6+54 SYLLABLE) vẫn
+    # nằm trong bộ giao nộp. KHÔNG loại chúng: nhãn có thể vẫn ĐÚNG dù ảnh hỏng, và loại
+    # đi sẽ đổi số + phá chuỗi băm. Cờ crop_quality_flag ở labels_trace.csv để (a) người
+    # chấm bỏ qua chiều ẢNH thay vì chấm nhầm thành "nhãn sai", (b) người huấn luyện lọc.
     _nchar = sum(1 for r in rows if (r.get("label") or "").strip())
     _nsyl = len(rows) - _nchar
     print(f"[export] {out_root}/labels.csv — {_nchar:,} nhãn CẤP KÝ TỰ "
@@ -144,19 +174,21 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
           f"SYLLABLE {tiers.get('SYLLABLE', 0)})")
     print(f"[export] ⚠️ con số đem so với bộ dữ liệu Hán Nôm khác là {_nchar:,}, "
           f"KHÔNG phải {len(rows):,}")
+    print(f"[export] labels.csv {len(GIAO_NOP)} cột · labels_trace.csv {len(_trace_cols)} cột "
+          f"(thiếu trong nguồn: {[c for c in TRACE if c not in fieldnames] or 'không'}) · "
+          f"columns.csv {len(_cot_seen):,} cột trang (cột đo: {_cot_csv or 'chưa có'})")
     if _n_lech:
         _rv_all = sum(1 for r in all_rows if r.get("tier") == "REVIEW") / max(1, len(all_rows))
-        print(f"[export] 🔴 page_cot_lech=1: {_n_lech:,} ô trên {len(_trang_lech)} trang "
-              f"KHÔNG đủ 9 cột (mức REVIEW chung {100*_rv_all:.1f}%):")
+        print(f"[export] 🔴 trang KHÔNG đủ 9 cột: {_n_lech:,} ô trên {len(_trang_lech)} trang "
+              f"(mức REVIEW chung {100*_rv_all:.1f}%; suy lại được từ columns.csv):")
         for b, pg in sorted(_trang_lech):
             _pr = [r for r in all_rows if r.get("book") == b and r.get("page") == pg]
             _rv = sum(1 for r in _pr if r.get("tier") == "REVIEW") / max(1, len(_pr))
             _co = sorted({int(r["column"]) for r in _pr})
             print(f"           {b}/{pg}: cột {_co} · REVIEW {100*_rv:.0f}%"
                   f"{'  <- lệch xa mức chung, ghép cột nhiều khả năng đã trượt' if _rv > 2*_rv_all else ''}")
-    print(f"[export] label_in_train: {_unseen:,} ô có lớp chữ KHÔNG có trong train "
-          f"của chính bộ này (tính lại tại bước xuất, sửa {_sua:,} ô so với Bước 3)")
-    print(f"[export] usable_image=0 (ảnh trắng/cụt, ĐỪNG chấm chiều ảnh): {_nbad:,} ô")
+    print(f"[export] ảnh trắng/cụt (crop_quality_flag blank/truncated ở labels_trace.csv, "
+          f"ĐỪNG chấm chiều ảnh): {_nbad:,} ô")
     print(f"[export] ảnh: {n_copied} đã copy, {n_missing} thiếu trên đĩa")
     # export XOÁ SẠCH thư mục đích rồi ghi lại, nên tài liệu đi kèm biến mất theo.
     # run_pipeline gọi make_dataset_docs ngay sau đây; chạy TAY thì dễ quên, và bộ giao

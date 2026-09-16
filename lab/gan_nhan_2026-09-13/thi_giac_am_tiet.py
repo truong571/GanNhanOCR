@@ -91,6 +91,13 @@ def cmd_crops():
 
 def load_all():
     df = pd.read_csv(REPO / "dataset_out/labels_final.csv", dtype=str, keep_default_na=False)
+    # A-10 (16/09): bộ nhãn v3 không còn cột split — tự chia theo TRANG bằng đúng công thức
+    # cũ của build_dataset (≤25/08) để E1/E2 tái lập nguyên xi trên cả hai thế hệ.
+    if "split" not in df.columns:
+        import hashlib
+        key = df["book"] + "|" + df["page"]
+        hv = key.map(lambda k: int(hashlib.md5(k.encode()).hexdigest(), 16) % 100)
+        df["split"] = np.where(hv < 80, "train", np.where(hv < 90, "val", "test"))
     z = np.load(CROPS)
     return df, z["X"], z["ok"]
 

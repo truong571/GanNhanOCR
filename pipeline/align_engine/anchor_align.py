@@ -26,17 +26,26 @@ core/align/anchor_align.py and is called from process_page_structural.
 """
 from __future__ import annotations
 
+import math
+
 # ---- substitution / indel costs -------------------------------------------
-# Tuned so that a 1-1 diagonal always wins on a clean matched column, but a
-# single missing/extra glyph is cheaper to absorb as ONE local gap than to
-# mis-pair the rest of the column.
+# Ma trận CALIB (2026-09-13): mỗi chi phí = −log tỉ số khả năng (nat) đo trên
+# ngữ liệu thật — docs/RA_SOAT_GAN_NHAN_2026-09-13.md §2 N1 và
+# lab/gan_nhan_2026-09-13/thuc_nghiem.py (cmd_calib, CALIB). Thay bộ cũ
+# 0/0,3/1,0/0,9/0,7 (khe giả 346 cột) → khe giả 54 cột trên cột m=n.
+# Một khe (8,6) đắt hơn một cặp lệch từ điển (6,7): chỉ mở khe khi ≥2 cặp
+# liên tiếp không hợp từ điển — không còn "khe giả" vì một chữ OCR sai.
 COST_CONFIRM   = 0.0   # ocr_char is a dict reading of the syllable (S1 ∩ S2)
-COST_SIMILAR   = 0.3   # a visually-similar char of ocr_char is a dict reading
-COST_DICTMISS  = 1.0   # syllable IS in dict but ocr_char is not among readings
-COST_NODICT    = 0.9   # syllable not in dict at all -> cannot judge, allow match
-COST_DEL       = 0.7   # skip a Nôm char (spurious / over-segmented box)
-COST_INS       = 0.7   # skip a QN syllable (Nôm OCR dropped a real glyph)
+COST_SIMILAR   = 2.5   # a visually-similar char of ocr_char is a dict reading
+COST_DICTMISS  = 6.7   # syllable IS in dict but ocr_char is not among readings
+COST_NODICT    = 5.1   # syllable not in dict at all -> cannot judge, allow match
+COST_DEL       = 8.6   # skip a Nôm char (spurious / over-segmented box)
+COST_INS       = 8.6   # skip a QN syllable (Nôm OCR dropped a real glyph)
 BAND_SLACK     = 2     # how far past |m-n| the alignment may bow off-diagonal
+# Trần chi phí cho cặp được NEO ngữ liệu (cặp (chữ, âm) thấy ở ≥2 trang khác,
+# flow N4b): cost_fn = min(base, ANCHOR_CAP). 2,0 nat thay vì 0 để một cặp neo
+# sai không kéo cả đoạn (khe đúng 86%, ghép sai 1,36% trên benchmark).
+ANCHOR_CAP     = 2.0
 
 
 def _char_of(item) -> str | None:
@@ -81,7 +90,8 @@ def is_confirmed(ocr_char: str | None, syllable: str,
 def realign_column(nom_chars: list, syllables: list[str],
                    qn_to_nom: dict[str, list[str]],
                    similar_dict: dict[str, list[str]] | None = None,
-                   band_slack: int = BAND_SLACK) -> list[dict]:
+                   band_slack: int = BAND_SLACK,
+                   cost_fn=None) -> list[dict]:
     """Align one column's Nôm chars to its QN syllables.
 
     Args:
@@ -90,6 +100,9 @@ def realign_column(nom_chars: list, syllables: list[str],
         syllables: list of QN syllable strings, in reading order.
         qn_to_nom: {qn_lower: [nom_char, ...]}.
         similar_dict: {nom_char: [similar, ...]} (optional, bridges OCR confusions).
+        cost_fn: callable (ocr_char, syllable) -> float ghi đè chi phí thay thế
+                 (vd. neo ngữ liệu, phát xạ ảnh); None = substitution_cost.
+                 Chỉ đổi ĐƯỜNG GHÉP; cờ 'confirmed' vẫn do is_confirmed quyết.
 
     Returns:
         Ordered list of ops, each a dict:
@@ -114,6 +127,7 @@ def realign_column(nom_chars: list, syllables: list[str],
     dp = [[INF] * (n + 1) for _ in range(m + 1)]
     bt = [[None] * (n + 1) for _ in range(m + 1)]
     dp[0][0] = 0.0
+    _cost = cost_fn or (lambda c, s: substitution_cost(c, s, qn_to_nom, similar_dict))
 
     for i in range(m + 1):
         for j in range(n + 1):
@@ -124,8 +138,7 @@ def realign_column(nom_chars: list, syllables: list[str],
             best, op = INF, None
             # diagonal: match nom[i-1] with syl[j-1]
             if i > 0 and j > 0 and dp[i - 1][j - 1] < INF:
-                c = dp[i - 1][j - 1] + substitution_cost(
-                    chars[i - 1], syllables[j - 1], qn_to_nom, similar_dict)
+                c = dp[i - 1][j - 1] + _cost(chars[i - 1], syllables[j - 1])
                 if c < best:
                     best, op = c, "M"
             # up: delete nom[i-1] (extra Nôm box, no syllable)
@@ -170,3 +183,92 @@ def realign_column(nom_chars: list, syllables: list[str],
 def matched_pairs(ops: list[dict]) -> list[dict]:
     """Extract only the 'match' ops (the emitted Nôm-crop ↔ syllable labels)."""
     return [o for o in ops if o["op"] == "match"]
+
+
+def band_touched(ops: list[dict], m: int, n: int,
+                 band_slack: int = BAND_SLACK) -> bool:
+    """True nếu đường ghép chạm biên băng |i−j| == |m−n| + slack (cùng công thức
+    băng với realign_column). Cột chạm biên = DP có thể đã bị băng CHẶN đường
+    tốt hơn → cờ để rà soát (CALIB: 3/4.029 cột)."""
+    band = abs(m - n) + max(1, band_slack)
+    i = j = 0
+    for o in ops:
+        if o["op"] == "match":
+            i += 1
+            j += 1
+        elif o["op"] == "del":
+            i += 1
+        else:  # "ins"
+            j += 1
+        if abs(i - j) >= band:
+            return True
+    return False
+
+
+def _lse(a: float, b: float) -> float:
+    """log(exp(a) + exp(b)) ổn định số; −inf là phần tử trung hoà."""
+    if a == -math.inf:
+        return b
+    if b == -math.inf:
+        return a
+    mx = max(a, b)
+    return mx + math.log(math.exp(a - mx) + math.exp(b - mx))
+
+
+def posterior_matches(nom_chars: list, syllables: list[str],
+                      qn_to_nom: dict[str, list[str]],
+                      similar_dict: dict[str, list[str]] | None = None,
+                      T: float = 1.0, cost_fn=None,
+                      band_slack: int = BAND_SLACK) -> dict[tuple[int, int], float]:
+    """{(i, j): P(ghép nom i ↔ âm j)} bằng forward–backward trên đúng lưới NW có
+    băng của realign_column, trọng số exp(−cost/T). Port từ
+    lab/gan_nhan_2026-09-13/thuc_nghiem.py:118-173 (RA_SOAT_GAN_NHAN §4); T=1,0
+    vì chi phí CALIB đã là nat. PHẢI truyền cùng cost_fn với realign_column để
+    p đo đúng đường Viterbi (argmax theo hàng == cặp Viterbi; Σ_j p(i,j) ≤ 1,
+    phần còn lại là P(del i))."""
+    m, n = len(nom_chars), len(syllables)
+    if m == 0 or n == 0:
+        return {}
+    chars = [_char_of(x) for x in nom_chars]
+    band = abs(m - n) + max(1, band_slack)
+    NEG = -math.inf
+    _cost = cost_fn or (lambda c, s: substitution_cost(c, s, qn_to_nom, similar_dict))
+    cache: dict[tuple[int, int], float] = {}
+
+    def sc(i, j):
+        if (i, j) not in cache:
+            cache[(i, j)] = -_cost(chars[i], syllables[j]) / T
+        return cache[(i, j)]
+    d, ins = -COST_DEL / T, -COST_INS / T
+    F = [[NEG] * (n + 1) for _ in range(m + 1)]
+    F[0][0] = 0.0
+    for i in range(m + 1):
+        for j in range(n + 1):
+            if abs(i - j) > band or (i == 0 and j == 0):
+                continue
+            v = NEG
+            if i > 0 and j > 0:
+                v = _lse(v, F[i - 1][j - 1] + sc(i - 1, j - 1))
+            if i > 0:
+                v = _lse(v, F[i - 1][j] + d)
+            if j > 0:
+                v = _lse(v, F[i][j - 1] + ins)
+            F[i][j] = v
+    B = [[NEG] * (n + 1) for _ in range(m + 1)]
+    B[m][n] = 0.0
+    for i in range(m, -1, -1):
+        for j in range(n, -1, -1):
+            if abs(i - j) > band or (i == m and j == n):
+                continue
+            v = NEG
+            if i < m and j < n:
+                v = _lse(v, B[i + 1][j + 1] + sc(i, j))
+            if i < m:
+                v = _lse(v, B[i + 1][j] + d)
+            if j < n:
+                v = _lse(v, B[i][j + 1] + ins)
+            B[i][j] = v
+    Z = F[m][n]
+    return {(i, j): math.exp(F[i][j] + sc(i, j) + B[i + 1][j + 1] - Z)
+            for i in range(m) for j in range(n)
+            if abs(i - j) <= band and F[i][j] > NEG and B[i + 1][j + 1] > NEG}

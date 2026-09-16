@@ -146,6 +146,77 @@ def test_remediate_synthetic() -> None:
           f"{rep_d.usable_before}->{rep_d.usable_after}")
 
 
+def test_census_md5_dup() -> None:
+    """A-11 (16/09): cùng md5 trong CÙNG cột nhưng bbox KHÁC — cặp 法/冉 lọt AE-1 lẫn F1.
+
+    Trước 16/09 census chỉ bắt AE-1 (bbox giống) và F1 (khác cột), nên hai hộp lệch vài px
+    cắt ra cùng một ảnh (md5 aa18c3e60447, stt4/page_0016/c01) đi thẳng vào bộ giao nộp
+    với hai nhãn khác nhau. Luật MD5_DUP phải bắt cặp này và remediate cách ly CẢ HAI.
+    """
+    print("[census MD5_DUP cùng cột khác bbox]")
+    df = _synthetic()
+    extra = [
+        # nhãn KHÁC -> conflict -> quarantine cả hai
+        _row(image="gold/f_c05_0.png", column=5, label="法", unicode="U+6CD5",
+             image_md5="aa18c3e60447", bbox="[1018, 1451, 1087, 1523]"),
+        _row(image="gold/f_c05_1.png", column=5, label="冉", unicode="U+5189",
+             image_md5="aa18c3e60447", bbox="[1018, 1511, 1087, 1583]"),
+        # nhãn GIỐNG -> giữ một, cách ly một
+        _row(image="gold/g_c06_0.png", column=6, label="月", unicode="U+6708",
+             image_md5="md5dupsame", bbox="[0, 0, 10, 10]"),
+        _row(image="gold/g_c06_1.png", column=6, label="月", unicode="U+6708",
+             image_md5="md5dupsame", bbox="[0, 2, 10, 12]"),
+    ]
+    df2 = pd.concat([df, pd.DataFrame(extra)], ignore_index=True)
+    base = census_mod.run_census(df)
+    res = census_mod.run_census(df2)
+    check("khung gốc: md5_dup == 0", base.md5_dup_rows == 0 and base.md5_dup_groups == 0,
+          f"{base.md5_dup_rows}/{base.md5_dup_groups}")
+    check("md5_dup rows == 4 (2 nhóm)", res.md5_dup_rows == 4 and res.md5_dup_groups == 2,
+          f"{res.md5_dup_rows}/{res.md5_dup_groups}")
+    check("MD5_DUP KHÔNG bị AE-1/F1 đếm nhầm",
+          res.dup_bbox_rows == base.dup_bbox_rows and res.cross_col_rows == base.cross_col_rows)
+    check("union tăng đúng 4 hàng / 2 nhóm",
+          res.union_rows == base.union_rows + 4 and res.union_groups == base.union_groups + 2,
+          f"{base.union_rows}->{res.union_rows}, {base.union_groups}->{res.union_groups}")
+    check("conflicting tăng 1 (法/冉), provably-wrong tăng 1",
+          res.conflicting_groups == base.conflicting_groups + 1
+          and res.provably_wrong_rows == base.provably_wrong_rows + 1)
+    out, rep = remediate_mod.remediate(df2)
+    q = out[out["tier"] == "QUARANTINE"]
+    check("remediate: cả hai 法/冉 bị cách ly (conflict)",
+          set(q["image"]) >= {"gold/f_c05_0.png", "gold/f_c05_1.png"}
+          and rep.quarantined_conflict == 4 + 2, str(rep.quarantined_conflict))
+    check("remediate: nhóm md5 cùng nhãn giữ 1 cách ly 1",
+          ((q["image"] == "gold/g_c06_0.png") | (q["image"] == "gold/g_c06_1.png")).sum() == 1
+          and rep.quarantined_duplicate == 1 + 1, str(rep.quarantined_duplicate))
+    check("remediate: report mang md5_dup", rep.census.get("md5_dup_rows") == 4,
+          str(rep.census.get("md5_dup_rows")))
+    check("remediate: lũy đẳng trên khung có MD5_DUP",
+          remediate_mod.remediate(out)[1].quarantined_rows == 0)
+
+
+def test_remediate_khong_split() -> None:
+    """A-10 giai đoạn 2: build v3 không còn split/split_group/label_in_train — remediate
+    phải chạy được (trước đây `split` nằm trong tuple bắt buộc -> bước 4 chết vì set -e)."""
+    print("[remediate không có cột split]")
+    df = _synthetic().drop(columns=["split", "split_group"])
+    try:
+        out, rep = remediate_mod.remediate(df)
+        ok_run = True
+    except Exception as e:  # noqa: BLE001
+        out, rep, ok_run = None, None, False
+        print(f"       lỗi: {e}")
+    check("remediate chạy không cần cột split", ok_run)
+    if ok_run:
+        check("không tự sinh cột split", "split" not in out.columns)
+        check("kết quả cách ly giống khung có split", rep.quarantined_rows == 5,
+              str(rep.quarantined_rows))
+        check("đếm rò split == 0 khi không có cột",
+              rep.md5_spanning_splits_original == 0 and rep.md5_spanning_splits_after == 0
+              and rep.split_reassigned_rows == 0)
+
+
 def test_real() -> None:
     if not LABELS.exists():
         print(f"[warn] {LABELS} missing — skipping real-data test")
@@ -162,18 +233,23 @@ def test_real() -> None:
     # cross_col: BẤT BIẾN == 0. Lịch sử 1686 -> 8 (labels.csv 21/07) -> 0 (22/07).
     check("real cross_col == 0 (dedup closed; hist 1686->8->0)", res.cross_col_rows == 0,
           str(res.cross_col_rows))
-    # union: BẤT BIẾN == 0 = union(dup_bbox=0, cross_col=0). Lịch sử 2321 -> 8 -> 0.
-    check("real union == 0 (dedup closed; hist 2321->8->0)", res.union_rows == 0,
-          str(res.union_rows))
-    # provably-wrong: BẤT BIẾN == 0 (1 nhãn sai / nhóm xung đột; 0 nhóm còn lại).
-    # Lịch sử ~1177 -> 4 -> 0.
-    check("real provably-wrong == 0 (dedup closed; hist 1177->4->0)",
-          res.provably_wrong_rows == 0, str(res.provably_wrong_rows))
-    # CẤU TRÚC (không phụ thuộc thế hệ dữ liệu): union = |dup_bbox ∪ cross_col|.
-    check("real union là hợp của 2 lớp con",
-          max(res.dup_bbox_rows, res.cross_col_rows) <= res.union_rows
-          <= res.dup_bbox_rows + res.cross_col_rows,
-          f"union={res.union_rows} dup_bbox={res.dup_bbox_rows} cross={res.cross_col_rows}")
+    # union: AE-1 = F1 = 0 nên union CHỈ còn lớp MD5_DUP (A-11, 16/09). Thế hệ 25/08 đóng
+    # băng còn đúng cặp 法/冉 (md5 aa18c3e60447, stt4/page_0016/c01) = 2 hàng / 1 nhóm
+    # lọt qua luật cũ; bản HEAD tái lập v3 kỳ vọng 0. Lịch sử 2321 -> 8 -> 0 (+2 khi thêm luật).
+    check("real union == md5_dup (AE-1/F1 đóng; ≤2 = cặp 法/冉 thế hệ 25/08)",
+          res.union_rows == res.md5_dup_rows and res.md5_dup_rows <= 2,
+          f"union={res.union_rows} md5_dup={res.md5_dup_rows}")
+    # provably-wrong: 1 nhãn sai / nhóm xung đột; nhóm xung đột ≤ 1 (cặp 法/冉).
+    # Lịch sử ~1177 -> 4 -> 0 (+1 khi thêm luật MD5_DUP).
+    check("real provably-wrong == số nhóm conflict (≤1; hist 1177->4->0)",
+          res.provably_wrong_rows == res.conflicting_groups and res.conflicting_groups <= 1,
+          f"pw={res.provably_wrong_rows} conflict={res.conflicting_groups}")
+    # CẤU TRÚC (không phụ thuộc thế hệ dữ liệu): union = |dup_bbox ∪ cross_col ∪ md5_dup|.
+    check("real union là hợp của 3 lớp con",
+          max(res.dup_bbox_rows, res.cross_col_rows, res.md5_dup_rows) <= res.union_rows
+          <= res.dup_bbox_rows + res.cross_col_rows + res.md5_dup_rows,
+          f"union={res.union_rows} dup_bbox={res.dup_bbox_rows} cross={res.cross_col_rows} "
+          f"md5_dup={res.md5_dup_rows}")
     out, rep = remediate_mod.remediate(df)
     check("real: outputs same #rows", len(out) == len(df))
     # BẤT BIẾN cốt lõi (giữ nguyên): không md5 nào span >1 split sau remediation.
@@ -181,8 +257,13 @@ def test_real() -> None:
     # Split-leak GỐC: đo 0 (lịch sử 288). Dedup upstream đã đóng lớp trùng md5 nên
     # labels.csv HIỆN TẠI vào remediation ĐÃ không còn md5 nào span >1 split — bất biến
     # giữ đúng từ đầu vào tới đầu ra (0 -> 0), không còn leak để vá tại bước này.
-    check("real: original split leak == 0 (dedup closed; hist 288)",
-          rep.md5_spanning_splits_original == 0, str(rep.md5_spanning_splits_original))
+    # A-10 (16/09): thế hệ v3 KHÔNG có cột split -> phép đếm trả 0 theo định nghĩa.
+    if "split" in df.columns:
+        check("real: original split leak == 0 (dedup closed; hist 288)",
+              rep.md5_spanning_splits_original == 0, str(rep.md5_spanning_splits_original))
+    else:
+        check("real: không có cột split (v3) -> đếm rò split == 0",
+              rep.md5_spanning_splits_original == 0, str(rep.md5_spanning_splits_original))
     # Demote similar-bridge: kiểm CẤU TRÚC, không phải số cứng — quarantine chạy TRƯỚC
     # nên hàng đã bị cách ly không còn tier GOLD và không bị demote nữa. Kỳ vọng =
     # |GOLD ∩ similar_bridge ∩ s3<τ| trừ đi phần đã bị quarantine cướp.
@@ -202,13 +283,14 @@ def test_real() -> None:
     check("real: s3_demote=True -> == |GOLD∩bridge∩s3<τ| \\ quarantine",
           rep_d.demoted_similar_lowcos == expect_demote,
           f"{rep_d.demoted_similar_lowcos} vs expect {expect_demote}")
-    # quarantined: BẤT BIẾN == 0. Lịch sử >1000 (~2321 hàng trùng) -> 8 -> 0. Không còn
-    # hàng trùng md5/bbox nào để cách ly.
-    check("real: quarantined == 0 (dedup closed; hist >1000->8->0)",
-          rep.quarantined_rows == 0 and rep.quarantined_conflict == 0
-          and rep.quarantined_duplicate == 0,
+    # quarantined: Lịch sử >1000 (~2321 hàng trùng) -> 8 -> 0. Từ 16/09 luật MD5_DUP bắt
+    # cặp 法/冉 trên thế hệ 25/08 -> cách ly CẢ HAI (conflict); v3 kỳ vọng 0. Bất biến:
+    # mọi nhóm trùng còn lại đều conflict -> quarantined == union, không có dup thuần.
+    check("real: quarantined == union (chỉ conflict MD5_DUP; ≤2; hist >1000->8->0)",
+          rep.quarantined_rows == res.union_rows == rep.quarantined_conflict
+          and rep.quarantined_duplicate == 0 and rep.quarantined_rows <= 2,
           f"rows={rep.quarantined_rows} conflict={rep.quarantined_conflict} "
-          f"dup={rep.quarantined_duplicate}")
+          f"dup={rep.quarantined_duplicate} union={res.union_rows}")
     # CẤU TRÚC: quarantine chỉ rút từ lớp trùng, và rows = conflict + duplicate thuần.
     check("real: quarantine ⊆ lớp trùng, rows = conflict + dup",
           rep.quarantined_rows <= res.union_rows
@@ -341,22 +423,36 @@ def test_two_outputs_and_verdicts() -> None:
     check("verdict unsure KHÔNG tính là lỗi", '"unsure"' in av and "MẪU SỐ" in av)
 
     # HỒI QUY: khối gắn cờ từng nằm SAU w.writerows() -> CSV ra cột RỖNG trong khi log
-    # vẫn báo "424 ô". Kiểm THỨ TỰ trong mã, và kiểm GIÁ TRỊ THẬT trên đĩa.
-    ex = (REPO / "pipeline" / "export_final_dataset.py").read_text(encoding="utf-8")
-    check("gắn cờ usable_image TRƯỚC khi ghi CSV",
-          ex.index('r["usable_image"] =') < ex.index("w.writerows(rows)"))
-    import csv as _csv
+    # vẫn báo "424 ô". Từ 16/09 (A-9, schema 12 cột) `usable_image` KHÔNG còn là cột:
+    # cờ ảnh hỏng sống ở labels_trace.csv (`crop_quality_flag` blank/truncated). Kiểm:
+    # whitelist không có cột đó + sidecar có cờ THẬT trên đĩa; thế hệ cũ (≤25/08) vẫn
+    # kiểm giá trị usable_image như trước.
+    from pipeline.export_final_dataset import GIAO_NOP, TRACE
+    check("labels.csv giao nộp KHÔNG mang usable_image (cờ ở labels_trace.csv)",
+          "usable_image" not in GIAO_NOP and "crop_quality_flag" in TRACE)
+    import csv as _csv, os as _os
+    _root = REPO / _os.environ.get("DS_OUT", "dataset_out")
+    _root = _root if _root != REPO / "dataset_out" else REPO
     for _d in ("dataset", "re-dataset"):
-        f = REPO / _d / "labels.csv"
+        f = _root / _d / "labels.csv"
         if not f.exists():
             continue
         rows = list(_csv.DictReader(open(f, encoding="utf-8")))
-        bad = [r for r in rows if r.get("crop_quality_flag") in ("blank", "truncated")]
-        sai = [r for r in bad if r.get("usable_image") != "0"]
-        check(f"{_d}/: {len(bad)} ô ảnh hỏng đều có usable_image=0 THẬT trên đĩa",
-              not sai, f"{len(sai)} ô sai")
-        check(f"{_d}/: cột usable_image KHÔNG rỗng",
-              any((r.get("usable_image") or "").strip() for r in rows))
+        if "usable_image" in (rows[0] if rows else {}):        # thế hệ cũ
+            bad = [r for r in rows if r.get("crop_quality_flag") in ("blank", "truncated")]
+            sai = [r for r in bad if r.get("usable_image") != "0"]
+            check(f"{_d}/: {len(bad)} ô ảnh hỏng đều có usable_image=0 THẬT trên đĩa",
+                  not sai, f"{len(sai)} ô sai")
+            check(f"{_d}/: cột usable_image KHÔNG rỗng",
+                  any((r.get("usable_image") or "").strip() for r in rows))
+        else:                                                   # 12 cột
+            tp = f.parent / "labels_trace.csv"
+            tr = list(_csv.DictReader(open(tp, encoding="utf-8"))) if tp.exists() else []
+            check(f"{_d}/: labels_trace.csv có crop_quality_flag THẬT trên đĩa (không rỗng)",
+                  bool(tr) and "crop_quality_flag" in tr[0]
+                  and any((r.get("crop_quality_flag") or "").strip() for r in tr))
+            check(f"{_d}/: trace cùng số dòng labels.csv", len(tr) == len(rows),
+                  f"{len(tr)} vs {len(rows)}")
         break
 
     check("TỪ CHỐI verdict không có khai xuất xứ", 'PROV = "NGUOI_CHAM.md"' in av)
@@ -398,11 +494,17 @@ def test_co_khong_bi_ep_kieu() -> None:
     import csv as _csv
     REPO = _P(__file__).resolve().parents[2]
     print("[cột cờ không bị ép kiểu]")
-    for f in ("pipeline/remediation/cli.py", "pipeline/remediation/confusion_fix.py"):
+    for f in ("pipeline/remediation/cli.py", "pipeline/remediation/confusion_fix.py",
+              "pipeline/remediation/glyph_fix.py"):
         src = (REPO / f).read_text(encoding="utf-8")
         check(f"{_P(f).name} đọc label_in_train là chuỗi", '"label_in_train": str' in src)
         check(f"{_P(f).name} đọc crop_w/h là chuỗi",
               '"crop_w": str' in src and '"crop_h": str' in src)
+        # A-10/A-12 (16/09): cờ v3 (qd01_locked…, nom_idx/syl_idx, n_*) cũng phải là chuỗi
+        check(f"{_P(f).name} đọc cờ v3 (qd01_locked, nom_idx, band_touched…) là chuỗi",
+              all(f'"{c}": str' in src for c in
+                  ("qd01_locked", "qd01_excluded", "nom_idx", "syl_idx", "band_touched",
+                   "l1_support", "flank_gold", "n_ocr")))
     for d in ("dataset", "re-dataset"):
         p2 = REPO / d / "labels.csv"
         if not p2.exists():
@@ -637,12 +739,94 @@ def test_glyph_fix_quyet_dinh_nguoi() -> None:
             check("thật: đều giữ tier_goc", (q["tier_goc"].astype(str) != "").all())
 
 
+def test_glyph_fix_kiem_khoa() -> None:
+    """Chế độ `--mode kiem` (A-2, N12): chỉ ĐỐI CHIẾU khoá QĐ-01, không gán.
+
+    Khoá bền (book,page,column,nom_idx) sống qua mọi đổi ma trận/hộp; bbox_cu/md5_cu chỉ
+    để đo trôi. Phải đếm đúng 4 lớp: khớp / pending / mất / lệch — và chỉ khớp + pending
+    mới được tính "đạt". Thiếu nom_idx thì rơi về khoá bbox↔bbox_cu.
+    """
+    from pipeline.remediation import glyph_fix as gf
+    print("[glyph_fix --mode kiem]")
+    NG = "\U0002029A"
+    cells = pd.DataFrame({
+        "book": ["stt2"] * 4, "page": ["p1"] * 4, "column": ["1", "1", "2", "2"],
+        "nom_idx": ["0", "3", "5", "7"], "syl_idx": ["0", "3", "5", "7"],
+        "syllable": ["người"] * 4, "ocr_char": ["㝵"] * 4, "label": [NG] * 4,
+        "unicode": ["U+2029A"] * 4,
+        "bbox_cu": ["[0, 0, 9, 9]", "[0, 30, 9, 39]", "[10, 0, 19, 9]", "[10, 70, 19, 79]"],
+        "prev_bbox_cu": [""] * 4, "next_bbox_cu": [""] * 4,
+        "image_md5_cu": ["a", "b", "c", "d"], "image_cu": ["gold/x.png"] * 4,
+        "tier_build": ["GOLD"] * 4, "rule_build": ["s1_inter_s2_direct"] * 4})
+    lab = pd.DataFrame({
+        "book": ["stt2"] * 4, "page": ["p1"] * 4, "column": [1, 1, 2, 9],
+        "nom_idx": [0, 3, 5, 7], "syllable": ["người", "người", "mà", "người"],
+        "label": [NG, "㝵", NG, NG], "tier": ["GOLD", "GOLD", "GOLD", "GOLD"],
+        "rule": ["quyet_dinh_nguoi:qd01_cell_lock", "s1_inter_s2_direct",
+                 "quyet_dinh_nguoi:pending", "quyet_dinh_nguoi:qd01_cell_lock"],
+        "bbox": ["[0, 0, 9, 9]", "[0, 30, 9, 39]", "[10, 1, 19, 9]", "[10, 70, 19, 79]"],
+        "image_md5": ["a", "b", "zz", "d"]})
+    dec = pd.DataFrame(columns=["book", "page", "column", "nom_idx", "bbox_cu", "syllable",
+                                "ocr_char", "label_hien_tai", "ly_do", "quyet", "nguoi_ky",
+                                "ngay", "xuat_xu"])
+    rep, j = gf.kiem_khoa(lab, cells, dec)
+    check("khoá theo nom_idx khi labels có cột", rep["khoa"] == "nom_idx")
+    check("khớp 1 (label 𠊚 + rule QĐ-01)", rep["n_khop"] == 1, str(rep))
+    check("pending 1 (rule quyet_dinh_nguoi:pending)", rep["n_pending"] == 1)
+    check("lệch 1 (nhãn 㝵, rule thường) — KHÔNG được tính đạt", rep["n_lech"] == 1)
+    check("mất 1 (cột 2 nom 7 không có; cột 9 không tính)", rep["n_mat"] == 1)
+    check("bbox đổi 1, md5 đổi 1 (ô pending)", (rep["n_bbox_doi"], rep["n_md5_doi"]) == (1, 1))
+    check("âm ≠ người 1 (ô pending ghép sang 'mà')", rep["n_syllable_doi"] == 1)
+    check("không đạt: khớp + pending 2 != 4", rep["dat"] is False)
+    check("GOLD 'người' ≠ 𠊚 chưa có phán quyết = 1 (ô lệch)", rep["n_gold_nguoi_chua_quyet"] == 1)
+    check("KHÔNG gán: labels giữ nguyên nhãn", lab.loc[1, "label"] == "㝵")
+
+    # phán quyết đã điền cho ô pending -> báo "chưa rebuild"
+    dec2 = pd.DataFrame([{"book": "stt2", "page": "p1", "column": "2", "nom_idx": "5",
+                          "bbox_cu": "[10, 0, 19, 9]", "syllable": "người", "ocr_char": "㝵",
+                          "label_hien_tai": "", "ly_do": "trôi", "quyet": "giu_2029A",
+                          "nguoi_ky": "t", "ngay": "2026-09-16", "xuat_xu": "x.md"}])
+    rep2, _ = gf.kiem_khoa(lab, cells, dec2)
+    check("pending có quyết nhưng chưa rebuild = 1", rep2["n_pending_co_quyet_chua_rebuild"] == 1)
+
+    # thiếu nom_idx -> khoá bbox↔bbox_cu: ô pending đổi bbox nên thành MẤT
+    rep3, _ = gf.kiem_khoa(lab.drop(columns=["nom_idx"]), cells, dec)
+    check("fallback khoá bbox khi labels không có nom_idx", rep3["khoa"] == "bbox")
+    check("fallback: khớp 1, mất 2 (bbox đổi không tìm thấy)", (rep3["n_khop"], rep3["n_mat"]) == (1, 2), str(rep3))
+
+    # đạt: cả 4 ô khớp/pending
+    lab_ok = lab.copy(); lab_ok.loc[1, ["label", "rule"]] = [NG, "quyet_dinh_nguoi:qd01_cell_lock"]
+    lab_ok.loc[3, "column"] = 2
+    rep4, _ = gf.kiem_khoa(lab_ok, cells, dec)
+    check("đạt khi khớp 3 + pending 1 == 4", rep4["dat"] and rep4["n_khop"] == 3)
+
+    # cấu hình thật: cells + decisions đúng schema, 2.014 ô, 12 ô A-3 chờ người
+    cp = REPO / "config" / "qd01_cells.csv"; dp = REPO / "config" / "qd01a_decisions.csv"
+    if cp.exists():
+        c = pd.read_csv(cp, dtype=str, keep_default_na=False)
+        check("thật: qd01_cells.csv 2.014 ô, 100% 𠊚, 0 trùng khoá",
+              len(c) == 2014 and set(c["label"]) == {NG}
+              and not c.duplicated(["book", "page", "column", "nom_idx"]).any(), str(len(c)))
+        check("thật: bbox_cu/md5_cu 2.014/2.014",
+              (c["bbox_cu"] != "").all() and (c["image_md5_cu"] != "").all())
+    if dp.exists():
+        d = pd.read_csv(dp, dtype=str, keep_default_na=False)
+        check("thật: qd01a_decisions.csv đủ 13 cột", list(d.columns) == list(dec.columns), str(list(d.columns)))
+        try:
+            gf._doc_decisions(dp)
+            check("thật: mọi `quyet` đã điền đều hợp lệ + có xuất xứ", True)
+        except SystemExit as e:
+            check("thật: mọi `quyet` đã điền đều hợp lệ + có xuất xứ", False, str(e)[:120])
+
+
 def main() -> int:
     print("=" * 64)
     print("REMEDIATION SELFTEST")
     print("=" * 64)
     test_census_synthetic()
+    test_census_md5_dup()
     test_remediate_synthetic()
+    test_remediate_khong_split()
     test_real()
     test_s3_unwind()
     test_two_outputs_and_verdicts()
@@ -651,6 +835,7 @@ def main() -> int:
     test_confusion_fix_join()
     test_measure_chi_nhan_verdict_nguoi()
     test_glyph_fix_quyet_dinh_nguoi()
+    test_glyph_fix_kiem_khoa()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

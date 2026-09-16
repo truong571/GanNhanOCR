@@ -22,8 +22,9 @@ from openpyxl.drawing.image import Image as XLImage
 from openpyxl.utils import get_column_letter
 from PIL import Image as PILImage
 
+# `label_level` không còn trong labels.csv 12 cột (16/09): tier đã nói đủ (GOLD = char).
 COLUMNS = ["image", "book", "page", "ocr_char", "syllable",
-           "label", "unicode", "label_level", "tier"]
+           "label", "unicode", "tier", "rule"]
 THUMB_PX = 80
 
 
@@ -34,12 +35,14 @@ def build_excel(labels_path: Path, src_root: Path, out_path: Path, n: int, seed:
 
     with open(labels_path, encoding="utf-8", newline="") as f:
         all_rows = [r for r in csv.DictReader(f) if r.get("image")]
-    # chỉ giữ dòng CÓ NHÃN ký tự (label_level=char, GOLD/SILVER) — SYLLABLE
-    # luôn label/unicode rỗng nên không có gì để soát nhãn.
-    rows = [r for r in all_rows if r.get("label_level") == "char" and r.get("label")]
+    # chỉ giữ dòng CÓ NHÃN ký tự (tier GOLD/SILVER, label không rỗng) — SYLLABLE
+    # luôn label/unicode rỗng nên không có gì để soát nhãn. Đọc `tier` thay `label_level`:
+    # cột đó bỏ từ 16/09 (= f(tier)), lọc theo nó thì ra 0 dòng mà không báo gì.
+    rows = [r for r in all_rows
+            if r.get("tier") != "SYLLABLE" and (r.get("label") or "").strip()]
     if not rows:
-        print(f"[review-xlsx] {labels_path} không có dòng char-level nào (label_level=char).",
-              file=sys.stderr)
+        print(f"[review-xlsx] {labels_path} không có dòng cấp ký tự nào (tier GOLD/SILVER "
+              f"có label).", file=sys.stderr)
         return 1
 
     rng = random.Random(seed)

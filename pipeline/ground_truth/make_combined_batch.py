@@ -356,6 +356,7 @@ def main(argv: list[str] | None = None) -> int:
         title="Audit nhãn · mẻ gộp",
         batch_size=args.batch_size or None,
         mode="label_only",
+        labels_path=args.labels,        # A-14: manifest nối với đúng tệp nhãn đã rút mẫu
     )
     print(f"[gộp] {stat['items']} ô dựng xong (thiếu glyph: "
           f"{stat['missing_reference_glyph']}, thiếu ngữ cảnh: {stat['missing_context']})")
@@ -365,6 +366,7 @@ def main(argv: list[str] | None = None) -> int:
         "labels_source": (str(Path(args.labels).relative_to(REPO))
                           if Path(args.labels).is_absolute()
                           and Path(args.labels).is_relative_to(REPO) else str(args.labels)),
+        "labels_sha256": stat.get("labels_sha256"),   # bộ đem đo = bộ đem nộp (so CHECKSUMS.txt)
         "mode": "label_only",
         "seed": args.seed, "conf": args.conf,
         "n_sample": int(len(sample)), "n_repeat": int(len(repeats)),

@@ -183,6 +183,26 @@ def _pair_old(cluster: dict, syllables: list[str], binary) -> list[dict]:
 # khởi động.
 BOX_OVERLAP_FRAC = 0.10
 
+# --- A-6 (flow N3f/N4d): HỘP THÔ DETECTOR + GÁN HỘP 3 NHÁNH ---------------------
+# Trước 2026-09-16: ngưỡng tin cậy 0,3 ghim trong _get_detector, biên x ±0,5w ghim
+# trong column_boxes, và hộp LUÔN bị ép về N = #âm tiết (enforce_count) rồi gán bằng
+# _monotone_assign — kể cả 70% cột mà detector đã đếm đúng. Đo (DANH_GIA_KE_HOACH_
+# NANG_CAP_2026-09-15, cột OCR=QN): thr 0,2 ±0,25w cho M==N 69,9→93,2%, M<N 27,1→1,9%,
+# M>N 3,0→4,8% — nên phần lớn cột gán hộp THẲNG theo chỉ số (assign_boxes), chỉ cột
+# lệch đếm mới đi đường ép đếm cũ.
+# Đọc từ config/pipeline.yaml step2.det_thr / step2.det_xmargin (build_dataset gán vào
+# đây lúc khởi động, như BOX_OVERLAP_FRAC). `--box-rule legacy` KHÔNG đọc hai hằng này:
+# nó dùng trọn bộ LEGACY_* để tái lập bộ cũ (selftest: bbox khớp 100% trên 5 trang).
+DETECTOR_THR = 0.2
+DETECTOR_XMARGIN = 0.25
+MONOTONE_GUARD = 0.35       # _monotone_assign: hộp xa tâm OCR quá guard×pitch -> midpoint
+# Bộ hằng luật CŨ, dùng TRỌN GÓI (thr + biên x + đường ép đếm _pick_reseg) cho
+# --box-rule legacy và cho cột có ô khoá QĐ-01 trong luật mới (không trộn hộp cũ của ô
+# khoá với hộp mới của hàng xóm -> trùng bbox -> census AE-1 cách ly cả hai).
+LEGACY_DETECTOR_THR = 0.3
+LEGACY_DETECTOR_XMARGIN = 0.5
+BOX_RULES = ("syl_index", "legacy")
+
 
 def _reseg_column(cluster) -> list | None:
     """Rebuild per-char boxes from the OCR y-CENTERS (which are reliable) with
@@ -216,8 +236,8 @@ def _reseg_column(cluster) -> list | None:
     return boxes
 
 
-_DETECTOR = None
-_DETECTOR_TRIED = False
+_DETECTORS: dict = {}          # thr -> DetectorInfer | None — cache THEO thr (A-6)
+_DETECTOR_TRIED: set = set()
 
 
 class DetectorUnavailableError(FileNotFoundError):
@@ -229,50 +249,69 @@ _HINT = ("tải: huggingface-cli download mdnt571/nom-char-det detector_r34.best
          "muốn dùng trung điểm (bộ crop sẽ KHÁC HẲN, phải đo lại).")
 
 
-def _get_detector(strict: bool = True):
-    """Lazy, cached CenterNet detector (train_crop/detector_r34.best.pt).
+def _get_detector(strict: bool = True, thr: float | None = None):
+    """Lazy, cached CenterNet detector (train_crop/detector_r34.best.pt), cache theo thr.
 
+    thr=None -> DETECTOR_THR (đọc lúc gọi, nên config ghi đè có hiệu lực); --box-rule
+    legacy truyền LEGACY_DETECTOR_THR để tái lập đúng bộ cũ (0,3) — hai đối tượng
+    detector sống song song, mỗi ngưỡng một cache.
     strict=True (mặc định): thiếu checkpoint -> NÉM DetectorUnavailableError.
     Trước 2026-08-23 hàm này chỉ IN một dòng log rồi lặng lẽ rơi về midpoint: toàn bộ
     hộp ký tự bị tách bằng trung điểm thay vì CenterNet, cho ra bộ crop khác hẳn, mà
     labels.csv KHÔNG ghi lại backend nào đã dùng -> không ai truy được về sau.
     Chỉ dùng bởi reseg_mode='detector'.
     """
-    global _DETECTOR, _DETECTOR_TRIED
-    if _DETECTOR_TRIED:
-        if strict and (_DETECTOR is None or not getattr(_DETECTOR, "trained", False)):
+    thr = float(DETECTOR_THR if thr is None else thr)
+    if thr in _DETECTOR_TRIED:
+        d = _DETECTORS.get(thr)
+        if strict and (d is None or not getattr(d, "trained", False)):
             raise DetectorUnavailableError(f"reseg=detector nhưng detector không dùng được. {_HINT}")
-        return _DETECTOR
-    _DETECTOR_TRIED = True
+        return d
+    _DETECTOR_TRIED.add(thr)
     err = None
+    d = None
     try:
         from pipeline.align_engine.char_detector.detector_infer import DetectorInfer
-        # thr 0.2->0.3: bớt detection tin cậy thấp (dễ lệch vị trí) lọt vào
-        # enforce_count/column_boxes -> ít box sai hơn feed cho _monotone_assign.
-        _DETECTOR = DetectorInfer(thr=0.3)  # tự tìm ckpt v1 ở train_crop/detector_r34.best.pt
-        if not _DETECTOR.trained:
+        # thr: trước A-6 ghim 0,3 (bớt detection tin cậy thấp lọt vào enforce_count);
+        # nay DETECTOR_THR 0,2 vì hộp thô không còn bị ép đếm ở cột đếm đúng.
+        d = DetectorInfer(thr=thr)  # tự tìm ckpt v1 ở train_crop/detector_r34.best.pt
+        if not d.trained:
             err = "không thấy train_crop/detector_r34.best.pt"
         else:
-            print(f"  [reseg detector] CenterNet v1 (img {_DETECTOR.img}, seam) — N = #âm tiết.", flush=True)
+            print(f"  [reseg detector] CenterNet v1 (img {d.img}, seam, thr {thr}).", flush=True)
     except Exception as e:
         err = f"{type(e).__name__}: {e}"
-        _DETECTOR = None
+        d = None
+    _DETECTORS[thr] = d
     if err:
         if strict:
             raise DetectorUnavailableError(f"reseg=detector nhưng {err}. {_HINT}")
         print(f"  [reseg detector] {err} -> midpoint fallback.", flush=True)
-    return _DETECTOR
+    return d
 
 
-def preflight_detector(reseg_mode: str) -> str:
+def _legacy_page_boxes(page_boxes, thr_run: float, page_bgr=None):
+    """Hộp trang theo NGƯỠNG CŨ (LEGACY_DETECTOR_THR) từ lần chạy ở thr_run.
+
+    decode() của CenterNet = top-k(1024) đỉnh heatmap rồi lọc score >= thr, nên lọc lại
+    theo score từ lần chạy ở ngưỡng thấp hơn CHO ĐÚNG tập hộp của lần chạy ở 0,3
+    (selftest kiểm bằng detector thứ hai trên 5 trang). Chỉ khi thr_run > 0,3 mới
+    phải chạy detector thứ hai.
+    """
+    if thr_run <= LEGACY_DETECTOR_THR:
+        return [b for b in page_boxes if b[4] >= LEGACY_DETECTOR_THR]
+    return _get_detector(strict=True, thr=LEGACY_DETECTOR_THR).boxes_for_page(page_bgr)
+
+
+def preflight_detector(reseg_mode: str, box_rule: str = "syl_index") -> str:
     """Kiểm detector MỘT LẦN trước khi duyệt trang. Trả tên backend sẽ dùng.
 
     Fail fast: thiếu checkpoint thì dừng ngay ở trang đầu tiên chứ không âm thầm
-    tách bằng trung điểm cho cả 445 trang.
+    tách bằng trung điểm cho cả 445 trang. box_rule quyết ngưỡng (legacy = 0,3).
     """
     if reseg_mode != "detector":
         return reseg_mode
-    _get_detector(strict=True)
+    _get_detector(strict=True, thr=LEGACY_DETECTOR_THR if box_rule == "legacy" else None)
     return "detector_centernet_v1"
 
 
@@ -393,11 +432,14 @@ def _pick_reseg(cluster, syllables, binary, reseg_mode, encoder=None, page_bgr=N
                         lower mean MLS (needs encoder+page_bgr); else midpoint.
       detector        — count-constrained CenterNet boxes (needs a trained
                         detector.pt; det+page_boxes from align_page). The real fix.
+                        A-6: đây là ĐƯỜNG CŨ trọn gói (ép đếm về N, ±0,5w) — chỉ còn
+                        dùng cho --box-rule legacy và cột có ô khoá QĐ-01; luật mới
+                        đi qua assign_boxes.
     Returns a list indexed like cluster['chars'] (or None)."""
     mid = _reseg_column(cluster)
     chars = cluster["chars"]; n = len(syllables)
     if reseg_mode == "detector" and det is not None and page_boxes is not None and cluster.get("x_range"):
-        cb = det.column_boxes(page_boxes, cluster["x_range"], n)
+        cb = det.column_boxes(page_boxes, cluster["x_range"], n, x_margin=LEGACY_DETECTOR_XMARGIN)
         if len(cb) == n:
             cys = [(c["bbox"][1] + c["bbox"][3]) / 2.0 for c in chars]
             assigned = _monotone_assign(cys, cb, mid)        # monotone 1-1 (fixes AE-1)
@@ -439,6 +481,142 @@ def _pick_reseg(cluster, syllables, binary, reseg_mode, encoder=None, page_bgr=N
     return mapped if mv >= mm else mid
 
 
+def assign_boxes(G, ops, n_ocr, n_qn, cluster=None, cb=None, det=None, guard=None):
+    """Gán hộp ảnh cho từng chữ OCR theo LUẬT 3 NHÁNH (A-6, flow N4d). Hàm thuần —
+    engine (PASS 1 với ops lượt 1, PASS 1b với ops lượt 2) và lab `thuc_nghiem.py geo`
+    cùng gọi, để số đo của lab là số đo của chính đường sản xuất.
+
+    G     : hộp thô detector của cột (DetectorInfer.raw_column_boxes: đã NMS, sắp theo y,
+            [x1,y1,x2,y2,score]).
+    ops   : ops DP (lượt cuối) của cột — nhánh (a) cần syl_idx của từng match.
+    cb    : hộp đã ép đếm G -> n_qn (DetectorInfer.enforce_count) cho nhánh (c); PASS 1
+            tính sẵn theo ảnh xám của ĐÚNG trang (det chỉ giữ ảnh xám của trang cuối),
+            PASS 1b truyền lại. cb=None và det có -> tự tính.
+    Trả (boxes, box_source, count_source):
+      boxes[i]      = hộp cho nom_idx i (None nếu không có / chữ không được ghép ở nhánh a)
+      box_source[i] ∈ {'detector', 'split', 'midpoint', ''}
+      count_source  ∈ {'equal_qn', 'equal_ocr', 'conflict'} (hai giá trị còn lại của enum,
+                      'legacy' / 'legacy_locked_col', do _pair_new_state ghi khi cột đi
+                      đường trọn gói luật cũ — không qua hàm này)
+      (a) |G| == n_qn          -> boxes[i] = G[j] với (i, j) match — theo THỨ TỰ ÂM (khe
+                                  của DP văn bản đặt đúng chỗ chữ rụng; lab: 96–97% hộp đúng)
+      (b) |G| == n_ocr != n_qn -> boxes[i] = G[i] — theo THỨ TỰ CHỮ (âm rụng, chữ đủ)
+      (c) còn lại              -> enforce_count(G -> n_qn) + _monotone_assign + x-guard
+                                  y hệt luật cũ (_pick_reseg); hộp do enforce_count bổ đôi
+                                  = 'split', hộp rơi về trung điểm = 'midpoint'.
+    """
+    G = G or []
+    boxes: list = [None] * n_ocr
+    src: list = [""] * n_ocr
+    if n_qn > 0 and len(G) == n_qn:
+        for o in ops:
+            if o.get("op") == "match":
+                i = o["nom_idx"]
+                if 0 <= i < n_ocr:
+                    boxes[i] = list(G[o["syl_idx"]][:4])
+                    src[i] = "detector"
+        return boxes, src, "equal_qn"
+    if n_ocr > 0 and len(G) == n_ocr:
+        return [list(g[:4]) for g in G], ["detector"] * n_ocr, "equal_ocr"
+    # (c) — đường ép đếm cũ; cần cluster (tâm OCR, x_range) và cb
+    mid = _reseg_column(cluster) if cluster else None
+    if cb is None and det is not None and n_qn > 0:
+        cb = det.enforce_count(G, n_qn)
+    gset = {tuple(int(v) for v in g[:4]) for g in G}
+    if cluster and cb and len(cb) == n_qn and cluster.get("x_range"):
+        chars = cluster.get("chars") or []
+        cys = [(c["bbox"][1] + c["bbox"][3]) / 2.0 for c in chars]
+        assigned = _monotone_assign(cys, cb, mid, guard=MONOTONE_GUARD if guard is None else guard)
+        if assigned is not None:
+            x1, x2 = cluster["x_range"]
+            xtol = 0.10 * (x2 - x1)
+            for i, box in enumerate(assigned):
+                if box is None:
+                    boxes[i], src[i] = (mid[i], "midpoint") if mid else (None, "")
+                    continue
+                bcx = (box[0] + box[2]) / 2.0
+                if bcx < x1 - xtol or bcx > x2 + xtol:
+                    box = mid[i] if mid else box
+                boxes[i] = list(box)
+                if mid and list(box) == list(mid[i]):
+                    src[i] = "midpoint"
+                else:
+                    src[i] = "detector" if tuple(int(v) for v in box[:4]) in gset else "split"
+            return boxes, src, "conflict"
+    if mid:
+        return [list(b) for b in mid], ["midpoint"] * n_ocr, "conflict"
+    return boxes, src, "conflict"
+
+
+def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
+                    binary=None, reseg: bool = True, reseg_mode: str = "midpoint",
+                    encoder=None, page_bgr=None, det=None, page_boxes=None,
+                    box_rule: str = "syl_index", legacy_page_boxes=None
+                    ) -> tuple[list[dict], int, list[dict], list | None, dict]:
+    """Như `_pair_new` nhưng trả thêm (ops lượt 1, reseg_boxes, box_info) — trạng thái
+    cột cho PASS 1b (flow N3g): build_dataset chạy DP lại với `cost_fn` neo ngữ liệu
+    trên đúng `chars`/`syllables`/hộp này, không phải dò lại trang lần hai.
+
+    box_rule (A-6): 'syl_index' = hộp thô G (thr DETECTOR_THR, ±DETECTOR_XMARGIN) + 3
+    nhánh assign_boxes; 'legacy' / 'legacy_locked_col' = trọn gói luật cũ (_pick_reseg
+    trên legacy_page_boxes = hộp ở ngưỡng 0,3, biên ±0,5w; count_source == box_source ==
+    box_rule, tức 'legacy' hoặc 'legacy_locked_col'). box_info = {G, cb, n_ocr, n_qn,
+    n_det, count_source, box_source (theo nom_idx), box_rule} để PASS 1b gán lại hộp
+    theo ops lượt 2 mà không cần detector.
+    """
+    ops = realign_column(cluster["chars"], syllables, qn_to_nom, similar)
+    mp = matched_pairs(ops)
+    nom_chars = cluster["chars"]
+    n_ocr, n_qn = len(nom_chars), len(syllables)
+    use_det = (reseg_mode == "detector" and det is not None and page_boxes is not None
+               and bool(cluster.get("x_range")))
+    G = cb = None
+    n_det = ""
+    count_source = ""
+    box_source = None
+    if not reseg:
+        reseg_boxes = None
+    elif use_det and box_rule == "syl_index":
+        G = det.raw_column_boxes(page_boxes, cluster["x_range"], DETECTOR_XMARGIN)
+        n_det = len(G)
+        if len(G) != n_qn and len(G) != n_ocr:
+            cb = det.enforce_count(G, n_qn)       # nhánh (c): ép đếm trên ảnh xám ĐÚNG trang
+        reseg_boxes, box_source, count_source = assign_boxes(G, ops, n_ocr, n_qn,
+                                                             cluster=cluster, cb=cb)
+    else:
+        pb = legacy_page_boxes if (use_det and legacy_page_boxes is not None) else page_boxes
+        reseg_boxes = _pick_reseg(cluster, syllables, binary, reseg_mode, encoder, page_bgr,
+                                  det, pb)
+        if use_det:
+            # n_det ghi theo đúng bộ hằng cũ (thr 0,3 ±0,5w) mà cột này thực dùng
+            n_det = len(det.raw_column_boxes(pb, cluster["x_range"], LEGACY_DETECTOR_XMARGIN))
+            # count_source đi cùng box_source: 'legacy' (--box-rule legacy) hoặc
+            # 'legacy_locked_col' (cột khoá QĐ-01 trong luật syl_index) — enum FLOW §172
+            count_source = box_rule if box_rule != "syl_index" else "legacy"
+            box_source = [count_source] * n_ocr
+        else:
+            box_source = [reseg_mode if reseg_mode != "detector" else "midpoint"] * n_ocr
+    box_info = {"G": G, "cb": cb, "n_ocr": n_ocr, "n_qn": n_qn, "n_det": n_det,
+                "count_source": count_source, "box_source": box_source,
+                "box_rule": box_rule if use_det else reseg_mode}
+    out = []
+    for p in mp:
+        i = p["nom_idx"]
+        bbox = reseg_boxes[i] if reseg_boxes else nom_chars[i].get("bbox")
+        # nom_idx/syl_idx (N0b): vị trí ô trong cột Nôm / âm tiết trong dòng QN —
+        # khoá bền để đối soát thế hệ và khoá QĐ-01; chỉ PHÁT THÊM, không đổi hành vi.
+        out.append({"ocr_char": p["ocr_char"], "bbox": bbox,
+                    "syllable": p["syllable"], "confirmed": p["confirmed"],
+                    "nom_idx": i, "syl_idx": p["syl_idx"],
+                    # A-6 (N4e): số đếm cột + nguồn hộp — sang columns.csv ở S9
+                    "n_ocr": n_ocr, "n_qn": n_qn, "n_det": n_det,
+                    "count_source": count_source,
+                    "box_source": box_source[i] if box_source else ""})
+    # number of syllables left without a Nôm box (Nôm OCR misses) -> REVIEW
+    n_gap = sum(1 for o in ops if o["op"] == "ins")
+    return out, n_gap, ops, reseg_boxes, box_info
+
+
 def _pair_new(cluster: dict, syllables: list[str], qn_to_nom, similar,
               binary=None, reseg: bool = True, reseg_mode: str = "midpoint",
               encoder=None, page_bgr=None, det=None, page_boxes=None) -> tuple[list[dict], int]:
@@ -450,30 +628,34 @@ def _pair_new(cluster: dict, syllables: list[str], qn_to_nom, similar,
     modes traded merging for fragments on diverged cols — seg_valley_n_ab.py).
     Falls back to the OCR box if re-segmentation is unavailable.
     """
-    ops = realign_column(cluster["chars"], syllables, qn_to_nom, similar)
-    mp = matched_pairs(ops)
-    nom_chars = cluster["chars"]
-    reseg_boxes = _pick_reseg(cluster, syllables, binary, reseg_mode, encoder, page_bgr,
-                              det, page_boxes) if reseg else None
-    out = []
-    for p in mp:
-        i = p["nom_idx"]
-        bbox = reseg_boxes[i] if reseg_boxes else nom_chars[i].get("bbox")
-        out.append({"ocr_char": p["ocr_char"], "bbox": bbox,
-                    "syllable": p["syllable"], "confirmed": p["confirmed"]})
-    # number of syllables left without a Nôm box (Nôm OCR misses) -> REVIEW
-    n_gap = sum(1 for o in ops if o["op"] == "ins")
+    out, n_gap, _ops, _boxes, _info = _pair_new_state(
+        cluster, syllables, qn_to_nom, similar, binary=binary, reseg=reseg,
+        reseg_mode=reseg_mode, encoder=encoder, page_bgr=page_bgr, det=det,
+        page_boxes=page_boxes)
     return out, n_gap
 
 
 def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                qn_to_nom: dict, similar: dict, mode: str,
-               reseg_mode: str = "midpoint", encoder=None) -> dict | None:
+               reseg_mode: str = "midpoint", encoder=None,
+               box_rule: str = "syl_index", locked_columns=None) -> dict | None:
     """Align one page in the given mode. Returns per-page record with pairs.
 
     reseg_mode (only used when mode != 'old'): 'midpoint' (default) | 'valley_n' |
     'valley_guarded'. valley_guarded needs `encoder` (NomEncoder) + loads the page
     image to apply the MLS guard. See _pick_reseg.
+
+    box_rule (A-6, chỉ với reseg_mode='detector'): 'syl_index' (mặc định) = hộp thô ở
+    DETECTOR_THR/±DETECTOR_XMARGIN + assign_boxes 3 nhánh; 'legacy' = trọn gói luật cũ
+    (thr 0,3, ±0,5w, _pick_reseg) tái lập bộ cũ. locked_columns = tập line_id (cột QN)
+    có ô khoá QĐ-01 trên trang này: cột ấy chạy trọn gói luật cũ dù box_rule=syl_index
+    (box_source='legacy_locked_col').
+
+    Kết quả (mode='new') còn có `col_states` (flow N3g) — mỗi cột một dict
+    {line_id, cluster, syllables (sau normalize_column), syllable_ocr (VietOCR
+    nguyên văn, lower), matched, reseg_boxes (theo nom_idx), ops1 (DP lượt 1),
+    G, cb, n_ocr, n_qn, n_det, count_source, box_source, box_rule} để build_dataset
+    PASS 1b chạy DP lại với neo ngữ liệu và gán lại hộp mà không dò lại trang.
     """
     det = _detect(page_name, data_dir, qn_dict_set)
     if det is None:
@@ -482,6 +664,8 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
     page_bgr = None
     detector = None
     page_boxes = None
+    legacy_page_boxes = None
+    locked_columns = set(locked_columns or ())
     if reseg_mode in ("valley_guarded", "detector"):
         import cv2 as _cv2
         page_bgr = _cv2.imread(str(data_dir / "pages" / f"{page_name}.png"), _cv2.IMREAD_COLOR)
@@ -490,11 +674,20 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
         if page_bgr is None:
             raise DetectorUnavailableError(
                 f"reseg=detector nhưng không đọc được ảnh trang {page_name}.png. {_HINT}")
-        detector = _get_detector(strict=True)     # thiếu ckpt -> ném lỗi, KHÔNG rơi ngầm
+        thr = LEGACY_DETECTOR_THR if box_rule == "legacy" else DETECTOR_THR
+        detector = _get_detector(strict=True, thr=thr)   # thiếu ckpt -> ném lỗi, KHÔNG rơi ngầm
         page_boxes = detector.boxes_for_page(page_bgr)   # all char boxes, once per page
+        if box_rule == "legacy":
+            legacy_page_boxes = page_boxes
+        elif locked_columns:
+            # cột có ô khoá QĐ-01: hộp ở ngưỡng cũ 0,3 (lọc lại từ lần chạy 0,2 — cùng tập)
+            legacy_page_boxes = _legacy_page_boxes(page_boxes, thr, page_bgr)
         seg_backend = "detector_centernet_v1"
 
     pairs: list[dict] = []
+    # col_states (flow N3g): trạng thái từng cột sau lượt DP 1 — build_dataset PASS 1b
+    # chạy DP lại với neo ngữ liệu trên chính trạng thái này (detector 1 lần/trang).
+    col_states: list[dict] = []
     n_gap_total = 0
     n_norm_total = 0
     _readings = build_readings(qn_to_nom)
@@ -503,6 +696,9 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
         syllables = qn_lines[line_id]
         if not syllables:
             continue
+        # âm VietOCR NGUYÊN VĂN (lower) TRƯỚC normalize_column — cột `syllable_ocr`
+        # (flow N3c): "ghi đè bản in = 0" phải đo trên chuỗi này, không phải chuỗi đã vá.
+        syllable_ocr = [str(x).lower() for x in syllables]
         # CHUẨN HOÁ TRƯỚC KHI CĂN CHỈNH — vá dấu phụ VietOCR rụng, dùng đọc âm của
         # chính các chữ trong cột này. Đặt SAU build thì +0 ô vào bộ giao nộp; đặt ở
         # đây thì các ô được vá đủ điều kiện s1_inter_s2_direct = GOLD.
@@ -516,11 +712,29 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                 p.update(column=line_id, matched=matched)
             pairs.extend(col_pairs)
         else:
-            col_pairs, n_gap = _pair_new(cluster, syllables, qn_to_nom, similar,
-                                         binary=binary, reseg_mode=reseg_mode,
-                                         encoder=encoder, page_bgr=page_bgr,
-                                         det=detector, page_boxes=page_boxes)
+            # A-6 (N4d): cột có ô khoá QĐ-01 -> trọn gói luật cũ cho CẢ cột
+            col_rule = box_rule
+            if box_rule == "syl_index" and line_id in locked_columns:
+                col_rule = "legacy_locked_col"
+            col_pairs, n_gap, ops1, reseg_boxes, box_info = _pair_new_state(
+                cluster, syllables, qn_to_nom, similar,
+                binary=binary, reseg_mode=reseg_mode,
+                encoder=encoder, page_bgr=page_bgr,
+                det=detector, page_boxes=page_boxes,
+                box_rule=col_rule, legacy_page_boxes=legacy_page_boxes)
             n_gap_total += n_gap
+            # syllable_raw = âm SAU normalize_column (đầu vào DP); syllable_ocr = âm
+            # VietOCR nguyên văn. Chỉ PHÁT THÊM vào pair, không đổi hành vi ghép.
+            for p in col_pairs:
+                j = p["syl_idx"]
+                p["syllable_raw"] = syllables[j]
+                p["syllable_ocr"] = syllable_ocr[j] if len(syllable_ocr) == len(syllables) else ""
+            col_states.append({
+                "line_id": line_id, "cluster": cluster, "syllables": syllables,
+                "syllable_ocr": syllable_ocr, "matched": matched,
+                "reseg_boxes": reseg_boxes, "ops1": ops1,
+                **box_info,          # A-6: G, cb, n_ocr, n_qn, n_det, count/box_source, box_rule
+            })
             # anchored flag: a pair flanked by a confirmed neighbour. Its LOCAL
             # register is certain even if the whole column's counts diverged, so
             # it is GOLD/SILVER-eligible (gold_ok in consensus). NOTE: dropped the
@@ -537,4 +751,6 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
             pairs.extend(col_pairs)
     return {"page": page_name, "page_ok": page_ok, "pairs": pairs,
             "n_review_gap": n_gap_total, "seg_backend": seg_backend,
-            "n_syllable_normalized": n_norm_total}
+            "n_syllable_normalized": n_norm_total,
+            # N3g: trạng thái cột cho PASS 1b; `pairs` giữ nguyên để tương thích
+            "col_states": col_states}

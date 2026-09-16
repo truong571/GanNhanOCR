@@ -68,8 +68,43 @@
 # xanh. Riêng phase1 "low-purity" là lỗi TEST (placeholder 'x' bị lọc là rác nên
 # purity không được kiểm) — đã sửa placeholder thành âm tiết hợp lệ 'an'/'ba'.
 #
-# => Con số trích dẫn trong luận văn phải là 722 assertions (722 pass, 0 fail), KHÔNG
-#    còn là 360 hay 223 — 223 là mốc cũ và đã bỏ sót toàn bộ selftest của bước 1-2.
+# => Con số trích dẫn trong luận văn phải là BASELINE_PASS hiện hành bên dưới (mốc 722 của
+#    2026-08-25 chỉ còn là lịch sử; 360/223 cũ hơn nữa — 223 bỏ sót toàn bộ selftest bước 1-2).
+#
+# MỐC 2026-09-16 (Khối A, A-1…A-12): TỔNG 922 passed, 0 failed, đo với
+#   re-dataset/ THẾ HỆ CŨ (30 cột, đóng băng 25/08) ở gốc kho và CHƯA dựng mẻ mẫu:
+#     ground_truth 171 · consensus_fusion 44 · publish 56 · remediation 182 ·
+#     phase1_engine 189 · decisions 41 (mới, S8) · tools 101 · lab 81 · parser 18 · syl 39
+#   remediation 164 -> 182 (S10, A-11/A-12): +luật MD5_DUP (cùng md5 cùng cột khác bbox —
+#   bắt cặp 法/冉 trên cả bộ 25/08 lẫn bản HEAD tái lập), +remediate không cần cột split,
+#   +cột cờ v3 (qd01_locked…) đọc là chuỗi; 3 phép "trùng == 0" trên bộ thật đổi thành
+#   cấu trúc (union == md5_dup ≤ 2, quarantined == union) vì luật mới THẤY cặp đó.
+#   tools.selftest: 4 phép kiểm split/label_in_train cũ bỏ (A-10); phép kiểm SCHEMA 12 CỘT
+#   + labels_trace/columns.csv chỉ chạy khi bộ giao nộp là thế hệ mới (DS_OUT=dataset_out_v3
+#   -> tools 127, TỔNG 948). Khi bộ v3 thay bộ thật ở gốc kho thì mốc là 948.
+#
+# MỐC 2026-09-16 (A-15, flow N0e): TỔNG 991 passed, 0 failed (cùng điều kiện dữ liệu như
+#   mốc 922 ở trên; với DS_OUT=dataset_out_v3 suy ra 948 + 69 = 1017, chưa đo).
+#   phase1_engine 189 -> 251 (+62): enforce_count (M>N / M<N / rỗng / gray None / seam-
+#   valley-midpoint / NMS / clamp) trên CHÍNH train_crop/infer_centernet; _pair_new_state
+#   nối 3 nhánh hộp (a: G[syl_idx], b: G[nom_idx], c: enforce_count CHỈ gọi ở đây + split/
+#   midpoint) trên cột giả với detector giả, legacy/legacy_locked_col trọn gói ±0,5w,
+#   _pair_new == _pair_new_state[:2]; bảng chân trị tier_v3/rule_of 19 nhánh + chốt
+#   is_plausible TRƯỚC tier. Hai test đầu tự bỏ qua (có ghi) nếu thiếu torch/train_crop.
+#   +7  pipeline.align_engine.tier_v3_selftest (suite MỚI vào runner): feats LOO của mã sản
+#   xuất == lab thuc_nghiem 100% trên cols.pkl; thiếu cols.pkl (cache lab, gitignored,
+#   dựng bằng `thuc_nghiem.py rebuild`) thì in RESULT 0/0 — tổng thấp hơn mốc 7, KHÔNG
+#   phải hồi quy.
+#   apply_am_sua_dau (có/không 2-gram + hoà), decisions mục chưa ký không áp, glyph_fix
+#   --mode kiem trên khung giả: ĐÃ có từ S7–S10 (phase1 mục 7 / decisions / remediation).
+#
+# MỐC 2026-09-16 (S12, A-13/A-14): TỔNG 1007 passed, 0 failed (cùng điều kiện dữ liệu).
+#   ground_truth 171 -> 175 (+4): audit_grid.build_audit(labels_path=) ghi labels_sha256 +
+#   labels_path vào TỪNG dòng manifest (bộ đem đo = bộ đem nộp), thiếu tệp -> FileNotFoundError.
+#   tools 101 -> 113 (+12): doi_soat_the_he khối v3 (N15 B1–B8, count_source, khe giả) trên
+#   dữ liệu giả có đáp án. phase1_engine 251 (không đổi số): mốc "legacy tái lập 100%" đọc
+#   dataset_out_v3/labels_HEAD_N0c.csv (bản tái lập HEAD N0c) — dataset_out_v3/labels.csv
+#   nay là bản build v3 (syl_index) nên không còn là mốc legacy; thiếu tệp mốc -> BỎ QUA.
 
 set -uo pipefail
 cd "$(dirname "$0")/.." || exit 1
@@ -77,7 +112,7 @@ cd "$(dirname "$0")/.." || exit 1
 PY="${PY:-.venv/bin/python}"
 [ -x "$PY" ] || { echo "Không thấy Python: $PY (đặt biến PY=... để đổi)"; exit 1; }
 
-BASELINE_PASS=722
+BASELINE_PASS=1007
 BASELINE_FAIL=0
 
 MODULES=(
@@ -88,6 +123,8 @@ MODULES=(
   pipeline.publish.selftest
   pipeline.remediation.selftest
   pipeline.phase1_engine_selftest
+  pipeline.align_engine.tier_v3_selftest
+  pipeline.decisions_selftest
   pipeline.tools.selftest
   pipeline.lab.selftest
 )
@@ -115,7 +152,7 @@ done
 
 echo "----------------------------------------------------------------"
 printf "%-38s %s\n" "TỔNG" "$total_pass passed, $total_fail failed"
-printf "%-38s %s\n" "MỐC 2026-08-24" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
+printf "%-38s %s\n" "MỐC 2026-09-16 (S12)" "$BASELINE_PASS passed, $BASELINE_FAIL failed"
 echo "================================================================"
 
 if [ "$total_pass" -eq "$BASELINE_PASS" ] && [ "$total_fail" -eq "$BASELINE_FAIL" ]; then
@@ -129,8 +166,13 @@ echo "LỆCH MỐC:"
 # kêu "nghi hồi quy" dù 0 test hỏng. Phân biệt hai chuyện đó trước khi kết luận.
 if [[ ! -d dataset_out/human_audit/audit_combined ]]; then
   echo
-  echo "  ℹ️  chưa dựng mẻ MẪU (đường phụ) — 10 test của nó tự bỏ qua, KHÔNG phải hồi quy."
-  echo "      Dựng mẻ thì tổng sẽ là 645 thay vì 722."
+  echo "  ℹ️  chưa dựng mẻ MẪU (đường phụ) — các test tools.selftest đọc manifest của nó tự bỏ qua,"
+  echo "      KHÔNG phải hồi quy. Mốc đo lúc CHƯA dựng mẻ; dựng mẻ thì tổng CAO HƠN mốc."
+fi
+if [[ ! -f lab/gan_nhan_2026-09-13/cols.pkl ]]; then
+  echo
+  echo "  ℹ️  thiếu lab/gan_nhan_2026-09-13/cols.pkl — 7 test tier_v3_selftest tự bỏ qua (RESULT 0/0),"
+  echo "      KHÔNG phải hồi quy. Dựng bằng: .venv/bin/python lab/gan_nhan_2026-09-13/thuc_nghiem.py rebuild"
 fi
 if [[ ! -f dataset_out/labels_final.csv ]]; then
   echo

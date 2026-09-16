@@ -13,6 +13,10 @@ bị GHI ĐÈ, phần văn xuôi ngoài mốc do người viết và không bị
     python -m pipeline.tools.update_bang_so_lieu --check   # chỉ kiểm, exit 1 nếu lệch
 
 `--check` dùng cho CI / trước khi commit: nó KHÔNG sửa gì, chỉ báo tài liệu đã lệch.
+
+DS_OUT=dataset_out_v3 (cùng quy ước run_pipeline.sh N0a): đọc bản THỬ NGHIỆM
+$DS_OUT/{labels_final.csv, dataset|re-dataset/labels.csv, *_report.json} — chỉ để
+`--check`/xem khối sinh ra; KHÔNG ghi docs/ (bản thử nghiệm không phải bộ giao nộp).
 """
 from __future__ import annotations
 
@@ -20,23 +24,28 @@ import argparse
 import collections
 import csv
 import hashlib
+import os
 import re
 import subprocess
 import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-LABELS_FINAL = REPO / "dataset_out" / "labels_final.csv"
+DS_OUT = os.environ.get("DS_OUT", "dataset_out")
+THU_NGHIEM = DS_OUT != "dataset_out"
+LABELS_FINAL = REPO / DS_OUT / "labels_final.csv"
 DOC = REPO / "docs" / "BANG_SO_LIEU_CHINH_THUC.md"
+# Bản thử nghiệm: hai thư mục xuất nằm DƯỚI $DS_OUT (run_pipeline.sh:78-81).
+_PUB_ROOT = REPO / DS_OUT if THU_NGHIEM else REPO
 
 FILES = [
-    ("dataset_out/labels.csv",
-     "python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --use-s3 --reseg detector"),
-    ("dataset_out/labels_remediated.csv",
+    (f"{DS_OUT}/labels.csv",
+     "python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --reseg detector  (S3 tắt từ 16/09)"),
+    (f"{DS_OUT}/labels_remediated.csv",
      "python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62"),
-    ("dataset_out/labels_final.csv",
+    (f"{DS_OUT}/labels_final.csv",
      "python -m pipeline.remediation.confusion_fix … rồi python -m pipeline.remediation.s3_unwind … --apply"),
-    ("dataset/labels.csv",
+    (f"{DS_OUT + '/' if THU_NGHIEM else ''}dataset/labels.csv",
      "python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset"),
 ]
 USABLE = ("GOLD", "SYLLABLE")
@@ -61,12 +70,12 @@ def _rows(p: Path) -> list[dict]:
 
 
 def build_blocks() -> dict[str, str]:
-    final = _rows(REPO / "dataset_out" / "labels_final.csv")
+    final = _rows(LABELS_FINAL)
     # ĐẦU RA CÓ HAI CHỖ (từ 2026-08-25): dataset/ khi đã nạp phán quyết người,
     # re-dataset/ khi chưa. Ghim cứng "dataset" làm công cụ CHẾT ngay sau lần chạy đầu,
     # vì lúc đó chỉ có re-dataset/. Ưu tiên bộ CUỐI, không có thì lấy bộ ĐEM CHẤM.
-    _final = REPO / "dataset" / "labels.csv"
-    _redat = REPO / "re-dataset" / "labels.csv"
+    _final = _PUB_ROOT / "dataset" / "labels.csv"
+    _redat = _PUB_ROOT / "re-dataset" / "labels.csv"
     _src = _final if _final.exists() else _redat
     if not _src.exists():
         raise SystemExit("[bảng số liệu] chưa có dataset/labels.csv lẫn re-dataset/labels.csv "
@@ -85,7 +94,7 @@ def build_blocks() -> dict[str, str]:
             out.append(f"| `{rel}` | (chưa có) | — | `{cmd}` |")
             continue
         n = sum(1 for _ in open(p, encoding="utf-8")) - 1
-        bold = "**" if rel == "dataset/labels.csv" else ""
+        bold = "**" if rel == FILES[-1][0] else ""     # dòng cuối = bộ giao nộp
         out.append(f"| `{rel}`{' (**bộ giao nộp**)' if bold else ''} | {bold}{_n(n)}{bold} "
                    f"| `{_sha(p)}` | `{cmd}` |")
     nguon = "\n".join(out)
@@ -139,7 +148,7 @@ def build_blocks() -> dict[str, str]:
     n9 = sum(1 for v in percol.values() if len(v) == 9)
     cls_all = len({r["label"] for r in final if r["label"]})
     cls_pub = len({r["label"] for r in pub if r["label"]})
-    splits = collections.Counter(r["split"] for r in pub)
+    # KHÔNG còn dòng split (A-10, 16/09): bộ giao nộp 12 cột không mang cột `split`.
     st = subprocess.run(["bash", str(REPO / "scripts" / "run_all_selftests.sh")],
                         capture_output=True, text=True, cwd=REPO)
     m = re.search(r"TỔNG\s+(\d+) passed,\s+(\d+) failed", st.stdout)
@@ -150,7 +159,6 @@ def build_blocks() -> dict[str, str]:
            f"| **Trang cho đủ 9 cột có nhãn** | **{n9}/{len(percol)}** |",
            f"| Lớp ký tự phân biệt (mọi tier có nhãn) | {_n(cls_all)} |",
            f"| **Lớp trong bộ giao nộp** | **{_n(cls_pub)}** |",
-           f"| Split bộ giao nộp | " + " · ".join(f"{k} {_n(v)}" for k, v in sorted(splits.items())) + " |",
            f"| **Selftest** | **{sel}** |"]
     pham_vi = "\n".join(out)
 
@@ -171,15 +179,15 @@ def build_blocks() -> dict[str, str]:
     except OSError:
         day = datetime.date.today()
     header = (f"**Bộ nhãn sinh ngày**: {day} · **Commit chạm bộ nhãn gần nhất**: `{sha}` · "
-              f"**Bộ nhãn**: `dataset_out/labels_final.csv` ({_n(tot)} dòng)")
+              f"**Bộ nhãn**: `{DS_OUT}/labels_final.csv` ({_n(tot)} dòng)")
 
     # --- VA_LOI: số liệu bước 4-6 -------------------------------------------
     import json
     def _j(rel):
         p = REPO / rel
         return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
-    rem, cfx, unw = _j("dataset_out/remediation_report.json"), \
-        _j("dataset_out/confusion_fix_report.json"), _j("dataset_out/s3_unwind_report.json")
+    rem, cfx, unw = _j(f"{DS_OUT}/remediation_report.json"), \
+        _j(f"{DS_OUT}/confusion_fix_report.json"), _j(f"{DS_OUT}/s3_unwind_report.json")
     out = ["| Chỉ số | Giá trị | Ghi chú |", "|---|---|---|",
            f"| Quarantine (bbox trùng, nhãn mâu thuẫn) | **{_n(rem.get('quarantined_rows',0))}** | lớp lỗi đã đóng ở gốc engine |",
            f"| Đổi split do trùng md5 | **{_n(rem.get('split_reassigned_rows',0))}** | rò rỉ vốn đã bằng 0 trước bước 4 |",
@@ -229,6 +237,11 @@ def main(argv: list[str] | None = None) -> int:
 
     cur = DOC.read_text(encoding="utf-8")
     new = apply_blocks(cur, build_blocks())
+    if THU_NGHIEM and not args.check:
+        # Bản thử nghiệm KHÔNG được ghi docs/ (run_pipeline.sh:726-731 cùng luật).
+        print(f"[bảng số liệu] DS_OUT={DS_OUT} là bản thử nghiệm — chỉ --check, KHÔNG ghi "
+              f"{DOC.relative_to(REPO)}", file=sys.stderr)
+        return 2
     if args.check:
         if cur == new:
             print(f"[bảng số liệu] KHỚP đĩa — {DOC.relative_to(REPO)}")

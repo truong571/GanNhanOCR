@@ -45,7 +45,8 @@ _HIDDEN_FIELDS = (
     "tier", "rule", "book", "page", "column", "label", "unicode", "syllable",
     "s3_cosine", "s3_val", "stratum", "stratum_N", "suspicion", "design_weight",
     "risk_reason",
-    "split", "image", "image_md5", "bbox",
+    # `split` bỏ 16/09 (A-10): bộ nhãn v3 không có cột này; vòng lặp bên dưới đã guard `in r.index`
+    "image", "image_md5", "bbox",
     # cờ chất lượng ảnh: vào manifest để bước phân tích tách được "nhãn sai" khỏi
     # "ảnh không đọc nổi". Nó CŨNG hiện ra HTML (xem `canh_bao` bên dưới) — hiện được
     # vì nó KHÔNG lộ tier, nên không phá tính mù của mẻ.
@@ -245,18 +246,30 @@ def build_audit(
     title: str = "Audit ground-truth · Hán-Nôm",
     batch_size: int | None = 150,
     mode: str = "full",
+    labels_path: str | Path | None = None,
 ) -> dict:
     """Render the blinded audit HTML + manifest. Returns a small stats summary.
 
     If batch_size is set and the sample is larger, the HTML is split into
     audit_001.html, audit_002.html, ... (each a manageable file for the browser)
     sharing the single manifest. Verdicts from every batch merge by item_id.
+
+    `labels_path` (A-14, 16/09): tệp labels_final.csv đã RÚT MẪU. sha256 của nó ghi vào
+    MỌI dòng manifest (`labels_sha256`, `labels_path`) — "bộ đem đo = bộ đem nộp" kiểm bằng
+    máy: so với sha256 trong $DS_OUT/CHECKSUMS.txt / EVIDENCE_INDEX.md của lần export. Mẻ
+    chấm mà sha không khớp bộ giao nộp thì số precision không áp cho bộ đó (lỗi B8 cũ).
     """
     dataset_dir = Path(dataset_dir)
     prepared_dir = Path(prepared_dir)
     fd_dir = Path(fd_dir)
     out_html = Path(out_html)
     out_manifest = Path(out_manifest)
+    labels_sha256 = None
+    if labels_path is not None:
+        lp = Path(labels_path)
+        if not lp.is_file():
+            raise FileNotFoundError(f"labels_path {lp}: không tồn tại — manifest phải nối được với bộ đem nộp")
+        labels_sha256 = hashlib.sha256(lp.read_bytes()).hexdigest()
 
     fonts = build_font_chain(font_path)
 
@@ -338,6 +351,11 @@ def build_audit(
         })
 
         manifest = {"item_id": item_id}
+        if labels_sha256 is not None:
+            # bộ đem đo = bộ đem nộp: ghi ở TỪNG dòng để mọi bước đọc manifest (estimate,
+            # report) tự đối chiếu được mà không cần tệp phụ
+            manifest["labels_sha256"] = labels_sha256
+            manifest["labels_path"] = str(labels_path)
         for f in _HIDDEN_FIELDS:
             if f in r.index:
                 v = r[f]
@@ -384,6 +402,7 @@ def build_audit(
         "missing_context": n_no_ctx,
         "html": html_out,
         "manifest": str(out_manifest),
+        "labels_sha256": labels_sha256,
     }
 
 

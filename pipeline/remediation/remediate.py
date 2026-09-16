@@ -75,7 +75,9 @@ def remediate(df: pd.DataFrame, tau_silver: float = TAU_SILVER,
               s3_demote: bool = False) -> tuple[pd.DataFrame, RemediationReport]:
     """Return (remediated_frame, report). Input is not mutated."""
     out = df.copy()
-    for col in ("tier", "rule", "split", "image_md5", "label", "bbox"):
+    # A-10 (16/09): `split` KHÔNG còn bắt buộc — build v3 bỏ chia train/val/test. Các
+    # phép đếm rò split bên dưới tự trả 0 khi thiếu cột (xem _count_md5_spanning_splits).
+    for col in ("tier", "rule", "image_md5", "label", "bbox"):
         if col not in out.columns:
             raise ValueError(f"labels frame missing required column {col!r}")
 
@@ -101,9 +103,21 @@ def remediate(df: pd.DataFrame, tau_silver: float = TAU_SILVER,
     quarantine_idx: list = []
     kept_reps = 0
     q_conflict = q_dup = 0
+    # Ô KHOÁ QĐ-01 (phán quyết người, crop giữ nguyên byte) không bao giờ bị cách ly:
+    # trong nhóm trùng, ô khoá là đại diện, các ô còn lại (hộp nhận trùng hộp khoá) bị cách ly.
+    locked = out["rule"].fillna("").astype(str).str.startswith("quyet_dinh_nguoi:")
     for _, g in defect.groupby("_gkey", sort=False):
         labels = g["label"].fillna("").astype(str)
-        if labels.nunique() > 1:
+        g_locked = [i for i in g.index if bool(locked.loc[i])]
+        if g_locked:
+            rest = [i for i in g.index if i not in g_locked]
+            quarantine_idx.extend(rest)
+            kept_reps += 1
+            if labels.nunique() > 1:
+                q_conflict += len(rest)
+            else:
+                q_dup += len(rest)
+        elif labels.nunique() > 1:
             quarantine_idx.extend(g.index.tolist())      # conflict -> quarantine all
             q_conflict += len(g)
         else:
@@ -180,7 +194,8 @@ def remediate(df: pd.DataFrame, tau_silver: float = TAU_SILVER,
 
 
 def _count_md5_spanning_splits(df: pd.DataFrame, md5: pd.Series) -> int:
-    if df.empty:
+    # không có cột split (thế hệ v3) -> không có gì để rò -> 0
+    if df.empty or "split" not in df.columns:
         return 0
     n = df.assign(_md5=md5).groupby("_md5")["split"].nunique()
     return int((n > 1).sum())

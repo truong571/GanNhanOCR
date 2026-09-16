@@ -82,6 +82,13 @@ step2:
   # 🔴 ĐÃ THỬ 0 VÀ HOÀN NGUYÊN (2026-08-25). Lý do đầy đủ ở BOX_OVERLAP_FRAC.
   box_overlap_frac: 0.10
 
+  # A-6 (flow N3f, 2026-09-16): hộp thô detector cho luật --box-rule syl_index.
+  # Ngưỡng tin cậy CenterNet và biên x lọc hộp theo cột (± phần của bề rộng cột).
+  # Đo trên cột OCR=QN: 0,2 / ±0,25w cho M==N 93,2% (cũ 0,3 / ±0,5w: 69,9%).
+  # `--box-rule legacy` KHÔNG đọc hai khoá này (trọn gói 0,3 / ±0,5w để tái lập bộ cũ).
+  det_thr: 0.2
+  det_xmargin: 0.25
+
 # Step 3 (legacy DINOv2 labeling path) — RETIRED: superseded by pipeline/align_engine Step 2
 # (build_dataset.py --use-s3, S3 = trained Nôm encoder). DINOv2 is DISABLED here
 # (proven non-discriminative on Nôm — pipeline/align_engine/README.md).

@@ -174,6 +174,11 @@ def main(use_internet=True, use_unihan=True, csv_as_verdict=False):
     raw.columns = [c.strip() for c in raw.columns]
     df = raw[[c for c in KEEP if c in raw.columns]].copy()
     df = df.apply(lambda s: s.str.strip() if s.dtype == object else s)
+    # bộ giao nộp 12 cột (từ 16/09) không còn `label_level`: suy từ `tier`
+    # (SYLLABLE -> 'syllable', còn lại -> 'char') để phần dưới giữ nguyên.
+    if 'label_level' not in df.columns and 'tier' in df.columns:
+        df['label_level'] = df['tier'].fillna('').map(
+            lambda t: 'syllable' if t == 'SYLLABLE' else 'char')
     n = len(df)
     print('  %d dòng, giữ %d/%d cột' % (n, df.shape[1], raw.shape[1]))
 

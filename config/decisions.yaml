@@ -1,0 +1,370 @@
+# QUYẾT ĐỊNH THEO LỚP — người ký, máy chỉ nạp/kiểm/thi hành (A-8, flow N5f/N5h/N5i).
+# Nạp bởi pipeline/decisions.py (schema + xuất xứ); build_dataset PASS 1c thi hành.
+#
+# 🔴 CHỈ MỤC `trang_thai: da_ky` VÀ `xuat_xu` trỏ tới TỆP CÓ THẬT mới được áp.
+#    `cho_ky` = ứng viên máy sinh (pipeline/tools/sinh_decisions.py), chỉ được ĐẾM trong
+#    decisions_report.json. Máy KHÔNG ký thay người; KHÔNG tự chọn `chuan`.
+#
+# corpus_readings: (ocr_char, syllable_raw) là cách đọc thật của ngữ liệu dù từ điển không có
+#   -> GOLD, rule corpus_reading:<id>, dict_support 'corpus'; KHÔNG vào qn_to_nom, KHÔNG làm neo.
+#   Ứng viên = ô L1 (755) mà cổng 2-gram ÂM–ÂM LOO ủng hộ âm GỐC, nhóm ≥ 5 ô.
+# di_the: hai mã Unicode cùng một hình -> cột label_canonical (label KHÔNG đổi).
+#   `quan_sat` ghi CẢ HAI mã, `so_o` đếm từng mã; người ký điền `chuan` (∈ quan_sat) +
+#   `quy_tac` (da_so_ngu_lieu | unicode) + `xuat_xu`; `book: null` = mọi sách.
+# lop_nham: ô NGOÀI khoá QĐ-01, âm `syllable`, nhãn máy == `ocr` -> `den` (REVIEW).
+# khoa_o: đường dẫn khoá QĐ-01 (build đọc theo --qd01-cells/--qd01a-decisions).
+
+corpus_readings:
+- id: cr_7121_vồ
+  ocr_char: 無
+  unicode: U+7121
+  syllable_raw: vồ
+  syllable_l1: vô
+  book: null
+  so_o: 69
+  ghi_chu: 'L1 nhóm (無, vồ->vô) 70 ô: 2-gram ủng hộ gốc 69 / đổi 0 / hoà 1; theo sách (ủng hộ gốc) stt11 10, stt2
+    27, stt4 32'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: cr_50e5_nhiều
+  ocr_char: 僥
+  unicode: U+50E5
+  syllable_raw: nhiều
+  syllable_l1: nhiêu
+  book: null
+  so_o: 62
+  ghi_chu: 'L1 nhóm (僥, nhiều->nhiêu) 67 ô: 2-gram ủng hộ gốc 62 / đổi 0 / hoà 5; theo sách (ủng hộ gốc) stt2 59,
+    stt4 3'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: cr_51dc_lăm
+  ocr_char: 凜
+  unicode: U+51DC
+  syllable_raw: lăm
+  syllable_l1: lắm
+  book: null
+  so_o: 28
+  ghi_chu: 'L1 nhóm (凜, lăm->lắm) 74 ô: 2-gram ủng hộ gốc 28 / đổi 31 / hoà 15; theo sách (ủng hộ gốc) stt11 24,
+    stt2 2, stt4 2'
+  xuat_xu: ''
+  trang_thai: cho_ky
+- id: cr_5eea_lăm
+  ocr_char: 廪
+  unicode: U+5EEA
+  syllable_raw: lăm
+  syllable_l1: lắm
+  book: null
+  so_o: 18
+  ghi_chu: 'L1 nhóm (廪, lăm->lắm) 36 ô: 2-gram ủng hộ gốc 18 / đổi 12 / hoà 6; theo sách (ủng hộ gốc) stt2 11, stt4
+    7'
+  xuat_xu: ''
+  trang_thai: cho_ky
+- id: cr_793c_lê
+  ocr_char: 礼
+  unicode: U+793C
+  syllable_raw: lê
+  syllable_l1: lễ
+  book: null
+  so_o: 11
+  ghi_chu: 'L1 nhóm (礼, lê->lễ) 47 ô: 2-gram ủng hộ gốc 11 / đổi 27 / hoà 9; theo sách (ủng hộ gốc) stt11 5, stt2
+    3, stt4 3'
+  xuat_xu: ''
+  trang_thai: cho_ky
+- id: cr_4fc2_hế
+  ocr_char: 係
+  unicode: U+4FC2
+  syllable_raw: hế
+  syllable_l1: hề
+  book: null
+  so_o: 9
+  ghi_chu: 'L1 nhóm (係, hế->hề) 10 ô: 2-gram ủng hộ gốc 9 / đổi 0 / hoà 1; theo sách (ủng hộ gốc) stt11 4, stt2
+    1, stt4 4'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: cr_5ee9_lăm
+  ocr_char: 廩
+  unicode: U+5EE9
+  syllable_raw: lăm
+  syllable_l1: lắm
+  book: null
+  so_o: 9
+  ghi_chu: 'L1 nhóm (廩, lăm->lắm) 14 ô: 2-gram ủng hộ gốc 9 / đổi 4 / hoà 1; theo sách (ủng hộ gốc) stt2 1, stt4
+    8'
+  xuat_xu: ''
+  trang_thai: cho_ky
+- id: cr_51db_lăm
+  ocr_char: 凛
+  unicode: U+51DB
+  syllable_raw: lăm
+  syllable_l1: lắm
+  book: null
+  so_o: 6
+  ghi_chu: 'L1 nhóm (凛, lăm->lắm) 8 ô: 2-gram ủng hộ gốc 6 / đổi 2 / hoà 0; theo sách (ủng hộ gốc) stt11 1, stt2
+    3, stt4 2'
+  xuat_xu: ''
+  trang_thai: cho_ky
+di_the:
+- id: dt_4e8a_4e8b
+  quan_sat:
+  - 亊
+  - 事
+  unicode:
+    亊: U+4E8A
+    事: U+4E8B
+  chuan: 事
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    亊: 28
+    事: 974
+  kiem_unicode: Unihan:kSemanticVariant
+  ghi_chu: 'E3: (stt2, sự) 事/亊 MOT nB=25. Đếm ô có label theo sách: stt2: 亊 25 / 事 276; stt4: 亊 1 / 事 370; stt11:
+    亊 2 / 事 328'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_4e9c_4e9e
+  quan_sat:
+  - 亜
+  - 亞
+  unicode:
+    亜: U+4E9C
+    亞: U+4E9E
+  chuan: 亞
+  book: null
+  quy_tac: unicode
+  so_o:
+    亜: 48
+    亞: 9
+  kiem_unicode: shinjitai/CJK-compat (máy đề xuất, không có trong Unihan_Variants lẫn tài liệu)
+  ghi_chu: 'E3: (stt11, a) 亜/亞 MOT nB=9. Đếm ô có label theo sách: stt2: 亜 3 / 亞 0; stt4: 亜 9 / 亞 0; stt11: 亜 36
+    / 亞 9'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5171_5176
+  quan_sat:
+  - 共
+  - 其
+  unicode:
+    共: U+5171
+    其: U+5176
+  chuan: ''
+  book: null
+  quy_tac: unicode
+  so_o:
+    共: 828
+    其: 303
+  kiem_unicode: KHÔNG phải dị thể Unicode — E3 đo một hình, N5j hoãn tới khi có xuat_xu
+  ghi_chu: 'E3: (stt11, cùng) 共/其 MOT nB=23, (stt2, cùng) 共/其 MOT nB=58, (stt4, cùng) 共/其 MOT nB=77. Đếm ô có label
+    theo sách: stt2: 共 310 / 其 124; stt4: 共 210 / 其 114; stt11: 共 308 / 其 65'
+  xuat_xu: ''
+  trang_thai: cho_ky
+- id: dt_5225_522b
+  quan_sat:
+  - 別
+  - 别
+  unicode:
+    別: U+5225
+    别: U+522B
+  chuan: 别
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    別: 84
+    别: 147
+  kiem_unicode: Unihan:kSimplifiedVariant+kTraditionalVariant
+  ghi_chu: 'E3: (stt11, biết) 别/別 MOT nB=41, (stt4, biết) 别/別 mo nB=38. Đếm ô có label theo sách: stt2: 別 4 / 别
+    59; stt4: 別 39 / 别 42; stt11: 別 41 / 别 46'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_57a9_580a
+  quan_sat:
+  - 垩
+  - 堊
+  unicode:
+    垩: U+57A9
+    堊: U+580A
+  chuan: 垩
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    垩: 576
+    堊: 23
+  kiem_unicode: Unihan:kSimplifiedVariant+kTraditionalVariant
+  ghi_chu: 'E3: (stt2, thánh) 垩/堊 MOT nB=13. Đếm ô có label theo sách: stt2: 垩 214 / 堊 15; stt4: 垩 0 / 堊 7; stt11:
+    垩 362 / 堊 1'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5b90_5b9c
+  quan_sat:
+  - 宐
+  - 宜
+  unicode:
+    宐: U+5B90
+    宜: U+5B9C
+  chuan: 宜
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    宐: 17
+    宜: 162
+  kiem_unicode: Unihan:kSemanticVariant
+  ghi_chu: 'E3: (stt4, nghe) 宜/宐 MOT nB=14. Đếm ô có label theo sách: stt2: 宐 0 / 宜 47; stt4: 宐 14 / 宜 47; stt11:
+    宐 3 / 宜 68'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5b9e_5b9f
+  quan_sat:
+  - 实
+  - 実
+  unicode:
+    实: U+5B9E
+    実: U+5B9F
+  chuan: 实
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    实: 57
+    実: 12
+  kiem_unicode: shinjitai/CJK-compat (máy đề xuất, không có trong Unihan_Variants lẫn tài liệu)
+  ghi_chu: 'E3: (stt11, thật) 实/実 MOT nB=11. Đếm ô có label theo sách: stt2: 实 15 / 実 1; stt4: 实 2 / 実 0; stt11:
+    实 40 / 実 11'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5e84_5e92
+  quan_sat:
+  - 庄
+  - 庒
+  unicode:
+    庄: U+5E84
+    庒: U+5E92
+  chuan: 庄
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    庄: 709
+    庒: 352
+  kiem_unicode: danh_sach_DANH_MUC_A-8 (không có trong Unihan_Variants)
+  ghi_chu: 'E3: (stt11, chăng) 庒/庄 MOT nB=65, (stt11, chẳng) 庒/庄 MOT nB=14, (stt2, chăng) 庄/庒 MOT nB=14. Đếm ô có
+    label theo sách: stt2: 庄 275 / 庒 18; stt4: 庄 354 / 庒 1; stt11: 庄 80 / 庒 333'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5ee9_5eea
+  quan_sat:
+  - 廩
+  - 廪
+  unicode:
+    廩: U+5EE9
+    廪: U+5EEA
+  chuan: 廪
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    廩: 46
+    廪: 84
+  kiem_unicode: Unihan:kSimplifiedVariant+kTraditionalVariant
+  ghi_chu: 'E3: (stt4, lắm) 廪/廩 MOT nB=39. Đếm ô có label theo sách: stt2: 廩 1 / 廪 32; stt4: 廩 45 / 廪 50; stt11:
+    廩 0 / 廪 2'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_5fb3_5fb7
+  quan_sat:
+  - 徳
+  - 德
+  unicode:
+    徳: U+5FB3
+    德: U+5FB7
+  chuan: 德
+  book: null
+  quy_tac: unicode
+  so_o:
+    徳: 313
+    德: 163
+  kiem_unicode: danh_sach_DANH_MUC_A-8 (không có trong Unihan_Variants)
+  ghi_chu: 'E3: (stt2, đức) 徳/德 MOT nB=31, (stt4, đức) 徳/德 MOT nB=127. Đếm ô có label theo sách: stt2: 徳 122 / 德
+    31; stt4: 徳 187 / 德 131; stt11: 徳 4 / 德 1'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_6bce_6bcf
+  quan_sat:
+  - 毎
+  - 每
+  unicode:
+    毎: U+6BCE
+    每: U+6BCF
+  chuan: 每
+  book: null
+  quy_tac: unicode
+  so_o:
+    毎: 12
+    每: 203
+  kiem_unicode: shinjitai/CJK-compat (máy đề xuất, không có trong Unihan_Variants lẫn tài liệu)
+  ghi_chu: 'E3: (stt2, mọi) 每/毎 MOT nB=8. Đếm ô có label theo sách: stt2: 毎 8 / 每 56; stt4: 毎 0 / 每 67; stt11: 毎
+    4 / 每 80'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_6c92_6ca1
+  quan_sat:
+  - 沒
+  - 没
+  unicode:
+    沒: U+6C92
+    没: U+6CA1
+  chuan: 沒
+  book: null
+  quy_tac: unicode
+  so_o:
+    沒: 25
+    没: 170
+  kiem_unicode: Unihan:kSimplifiedVariant+kSpecializedSemanticVariant+kTraditionalVariant
+  ghi_chu: 'E3: (stt4, một) 没/沒 MOT nB=18. Đếm ô có label theo sách: stt2: 沒 0 / 没 63; stt4: 沒 24 / 没 101; stt11:
+    沒 1 / 没 6'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_70ba_7232_stt4
+  quan_sat:
+  - 為
+  - 爲
+  unicode:
+    為: U+70BA
+    爲: U+7232
+  chuan: 爲
+  book: stt4
+  quy_tac: unicode
+  so_o:
+    為: 55
+    爲: 173
+  kiem_unicode: Unihan:kSemanticVariant
+  ghi_chu: 'E3: (stt2, vì) 為/爲 HAI nB=15, (stt4, vì) 爲/為 MOT nB=33. Đếm ô có label theo sách: stt4: 為 55 / 爲 173'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+- id: dt_70dd_84b8
+  quan_sat:
+  - 烝
+  - 蒸
+  unicode:
+    烝: U+70DD
+    蒸: U+84B8
+  chuan: 烝
+  book: null
+  quy_tac: da_so_ngu_lieu
+  so_o:
+    烝: 21
+    蒸: 9
+  kiem_unicode: Unihan:kSemanticVariant
+  ghi_chu: 'E3: (stt11, chưng) 烝/蒸 MOT nB=8. Đếm ô có label theo sách: stt2: 烝 4 / 蒸 1; stt4: 烝 0 / 蒸 0; stt11:
+    烝 17 / 蒸 8'
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+lop_nham:
+- id: nguoi_2029A_vs_346B
+  syllable: người
+  ocr: 㝵
+  unicode: U+3775
+  den: REVIEW
+  pham_vi: ngoai_khoa
+  xuat_xu: docs/NGUOI_CHAM_QUYET_DINH.md
+  trang_thai: da_ky
+  ghi_chu: 'N5h: ô ''người'' ngoài khoá QĐ-01 mang nhãn 㝵 -> REVIEW; ô 𠊚 giữ GOLD'
+khoa_o:
+  cells: config/qd01_cells.csv
+  decisions: config/qd01a_decisions.csv

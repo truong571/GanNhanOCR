@@ -203,7 +203,9 @@ class VisualS3:
                 pass
         by: dict[str, list[str]] = defaultdict(list)
         for r in csv.DictReader(open(idx_csv, encoding="utf-8")):
-            if r.get("source") == "crop" and r.get("split") == "train" and r.get("label"):
+            # A-10 (16/09): index.csv thế hệ v3 có thể KHÔNG có cột split (S3 tắt nên
+            # nhánh này không chạy; chỉ phòng) — thiếu cột thì lấy mọi crop.
+            if r.get("source") == "crop" and r.get("split", "train") == "train" and r.get("label"):
                 by[r["label"]].append(str(repo / r["path"]))
         print(f"  [S3] building crop prototypes for {len(by)} classes (<= {PROTO_K} crops each) ...",
               flush=True)

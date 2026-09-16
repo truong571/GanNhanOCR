@@ -19,6 +19,15 @@ DEFAULT_LABELS = REPO / "dataset_out" / "labels.csv"
 DEFAULT_OUT = REPO / "dataset_out"
 
 
+# CỘT CỜ / CHỈ SỐ đọc là CHUỖI (xem chú thích trong _load/run): ô rỗng -> float64 -> '1.0'
+DTYPE = {"image_md5": str, "label_in_train": str, "crop_w": str, "crop_h": str,
+         # cờ/chỉ số v3 (A-7/A-5/A-6): có thể rỗng ở thế hệ cũ -> pandas ép float "1.0"
+         "nom_idx": str, "syl_idx": str, "band_touched": str, "n_ocr": str, "n_qn": str,
+         "n_det": str, "l1_support": str, "l1_tie": str, "flank_gold": str,
+         "qd01_locked": str, "qd01_excluded": str, "am_da_quyet_ngoai_khoa": str,
+         "norm_fixed": str}
+
+
 def _load(path: str) -> pd.DataFrame:
         # `nan` LÀ MỘT ÂM TIẾNG VIỆT (難). pandas mặc định đọc chuỗi "nan"/"NA"/"null"…
     # thành NaN, nên 3 ô mất hẳn âm khi đi qua bước này (2 trong đó là GOLD trong bộ
@@ -28,7 +37,7 @@ def _load(path: str) -> pd.DataFrame:
     # có label_in_train; hàng REVIEW không có crop_w/h), nên pandas ép cả cột về float64
     # rồi ghi ra '1.0' thay vì '1'. Hậu quả: mọi phép lọc `label_in_train == "1"` trả về
     # RỖNG mà không báo lỗi — đúng lớp lỗi câm đã cắn dự án này nhiều lần.
-    return pd.read_csv(path, dtype={"image_md5": str, "label_in_train": str, "crop_w": str, "crop_h": str}, keep_default_na=False, na_values=[""])
+    return pd.read_csv(path, dtype=DTYPE, keep_default_na=False, na_values=[""])
 
 
 def cmd_census(args) -> None:

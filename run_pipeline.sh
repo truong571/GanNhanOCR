@@ -17,11 +17,19 @@
 #                 trong config — build không lọc theo sách vừa extract, xem lưu ý
 #                 ở step_build())
 #   4 remediate   pipeline.remediation -> labels_remediated.csv + remediation_report.json
+#                 (census AE-1/F1 + MD5_DUP cùng cột — A-11)
 #   5 confusion   pipeline.remediation.confusion_fix -> labels_final.csv (BẢN CÔNG BỐ)
-#   7 quyết định  pipeline.remediation.glyph_fix — phán quyết NGƯỜI cho lớp glyph OCR mù
-#                 hạ tier các confusion HỆ THỐNG đã chứng minh bằng audit người
-#   7 export      pipeline/export_final_dataset.py -> dataset/ (chỉ tier
+#   6 gỡ S3       pipeline.remediation.s3_unwind — chạy VÔ ĐIỀU KIỆN (no-op khi S3 tắt)
+#                 để s3_unwind_report.json luôn là bản mới (N11)
+#   7 kiểm QĐ-01  pipeline.remediation.glyph_fix --mode kiem — KHÔNG gán; chỉ đối chiếu
+#                 khoá bền config/qd01_cells.csv + qd01a_decisions.csv (N12); khoá đã
+#                 được build áp ở PASS 1c. assert_qd01 chạy sau các bước 4/5/6/7 (N13)
+#   8 export      pipeline/export_final_dataset.py -> dataset/ (chỉ tier
 #                 GOLD+SILVER+SYLLABLE = usable; XOÁ SẠCH dataset/ cũ trước khi ghi)
+#
+# S3 TẮT từ 16/09 (A-10 giai đoạn 2): build không còn --use-s3; bộ nhãn KHÔNG có cột
+#   split/split_group/label_in_train (bỏ chia train/val/test); proto-index/s3_proto_cache
+#   ngoài flow. Thời gian từng bước ghi vào log và $DS_OUT/CHECKSUMS.txt (dòng `thoi_gian`).
 #
 # ⚠️ BƯỚC 5 KHÔNG ĐƯỢC BỎ. Trước 2026-08-11 script này export thẳng từ
 #   labels_remediated.csv, trong khi confusion_fix chỉ được chạy tay một lần hồi
@@ -36,6 +44,14 @@
 #   quốc tế...) vẫn còn nguyên trong lịch sử git: `git log -- run_pipeline.sh`
 #   (commit 47dfbfe0f trở về trước) — khôi phục bằng
 #   `git show 47dfbfe0f:run_pipeline.sh > run_pipeline.sh` khi cần dùng lại.
+#
+# BIẾN MÔI TRƯỜNG (N0a, 2026-09-16) — không phải cờ dòng lệnh:
+#   DS_OUT=dataset_out_v3   dựng bản THỬ NGHIỆM song song (mặc định dataset_out = bộ thật);
+#                           re-dataset/ + dataset/ khi đó nằm dưới $DS_OUT, KHÔNG ghi docs/
+#   NONINTERACTIVE=1        bỏ mọi câu hỏi: cả 3 sách, dùng cache OCR cũ, bắt đầu ngay;
+#                           gặp $DS_OUT/.FROZEN thì chỉ tiếp tục khi FROZEN_OVERRIDE=GHIDE
+#   ALLOW_PENDING=1         CHỈ khi DS_OUT != dataset_out: export dù còn ô QĐ-01 pending (bản
+#                           thử nghiệm để đối soát N15 / thăm dò QĐ-01a); bộ thật luôn bị chặn
 #
 # Viết cho bash 3.2 (bash mặc định của macOS): không dùng mảng kết hợp.
 # =============================================================================
@@ -52,9 +68,14 @@ PY="${PYTHON_BIN:-$REPO_ROOT/.venv/bin/python}"
 CONFIG="${CONFIG:-config/pipeline.yaml}"
 RESEG="${RESEG:-detector}"
 TAU_REMEDIATE="${TAU_REMEDIATE:-0.62}"
-LABELS_RAW="dataset_out/labels.csv"
-LABELS_REMED="dataset_out/labels_remediated.csv"
-LABELS_FINAL="dataset_out/labels_final.csv"   # BẢN CÔNG BỐ — nguồn của export + audit
+# DS_OUT — thư mục làm việc trung gian (N0a). Mặc định `dataset_out` = bộ giao nộp.
+# Đặt DS_OUT=dataset_out_v3 để dựng bản THỬ NGHIỆM song song mà không đụng bộ đã
+# đóng băng: mọi bước ghi/đọc đều đi qua biến này, evidence() chỉ ghi vào docs/ khi
+# DS_OUT là bộ thật. (KHÔNG đặt tên OUT_DIR — va với `local OUT_DIR` ở step_export.)
+DS_OUT="${DS_OUT:-dataset_out}"
+LABELS_RAW="$DS_OUT/labels.csv"
+LABELS_REMED="$DS_OUT/labels_remediated.csv"
+LABELS_FINAL="$DS_OUT/labels_final.csv"   # BẢN CÔNG BỐ — nguồn của export + audit
 CONFUSION_FIXES="${CONFUSION_FIXES:-config/confusion_fixes.yaml}"
 GLYPH_DECISIONS="${GLYPH_DECISIONS:-config/quyet_dinh_glyph.yaml}"
 # ---- HAI ĐẦU RA, TÙY CÓ PHÁN QUYẾT NGƯỜI HAY CHƯA --------------------------
@@ -64,9 +85,18 @@ GLYPH_DECISIONS="${GLYPH_DECISIONS:-config/quyet_dinh_glyph.yaml}"
 # chọn dựa trên việc verdicts*.jsonl đã có hay chưa — không cần cờ tay, không quên được.
 REDATASET_DIR="re-dataset"
 FINAL_DIR="dataset"
-AUDIT_DIR="dataset_out/human_audit/audit_combined"
+# Bản thử nghiệm: hai thư mục xuất nằm DƯỚI $DS_OUT để export không rmtree bộ thật.
+if [[ "$DS_OUT" != "dataset_out" ]]; then
+  REDATASET_DIR="$DS_OUT/re-dataset"
+  FINAL_DIR="$DS_OUT/dataset"
+fi
+AUDIT_DIR="$DS_OUT/human_audit/audit_combined"
 EVIDENCE="docs/EVIDENCE_INDEX.md"
-CHECKSUMS="dataset_out/CHECKSUMS.txt"
+CHECKSUMS="$DS_OUT/CHECKSUMS.txt"
+# NONINTERACTIVE=1 — chạy không tay (N0c/N19): bỏ mọi `read -r -p`, lấy mặc định AN
+# TOÀN: cả 3 sách, dùng cache OCR cũ (KHÔNG BAO GIỜ xoá cache), .FROZEN -> tiếp tục
+# (chỉ có nghĩa khi DS_OUT != dataset_out — xem MAIN), Enter bắt đầu -> tự chạy.
+NONINTERACTIVE="${NONINTERACTIVE:-0}"
 
 BOOKS=""            # tên đầy đủ trong config, cách nhau bởi dấu cách — điền ở ask_book_choice
 BOOKS_LABEL=""       # nhãn ngắn để in log
@@ -102,6 +132,12 @@ X() {
 # ============================ HỎI-ĐÁP (interactive) ==========================
 ask_book_choice() {
   local choice
+  if [[ "$NONINTERACTIVE" == "1" ]]; then
+    BOOKS="SachThanhTruyen2 SachThanhTruyen4 SachThanhTruyen11"
+    BOOKS_LABEL="STT2+STT4+STT11"
+    info "NONINTERACTIVE=1 -> chọn sách: cả 3 ($BOOKS_LABEL)"
+    return 0
+  fi
   while true; do
     log ""
     log "${BLD}Chọn sách cần OCR (bước extract):${RST}"
@@ -134,12 +170,19 @@ confirm_fresh_delete() {
   log "${RED}Cache OCR là PRIMARY DATA của luận văn:${RST}"
   log "${RED}  · còn cache -> bước extract TÁI LẬP ĐƯỢC, 0 đồng${RST}"
   log "${RED}  · xoá cache -> gọi lại API ngoài: TỐN TIỀN + KHÔNG tái lập${RST}"
+  if [[ "$NONINTERACTIVE" == "1" ]]; then
+    warn "NONINTERACTIVE=1 -> KHÔNG xoá cache OCR (huỷ, dùng cache cũ)"; return 1
+  fi
   read -r -p "Gõ đúng chữ XOA để xác nhận (Enter/khác = huỷ, quay về dùng cache cũ): " typed
   [[ "$typed" == "XOA" ]]
 }
 
 ask_cache_choice() {
   local choice
+  if [[ "$NONINTERACTIVE" == "1" ]]; then
+    FRESH_OCR=0; info "NONINTERACTIVE=1 -> cache OCR: dùng cache cũ (0 đồng, tái lập được)"
+    return 0
+  fi
   while true; do
     log ""
     log "${BLD}Cache OCR (prepared/<sách>/detected/*_ocr_cache.json):${RST}"
@@ -158,10 +201,19 @@ ask_cache_choice() {
 confirm_frozen_override() {
   local typed
   log ""
-  log "${RED}${BLD}dataset_out/.FROZEN tồn tại${RST} — bản đã đóng băng để trích số vào luận văn."
+  log "${RED}${BLD}$DS_OUT/.FROZEN tồn tại${RST} — bản đã đóng băng để trích số vào luận văn."
   log "${RED}Chạy tiếp (bước build) sẽ GHI ĐÈ bằng chứng đã đóng băng đó.${RST}"
+  if [[ "$NONINTERACTIVE" == "1" ]]; then
+    # Không có người gõ GHIDE: chỉ tiếp tục khi biến môi trường nói rõ ý đó, vì một
+    # lần chạy nền vô ý (quên đặt DS_OUT) mà ghi đè bộ đã đóng băng thì không hồi được.
+    [[ "${FROZEN_OVERRIDE:-}" == "GHIDE" ]] \
+      || die "NONINTERACTIVE=1 nhưng $DS_OUT/.FROZEN tồn tại — đặt FROZEN_OVERRIDE=GHIDE
+      để ghi đè có chủ đích, hoặc DS_OUT=dataset_out_v3 để dựng bản thử nghiệm."
+    warn "NONINTERACTIVE=1 + FROZEN_OVERRIDE=GHIDE -> tiếp tục, sẽ ghi đè $DS_OUT/"
+    return 0
+  fi
   read -r -p "Gõ đúng chữ GHIDE để tiếp tục (Enter/khác = huỷ chạy): " typed
-  [[ "$typed" == "GHIDE" ]] || die "Đã huỷ — xoá dataset_out/.FROZEN nếu thật sự muốn dựng lại."
+  [[ "$typed" == "GHIDE" ]] || die "Đã huỷ — xoá $DS_OUT/.FROZEN nếu thật sự muốn dựng lại."
 }
 
 # ============================== PREFLIGHT ====================================
@@ -362,7 +414,11 @@ step_extract() {
 # vốn lọc config chỉ còn 1 sách nên có bẫy ghi đè — xem chú thích trong đó).
 step_build() {
   banner 3 build "align_engine.build_dataset: banded-DP align + consensus tier + crops (cả 3 sách trong config)"
-  X "$PY" -m pipeline.align_engine.build_dataset --config "$CONFIG" --use-s3 --reseg "$RESEG"
+  # S3 TẮT (A-10 giai đoạn 2, 16/09): KHÔNG truyền --use-s3. Lý do: error-AUC 0,566/0,577
+  # (CI chứa 0,5) — không tín hiệu thị giác nào được quyết tier; bỏ luôn split nên
+  # proto-index GOLD∧train không còn nguồn. Muốn tái lập thế hệ ≤25/08 thì thêm tay --use-s3.
+  X "$PY" -m pipeline.align_engine.build_dataset --config "$CONFIG" --reseg "$RESEG" \
+      --out "$DS_OUT"
   [[ -f "$LABELS_RAW" ]] || die "bước build không sinh $LABELS_RAW"
   # --- CHẤM CHIỀU CROP BẰNG MÁY, KHÔNG BẰNG MẮT NGƯỜI ------------------------
   # Mẻ chấm 2026-08-04 hỏng ở chiều CROP (κ = 0,14) chứ không ở chiều NHÃN. Người
@@ -370,7 +426,7 @@ step_build() {
   # nhất quán tuyệt đối. Ba cột này tách bạch hai việc đó — đặc tả T4.4 đặt hàng
   # nhưng chưa từng được làm. Chạy ngay sau build nên luôn khớp crop vừa cắt; các
   # bước 4-7 giữ nguyên cột lạ (remediate dùng pandas, export dùng reader.fieldnames).
-  X "$PY" -m pipeline.tools.enrich_crop_quality --labels "$LABELS_RAW" --src-root dataset_out
+  X "$PY" -m pipeline.tools.enrich_crop_quality --labels "$LABELS_RAW" --src-root "$DS_OUT"
 }
 
 
@@ -390,12 +446,92 @@ checkpoint() {
   log "  ${CYA}sha256 -> $CHECKSUMS ($tag)${RST}"
 }
 
+# ---- THỜI GIAN TỪNG BƯỚC ----------------------------------------------------
+# tick <tên bước>: in số giây bước vừa chạy (từ mốc T_STEP) và ghi một dòng `thoi_gian`
+# vào CHECKSUMS để lần chạy nào cũng có bằng chứng thời gian thật (flow N19 "thời gian
+# thật") — không ai còn phải ước lượng "build ~40 phút" từ trí nhớ.
+T_STEP=$SECONDS
+tick() {
+  local dt=$((SECONDS - T_STEP)); T_STEP=$SECONDS
+  log "  ${CYA}⏱ $1: ${dt}s${RST}"
+  mkdir -p "$(dirname "$CHECKSUMS")"
+  printf '%s  thoi_gian  %s  %ss\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$1" "$dt" >> "$CHECKSUMS"
+}
+
+# ---- CHỐT CHẶN QĐ-01 (N13) ---------------------------------------------------
+# assert_qd01 <labels.csv> <nhãn bước> [final]
+# Đếm ô mang rule tiền tố `quyet_dinh_nguoi:` (lock + pending + qd01a) trong tệp nhãn và
+# so với KỲ VỌNG suy từ config: số dòng qd01_cells.csv (2.014, N0d) TRỪ ô trong khoá mà
+# người đã quyết `bo` (mất tiền tố, qd01_excluded=1) CỘNG ô NGOÀI khoá người quyết
+# `giu_2029A`/`khac:` (được khoá thêm, A-3) — đúng ngữ nghĩa apply_qd01_lock (N5g).
+# Gọi SAU MỖI bước hậu xử lý (remediate, confusion, s3_unwind, glyph) để bước nào làm rơi
+# ô QĐ-01 thì dừng ngay tại bước đó, không đợi tới export. Với `final` (trước export) đòi
+# thêm pending == 0: ô pending là ô người CHƯA quyết (QĐ-01a) — export bộ có ô chưa quyết
+# là giao nộp phán quyết chưa tồn tại. Đếm bằng Python theo ĐÚNG CỘT rule (grep -c đếm cả
+# dòng có chuỗi ở cột khác) và giữ tiền tố qua hậu tố `|quarantine_dup`… của remediate.
+QD01_CELLS="${QD01_CELLS:-config/qd01_cells.csv}"
+QD01A_DECISIONS="${QD01A_DECISIONS:-config/qd01a_decisions.csv}"
+assert_qd01() {
+  local f="$1" tag="$2" final="${3:-}"
+  [[ -f "$QD01_CELLS" ]] || die "thiếu $QD01_CELLS — sinh bằng python -m pipeline.tools.sinh_qd01_cells (N0d)"
+  [[ -f "$f" ]] || die "assert_qd01($tag): không thấy $f"
+  local n_qd n_pending n_exp n_cells
+  # bash 3.2 (macOS) không phân tích được heredoc lồng trong <( ) -> mã Python đi qua biến.
+  local _py='
+import csv, sys
+def key(r):
+    return (r["book"], r["page"], int(float(r["column"])), int(float(r["nom_idx"])))
+labels, cells_csv, dec_csv = sys.argv[1:4]
+with open(cells_csv, encoding="utf-8", newline="") as fh:
+    cells = {key(r) for r in csv.DictReader(fh) if r.get("nom_idx", "") != ""}
+dec = {}
+try:
+    with open(dec_csv, encoding="utf-8", newline="") as fh:
+        for r in csv.DictReader(fh):
+            if r.get("nom_idx", "") != "":
+                dec[key(r)] = (r.get("quyet") or "").strip()
+except FileNotFoundError:
+    pass
+n_bo = sum(1 for k, q in dec.items() if k in cells and q == "bo")
+n_ngoai = sum(1 for k, q in dec.items() if k not in cells and (q == "giu_2029A" or q.startswith("khac:")))
+n = p = 0
+with open(labels, encoding="utf-8", newline="") as fh:
+    for r in csv.DictReader(fh):
+        rule = (r.get("rule") or "")
+        if rule.startswith("quyet_dinh_nguoi:"):
+            n += 1
+            if rule.split("|", 1)[0] == "quyet_dinh_nguoi:pending":
+                p += 1
+print(n, p, len(cells) - n_bo + n_ngoai, len(cells))
+'
+  read -r n_qd n_pending n_exp n_cells < <("$PY" -c "$_py" "$f" "$QD01_CELLS" "$QD01A_DECISIONS")
+  if [[ "$n_qd" != "$n_exp" ]]; then
+    die "assert_qd01($tag): $f có $n_qd ô rule 'quyet_dinh_nguoi:*' nhưng kỳ vọng $n_exp
+      (= $n_cells ô khoá trong $QD01_CELLS − ô 'bo' + ô ngoài khoá đã quyết trong $QD01A_DECISIONS).
+      Bước '$tag' đã làm rơi/thêm ô QĐ-01 — DỪNG, không chạy tiếp."
+  fi
+  if [[ -n "$final" && "$n_pending" -gt 0 ]]; then
+    # ALLOW_PENDING=1 — CHỈ cho bản THỬ NGHIỆM (DS_OUT != dataset_out): cho export đi tiếp
+    # dù còn ô pending, để có labels_final/re-dataset tạm cho đối soát thế hệ (N15) và
+    # thăm dò trước QĐ-01a (N16). Bộ thật KHÔNG BAO GIỜ được nới: ô chưa quyết mà vào bộ
+    # giao nộp là giao nộp phán quyết chưa tồn tại.
+    if [[ "${ALLOW_PENDING:-0}" == "1" && "$DS_OUT" != "dataset_out" ]]; then
+      warn "assert_qd01($tag): còn $n_pending ô QĐ-01 PENDING — ALLOW_PENDING=1 (bản thử nghiệm $DS_OUT) nên đi tiếp; bộ này KHÔNG được thăng cấp"
+    else
+      die "assert_qd01($tag): còn $n_pending ô QĐ-01 PENDING (rule quyet_dinh_nguoi:pending).
+      Điền phán quyết người vào $QD01A_DECISIONS rồi chạy lại (rebuild) — KHÔNG sửa tay CSV.
+      Danh sách ô: $DS_OUT/qd01a_pending.csv · report: $DS_OUT/glyph_fix_kiem_report.json"
+    fi
+  fi
+  ok "QĐ-01 ($tag): $n_qd/$n_exp ô khoá còn nguyên (cells $n_cells) · pending $n_pending"
+}
+
 # ---- 4/7 remediate ----------------------------------------------------------
 # -> labels_remediated.csv + remediation_report.json
 step_remediate() {
   banner 4 remediate "kiểm kê trùng lặp + cách ly/hạ tier -> $LABELS_REMED"
-  X "$PY" -m pipeline.remediation --labels "$LABELS_RAW" --out dataset_out census
-  X "$PY" -m pipeline.remediation --labels "$LABELS_RAW" --out dataset_out apply --tau "$TAU_REMEDIATE"
+  X "$PY" -m pipeline.remediation --labels "$LABELS_RAW" --out "$DS_OUT" census
+  X "$PY" -m pipeline.remediation --labels "$LABELS_RAW" --out "$DS_OUT" apply --tau "$TAU_REMEDIATE"
   [[ -f "$LABELS_REMED" ]] || die "bước remediate không sinh $LABELS_REMED"
 }
 
@@ -429,8 +565,8 @@ step_s3unwind() {
   banner 6 "gỡ S3" "gỡ tín hiệu thị giác khỏi mọi quyết định tier -> $LABELS_FINAL"
   X "$PY" -m pipeline.remediation.s3_unwind \
       --in "$LABELS_FINAL" --out "$LABELS_FINAL" \
-      --report dataset_out/s3_unwind_report.json --apply
-  [[ -f dataset_out/s3_unwind_report.json ]] || die "bước gỡ S3 không sinh báo cáo"
+      --report "$DS_OUT/s3_unwind_report.json" --apply
+  [[ -f "$DS_OUT/s3_unwind_report.json" ]] || die "bước gỡ S3 không sinh báo cáo"
 }
 
 # ---- 7/8 quyết định glyph -----------------------------------------------------
@@ -443,12 +579,18 @@ step_s3unwind() {
 # cầu tự dạng hai chiều (T7) dưới ngưỡng · dịch vụ đọc ngoài 0/16 sống sót phản biện.
 # CHẠY SAU gỡ S3 để không tín hiệu thị giác nào đụng lại nhãn người đã quyết.
 # Mỗi quyết định BẮT BUỘC khai xuất xứ; thiếu -> module TỪ CHỐI chạy, không chạy tiếp.
+# TỪ 16/09 (A-2/A-12, flow N12): chế độ `kiem` — KHÔNG GÁN GÌ. Khoá QĐ-01 đã được build áp
+# trong PASS 1c theo config/qd01_cells.csv (khoá bền book,page,column,nom_idx) +
+# qd01a_decisions.csv (phán quyết người cho ô trôi). Bước này chỉ ĐỐI CHIẾU và ghi
+# $DS_OUT/glyph_fix_kiem_report.json (n_khop/n_pending/n_mat/n_bbox_doi/n_md5_doi); exit 1
+# nếu khớp + pending != số ô khoá. Vẫn truyền --config để kiểm xuất xứ của phán quyết âm.
+# Chế độ `am` cũ (gán theo âm, --apply) chỉ dùng tay khi tái lập thế hệ ≤25/08.
 step_glyph() {
-  banner 7 "quyết định glyph" "áp phán quyết NGƯỜI cho lớp glyph mà OCR mù -> $LABELS_FINAL"
-  [[ -f "$GLYPH_DECISIONS" ]] || { log "  (không có $GLYPH_DECISIONS — bỏ qua)"; return 0; }
-  X "$PY" -m pipeline.remediation.glyph_fix \
-      --in "$LABELS_FINAL" --out "$LABELS_FINAL" \
-      --config "$GLYPH_DECISIONS" --src-root dataset_out --apply
+  banner 7 "kiểm QĐ-01" "đối chiếu khoá QĐ-01 (không gán) -> $DS_OUT/glyph_fix_kiem_report.json"
+  [[ -f "$QD01_CELLS" ]] || die "thiếu $QD01_CELLS — sinh bằng python -m pipeline.tools.sinh_qd01_cells (N0d)"
+  X "$PY" -m pipeline.remediation.glyph_fix --mode kiem \
+      --in "$LABELS_FINAL" --cells "$QD01_CELLS" --decisions "$QD01A_DECISIONS" \
+      --config "$GLYPH_DECISIONS" --report "$DS_OUT/glyph_fix_kiem_report.json"
 }
 
 # ---- 8/8 export -------------------------------------------------------------
@@ -458,27 +600,12 @@ step_glyph() {
 # không cộng dồn qua các lần chạy trước. dataset_out/ KHÔNG bị đụng — vẫn còn
 # labels_remediated.csv đầy đủ mọi tier (kể cả REVIEW/QUARANTINE) để tra cứu sau.
 step_export() {
-  # --- CỔNG CHẶN QĐ: ĐẾM TRƯỚC KHI XOÁ ----------------------------------------
-  # export_final_dataset.py:47-48 chạy shutil.rmtree(thư mục đích) RỒI mới ghi lại.
-  # Nếu bước 7 bị bỏ qua (thiếu config, đổi tên tệp, hàm không được gọi như trước
-  # 2026-09-09) thì lệnh xoá đó nuốt mất 2.014 ô phán quyết NGƯỜI và không hồi được
-  # từ chính lần chạy này. Đếm TRƯỚC KHI XOÁ, không đếm sau.
-  if [[ -f "$GLYPH_DECISIONS" ]]; then
-    # GÁN RỒI MỚI CHỮA MÃ THOÁT — không dùng `|| echo 0`: grep -c không khớp gì vẫn IN "0"
-    # rồi thoát mã 1, nên `|| echo 0` sẽ in THÊM một "0" nữa và biến giá trị thành "0 0".
-    local _ndc _nqd
-    _ndc=$("$PY" -c "
-import yaml
-d = yaml.safe_load(open('$GLYPH_DECISIONS')) or {}
-print(len(d.get('quyet_dinh', []) or []))" 2>/dev/null) || _ndc=0
-    _nqd=$(grep -c 'quyet_dinh_nguoi:' "$LABELS_FINAL" 2>/dev/null) || _nqd=0
-    if [[ "$_ndc" -gt 0 && "$_nqd" -eq 0 ]]; then
-      die "$GLYPH_DECISIONS khai $_ndc quyết định NGƯỜI nhưng $LABELS_FINAL có 0 ô mang
-      rule 'quyet_dinh_nguoi:'. Bước 7 đã không chạy hoặc chạy hỏng.
-      DỪNG TRƯỚC KHI XOÁ — export sẽ rmtree thư mục đích và bộ hiện có sẽ mất."
-    fi
-    log "  ${GRN}cổng QĐ: $_nqd ô phán quyết người trong $(basename "$LABELS_FINAL")${RST}"
-  fi
+  # --- CỔNG CHẶN QĐ-01: ĐẾM TRƯỚC KHI XOÁ (N13, final) ---------------------------
+  # export_final_dataset.py chạy shutil.rmtree(thư mục đích) RỒI mới ghi lại. Nếu một bước
+  # trước đó làm rơi ô QĐ-01 (trước 2026-09-09 step_glyph được định nghĩa mà KHÔNG AI GỌI)
+  # thì lệnh xoá đó nuốt mất 2.014 ô phán quyết NGƯỜI và không hồi được từ chính lần chạy
+  # này. Đếm TRƯỚC KHI XOÁ, và đòi pending == 0 — ô chưa quyết không được vào bộ giao nộp.
+  assert_qd01 "$LABELS_FINAL" "trước export" final
 
   # --- CÓ PHÁN QUYẾT NGƯỜI CHƯA? ----------------------------------------------
   # Hai đường nạp phán quyết, dò cả hai:
@@ -492,9 +619,13 @@ print(len(d.get('quyet_dinh', []) or []))" 2>/dev/null) || _ndc=0
     banner "7a" "nạp phán quyết" "áp verdict của người + ước lượng precision theo tầng"
     # Bước này TỪ CHỐI chạy tiếp nếu κ liên-người < 0,60 — khi hai người không cùng
     # tiêu chí thì con số precision là tiêu chí của MỘT NGƯỜI, không phải chất lượng dữ liệu.
+    # Bản thử nghiệm: bảng precision đi theo $DS_OUT, KHÔNG ghi docs/BANG_PRECISION.md.
+    # (bash 3.2 + set -u: mảng rỗng phải nở bằng ${_rep[@]+"${_rep[@]}"})
+    local _rep=()
+    [[ "$DS_OUT" == "dataset_out" ]] || _rep=(--report "$DS_OUT/BANG_PRECISION.md")
     X "$PY" -m pipeline.remediation.apply_verdicts \
         --in "$LABELS_FINAL" --out "$LABELS_FINAL" \
-        --batch "$AUDIT_DIR" --redataset "$REDATASET_DIR"
+        --batch "$AUDIT_DIR" --redataset "$REDATASET_DIR" ${_rep[@]+"${_rep[@]}"}
   else
     OUT_DIR="$REDATASET_DIR"; NHAN="ĐEM CHẤM (CHƯA kiểm chứng)"
     log ""
@@ -504,7 +635,7 @@ print(len(d.get('quyet_dinh', []) or []))" 2>/dev/null) || _ndc=0
 
   banner 8 export "xuất bộ $NHAN -> $OUT_DIR/ (tự chứa)"
   X "$PY" pipeline/export_final_dataset.py \
-      --labels "$LABELS_FINAL" --src-root dataset_out --out "$OUT_DIR"
+      --labels "$LABELS_FINAL" --src-root "$DS_OUT" --out "$OUT_DIR"
   [[ -f "$OUT_DIR/labels.csv" ]] || die "bước export không sinh $OUT_DIR/labels.csv"
   FINAL_OUT="$OUT_DIR"
 
@@ -516,6 +647,20 @@ print(len(d.get('quyet_dinh', []) or []))" 2>/dev/null) || _ndc=0
   X "$PY" -m pipeline.tools.make_dataset_docs --dataset "$FINAL_OUT"
   # bản .xlsx đọc bằng Excel của chính labels.csv (ngoài git — đầu ra dựng lại được)
   X "$PY" -m pipeline.tools.make_xlsx --labels "$FINAL_OUT/labels.csv"
+
+  # --- THĂNG CẤP (N19) — chỉ khi dựng BỘ THẬT ----------------------------------
+  # S3 tắt -> cache nguyên mẫu s3_proto_cache.pkl (ký bằng mtime index.csv) là tạo phẩm
+  # của thế hệ cũ: xoá để repro_check R2 không đối chiếu với một cache không còn ai dựng
+  # (KHÔNG chạy rebuild_proto_index: nó đổi mtime index.csv -> R2 lệch, và cần cột split).
+  # Rồi đồng bộ docs/BANG_SO_LIEU_CHINH_THUC.md từ đúng bộ vừa export để MỘT commit là đủ.
+  if [[ "$DS_OUT" == "dataset_out" ]]; then
+    if [[ -f pipeline/align_engine/s3_proto_cache.pkl ]]; then
+      X rm -f pipeline/align_engine/s3_proto_cache.pkl
+    fi
+    X "$PY" -m pipeline.tools.update_bang_so_lieu
+  else
+    info "bỏ qua rm s3_proto_cache.pkl + update_bang_so_lieu (DS_OUT thử nghiệm: $DS_OUT)"
+  fi
 }
 
 # ====================== FREEZE / EVIDENCE ====================================
@@ -639,28 +784,37 @@ preflight
 ask_book_choice
 ask_cache_choice
 
-if [[ -f dataset_out/.FROZEN ]]; then
+if [[ -f "$DS_OUT/.FROZEN" ]]; then
   confirm_frozen_override
 fi
 
 log ""
-log "${BLD}Sẽ chạy:${RST} setup -> extract($BOOKS_LABEL) -> build(cả 3 sách) -> remediate -> confusion -> gỡ S3 -> export"
+log "${BLD}Sẽ chạy:${RST} setup -> extract($BOOKS_LABEL) -> build(cả 3 sách, S3 TẮT) -> remediate -> confusion -> gỡ S3 -> kiểm QĐ-01 -> export"
 log "  cache OCR : $([[ $FRESH_OCR == 1 ]] && echo 'XOÁ & OCR lại mới' || echo 'dùng cache cũ')"
 log "  ${YEL}export sẽ XOÁ SẠCH thư mục đích rồi ghi lại bản mới nhất:${RST}"
 log "  ${YEL}  chưa có phán quyết người -> $REDATASET_DIR/  (bộ ĐEM CHẤM)${RST}"
 log "  ${YEL}  đã có phán quyết         -> $FINAL_DIR/      (bộ CUỐI CÙNG)${RST}"
-read -r -p "Enter để bắt đầu, Ctrl-C để huỷ... " _
+if [[ "$NONINTERACTIVE" == "1" ]]; then
+  info "NONINTERACTIVE=1 -> bắt đầu ngay (DS_OUT=$DS_OUT)"
+else
+  read -r -p "Enter để bắt đầu, Ctrl-C để huỷ... " _
+fi
 
-step_setup
-step_extract
+T_STEP=$SECONDS
+step_setup;   tick setup
+step_extract; tick extract
 step_build
-checkpoint build "$LABELS_RAW"
+checkpoint build "$LABELS_RAW"; tick build
 step_remediate
-checkpoint remediate "$LABELS_REMED"
+checkpoint remediate "$LABELS_REMED"; tick remediate
+assert_qd01 "$LABELS_REMED" remediate
 step_confusion
-checkpoint confusion "$LABELS_FINAL"
+checkpoint confusion "$LABELS_FINAL"; tick confusion
+assert_qd01 "$LABELS_FINAL" confusion
+# N11: s3_unwind chạy VÔ ĐIỀU KIỆN (no-op tất định khi S3 tắt) để report luôn được ghi mới
 step_s3unwind
-checkpoint s3unwind "$LABELS_FINAL"
+checkpoint s3unwind "$LABELS_FINAL"; tick s3unwind
+assert_qd01 "$LABELS_FINAL" s3unwind
 # BƯỚC 7 PHẢI NẰM Ở ĐÂY, KHÔNG PHẢI CHỖ KHÁC. glyph_fix áp phán quyết NGƯỜI, nên nó
 # phải chạy SAU bước máy cuối cùng đụng tier (s3_unwind) và TRƯỚC export. Đã chứng
 # minh bằng phép chạy lại chứ không bằng chú thích: thứ tự này tái lập ĐÚNG BYTE cả
@@ -669,10 +823,17 @@ checkpoint s3unwind "$LABELS_FINAL"
 # thứ tự cột. Trước 2026-09-09 hàm này được ĐỊNH NGHĨA ở dòng 446 nhưng KHÔNG AI GỌI,
 # nên mỗi lần chạy script lại sinh bộ 57.357 dòng, thiếu đúng 2.014 ô phán quyết người.
 step_glyph
-checkpoint glyph "$LABELS_FINAL"
+checkpoint glyph "$LABELS_FINAL"; tick glyph
+assert_qd01 "$LABELS_FINAL" glyph
 step_export
-checkpoint export "${FINAL_OUT:-$FINAL_DIR}/labels.csv"
-evidence
+checkpoint export "${FINAL_OUT:-$FINAL_DIR}/labels.csv"; tick export
+# Bằng chứng vào docs/ CHỈ khi dựng bộ thật: bản thử nghiệm (DS_OUT khác) mà ghi
+# EVIDENCE_INDEX.md thì khối BẢN HIỆN HÀNH sẽ trỏ sang tệp không phải bộ giao nộp.
+if [[ "$DS_OUT" == "dataset_out" ]]; then
+  evidence
+else
+  info "bỏ qua evidence (DS_OUT thử nghiệm: $DS_OUT — không ghi docs/)"
+fi
 
 log ""
 log "${BLD}================================================================${RST}"
@@ -704,11 +865,12 @@ log ""
 log "  Bản làm việc trung gian (đủ mọi tier kể cả REVIEW/QUARANTINE, không bị đụng):"
 log "  $LABELS_REMED   (trước confusion-fix)"
 log "  $LABELS_FINAL   (BẢN CÔNG BỐ — nguồn của bộ xuất và của mẻ audit người)"
-log "  dataset_out/{gold,silver,syllable}/"
+log "  $DS_OUT/{gold,silver,syllable}/"
 log "  cảnh báo    : $N_WARN"
+log "  thời gian   : tổng ${SECONDS}s (từng bước: grep thoi_gian $CHECKSUMS)"
 log ""
 log "  ${YEL}Nếu có dùng mẻ MẪU (đường phụ): nhãn vừa đổi -> mẻ dựng từ bản cũ đã hết hiệu lực.${RST}"
-log "  Dựng lại: rm -rf dataset_out/human_audit/audit_combined && \\"
+log "  Dựng lại: rm -rf $AUDIT_DIR && \\"
 log "            $PY -m pipeline.ground_truth.make_combined_batch --seed 2026"
 log ""
 log "  TẠM BỎ QUA (theo yêu cầu): audit người · fuse · publish của bản 8-bước cũ"

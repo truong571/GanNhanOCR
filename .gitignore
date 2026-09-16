@@ -94,3 +94,6 @@ fonts/*
 # (2) chữ ký của nó là mtime (visual_signal.py:195), nên sau một lần clone nó KHÔNG
 #     BAO GIỜ khớp và luôn phải dựng lại -> 7 MB trong git cho 0 lợi ích.
 pipeline/align_engine/s3_proto_cache.pkl
+
+# bản dựng THỬ NGHIỆM song song (DS_OUT=dataset_out_v3 — N0a); dựng lại được, không commit
+/dataset_out_v3/

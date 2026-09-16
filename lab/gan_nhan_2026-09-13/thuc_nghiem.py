@@ -53,6 +53,11 @@ Rset = {s: set(v) for s, v in qn.items()}
 PROD = dict(COST_CONFIRM=0.0, COST_SIMILAR=0.3, COST_DICTMISS=1.0, COST_NODICT=0.9, COST_DEL=0.7, COST_INS=0.7)
 # −log tỉ số khả năng đo trên ngữ liệu (mục §3 báo cáo): confirmed 0 · similar 2,5 · nodict 5,1 · miss 6,7 · khe 8,6
 CALIB = dict(COST_CONFIRM=0.0, COST_SIMILAR=2.5, COST_DICTMISS=6.7, COST_NODICT=5.1, COST_DEL=8.6, COST_INS=8.6)
+# Ma trận ĐANG ở engine (từ A-4 = CALIB): rebuild dựng cols.pkl bằng ma trận này và mọi
+# cmd reset về nó — PROD chỉ còn là mốc so sánh lịch sử, không phải mặc định.
+ENGINE = {k: getattr(aa, k) for k in PROD}
+# Trần chi phí neo ngữ liệu (flow N4b) — đọc từ engine, 2,0 nat thay vì COST_CONFIRM=0
+ANCHOR_CAP = getattr(aa, "ANCHOR_CAP", 2.0)
 
 
 def set_matrix(M):
@@ -73,7 +78,7 @@ def cmd_rebuild():
     df["row"] = range(len(df))
     lab = {k: g for k, g in df.groupby(["book", "page", "column"], sort=False)}
     cols, bad = [], 0
-    set_matrix(PROD)
+    set_matrix(ENGINE)
     for book, code in BOOKS.items():
         dd = REPO / "prepared" / book
         for tf in sorted(glob.glob(str(dd / "transcriptions" / "page_*.json"))):
@@ -99,7 +104,7 @@ def cmd_rebuild():
                 mp = [o for o in ops if o["op"] == "match"]
                 g = lab.get((code, page, keys[i]))
                 rec = dict(book=code, page=page, column=keys[i], chars=chars, syl=syl, ops=ops,
-                           tiers=None, rules=None, rows=None)
+                           tiers=None, rules=None, rows=None, matrix=dict(ENGINE))
                 if g is not None and len(g) == len(mp):
                     rec.update(tiers=list(g.tier), rules=list(g.rule), rows=list(g.row))
                 else:
@@ -496,7 +501,7 @@ def cmd_calib():
     print("\nô giao nộp ĐỔI âm ghép khi dùng ma trận hiệu chuẩn:")
     for t in tot:
         print(f"  {t:20s} {changed[t]:5d}/{tot[t]} ({changed[t]/tot[t]:.2%})")
-    set_matrix(PROD)
+    set_matrix(ENGINE)
 
 
 def cmd_recursive():
@@ -522,9 +527,9 @@ def cmd_recursive():
                         if mode == "dict":
                             return base
                         if len(C.pair_pages.get((c, s), set()) - {pg}) >= 2:
-                            return min(base, aa.COST_CONFIRM)
+                            return min(base, ANCHOR_CAP)
                         if mode == "+corpus+bigram" and any(C.bigram_pages.get(k, set()) - {pg} for k in C.bigrams(c2, s2, i, j)):
-                            return min(base, aa.COST_CONFIRM)
+                            return min(base, ANCHOR_CAP)
                         return base
                     pairs, ins = _dp_with(sub, c2, s2)
                     res[kind + "_n"] += len(pairs)
@@ -534,7 +539,7 @@ def cmd_recursive():
                         res["gap"] += len(ins) == 1 and bool(tg) and ins[0] == tg[0]
             print(f"{mname:11s} {mode:15s} | none: sai {res['none_w']/res['none_n']:.2%} | drop_char: sai "
                   f"{res['drop_char_w']/res['drop_char_n']:.2%}, khe đúng {res['gap']/600:.0%} | drop_syl: sai {res['drop_syl_w']/res['drop_syl_n']:.2%}")
-    set_matrix(PROD)
+    set_matrix(ENGINE)
 
 
 # =========================================================================== v3
@@ -586,7 +591,7 @@ def _v3_crosstab(cols, C, recursive):
         for i, j in pairs.items():
             f = C.feats(chars, syls, i, j, pg)
             cross[(prod.get(i, "(khe)"), tier_v3(f, post.get((i, j), 0.0)))] += 1
-    set_matrix(PROD)
+    set_matrix(ENGINE)
     tab = pd.Series(cross).unstack(fill_value=0)
     print(tab.to_string()); print("tổng v3:", tab.sum(axis=0).to_dict())
 
@@ -669,20 +674,24 @@ def cmd_classes():
 
 # =========================================================================== geo
 def cmd_geo():
+    """Hộp ảnh cho chữ OCR khi cột lệch 1 đơn vị — THAM SỐ HOÁ theo engine (A-6, N4d):
+    thr = ap.DETECTOR_THR, hộp thô = det.raw_column_boxes(±ap.DETECTOR_XMARGIN·w), điều
+    kiện lấy mẫu |G| == |Q| (in độ phủ), gán hộp bằng ap.assign_boxes (cùng hàm sản xuất).
+    Kịch bản INS = rụng 1 chữ OCR (n_ocr = |Q| − 1, nhánh a: hộp theo syl_idx), DEL = rụng
+    1 âm QN (n_qn = |Q| − 1, nhánh b: hộp theo nom_idx). Ma trận = engine (CALIB)."""
     import cv2
-    from pipeline.align_engine.align_production import _monotone_assign, _reseg_column
+    from pipeline.align_engine import align_production as ap
     from pipeline.align_engine.char_detector.detector_infer import DetectorInfer
-    sys.path.insert(0, str(REPO / "train_crop"))
-    from infer_centernet import _nms_vertical
     readings = build_readings(qn)
-    det = DetectorInfer(thr=0.3)
+    det = DetectorInfer(thr=ap.DETECTOR_THR)
     rng = random.Random(11)
     pages = []
     for b in BOOKS:
         ts = [t for t in sorted(glob.glob(str(REPO / "prepared" / b / "transcriptions" / "page_*.json"))) if not t.endswith("_qn_ocr_cache.json")]
         pages += [(b, Path(t).stem) for t in rng.sample(ts, 14)]
-    set_matrix(PROD)
+    set_matrix(ENGINE)
     tot = Counter()
+    cov = Counter()
     for b, page in pages:
         dd = REPO / "prepared" / b
         od = json.load(open(dd / "detected" / f"{page}_ocr_cache.json", encoding="utf-8"))
@@ -692,40 +701,56 @@ def cmd_geo():
         if len(cs) != 9:
             cs = nom_cols_hybrid(od["columns"], 1)
         img = cv2.imread(str(dd / "pages" / f"{page}.png"))
-        pb = [list(x) for x in det.boxes_for_page(img)]
+        pb = det.boxes_for_page(img)
         for i in range(min(len(cs), len(keys))):
             cl = cs[i]
             chars = [c["char"] for c in cl["chars"]]
             syl, _ = normalize_column(cl["chars"], lines[keys[i]], qs, readings)
             if len(chars) != len(syl) or len(chars) < 10:
                 continue
-            x1, x2 = cl["x_range"]; m = (x2 - x1) * 0.5
-            col = _nms_vertical([bb for bb in pb if x1 - m <= (bb[0] + bb[2]) / 2 <= x2 + m], 0.45)
-            col.sort(key=lambda bb: (bb[1] + bb[3]) / 2)
-            if len(col) != len(chars):
+            cov["cột OCR=QN, ≥10 chữ"] += 1
+            G = det.raw_column_boxes(pb, cl["x_range"], ap.DETECTOR_XMARGIN)
+            cov["|G| == |Q|" if len(G) == len(syl) else ("|G| < |Q|" if len(G) < len(syl) else "|G| > |Q|")] += 1
+            if len(G) != len(syl):
                 continue
-            boxes = [[int(v) for v in bb[:4]] for bb in col]
+            x1, x2 = cl["x_range"]
             y_top = min(c["bbox"][1] for c in cl["chars"]); y_bot = max(c["bbox"][3] for c in cl["chars"]); H = y_bot - y_top
             k = rng.randrange(2, len(chars) - 2)
-            c2 = chars[:k] + chars[k + 1:]; n2 = len(c2)
-            truth = {t: (t if t < k else t + 1) for t in range(n2)}
-            cys = [y_top + (t + 0.5) * H / n2 for t in range(n2)]        # tâm TỔNG HỢP như ocr_api dựng
-            cl2 = {"chars": [{"char": c2[t], "bbox": [x1, int(y_top + t * H / n2), x2, int(y_top + (t + 1) * H / n2)]} for t in range(n2)],
-                   "x_range": cl["x_range"]}
-            assigned = _monotone_assign(cys, boxes, _reseg_column(cl2))
-            ins = [o["syl_idx"] for o in realign_column(c2, syl, qn, sim) if o["op"] == "ins"]
-            g = ins[0] if len(ins) == 1 else None
-            for t in range(n2):
-                tot["n"] += 1
-                q = next((qi for qi, bb in enumerate(boxes) if assigned and assigned[t] == bb), None)
-                tot["prod_ok"] += q == truth[t]; tot["prod_mid"] += q is None
-                tot["prod_wrong"] += q is not None and q != truth[t]
-                q2 = None if g is None else (t if t < g else t + 1)
-                tot["order_ok"] += q2 == truth[t]
-    n = tot["n"]
-    h(f"HỘP ẢNH CHO CHỮ OCR TRONG CỘT RỤNG 1 CHỮ ({n} ô, {len(pages)} trang)")
-    print(f"  production _monotone_assign: đúng hộp {tot['prod_ok']/n:.1%} · hộp của chữ KHÁC {tot['prod_wrong']/n:.1%} · rơi midpoint {tot['prod_mid']/n:.1%}")
-    print(f"  theo THỨ TỰ sau khe của DP văn bản: đúng hộp {tot['order_ok']/n:.1%}")
+            for kind in ("INS", "DEL"):
+                if kind == "INS":                                   # rụng chữ k: n_ocr = |Q| − 1
+                    c2 = chars[:k] + chars[k + 1:]; s2 = syl
+                    truth_box = {t: (t if t < k else t + 1) for t in range(len(c2))}
+                    truth_syl = dict(truth_box)
+                else:                                               # rụng âm k: n_qn = |Q| − 1
+                    c2 = chars; s2 = syl[:k] + syl[k + 1:]
+                    truth_box = {t: t for t in range(len(c2))}
+                    truth_syl = {t: (t if t < k else (None if t == k else t - 1)) for t in range(len(c2))}
+                n2 = len(c2)
+                # tâm TỔNG HỢP như ocr_api dựng (chỉ nhánh c dùng; ở đây |G| ∈ {n_qn, n_ocr})
+                cl2 = {"chars": [{"char": c2[t], "bbox": [x1, int(y_top + t * H / n2), x2, int(y_top + (t + 1) * H / n2)]} for t in range(n2)],
+                       "x_range": cl["x_range"]}
+                ops = realign_column(c2, s2, qn, sim)
+                boxes, src, count_source = ap.assign_boxes(G, ops, n2, len(s2), cluster=cl2, det=det)
+                tot[f"{kind}:{count_source}"] += 1
+                gidx = {tuple(g[:4]): gi for gi, g in enumerate(G)}
+                for o in ops:
+                    if o["op"] != "match":
+                        continue
+                    t, j = o["nom_idx"], o["syl_idx"]
+                    tot[f"{kind}:n"] += 1
+                    q = gidx.get(tuple(boxes[t][:4])) if boxes[t] is not None else None
+                    tot[f"{kind}:box_ok"] += q == truth_box[t]
+                    tot[f"{kind}:box_wrong"] += q is not None and q != truth_box[t]
+                    tot[f"{kind}:box_none"] += q is None
+                    tot[f"{kind}:syl_ok"] += j == truth_syl[t]
+    h(f"HỘP ẢNH CHO CHỮ OCR KHI CỘT LỆCH 1 (thr {ap.DETECTOR_THR}, ±{ap.DETECTOR_XMARGIN}w, ma trận engine; {len(pages)} trang)")
+    print(f"  độ phủ: {dict(cov)}")
+    for kind, mota in (("INS", "rụng 1 chữ OCR — nhánh (a) hộp theo syl_idx"), ("DEL", "rụng 1 âm QN — nhánh (b) hộp theo nom_idx")):
+        n = tot[f"{kind}:n"] or 1
+        srcs = {k.split(":")[1]: v for k, v in tot.items() if k.startswith(kind + ":") and k.split(":")[1] in ("equal_qn", "equal_ocr", "conflict")}
+        print(f"  {kind} ({mota}): {tot[kind + ':n']} ô · count_source {srcs}")
+        print(f"     hộp đúng {tot[kind + ':box_ok'] / n:.1%} · hộp của chữ KHÁC {tot[kind + ':box_wrong'] / n:.1%} · không hộp/midpoint {tot[kind + ':box_none'] / n:.1%} · ghép đúng âm {tot[kind + ':syl_ok'] / n:.1%}")
+    set_matrix(ENGINE)
 
 
 if __name__ == "__main__":

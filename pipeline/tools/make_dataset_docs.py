@@ -44,23 +44,32 @@ def stats(labels: Path) -> dict:
     rows = list(csv.DictReader(open(labels, encoding="utf-8")))
     char = [r for r in rows if (r.get("label") or "").strip()]
     syl = [r for r in rows if not (r.get("label") or "").strip()]
-    q = collections.Counter(r.get("crop_quality_flag", "") for r in rows)
-    # ĐO chia tách từ CHÍNH DỮ LIỆU, không khẳng định theo thiết kế. Tài liệu từng nói
-    # "rời nhau theo TRANG" trong khi đo được 360/444 trang nằm ở hai phía — vì nó chép
-    # lại ý định của mã thay vì đọc tệp. Bộ sinh tài liệu KHÔNG được phép nói điều nó
-    # chưa đo.
-    _pg = collections.defaultdict(set)
-    for r in rows:
-        _pg[(r.get("book"), r.get("page"))].add(r.get("split", ""))
-    n_leak = sum(1 for v in _pg.values() if len(v) > 1)
-    unseen = sum(1 for r in rows if r.get("label_in_train") == "0")
+    # SCHEMA 12 CỘT (16/09): cờ chất lượng ảnh nằm ở sidecar labels_trace.csv, còn danh
+    # sách cột của từng trang ở columns.csv. Thế hệ cũ (≤25/08, 30+ cột) vẫn đọc được:
+    # cột nằm ngay trong labels.csv thì lấy ở đó.
+    root = labels.parent
+    trace_p, cols_p = root / "labels_trace.csv", root / "columns.csv"
+    trace = list(csv.DictReader(open(trace_p, encoding="utf-8"))) if trace_p.exists() else []
+    flag_src = trace if (trace and "crop_quality_flag" in trace[0]) else rows
+    q = collections.Counter(r.get("crop_quality_flag", "") for r in flag_src)
+    # TRANG KHÔNG ĐỦ 9 CỘT: đo từ columns.csv (dựng trên TOÀN BỘ hàng, kể cả REVIEW — đếm
+    # trên hàng đã lọc thì trang lành có nguyên cột rơi vào REVIEW sẽ mang tiếng oan).
+    # Không có columns.csv (thế hệ cũ) thì đọc cờ page_cot_lech cũ.
+    if cols_p.exists():
+        _pg = collections.defaultdict(set)
+        for r in csv.DictReader(open(cols_p, encoding="utf-8")):
+            _pg[(r.get("book"), r.get("page"))].add(r.get("column"))
+        trang_lech = sorted(k for k, v in _pg.items() if len(v) != 9)
+        _co_trang = {(r.get("book"), r.get("page")) for r in rows}
+        trang_lech = [k for k in trang_lech if k in _co_trang]
+    else:
+        trang_lech = sorted({(r.get("book"), r.get("page")) for r in rows
+                             if r.get("page_cot_lech") == "1"})
+    _tl = set(trang_lech)
+    _lech = sum(1 for r in rows if (r.get("book"), r.get("page")) in _tl)
     # ĐO tỷ lệ chữ ngoài khối CJK cơ bản. Trước 2026-08-25 con số này là chuỗi ghim cứng
     # "1,63%" nằm lọt giữa một f-string mà mọi số quanh nó đều động — đo lại được 2,25%.
     _ngoai = sum(1 for r in char if not ("\u4e00" <= r["label"] <= "\u9fff"))
-    _lech = sum(1 for r in rows if r.get("page_cot_lech") == "1")
-    _trang_lech = len({(r.get("book"), r.get("page")) for r in rows
-                       if r.get("page_cot_lech") == "1"})
-    co_cot_moi = "label_in_train" in (rows[0] if rows else {})
     return {
         "dong": len(rows), "nhan_ky_tu": len(char), "chu_giai_am": len(syl),
         "lop_chu": len({r["label"] for r in char}),
@@ -70,13 +79,15 @@ def stats(labels: Path) -> dict:
         "am_qn": len({(r.get("syllable") or "").lower() for r in rows if r.get("syllable")}),
         "anh_hong": q.get("blank", 0) + q.get("truncated", 0),
         "flag": {k: v for k, v in q.items() if k},
-        "cot_lech": _lech, "trang_cot_lech": _trang_lech,
+        "cot_lech": _lech, "trang_cot_lech": len(trang_lech),
+        "ds_trang_lech": [f"{b}/{pg}" for b, pg in trang_lech],
         "ngoai_cjk": _ngoai,
         "ngoai_cjk_pct": (100 * _ngoai / len(char)) if char else 0.0,
-        "n_leak": n_leak, "n_trang_split": len(_pg), "unseen": unseen,
-        "co_cot_moi": co_cot_moi,
+        "cot_labels": list(rows[0].keys()) if rows else [],
+        "cot_trace": list(trace[0].keys()) if trace else [],
+        "co_columns_csv": cols_p.exists(),
         "commit": subprocess.run(["git", "log", "-1", "--format=%h", "--", str(labels)],
-                                 cwd=REPO, capture_output=True, text=True).stdout.strip() or "?",
+                                cwd=REPO, capture_output=True, text=True).stdout.strip() or "?",
         "ngay": datetime.date.fromtimestamp(labels.stat().st_mtime).isoformat(),
     }
 
@@ -86,34 +97,87 @@ def _pct(x: float) -> str:
     return f"{x:.2f}".replace(".", ",")
 
 
-def _khoi_chia_tach(s: dict) -> str:
-    """Mô tả chia tách theo SỐ ĐO, không theo ý định của mã."""
-    if s["n_leak"] == 0:
-        t = ["## Chia tách — rời nhau theo TRANG", "",
-             f"Đo trên chính `labels.csv`: **0/{s['n_trang_split']} trang** nằm ở hai phía.", "",
-             "Chọn mức trang chứ không phải cột vì hai cột cạnh nhau trên cùng một trang dùng",
-             "chung nét bút, chung mực, chung lần quét — chia theo cột thì mô hình học được",
-             "*diện mạo trang* rồi được chấm lại trên chính trang đó."]
-        if s["co_cot_moi"]:
-            t += ["", f"**Hệ quả phải biết:** {s['unseen']:,} ô có lớp chữ **không xuất hiện trong",
-                  "`train`** — hệ quả của việc không bóp méo chia tách. Cột **`label_in_train`**",
-                  "đánh dấu chúng: `1` có mặt, `0` không, **rỗng** với dòng tầng SYLLABLE (chúng",
-                  "không có nhãn cấp ký tự nên câu hỏi không áp dụng).", "",
-                  f"Khi đánh giá **cấp ký tự**, bỏ các ô `label_in_train == 0` — nếu không, "
-                  f"{s['unseen']:,} ô đó",
-                  "bị tính sai 100% dù mô hình chưa từng có cơ hội học lớp chữ ấy.", "",
-                  "> ⚠️ Đừng viết `df[df.label_in_train == \"1\"]` để lọc cả bộ: điều kiện đó vứt",
-                  f"> luôn {s['chu_giai_am']:,} dòng SYLLABLE có ô rỗng, tức {s['chu_giai_am'] + s['unseen']:,} dòng",
-                  f"> chứ không phải {s['unseen']:,}. Lọc trong phạm vi `label_level == \"char\"`."]
-        return "\n".join(t)
+# Nghĩa từng cột giao nộp (12 cột, DANH_MUC_SUA_DOI_CUOI_2026-09-16 §2) và sidecar.
+NGHIA_COT = {
+    "image": "đường ảnh crop tương đối, **khoá chính** (duy nhất)",
+    "book": "mã sách (`stt2`/`stt4`/`stt11`)",
+    "page": "tên trang trên bản quét — **đơn vị chia tách** nếu người dùng cần",
+    "column": "số cột trên trang (1–9, bố cục ván khắc luôn 9 cột)",
+    "ocr_char": "chữ OCR Nôm (S1) — bằng chứng trực tiếp, không rỗng",
+    "syllable": "âm Quốc ngữ (lower/NFC) lấy từ bản phiên âm in kèm — nhãn tầng SYLLABLE",
+    "label": "chữ Nôm được gán. **Rỗng** ở tầng SYLLABLE",
+    "unicode": "mã của `label` (`U+XXXX`), để Excel không hiện được Ext-B vẫn tra được",
+    "tier": "`GOLD` = nhãn cấp ký tự · `SYLLABLE` = chỉ có âm (thay cột `label_level` cũ)",
+    "rule": "luật quyết nhãn (`quyet_dinh_nguoi:*` = phán quyết NGƯỜI, QĐ-01) — xem DATASHEET",
+    "bbox": "toạ độ `[x1, y1, x2, y2]` trên ảnh trang gốc — không tái lập được từ crop",
+    "image_md5": "md5 (12 hex đầu) của tệp crop: kiểm toàn vẹn khi sao chép, bắt trùng crop",
+}
+NGHIA_TRACE = {
+    "nom_idx": "thứ tự chữ trong cột OCR Nôm (khoá bền cùng `book,page,column`)",
+    "syl_idx": "thứ tự âm trong cột Quốc ngữ",
+    "syllable_ocr": "âm Quốc ngữ NGUYÊN VĂN VietOCR (lower) — \"ghi đè bản in\" đo trên cột này",
+    "syllable_raw": "âm sau `normalize_column` (vá dấu), TRƯỚC mọi sửa L1",
+    "tier_v3": "tầng theo luật v3 (`CHAR_A`/`CHAR_B`/`SYL`/…) trước khi ánh xạ sang `tier`",
+    "tier_goc": "tier trước khi bị hạ (rỗng nếu chưa từng hạ)",
+    "rule_goc": "luật trước khi bị hạ (rỗng nếu chưa từng hạ)",
+    "p_register": "xác suất hậu nghiệm P(chữ i ↔ âm j) — forward–backward trên lưới DP có băng",
+    "dict_support": "số chữ từ điển cho âm này (|R(s)|); `corpus` khi nhãn do `corpus_readings`",
+    "context_evidence": "cờ ngữ cảnh ĐÚNG, nối bằng `|`: `bigram|corpus4|tone|corpus2|direct|sim_unique`",
+    "l1_support": "L1: n(âm mới) − n(âm gốc) theo 2-gram âm–âm (LOO trang); > 0 mới đổi âm",
+    "l1_tie": "1 = L1 hoà → giữ âm gốc",
+    "flank_gold": "số ô kề (`syl_idx` ± 1, cùng cột) có `tier_v3 == CHAR_A` ∈ {0, 1, 2}",
+    "box_source": "nguồn hộp `bbox`: `detector` / `split` / `midpoint` / `legacy_locked_col` / `qd01_locked`",
+    "qd01_locked": "1 = ô khoá theo phán quyết NGƯỜI QĐ-01 (giữ `bbox` cũ)",
+    "qd01_excluded": "1 = ô QĐ-01 bị loại (`bo`) hoặc còn chờ người",
+    "label_canonical": "mã chuẩn dị thể theo bảng đã ký (mặc định = `label`; `label` không đổi)",
+    "crop_quality_flag": "`ok` / `bleed` (dính mực chữ bên) / `truncated` / `blank` — "
+                         "**`blank`/`truncated` = ảnh hỏng, đừng chấm chiều ảnh**",
+    "stray_ink": "tỷ lệ mực lạc (không thuộc chữ chính)", "border_ink": "mực sát biên crop",
+    "ink_pct": "tỷ lệ điểm mực trên crop",
+    "crop_w": "rộng crop (px)", "crop_h": "cao crop (px)", "seg_flag": "cờ tách chữ của bước crop",
+    "s3_cosine": "cosine với nguyên mẫu thị giác S3 (rỗng khi không tính / S3 tắt)",
+}
+
+
+def _khoi_cot(s: dict) -> str:
+    """Bảng cột đọc từ CHÍNH header trên đĩa — cột lạ (thế hệ cũ) vẫn liệt kê, không nói dối."""
+    t = ["## Cột của `labels.csv`", "", "| cột | nghĩa |", "|---|---|"]
+    for c in s["cot_labels"]:
+        t.append(f"| `{c}` | {NGHIA_COT.get(c, '(cột thế hệ cũ, xem lịch sử README)')} |")
+    if s["cot_trace"]:
+        t += ["", "## Sidecar `labels_trace.csv` — chẩn đoán, CÙNG số dòng và thứ tự, khoá `image`", "",
+              "Không cần cho việc dùng nhãn; giữ để truy vết vì sao một ô được gán như vậy.", "",
+              "| cột | nghĩa |", "|---|---|"]
+        for c in s["cot_trace"]:
+            if c == "image":
+                continue
+            t.append(f"| `{c}` | {NGHIA_TRACE.get(c, '')} |")
+    if s["co_columns_csv"]:
+        t += ["", "## `columns.csv` — một dòng mỗi cột trang, khoá `book,page,column`", "",
+              "Dựng trên TOÀN BỘ ô (kể cả ô không giao nộp) nên đủ để suy trang thiếu cột;",
+              "các cột `n_ocr` (số chữ OCR Nôm), `n_qn` (số âm Quốc ngữ), `n_det` (số hộp",
+              "detector), `count_source` (`equal_qn`/`equal_ocr`/`conflict`/`legacy_locked_col`)",
+              "chỉ có ở bộ dựng từ 16/09 trở đi."]
+    return "\n".join(t)
+
+
+def _khoi_khong_chia(s: dict) -> str:
+    """Bộ giao nộp KHÔNG chia train/val/test (ràng buộc 16/09, A-10): ghi công thức cũ để ai cần tự chia."""
     return "\n".join([
-        "## 🔴 Chia tách CÓ RÒ RỈ theo trang", "",
-        f"Đo trên chính `labels.csv`: **{s['n_leak']}/{s['n_trang_split']} trang** có ô nằm ở",
-        "**hai phía khác nhau**. Hai cột cạnh nhau trên cùng một trang dùng chung nét bút,",
-        "chung mực, chung lần quét, nên mô hình huấn luyện trên `train` học được *diện mạo",
-        "trang* rồi được chấm lại trên chính trang đó.", "",
-        "**Mọi chỉ số đo bằng `split` sẵn có là CẬN TRÊN**, không phải hiệu năng thật trên",
-        "trang chưa từng thấy. Muốn đánh giá trung thực thì tự chia lại theo `book` + `page`."])
+        "## Không chia train/val/test", "",
+        "Bộ này **không** mang cột `split`/`split_group`/`label_in_train` (bỏ từ 16/09). Ba cột ấy",
+        "là hàm thuần của `book` + `page`, không mất thông tin khi bỏ; người dùng tự chia theo",
+        "**trang** — hai cột cạnh nhau trên cùng một trang dùng chung nét bút, chung mực, chung",
+        "lần quét, chia theo cột thì mô hình học được *diện mạo trang* rồi được chấm lại trên",
+        "chính trang đó.", "",
+        "Công thức đã dùng cho các bản tới 25/08 (tái lập được):", "",
+        "```python",
+        "h = int(hashlib.md5(f'{book}|{page}'.encode()).hexdigest(), 16) % 100",
+        "split = 'train' if h < 80 else 'val' if h < 90 else 'test'",
+        "```", "",
+        f"Khi đánh giá **cấp ký tự** hãy tự tính \"lớp chữ có mặt trong train\" trên phần train",
+        f"của chính phép chia mình dùng, và tính trong phạm vi `tier == \"GOLD\"` — lọc trên cả bộ",
+        f"sẽ vứt luôn {s['chu_giai_am']:,} dòng SYLLABLE có `label` rỗng."])
 
 
 def readme(s: dict) -> str:
@@ -130,25 +194,22 @@ def readme(s: dict) -> str:
 
 | | |
 |---|---|
-| `labels.csv` | một dòng mỗi ô, đường dẫn ảnh tương đối |
+| `labels.csv` | một dòng mỗi ô, **{len(s['cot_labels'])} cột cố định**, đường dẫn ảnh tương đối |
+| `labels_trace.csv` | sidecar chẩn đoán, cùng số dòng/thứ tự, khoá `image` (không cần để dùng nhãn) |
+| `columns.csv` | một dòng mỗi cột trang (`book,page,column`) |
 | `gold/` | ảnh crop của các ô có nhãn cấp ký tự |
 | `syllable/` | ảnh crop của các ô chỉ có chú giải âm |
 
-## Cột quan trọng
+{_khoi_cot(s)}
 
-| cột | nghĩa |
-|---|---|
-| `label` | chữ Nôm được gán. **Rỗng** ở tầng SYLLABLE |
-| `label_level` | `char` = nhãn ký tự · `syllable` = chỉ có âm |
-| `syllable` | âm Quốc ngữ tương ứng, lấy từ bản dịch song song in kèm |
-| `tier` / `rule` | luật nào quyết nhãn này — xem DATASHEET |
-| `usable_image` | `0` = ảnh trắng hoặc bị cắt mất nét ({s['anh_hong']} ô). Nhãn có thể vẫn đúng; đừng chấm chiều ảnh ở các ô này |
-| `crop_quality_flag` | `ok` / `bleed` (dính mực chữ bên cạnh) / `truncated` / `blank` |
-| `split` / `split_group` | {"**rời nhau theo TRANG**" if s['n_leak']==0 else "🔴 **CÓ RÒ RỈ** — xem dưới"} |
-{"| `label_in_train` | `0` = lớp chữ này **không có mặt trong `train`**. Đánh giá phải lọc theo cột này |" if s['co_cot_moi'] else ""}
-{f"| `page_cot_lech` | `1` = trang này không đủ 9 cột ({s['cot_lech']} ô / {s['trang_cot_lech']} trang). Ghép cột Nôm↔Quốc ngữ có thể đã trượt |" if s['cot_lech'] else ""}
+{_khoi_khong_chia(s)}
 
-{_khoi_chia_tach(s)}
+## Ảnh hỏng và trang thiếu cột
+
+- **{s['anh_hong']} ô** có ảnh trắng hoặc bị cắt mất nét (`crop_quality_flag` = `blank`/`truncated`
+  trong `labels_trace.csv`). Nhãn có thể vẫn đúng; đừng chấm chiều ảnh ở các ô này.
+- **{s['cot_lech']} ô trên {s['trang_cot_lech']} trang không đủ 9 cột** ({', '.join(s['ds_trang_lech']) or 'không có'}):
+  ghép cột Nôm↔Quốc ngữ trên trang đó có thể đã trượt — suy từ `columns.csv`.
 
 ## 🔴 Trạng thái kiểm định
 
@@ -235,16 +296,16 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
 4. **Chưa chuẩn hoá dị thể.** Cùng một chữ có thể xuất hiện dưới nhiều mã
    (`徳`/`德`, `别`/`別`). Ứng viên đã lọc ở `docs/UNG_VIEN_CHUAN_HOA_DI_THE.csv`,
    **chưa áp dụng**.
-5. **{s['anh_hong']} ô có ảnh hỏng** (`usable_image=0`) vẫn nằm trong bộ — nhãn có thể
-   đúng, ảnh thì không dùng được.
-6. **{s['cot_lech']} ô nằm trên {s['trang_cot_lech']} trang không đủ 9 cột** (`page_cot_lech=1`).
+5. **{s['anh_hong']} ô có ảnh hỏng** (`crop_quality_flag` = `blank`/`truncated` trong
+   `labels_trace.csv`) vẫn nằm trong bộ — nhãn có thể đúng, ảnh thì không dùng được.
+6. **{s['cot_lech']} ô nằm trên {s['trang_cot_lech']} trang không đủ 9 cột**
+   ({', '.join(s['ds_trang_lech']) or 'không có'} — suy từ `columns.csv`).
    Bố cục trang luôn 9 cột, nên thiếu cột nghĩa là phép ghép cột Nôm↔Quốc ngữ trên
-   trang đó có thể đã trượt một nhịp. Cờ chỉ nêu sự việc, không kết luận nhãn sai.
-
+   trang đó có thể đã trượt một nhịp. Chỉ nêu sự việc, không kết luận nhãn sai.
 7. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.
-8. **Chia tách: {s['n_leak']}/{s['n_trang_split']} trang nằm ở hai phía.** {s['unseen']:,} ô có
-   lớp chữ không mặt trong `train` — hệ quả của việc chia tách trung thực theo trang.
-   Lọc bằng `label_in_train` khi đánh giá (cột này RỖNG ở tầng SYLLABLE, xem README).
+8. **Không chia train/val/test.** Bộ giao nộp không mang cột `split`; ai cần thì chia theo
+   **trang** (`book` + `page`) bằng công thức ghi trong README, rồi tự tính lớp chữ có mặt
+   trong train của phép chia đó.
 
 ## Khuyến nghị dùng
 Dùng được: huấn luyện mô hình, thăm dò, làm điểm khởi đầu để chấm tay.

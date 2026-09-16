@@ -41,6 +41,15 @@ from core.text.text_utils import is_plausible_qn_syllable
 # với của QĐ-01, và nhãn 𠊚 (U+2029A) mà người đã phán cho ô ấy biến mất im lặng.
 # Nên: mọi luật tự động thêm mới (L1/L2/L3/L5) PHẢI tránh các âm trong tập này.
 # Đây KHÔNG phải danh sách "âm khó"; nó là danh sách "âm đã có người quyết rồi".
+#
+# A-7 (flow N5c/N5h, 2026-09-16): trên đường --two-pass KHÔNG còn dùng làm CHỐT BAO
+# TRÙM (không chặn tier theo âm): đo được chốt bao trùm làm mất 243 ô 'người' ngoài
+# khoá và hạ 49 ô mốc đã ký (37 ô 𠊚 s1_inter_s2_similar + 12 khong_dung_cho). Phán
+# quyết người nay là KHOÁ TỪNG Ô theo (book,page,column,nom_idx) trong build
+# (build_dataset.apply_qd01_lock, config/qd01_cells.csv + qd01a_decisions.csv); ô
+# 'người' ngoài khoá chỉ hạ khi nhãn v3 == 㝵 (apply_nguoi_ngoai_khoa) và mang cờ
+# am_da_quyet_ngoai_khoa=1. Tập này chỉ còn: (a) L1 không đổi âm đi/đến âm trong tập;
+# (b) đường --no-two-pass (tái lập bộ 64.525) giữ hành vi cũ.
 AM_DA_QUYET = frozenset({"người"})
 
 

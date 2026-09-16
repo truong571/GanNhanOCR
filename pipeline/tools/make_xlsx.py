@@ -3,11 +3,15 @@
 VÌ SAO KHÔNG DÙNG `pandas.to_excel`
 -----------------------------------
 Excel suy kiểu còn hăng hơn pandas, và kho này đã nhiều lần chảy máu vì đúng chuyện đó:
-`label_in_train` '1' hoá 1.0, âm Quốc ngữ thật "nan" hoá NaN, `crop_w` '138' hoá 138.0.
+cột cờ '1' hoá 1.0 (label_in_train, thế hệ ≤25/08), âm Quốc ngữ thật "nan" hoá NaN,
+`crop_w` '138' hoá 138.0, `image_md5` '0000e5…' mất số 0 đầu.
 Nếu để Excel đoán thì `U+2029A` vẫn yên nhưng `[1453, 801, 1577, 942]` hay `0010` thì
 không. Nên ở đây MẶC ĐỊNH là CHUỖI, và chỉ vài cột ĐO ĐƯỢC mới ghi kiểu số để còn lọc và
 sắp xếp đúng. Cái giá là Excel hiện tam giác xanh "số lưu dạng chữ" ở vài ô — rẻ hơn
 nhiều so với một cột nhãn hỏng âm thầm.
+
+Từ 16/09 `labels.csv` giao nộp cố định 12 cột (A-9); công cụ này chạy trên bất kỳ CSV nào
+(cả `labels_trace.csv`), nên COT_SO vẫn giữ các cột đo của sidecar.
 
 Tệp .xlsx nằm ngoài git (`.gitignore: *.xlsx`) vì nó là ĐẦU RA dựng lại được. Công cụ này
 tồn tại để nó luôn dựng lại được, thay vì là một tệp ai đó làm tay một lần rồi quên.
@@ -26,10 +30,9 @@ REPO = Path(__file__).resolve().parents[2]
 # Cột ĐO ĐƯỢC — ghi kiểu số để lọc/sắp xếp trong Excel cho đúng. Mọi cột khác giữ CHUỖI.
 COT_SO = {"s3_cosine", "ink_pct", "stray_ink", "border_ink", "column"}
 
-# Cột hay bị nhìn nhầm nên nới rộng sẵn
-RONG = {"image": 34, "split_group": 17, "bbox": 22, "rule": 30, "rule_goc": 22,
-        "seg_backend": 22, "image_md5": 15, "syllable": 11, "crop_quality_flag": 17,
-        "readmitted_from_s3_demotion": 12, "label_in_train": 13, "page_cot_lech": 13}
+# Cột hay bị nhìn nhầm nên nới rộng sẵn (12 cột giao nộp + vài cột sidecar labels_trace.csv)
+RONG = {"image": 34, "bbox": 22, "rule": 30, "image_md5": 15, "syllable": 11,
+        "rule_goc": 22, "crop_quality_flag": 17, "context_evidence": 22, "box_source": 16}
 
 
 def xuat(src: Path, dst: Path) -> dict:

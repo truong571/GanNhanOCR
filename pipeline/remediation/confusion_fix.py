@@ -115,8 +115,17 @@ def measure_gold_precision(final: pd.DataFrame) -> dict | None:
             "provenance": f"{vfile.relative_to(REPO)} + {prov.name}"}
 
 
+# CỘT CỜ / CHỈ SỐ đọc là CHUỖI (xem chú thích trong _load/run): ô rỗng -> float64 -> '1.0'
+DTYPE = {"image_md5": str, "label_in_train": str, "crop_w": str, "crop_h": str,
+         # cờ/chỉ số v3 (A-7/A-5/A-6): có thể rỗng ở thế hệ cũ -> pandas ép float "1.0"
+         "nom_idx": str, "syl_idx": str, "band_touched": str, "n_ocr": str, "n_qn": str,
+         "n_det": str, "l1_support": str, "l1_tie": str, "flank_gold": str,
+         "qd01_locked": str, "qd01_excluded": str, "am_da_quyet_ngoai_khoa": str,
+         "norm_fixed": str}
+
+
 def run(in_csv: Path, out_csv: Path, fixes_yaml: Path, measure: bool) -> dict:
-    df = pd.read_csv(in_csv, dtype={"image_md5": str, "label_in_train": str, "crop_w": str, "crop_h": str}, keep_default_na=False, na_values=[""])
+    df = pd.read_csv(in_csv, dtype=DTYPE, keep_default_na=False, na_values=[""])
     cfg = yaml.safe_load(fixes_yaml.read_text()) if fixes_yaml.exists() else {}
     fixes = (cfg or {}).get("fixes", [])
     before = df["tier"].value_counts().to_dict()

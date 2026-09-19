@@ -1,26 +1,25 @@
 #!/usr/bin/env python3
-"""Gộp IHR-NomDB (data/handwritten) + nhãn NomNaOCR (LVT, Kiều 1872) thành MỘT manifest.
+"""Dựng manifest cho 2 sách IHR-NomDB đã tách theo cuốn: data/LucVanTien1916, data/TruyenKieu1872.
 
-Nguồn gốc duy nhất là data/handwritten (ảnh trang + patch + annotation + bbox cột).
-Các bản sao phái sinh (LucVanTien/*.txt, TruyenKieu/*.txt, *_song_ngu.tsv) KHÔNG được
-dùng vì TSV lệch câu (LVT 1.084/2.000, Kiều 2.265/3.254 câu sai số âm tiết).
+Mỗi thư mục sách giữ nguyên cấu trúc IHR-NomDB: pages/{images,annotation.json,bboxes.json},
+patches/, patches_preprocessed/{train,val}, train.json, val.json. Nhãn NomNaOCR (NomNaOCR/All.txt)
+chỉ dùng để đối chiếu (cột nomnaocr_label) — đã chứng minh cùng nguồn với IHR.
 
 Chạy từ gốc repo:  python3 scripts/build_ihr_manifest.py
-Ra:  data/ihr_nomdb_merged/manifest.tsv  (1 dòng = 1 câu thơ = 1 patch)
+Ra:  data/<Sách>/manifest.tsv + summary.json  (1 dòng = 1 câu thơ = 1 patch)
 """
 import csv, json, os, re, sys, unicodedata
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-HW = REPO / "data" / "handwritten"
-OUT = REPO / "data" / "ihr_nomdb_merged"
+DATA = REPO / "data"
 NNA_ALL = REPO / "NomNaOCR" / "All.txt"
 if not NNA_ALL.exists():
     NNA_ALL = REPO / "data" / "NomNaOCR" / "All.txt"
 
-BOOKS = {  # thư mục IHR -> (tên sách, ấn bản, tiền tố nguồn trong NomNaOCR/All.txt)
-    "Luc-Van-Tien": ("LucVanTien", "nlvnpf-0059 (in mộc bản 1916)", "Luc Van Tien"),
-    "tale-of-kieu": ("TruyenKieu", "Kiều 1872 (in mộc bản)", "Tale of Kieu 1872"),
+BOOKS = {  # thư mục sách trong data/ -> (ấn bản, tiền tố nguồn trong NomNaOCR/All.txt)
+    "LucVanTien1916": ("nlvnpf-0059 (in mộc bản 1916)", "Luc Van Tien"),
+    "TruyenKieu1872": ("Kiều 1872 (in mộc bản)", "Tale of Kieu 1872"),
 }
 
 def nfc(s): return unicodedata.normalize("NFC", s)
@@ -34,16 +33,16 @@ def load_nna():
         m[p] = nfc(t.strip())
     return m
 
-def split_of():
+def split_of(B):
     s = {}
     for name in ("train", "val"):
-        for rel in json.load(open(HW / "patches" / f"{name}.json")):
+        for rel in json.load(open(B / f"{name}.json")):
             s[Path(rel).stem] = name   # 'nlvnpf-0059-101.jpg_8_2'
     return s
 
-def column_boxes(src):
+def column_boxes(B):
     """VoTT: trả về {tên_ảnh: [bbox cột sắp phải→trái]}; chỉ tin khi số cột khớp."""
-    bb = json.load(open(HW / "pages" / src / "bboxes.json"))["assets"]
+    bb = json.load(open(B / "pages" / "bboxes.json"))["assets"]
     out = {}
     for a in bb.values():
         regs = [r["boundingBox"] for r in a.get("regions", []) if "Column" in r.get("tags", [])]
@@ -51,14 +50,13 @@ def column_boxes(src):
         out[a["asset"]["name"]] = [(round(b["left"], 1), round(b["top"], 1), round(b["width"], 1), round(b["height"], 1)) for b in regs]
     return out
 
-def main():
-    OUT.mkdir(parents=True, exist_ok=True)
-    nna = load_nna(); splits = split_of()
-    rows = []; stats = {}
-    for src, (book, edition, nna_prefix) in BOOKS.items():
-        boxes = column_boxes(src)
-        pages = json.load(open(HW / "pages" / src / "annotation.json"))
-        pdir = HW / "patches" / src / "patches"
+def build_book(book, edition, nna_prefix, nna):
+    B = DATA / book
+    splits = split_of(B); rows = []
+    if True:
+        boxes = column_boxes(B)
+        pages = json.load(open(B / "pages" / "annotation.json"))
+        pdir = B / "patches"
         n_bbox_ok = 0; n_verse = 0
         for pg in pages:
             img = os.path.basename(pg["img"])
@@ -89,10 +87,10 @@ def main():
                 qn_syl = [w for w in re.split(r"\s+", qn) if w]
                 rows.append({
                     "book": book, "edition": edition, "page_id": img[:-4],
-                    "page_image": f"data/handwritten/pages/{src}/images/{img}",
+                    "page_image": f"data/{book}/pages/images/{img}",
                     "verse_idx_in_page": vi, "col_index": col, "part": part,
-                    "patch_image": f"data/handwritten/patches/{src}/patches/{stem}.jpg" if stem else "",
-                    "patch_preprocessed": next((f"data/handwritten/patches_preprocessed/{s}/{stem}.jpg" for s in ("train", "val") if stem and (HW / "patches_preprocessed" / s / f"{stem}.jpg").exists()), ""),
+                    "patch_image": f"data/{book}/patches/{stem}.jpg" if stem else "",
+                    "patch_preprocessed": next((f"data/{book}/patches_preprocessed/{s}/{stem}.jpg" for s in ("train", "val") if stem and (B / "patches_preprocessed" / s / f"{stem}.jpg").exists()), ""),
                     "split": splits.get(stem, ""),
                     "col_bbox_xywh": ",".join(map(str, cb)) if cb else "",
                     "nom_text": nom,
@@ -103,13 +101,11 @@ def main():
                     "nomnaocr_label": nna_txt,
                     "nna_eq_ihr": int(nna_txt == nom) if nna_txt else "",
                 })
-        stats[book] = dict(pages=len(pages), verses=n_verse, pages_bbox_ok=n_bbox_ok)
-    with open(OUT / "manifest.tsv", "w", encoding="utf-8", newline="") as f:
+    with open(B / "manifest.tsv", "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(rows[0].keys()), delimiter="\t"); w.writeheader(); w.writerows(rows)
-    # tóm tắt
     def cnt(pred): return sum(1 for r in rows if pred(r))
     summ = {
-        "rows": len(rows), **{f"{b}": s for b, s in stats.items()},
+        "book": book, "rows": len(rows), "pages": len(pages), "pages_bbox_ok": n_bbox_ok,
         "with_patch": cnt(lambda r: r["patch_image"]), "with_col_bbox": cnt(lambda r: r["col_bbox_xywh"]),
         "split_train": cnt(lambda r: r["split"] == "train"), "split_val": cnt(lambda r: r["split"] == "val"),
         "len_match": cnt(lambda r: r["len_match"] == 1),
@@ -117,8 +113,13 @@ def main():
         "distinct_nom_chars": len({c for r in rows for c in r["nom_text"]}),
         "pua_chars": len({c for r in rows for c in r["nom_text"] if 0xE000 <= ord(c) <= 0xF8FF or 0xF0000 <= ord(c) <= 0x10FFFD}),
     }
-    json.dump(summ, open(OUT / "summary.json", "w"), ensure_ascii=False, indent=1)
+    json.dump(summ, open(B / "summary.json", "w"), ensure_ascii=False, indent=1)
     print(json.dumps(summ, ensure_ascii=False))
+
+def main():
+    nna = load_nna()
+    for book, (edition, nna_prefix) in BOOKS.items():
+        build_book(book, edition, nna_prefix, nna)
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Báo Cáo Tiến Trình Gán Nhãn Tự Động Văn Bản Hán Nôm</title>
+<style>
+  :root {
+    --bg: #f8fafc;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text-main: #0f172a;
+    --text-muted: #334155;
+    --text-sub: #64748b;
+    --primary: #1e40af;
+    --primary-bg: #eff6ff;
+    --gold: #047857;
+    --gold-bg: #ecfdf5;
+    --gold-border: #a7f3d0;
+    --rescue: #3730a3;
+    --rescue-bg: #eef2ff;
+    --rescue-border: #c7d2fe;
+    --syl: #0369a1;
+    --syl-bg: #f0f9ff;
+    --syl-border: #bae6fd;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg);
+    color: var(--text-main);
+    line-height: 1.6;
+    padding: 24px 16px;
+  }
+
+  .container {
+    max-width: 1040px;
+    margin: 0 auto;
+  }
+
+  /* Tiêu đề */
+  .header {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 6px;
+    letter-spacing: -0.2px;
+  }
+  .header p {
+    font-size: 13.5px;
+    color: var(--text-muted);
+  }
+
+  /* Khối nội dung */
+  .section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-title span.num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background: var(--primary-bg);
+    color: var(--primary);
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* Quy trình tuần tự 6 bước */
+  .flow-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 8px;
+  }
+  @media (max-width: 1024px) {
+    .flow-grid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  @media (max-width: 640px) {
+    .flow-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+  .step-card {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 9px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .step-card.highlight {
+    background: var(--rescue-bg);
+    border-color: var(--rescue-border);
+  }
+  .step-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 5px;
+  }
+  .step-num {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--primary);
+    background: var(--primary-bg);
+    padding: 1px 5px;
+    border-radius: 3px;
+    letter-spacing: 0.3px;
+  }
+  .step-card.highlight .step-num {
+    color: var(--rescue);
+    background: #fed7aa;
+  }
+  .step-arrow {
+    font-size: 11px;
+    color: var(--text-sub);
+    font-weight: bold;
+  }
+  .step-name {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+  .step-card.highlight .step-name {
+    color: var(--rescue);
+  }
+  .step-text {
+    font-size: 11px;
+    color: var(--text-muted);
+    line-height: 1.35;
+    margin-bottom: 8px;
+    flex-grow: 1;
+  }
+  .step-ref {
+    font-size: 9.5px;
+    color: #475569;
+    background: #e2e8f0;
+    padding: 2px 5px;
+    border-radius: 3px;
+    font-family: monospace;
+    display: block;
+    word-break: break-word;
+  }
+  .step-card.highlight .step-ref {
+    background: #ffedd5;
+    color: #9a3412;
+  }
+
+  /* Bảng mẫu dữ liệu */
+  .table-responsive {
+    overflow-x: auto;
+  }
+  table.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    text-align: left;
+  }
+  table.data-table th {
+    background: #f1f5f9;
+    color: var(--text-main);
+    font-weight: 600;
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+    font-size: 12.5px;
+  }
+  table.data-table td {
+    padding: 10px 10px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  table.data-table tr:hover td {
+    background: #f8fafc;
+  }
+
+  /* Nhãn phân loại */
+  .badge {
+    display: inline-block;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-gold {
+    background: var(--gold-bg);
+    color: var(--gold);
+    border: 1px solid var(--gold-border);
+  }
+  .badge-rescue {
+    background: var(--rescue-bg);
+    color: var(--rescue);
+    border: 1px solid var(--rescue-border);
+  }
+  .badge-syl {
+    background: var(--syl-bg);
+    color: var(--syl);
+    border: 1px solid var(--syl-border);
+  }
+
+  /* Chữ Nôm & Ảnh */
+  .nom-char {
+    font-family: "Noto Serif CJK TC", "Songti SC", "SimSun", serif;
+    font-size: 20px;
+    font-weight: 600;
+    color: #0f172a;
+    line-height: 1;
+    display: inline-block;
+  }
+  .crop-img {
+    width: 42px;
+    height: 42px;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    image-rendering: pixelated;
+    display: block;
+    background: #ffffff;
+  }
+
+  .case-tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #475569;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-bottom: 3px;
+  }
+  .method-tag {
+    font-weight: 700;
+    color: #0f172a;
+    display: block;
+    margin-bottom: 3px;
+    font-size: 12.5px;
+  }
+  .explain-text {
+    font-size: 12px;
+    color: #334155;
+    display: block;
+    line-height: 1.45;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Tiêu đề -->
+  <div class="header">
+    <h1>Báo Cáo Tiến Trình Gán Nhãn Tự Động Văn Bản Hán Nôm</h1>
+    <p>Hệ thống tự động hóa hoàn toàn quy trình xử lý và gán nhãn dữ liệu từ thư tịch cổ thế kỷ 19, dựa trên suy diễn thuật toán và mô hình học sâu (0 can thiệp thủ công).</p>
+  </div>
+
+  <!-- Phần 1: Quy trình 6 bước -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">1</span>
+      <span>Quy Trình Được Thực Thi Tuần Tự (6 Bước Thuần Tự Động)</span>
+    </div>
+
+    <div class="flow-grid">
+      <div class="step-card">
+        <div>
+          <div class="step-header">
+            <span class="step-num">BƯỚC 1</span>
+            <span class="step-arrow">➔</span>
+          </div>
+          <div class="step-name">Khởi tạo & Tiền kiểm</div>
+          <div class="step-text">Nạp tri thức ngôn ngữ, đồng bộ cấu hình và kiểm định môi trường thực thi tự động.</div>
+        </div>
+        <div class="step-ref">Data: QuocNgu_SinoNom.csv</div>
+      </div>
+
+      <div class="step-card">
+        <div>
+          <div class="step-header">
+            <span class="step-num">BƯỚC 2</span>
+            <span class="step-arrow">➔</span>
+          </div>
+          <div class="step-name">Phân đoạn & Trích xuất</div>
+          <div class="step-text">Định vị khung trang, bóc tách chính xác 9 cột chữ Nôm từ ảnh thư tịch cổ thế kỷ 19.</div>
+        </div>
+        <div class="step-ref">Data: 83.239 ô cắt mộc bản</div>
+      </div>
+
+      <div class="step-card">
+        <div>
+          <div class="step-header">
+            <span class="step-num">BƯỚC 3</span>
+            <span class="step-arrow">➔</span>
+          </div>
+          <div class="step-name">Gióng hàng đa tầng</div>
+          <div class="step-text">Thuật toán Banded-DP gióng ô chữ với âm; đối soát từ điển cấp nhãn chuẩn GOLD đợt 1.</div>
+        </div>
+        <div class="step-ref">Data: Banded-DP + Từ điển</div>
+      </div>
+
+      <div class="step-card">
+        <div>
+          <div class="step-header">
+            <span class="step-num">BƯỚC 4</span>
+            <span class="step-arrow">➔</span>
+          </div>
+          <div class="step-name">Khử trùng & Hiệu chỉnh</div>
+          <div class="step-text">Tự động lọc ô cắt đè; kích hoạt bảng tra dị thể sửa chữa lỗi nhầm nét hệ thống (㝵 ➔ 𠊚).</div>
+        </div>
+        <div class="step-ref">Data: SinoNom_Similar.csv</div>
+      </div>
+
+      <div class="step-card highlight">
+        <div>
+          <div class="step-header">
+            <span class="step-num">BƯỚC 5 · ĐIỂM MỚI</span>
+            <span class="step-arrow">➔</span>
+          </div>
+          <div class="step-name">Tái nhận dạng & Giải cứu</div>
+          <div class="step-text">Học sâu SE-ResNet tự học nét bút, đối soát kép khôi phục <strong>2.840 ô</strong> lên GOLD.</div>
+        </div>
+        <div class="step-ref">Model: SE-ResNet (Self-Train)</div>
+      </div>
+
+      <div class="step-card">
+        <div>
+          <div class="step-header">
+            <span class="step-num">BƯỚC 6</span>
+            <span class="step-arrow">✓</span>
+          </div>
+          <div class="step-name">Đóng gói & Xuất bản</div>
+          <div class="step-text">Xuất 71.610 ảnh ký tự độc lập, bảng nhãn 12 trường thuộc tính và hồ sơ kiểm định.</div>
+        </div>
+        <div class="step-ref">Output: labels.csv (52.707 GOLD)</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Phần 2: Minh họa bằng mẫu dữ liệu thật -->
+  <div class="section">
+    <div class="section-title">
+      <span class="num">2</span>
+      <span>Minh Họa Mẫu Dữ Liệu Thực Nghiệm & Cơ Chế Xác Thực</span>
+    </div>
+
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th style="width: 32px; text-align: center;">STT</th>
+            <th>Ảnh mẫu</th>
+            <th>Vị trí ô</th>
+            <th>Âm đọc</th>
+            <th>OCR ban đầu</th>
+            <th style="min-width: 340px;">Cơ chế xử lý & Căn cứ xác thực</th>
+            <th>Chữ chuẩn</th>
+            <th>Mã chữ</th>
+            <th>Phân loại</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <tr>
+            <td style="text-align: center; color: var(--text-sub); font-weight: 600;">1</td>
+            <td><img class="crop-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAEY0lEQVR4nL2Xf0xTVxTHv/1BQeBBwREWJkgn4KYkUjWEAHMxETVRFn90ZiQOMyFjtguiki37yRa6LVtYZhZdRgluBNMGE/8AcYbIJkFwTCE4UbLNATIUFbECk5aWwVnee20H0tf3WpJ9/3nnvnvvp/ednnvuuSAvagKrBC0SjDNs23mqMA5IL/A2Ft5eFgFKjjHAt+9BtmTXtVmSDFAhuaMgBJrPnXzbnm/xOlkIMKVa8iPRrZtWwVkigBoYSbLkWKiwqFxIloy8vLy9bJEAfyQXHzI9uNgVzCgWtwIobKZu4V6SoHIwLf7EwZPqWwFEpqbWcvvCD8CDb3q4Z1WCa7EWPwENCG8munQwyP213X4DwOzYoUbOsU14UwtsHPMT8Ps2ANGJldM0MzxjGx6e9NuJtpIgnPPRLwogaqonumtWq9UVAQKIOr6LZf13KjBAlz5HASjSMs94T2esZL72gvGj3Fj5foUWwM2fGpJ3Z8ukhfJIQX37PJc7za/FsWNrJH7ChwB00+6W/cT2FIQxKkD7SKoP9nvidrjZoAFWWex0CNCTVICj792yx6MvDpEuBgjSN7PpuQNolQzgdB+hL22Mr3rrIt+8IbAX5IJ/wVPv2Wznego1SSLphgTVAIzTHxHqyrq6O0RnkDLhbRSEAX0MXu5NZ39EeYHoEJaPSgSMfe9KPYX8GlfvO05EScgjiYA2PD3IGbXAkfJQHGbtYuTekAqohqyTM/YArbNalPxDdIeRXSKpgEqk8cZdNZLYUzLuAQ1nld9rM+1rbPtFAqAUr7islnCEKKAyOIkmm9I4hyhbxAFfQb3npIug/7OU9cHIp7FhOTkMS2gUBzi/BDI9rddx2NG/HiEVfOkkPy8OoBpo2jyNtXg2A9B1EdF0PJBB4oD+FFS5zIf9byghz/7kCh8Z+UC9BMBObB7njGsWbh+4XcoC1tvFAReC2VHHmOyLOiBxVQh+JTrLMO9PkiMIZhIFtKoj2X0/qEFUXXv7BOWhl65uBrD7hAmqK6KAd+Rb+G1/HtjKPvPQW+bZ80dIDNAaiU0nHY6r12niGaiqia6H4nm1Yrt+OQcoFQHc/piLFQAx+fnhQKKNdgLryrqJBg5EAKjwDRhYiWBd6eo5yd+4QZbe4JiuYUvezNj23xw+AT9rEN3OuiF1TsLKsxK9jSydTrc0ylV6CwBsJpXq2/uc+diic89PZtNYEXc8IqjHF8CchqL/4ne22u2MIjb0popfbXwOJhIGjGllKPacRaysP/A3BvAJiWjoNPkADIH54MkazOACZHmfOB/w99GFx974C27AX05RgFdZP+MASSVLDUSBFRgGd5Es11++3B8AgDLmRET01wfWGHvtTr8AnRsWHIXxe/cO+FFkjfN+mK+jU1OzVps0AD1auAasWbdlBGtdA5TwLfXZMfMXD+e+iWBGU3Ija8P9uLGMmjpvJfLmsq1YuSKQS5cjWKjn/7i1cTp+sEugR+RfcMuAGO/1wb/uaHgq1xaHjQAAAABJRU5ErkJggg==" alt="mươi"></td>
+            <td style="color: var(--text-sub); font-family: monospace; font-size: 11px;">stt11_page_0010<br>c01_001</td>
+            <td><strong style="font-size: 13.5px;">mươi</strong></td>
+            <td><span class="nom-char">邁</span></td>
+            <td>
+              <span class="case-tag">Trường hợp: Giao thoa từ điển trực tiếp</span>
+              <span class="method-tag">🔹 Đối soát từ điển Quốc ngữ – Nôm</span>
+              <span class="explain-text">Ký tự nhận dạng trùng khớp tuyệt đối với mục từ tương ứng trong từ điển; xác lập nhãn chuẩn.</span>
+            </td>
+            <td><span class="nom-char" style="color: #047857;">邁</span></td>
+            <td style="font-family: monospace; font-size: 11.5px; color: var(--text-sub);">U+9081</td>
+            <td><span class="badge badge-gold">Nhãn chuẩn</span></td>
+          </tr>
+
+          <tr>
+            <td style="text-align: center; color: var(--text-sub); font-weight: 600;">2</td>
+            <td><img class="crop-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAESElEQVR4nNWWe2zTVRTHv+1ax6CbbGkFAd2WaAM4WFEjZrKhkcHmZLJIJCgal2CQaBxxOs2MMfMRJcVXrMumIomP/mF4iNLhfGwjoKJOR4p2QySDYfdohA3cg66PY+7v0f7a3d+vLfyhnn9+95x77ueee3/3nHtB6nIUADpk7WsAt231xzvpCGoSbL0TQMl7AH7+BuhvYcbS3OevjPHS8QC9PgCv/b2fy/Us0AB09wK/tuD3AdWwgOrc9jVbFDopJGgWbUs33B7pT79rKsNyMjrGEBNO1bsArl/x3HT/qz6gtQfYVF5x5COh89NTET//cC5nCYeWATQJIE2GBsLAZTq5P+DZC8C7PQTc/0F0UkOkNZ3h0pUBGWPiNhYWss+qAeBWZdSESxM9/vcAg1YnhdxfAHuOVzdkaTipyejQ9ntkpxpVL+JH4D2Prm1dsvZ0sFwrTI40zolxiWR00hGM9SuUwpttGvODG8Fkm5zz1l88w1rzqxaUEZYUADIyNWdXPcqh0r8OXh5VA+PTYpJEKQautasd5yTAwwCOt1XsSw0wGG01C5+bkBJgwo7ZGQCGHxuQqkh+an/BBawnos+ukXzKt4VV/wJ4xk3AAbejaoY4/J1Tkxq/EVNNQZ8B2Gxm9Wnjvkxgt+Y5QLzh+5piceJM64dE1GnCQ/5UAMcs8ub8IBrqgB0TKQDO3vuIKw2ZdQtwR8cgM7wFoLg5hSUQS7Ab6WAGwJZAgUoAs59SBein/tijYSzGsnr5oNydBwzaxcuFI/qpphfDKAOyYVooqA8sARDe2Z30QbpgQU4PkQOmb0VDp5CRqzsDSe7BDiCfGADZbtHSVyBM9WVygLMrgcdFANYdGzp8eIio7zoGmNvQlwxgL2BokQAwWwHr691H/pwvxJDnOp0YsAYoIgnQuGsDKySWmQ9+9YK4Y/PKfAkA3nzgJQkw/wLRwPvCwIZgU80VQsv87Jgm4BBQJCSfA9DtJ6IzwrDSMSJ3lfhWSE+f1TihBpisA9gwcQkuAWBeawRMnURUfbVcrdeqATqA5SLdAVzlJSK/8zTZbWkl4rPonNNZb1vqdA6qAPyrYJbuIQdQEO1oi99rPiC8MTKeAexSs1/K7MSAnzDzgNxeJGUjEVWaWtUBekVWvL0C80pkZURqhBEaGV39SjAYDCdKps2wVEvNwJsVrBjX1vY8U1x7reRp3ZlgCfb1UvELeZ7gzrUuxAHolHfjG+3CJ8B/ZQO/LUxQD26QbItLMDcDBc1bKmeUyZcLk3pOBAYlrNWH3X8AT86Z1ps1EZiVA5zIO/OxG/D8KPQv4gSgS+qlOj56vgmw3ae7WMB/+qWq/9cBhjjddRK2W1IiUIz0pAFFvBOrKvpYXHY+8N2eS4jgBLvGjI+OJB8B4nR2mQNLPr9owCdiXCsjBr9GNeIBxpviAC8bl/enAiC/VQB4tlbm5Ni8RLuALI8G4B+TN+u4+GRHnwAAAABJRU5ErkJggg==" alt="trời"></td>
+            <td style="color: var(--text-sub); font-family: monospace; font-size: 11px;">stt11_page_0010<br>c03_003</td>
+            <td><strong style="font-size: 13.5px;">trời</strong></td>
+            <td><span class="nom-char">忝</span></td>
+            <td>
+              <span class="case-tag">Trường hợp: Quy chiếu dị thể tương cận</span>
+              <span class="method-tag">🔹 Bảng tương đồng tự hình</span>
+              <span class="explain-text">Hiệu chỉnh nhầm lẫn tự hình tương cận (忝) sang ký tự Nôm chuẩn hóa (𡗶) theo âm đọc phiên âm.</span>
+            </td>
+            <td><span class="nom-char" style="color: #047857;">𡗶</span></td>
+            <td style="font-family: monospace; font-size: 11.5px; color: var(--text-sub);">U+215F6</td>
+            <td><span class="badge badge-gold">Nhãn chuẩn</span></td>
+          </tr>
+
+          <tr>
+            <td style="text-align: center; color: var(--text-sub); font-weight: 600;">3</td>
+            <td><img class="crop-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAEaUlEQVR4nO2Xf0zUZRzH33f3hWOCHAPGoUMvBmrutEymmGwOER2rbP2gPxwJSg6XzGPO1FrTrUWJLDMzNmsTpbZQtGHTpfmjyQzStgwIzeHSFkY04DI7Dji+8WnP83zv+N59v8d9b/zb+4/7Pt/P5/O8ns/z4/s8z4HCqN0GTNv38KFMdFUCPg8XhzD24ZchtMM3tAZwdEcJaC0AkusbXgCw9knAcoKiA3xrB8o6ie4nizQWUHSAVjuwwctKp3l96dfoACOFwMYhXmzngFhe/v2GQYBcAmwQ9RWA6Sgrr04aMAS4MQu2t4ZJDUD6Z0T0BPqMAH5MwqqrojhWU1OlTOYjRgHyJhOKxnnR51kJwBJvFQB5JzZTJIC7dzOAXbzcUsAqzjtJ3SkAEl3FiLsXCXDLISbtOBF55rHml94loq1KN45RBMARB6bn5MwGrJvcl5cDmLmb2+8mCsBXkQAuOJuIepwAHk8FluX71/8+MwfkeyMA7rUNskctC07Z1jYy4YkTKZSNRBgDoX4LADbvAe00KaNwmQytRBeAc+r6ogcACsa00WZoZAt+bX5v3F/8hn3eITJDV7LyHG/YUzkOa+vAYv56Jqbk39BQ0qgFwAql3MpCnv6OqJ9NDlPR9Yhj4PUDBjvKM4GEF/mXVZ/N1zSQdtsw4DEWn/il3/6hQmg0CDhcxMbH1jzhOBTLAalVLXcmBRxm7eblsfamlXeqPWx9c81ongRwKz0wwNaqYFd/+3y/a+HCM+EAXwdmNvc3jdPdUVExU3g/DdsFSalf+Q/pqt0OmLZfGOldnLJFF3COV18UGH2NfKOjo0T0vRmluoCxFQC29lNEnXz/vP65cGmW9Q29/VNXJtL5Ejxta2BUJj1ANDJPsT7+BwD+davSICxJU8ngWlqqY0+fcQJpJKn2xMgya5FNALouTiEDLzMnX1RZ7ugdSYqgNX3EwevYbavpArc4pOpoALs5IPdIRXYmrCvZZxmHmOz884YBtqAuFhPRfVaIDdpfJxvEIfWLiZ1p6Ww79pW6jQ3ilQmmKfN5cUsf4K8/6WUgaYiX/IdxxusJZUGenxcYyaCRHz/xTmed6j4iMthvIIOuA40+ICvt1fVBZsn+JwB+qng7cOwPoNCll8HfG9mFzFLbq2mnAsCjA0S+bUsU5GnFg0DM2KlPeBPPHtLmObqaec7Sa4sCSdWFAHbNzRaOd2WdjooxsM3137aAvL/UgJ6cGexqBmS4PpZ/2J918OCpoPrX14aM/CvHPaQGvC3MKW/eJCrns2CJr6oWfxkaql+KF/cCrqcOeDwej7iOTwBqlmTZbLZivlbnBGKXnv1ib3eJqt3YwpoPNL1DqKGrNBFSxvK6Su0SKze0Ep0NHZ3TnwOw6p0e2Q0kzAZ2DG9hrgeyFN3R1u37BbAvY/tsKjf02XWiyIh8z/DYa0a6sLeZ/VYGf0Yx4lrTmKtNIBRws/YBe9QHAyZR6IbivM3/KxmXZkeyF7GfOt3g7TrG/wAr9UK2nOr42QAAAABJRU5ErkJggg==" alt="lễ"></td>
+            <td style="color: var(--text-sub); font-family: monospace; font-size: 11px;">stt11_page_0010<br>c02_008</td>
+            <td><strong style="font-size: 13.5px;">lễ</strong></td>
+            <td><span class="nom-char">礼</span></td>
+            <td>
+              <span class="case-tag">Trường hợp: Khử nhiễu biến âm lịch sử</span>
+              <span class="method-tag">🔹 Quy tắc chuẩn hoá biến âm cổ</span>
+              <span class="explain-text">Chuẩn hóa dị biệt dấu thanh giữa văn bản phiên âm lịch sử và từ điển để xác lập chính xác tự hình.</span>
+            </td>
+            <td><span class="nom-char" style="color: #047857;">礼</span></td>
+            <td style="font-family: monospace; font-size: 11.5px; color: var(--text-sub);">U+793C</td>
+            <td><span class="badge badge-gold">Nhãn chuẩn</span></td>
+          </tr>
+
+          <tr>
+            <td style="text-align: center; color: var(--text-sub); font-weight: 600;">4</td>
+            <td><img class="crop-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAESUlEQVR4nL2Wf0yUdRzH38/9QOB+AHVjJaadroONM4m40FHzHJuJNWtLpMy1NG0d2ljDWrXKRnI2J8lyrkAntOWPiNKFk2LZ2MC8DWvJhKFcYAZxZ/zy4Dg8Dj/tee6O+/Xcc8/B1vuP5/l+P5/P9/X9fH89zxfEaeTzB7GZgrQvfxFYaXaeI6KbxwablWbiE7yvrUDxVKjneQ4AKPq8des9IcCGFYc8YZ4xjY/QzdswDDA4GumyLPYCuq62xAbwyvksBzBi0RdW/ggiYgjR1bXrsq+k3pKBcuWgKiUyiITUEhyZvR7anY2N06EhEAR4LA9H9Jiatl08gGhCF5m0npqp/RuRAPp9lW8xAmISJQ1lsl9ETKJXtvoDDl8RYBhVCfCafrY312cgxJbr1KTDl8eLijAfIwYgJAn+J8D5FRtd/B4Sp4EkvMDrkAh3bLf5ChkyDM8jA0eW2ncSW6X4iTcE3NNexw8YyUFCpp2ILjyScIw/BIIZUJsE2EVExXguSgSEAbQW0BK9y6R1zBPwm0baRm2phdZ/vzTklV+KH0BNRNcfwONGbsaVw/EDyFGjBpCUp5IDOBU34GIpgIIdp21EFchOXi8W4K51sa/NWgby0p9nOFsHvioxekTuRPPrJT0ApHrgiaOFMr85/Y5b5E48Loemlu1tDwr8tg6kyEQPgWqWAjZ2GQOABiCzUTSAepfjXAhgfBWSr1Mcq9CJfA6grq4sKBgleg/YQfEAph5V/eCh3ew8yXNH6ACD4tm4AFQHjJFJYkpb03nP/ZlUXuyk+AC3dKgi08t0tt/9KvBxlChEB9Af0A0MuWiiql+fcXR2HoDJIrQTURU+EAhihP4L17Y2LQNai5b0AgfdgO08XlLgmRxG9Dfxo2b2+XbqEJEq0KQi+DoDQYAhkT1HLThJdNv+yhxh9R2RgL+S4Ga3lGITEfUtCeTw1Ji4/0K1yyAFsJK7r7UOBBxtNaLmYCIb33GFN++zEJ2AZLvB30p+IfYQZsxKZHkvl/+gkgWYyPW0n8DciDmE9vcncXOfB263W7OuG+gGg8TDa+YSjzmESizLAvK3AfjErLzo1KOUPWIV7LcVgP9kIypguGfYYcn0L79Ki6VdnL23p0736fd7b8cEeDX67REFlj/GMpqIT0zsK87QTErCVeNdeNgljRSJUyEQ8UXnJIEoeVzAG3e54syRS3FncG2gjw3dz1X+RHW8GZhzy+6vtpxhXONsTR52U6RYatj9IY6zhcv1T46z70O34sog/0p9OtLZ0mpn+wYAfXvPBvslgq3Hi7q2bHKWmdZyNSk6DnuQvDi0DQnqx8q6TlWtr+LOAVZu02MyOAL8DR00TV0H1+mupJdTYMhTJ7k+QwAy3tRntcZ+7a9DwLQdeGjOnLQxMlTCC2D29Ngtkncsf+eF2tX71YBevpDrvvXG14a3FgJAuISX0bpQgPf4CGrBQ/gPcFPqlY5Ny5gAAAAASUVORK5CYII=" alt="một"></td>
+            <td style="color: var(--text-sub); font-family: monospace; font-size: 11px;">stt11_page_0010<br>c01_002</td>
+            <td><strong style="font-size: 13.5px;">một</strong></td>
+            <td><span class="nom-char">戔</span></td>
+            <td>
+              <span class="case-tag">Trường hợp: Bảo tồn âm tiết ngữ cảnh</span>
+              <span class="method-tag">🔹 Xác suất ngữ cảnh chuỗi âm tiết</span>
+              <span class="explain-text">Tự hình mờ nhòe gây bất định nhận dạng chữ; hệ thống bảo tồn nguyên vẹn âm tiết nhờ chuỗi ngữ cảnh liền kề.</span>
+            </td>
+            <td><span class="nom-char" style="color: #0369a1;">—</span></td>
+            <td style="font-family: monospace; font-size: 11.5px; color: var(--text-sub);">Bảo lưu âm</td>
+            <td><span class="badge badge-syl">Nhãn âm tiết</span></td>
+          </tr>
+
+          <tr>
+            <td style="text-align: center; color: var(--text-sub); font-weight: 600;">5</td>
+            <td><img class="crop-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAEJElEQVR4nN2Xa2wUVRTH/zNb27KJdtm2Sx80tSyFbdciBR9US6CtsUGwIfggMYKVBBsaQmsp6ge/mFitiYRoVMSKCNoAWS1qjFHRBslqlYoQEiVd+ogVSlNgt4YiLW33mDt3trs7M3eY4hfD+TBzzrlnfveec8/O3AWJZQMAtJO5yBBLBbts7DOJAGAG6GCXngd7zQkkkBanU3bX1mYCtzprTotTgGggB3AHiDqz2Cwp9dMH+NbvuMDug3WMYJvfah1wvDo/fyJqdmcrqUr5NeHrAzre83q9qYAnBkC/rKnk5So8eE0PkCimoAPlXcC9O4GMzLhCjzX9htNsM2oenpdtj98EKRaAQAjIcxnuVvem79htdlrS5lm4a+aJ7EgYWZXw0aMVc9WH1tHKh8RFNJH+BxIXzQCwlFamn+KuBExHcg63l3ReCXxUixp7kVENbkBk3PSA8eE4c/TgpDaCzKVxyXisuVvq1QRA/Owo6/z78WysbyJLC5CFi+90FQ8BEvwxG01rB3RxJJJdQOF+agc+j/reAKynMDkbqGKAxqjPgeqw9RrkAM00sQx3TnmcEvpoOoCqCaIy2CI5PCbh6UkzwGC/BtBMRF8DPmaN73QB1efJBNDhWvBn1PrDY5szQER+Dvj5cQDv6uaPAXx18QjwUnRgI6sAEXVl4o4+upgCFJ0xeqtCvZ/Nu/2H5zKKpvx7bMgdVLRKoG53PrBAecsLAcMerKUVyd+oZmADcIyrX/B+8SqVMEmhGMtoy9xLqpULbBvj6jH2eOJqffk0rZyH4dC1GU5F7yntxyNNiXyAfZ2TdhzKELU8qfIlsDWV1+BMLoDjihrcV8aYOYrxl9+/qqze7//dMIUhDwCeQiOANfwj9D6fZdYQM5rUOdNfMALQm2xs8d6TP1W5ATQovi6v+swuZrVE8q0wBLRGkpILPGkFrzFXXQrslb4VAF5WQtq22pSIkitGgNeR5b6v9W23u4HCp6i3e4guu2H/gCh4D+BSg55PVwhtRoBze1jnRsSOZ0ZWY+G3TH8USP5U9QdYflhlBIgXOwqWI/VDRX+KnVEiqw4UulwlA9cHpAIoDXI9WMoMZTF6gQCwHbg7FDF62Rf0VeNAWdBfMuB1THXpXgCHw+adqBUHqqPG34sBLDc8I8mwIrc1ADjyyvc3vAIKb2KxCcmf6eJgDUDBYmW6xDargHekeACFOCH5E01ggiDrq9qTi6O9/AT7PK/vSatKs1CD7dCsgCi0jv+U8KuVFcy7ZVzrcux7kZr/ATDT0i6U6FZgLLJgBXgC1kQWD82xBJBE58Rz3UuS/hPg5jkn/s8Al6cFCAVHNJ5D5UGDOGGPujC/JXqkGfXV10tYOKILEwOeBHCSq+Ex3yI+nf6UIv7Ls/TjiHbgx7e4Ulqp+c8H4F9Pv82AGBXX4QAAAABJRU5ErkJggg==" alt="dạy"></td>
+            <td style="color: var(--text-sub); font-family: monospace; font-size: 11px;">stt11_page_0010<br>c09_008</td>
+            <td><strong style="font-size: 13.5px;">dạy</strong></td>
+            <td><span class="nom-char">化</span></td>
+            <td>
+              <span class="case-tag">Trường hợp: Tái nhận dạng (Độ tin cậy 96,6%)</span>
+              <span class="method-tag">🔹 Mô hình học sâu nội suy nét bút</span>
+              <span class="explain-text">Khắc phục lỗi nhận dạng thô do khuyết nét bộ Nhân; khôi phục chuẩn xác ký tự 代 và đối soát từ điển.</span>
+            </td>
+            <td><span class="nom-char" style="color: #047857;">代</span></td>
+            <td style="font-family: monospace; font-size: 11.5px; color: var(--text-sub);">U+4EE3</td>
+            <td><span class="badge badge-rescue">Nhãn giải cứu</span></td>
+          </tr>
+
+          <tr>
+            <td style="text-align: center; color: var(--text-sub); font-weight: 600;">6</td>
+            <td><img class="crop-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAEdUlEQVR4nN2Xe0xbdRTHvy2tl1c6ySwDtlUwIZKFJnXrRnTKYyxj4MS4yAxhw2zRaJwJQd2W6MAQHxnaxZlhFqPJYNNFtolhrAIbuIaRbFqDAyrbkPHYMmOHCpTKozyO+d1exqW9l97Kf540ved37jmf/s7vd36Pqgh+8jEh3lhXkvUk8HIUAglJi6tYW0k3yz0USCBj34EEIhvK/yvgp8iHuxkgdoSIrlitm565TEQ91jtKAS/E3yAGwDHHle0RLNXQb99JXoFVW08OKwCMZHAW9jwMQBcuDNbRaGPRWgDRH84EAsw6sPkf93sbOTUfqY6ISCsra5vpGKSRDczAvRgAcBYwPCT8rm5XxRnRq7/f4I1tiwOMAKJMJtMrOoCNnVh+SWCEjc2LAQ6rUhob25mWA/zl+7aW75jZJQ/oW6a9IKhSgKFXOUb4Rh5QhDRaBEB0RgUgXxbQrVf/IAGYqbl13+UsVAV9cw2N79q4PvhmhqhZEuZ9NjsuPjJn22aJKZBdTGOFaPJqs10tq0Skt/1zkUyhFZkTRNTZWvD0go5xF2UAGp8MvsZq7vzQ544RAI+tBrBfAJiV7Qe3InHZC81r7/JZNopSeA1ZU3TO2V7dOa0k2g/gVIV8ojBQGlCBMloK4A5QuyTAS0gbXArgt3AcDzaevJuOUK5jB/MQtNC82N8NfAz4iUriZApK1EuMx/8AoAnoMfQFAG2x7HsKJO2828pJBYUkLUf577uFY0scg7pOmRckJcPWvDSHoN+02WwbEHZSJgVIWisBlIraDTuLKBhAs8kHsIhA3Jgo3cvtKb33ewjL7QJNuN1ruE+J6FrpJs5wXAHgA9HYbPPQTmGMnPlMyVQA+PXLpPuAAaJzOnaK5udH84Z8BQCiLjGgT7imPN+4HKFH/lQEGE8FsM6+GYZBorf4cPMpV3+UplLpLOSyQ4nyUE7TlsjY1t7eXhcNrMEJCgagWqbF+vpnoe/w2rZg/ZQsQONTmOFAdubIR7BnQ73biPFRlR7pa7doRrWhykq5FnASsc15dzURbQdXw8wTSWnfjytNwckAqbX86ZoIJLKnG4BdEqCW7pf+/Vy+HAv4DxCSAFgkF7Ta31RMSD/wlFdvAMffmEJzgGqnkjHIBdaJLtOJ2OpVrgPonbeftrhkZqHm4KH0+V5V9yBj3MO0GQCWB4GUH4F9qj/29x9Qxd6W6gH1m5vm69IEpMwvDx+JC3S0TTWX2xAjXPVu3wNgurYAcFd+W3ddxbHRyVZgZUOy1/L6Z8BXO1pQ0wMbnxMQDzHg0qGqmDp36HODTbBfwlg3kGzMrke2EM/LE9pMZAKOadZoayoUz4InFXqDBiGGFbwx6/GKgWHqBH6eG469C2fBvxK/K03iuH2pHLfntNvtnmIXBZcZSXObQLY2EEBCTgC7BPU8K8uwgeAAniTgqqDHsbzyJN3UsrM4ewM5j3pV56Ss1yKHawdgFdQS5qhvkXSTB5QBcVVMqUp8AMBy/q9okAAk1xOdYuHQHZFx+xeZ115MgqihrQAAAABJRU5ErkJggg==" alt="ăn"></td>
+            <td style="color: var(--text-sub); font-family: monospace; font-size: 11px;">stt11_page_0012<br>c08_015</td>
+            <td><strong style="font-size: 13.5px;">ăn</strong></td>
+            <td><span class="nom-char">喚</span></td>
+            <td>
+              <span class="case-tag">Trường hợp: Tái nhận dạng (Độ tin cậy 97,4%)</span>
+              <span class="method-tag">🔹 Mô hình học sâu nội suy nét bút</span>
+              <span class="explain-text">Tách chiết đặc trưng nét bút lông khắc phục lỗi nhận dạng sai tự hình mờ; tái lập chính xác chữ 安.</span>
+            </td>
+            <td><span class="nom-char" style="color: #047857;">安</span></td>
+            <td style="font-family: monospace; font-size: 11.5px; color: var(--text-sub);">U+5B89</td>
+            <td><span class="badge badge-rescue">Nhãn giải cứu</span></td>
+          </tr>
+
+          <tr>
+            <td style="text-align: center; color: var(--text-sub); font-weight: 600;">7</td>
+            <td><img class="crop-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAEfklEQVR4nM2Wa0wUVxTH/ywEysLSZZG3QIGWrltjo9nyCip9WMWqpYSQFG2xW0gItYmNbY1JE0sTY9GYpqUkUksTpRIVqRBrKVoXTasEBKSATSshhspzERHXxYK4p5nZnWEWZ2dm65f+P+w959y5v7nn3McOyK2uRyf+TbJSwa02DyXGQFYqtz1n2uVHSwISI7BSAcCL3HbN2n1VjwVQJhX+z4Dj9Xi8GqRc1Zji3oiWIZBQ1yrOC7wr4QDWyexEuHiHkCYktBUXF3d6CID/XiFCXqqFKd3fVQV8VsP7Z7497UERbZMA1LobGal19S0OyPiM79nVEgAfFy8ggG2uDAOlXVxQGwKlgJqevby9cRnwdHq+BWE/LJXMgQSq1Iyw7XGUOiNDyTjpSRGtc04jx9lGJSNY8v1wrYFQ5V8DiW/zlVCWAm6ybW/oV0QrHP1Gm3QKPq64CraKUzMvArX/MGaBWu1RChb2N709BkhgTfWt8VDPj3NT7qDTOtxhGYXngM+7Gx3z+eI9W3jkf1iF1y9EAWNH2yzNwOjwIiZ0t2t5R6aCVTCx7URCsNH4DIC09ftXX2Yid3L8n/OvEFsFCJ2f/EJHiPqIDChsZWQlytS0MuOZd22UBZzyxXlqXGwmQya/+plY29RUDiBwyy1ZwI9+Ue1kydtDhpA+PmZkM11XVyS+kSB0Gnyz7rPGBpzig906AJpLig5Ty2zX1ME9AGKxi1/+2HhA8006Y06PyaxCCkyd2k+IqBbZXIytn5GxbHUpa2RSqMRFujTNAvTszTD56xH2TOkniGwmQNclDRg85ygBHWBncPvwCiAo/eB3wciaoB4g7TeZGfAyQD/S/Q7z8ufbmOJqsfyY9d0NjvtKGSCbuQ8MlY2trL8f0BRMiD4KgZ3fy1mvILy/yvjmJOcXAYgblgFY8vw+5ezhOEcRneqrZj55bssAyoH5QUtxlbfNm8LU+xqysf4PaUB/6rLxeQA3A+sH2WHIaCb6HdCUSAJcxM3gl1XAs3WjzIbaBATmnFAOOEv99bm5i/BUmdkRulMRBAQcnVQKiM7TIU6vzxqbD16u0D+JZLNCAAKSXnv0AvgoKalWEWA3UCDeQ335tQoAA9XV4huPaGdCCg0U3ZAByKgEWs70gad6OKQLfOsFX9ELRZFuYp/Q9fL4Y3swJmJE6bfyzOjso8HgjLs7pgU+SagJO0WihcDKZt5TSc1gGtfEOzrmPxpUUoAyJDutual7fDZqYPqCshRSfVqYxtpbtjs0cRsXHQLwxM+cB4nxXZGxPVPd27fHMS+K5//srMzfvNY94AFztbcfslo7I9gpent7BybtKOLHE91LlwSYlnw4yJxGh7xLak58v/CR990AWj622Il6Q5BrryorYCpsKKsRy822ylsUUOmFKjtRiRe+JLoeC7zqrjq2ZPEUtgADRKTHklGi08AaO809fGAnstsXELaJn8Zq87B5K3Dypb/Gw2EGzpkWH4m/uDkeI0EHvFx2iOpl8X0Qha2c+WckUFgayz3W4C6bfwGTwDFoSoJN+QAAAABJRU5ErkJggg==" alt="rằng"></td>
+            <td style="color: var(--text-sub); font-family: monospace; font-size: 11px;">stt11_page_0010_p0220<br>c07_020</td>
+            <td><strong style="font-size: 13.5px;">rằng</strong></td>
+            <td><span class="nom-char">眼</span></td>
+            <td>
+              <span class="case-tag">Trường hợp: Tái nhận dạng (Độ tin cậy 97,4%)</span>
+              <span class="method-tag">🔹 Mô hình học sâu nội suy nét bút</span>
+              <span class="explain-text">Khôi phục chữ Nôm 浪 bị OCR ban đầu phân loại nhầm sang chữ Hán; giải cứu thành công lên nhãn chuẩn.</span>
+            </td>
+            <td><span class="nom-char" style="color: #047857;">浪</span></td>
+            <td style="font-family: monospace; font-size: 11.5px; color: var(--text-sub);">U+6D6A</td>
+            <td><span class="badge badge-rescue">Nhãn giải cứu</span></td>
+          </tr>
+
+          <tr>
+            <td style="text-align: center; color: var(--text-sub); font-weight: 600;">8</td>
+            <td><img class="crop-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAADRUlEQVR4nO2XS0wTURSG/xlKASGtLxS1bQBTrVFiImBEQjAIii4IiQtxoTHREB/EWIzRiAsT0SgGfCxIMIaFMbpB1AgKUrUaDWqCr4XGByj1UcqjYARLUTlmoGmnZTqd6cS48V9Mz/nvna/33Lm5dwYUoDtASaB3GkDpGxIUAo0S7P4R6GUDwIzk5NUWCYCjLa4Jna5N5ggAoutCAwRlXRcTs61Ge6jm5YQmhqBMrML78R+AvwxwflEI2KqrVwYAbisFQBmgGN9+hiSQiGxAkF3AJ1bCKK3hjuCRDsg9m5ioWSPSSSXCHv4MWCyAKVakk0rQvdqQVOYJ2biqoli5JbhXoIzbh7j2nSEmEYLuYNcIEb3SATnusJ5C7MxIAAvSAbVa4UqMg0JAZigAglf3tnYJoNr7WnwOGKFt3ZXBXZ2fxhLdtJWVctcBOb9GxA9q9Bj4jnjGmRdGCdUXfrRyK4Hd1xHiMTLiJ9OvCMYT1S02hvMUVAzwobipuOnIxjZZJXjVYc43jXe8RIJS8WGjZmMJn917CBcHIliGEFl+NthYiae9mNfuy85sB5C05yHpoaGgAj/pV5s+jEeN9YV6Fkip7CYivbZOIoCi0EhErsfZaiCh2Gq1EVFndtQ5kgrYjLwGov1QaxbVPh+3Ppqw3C4Z8GQ6mFtUe7DF67w3Atw4JAJoAWD2M8o1V3p+ywKwnbz0Y0b0Knk70ibA4Mv68luH3Zcdv0UXK/mpGSwvs+HwdADVMkpoBvZxv+1r3xPR6CC16QBVhSyAmehFigHrPM5d7gW1QjLAkQozuddDf+qTx3kDIGGhZABdqbLSS+QOeQ0OYBUpQRUwp4Vj16WTIFWshD4JU5UA1FOwaK5MwJzMpn5vkrgBvQMyAVNNT3fw86TZYkMkAW3hvxr1IIbb4YOJFcae94VauE7ILAHAMl8YUYR2+QAnr0caHM9lA3p48c45Xbkv/Fpt3SEBDl4cfUzbt+bZ996xxD7supeew61vjxihs/FBlsHCPwkLrsNgHDJUnLTj3azRJuB+lq+RBDQIHODnjrSAf7jva2OERuDehdL5fGPk5g3HtfHQkI+cgihf5ZI/PF0dwHE7cCzV3//3X65/AMzJ3EEjFSubAAAAAElFTkSuQmCC" alt="xác"></td>
+            <td style="color: var(--text-sub); font-family: monospace; font-size: 11px;">stt11_page_0010_p0220<br>c09_016</td>
+            <td><strong style="font-size: 13.5px;">xác</strong></td>
+            <td><span class="nom-char">壹</span></td>
+            <td>
+              <span class="case-tag">Trường hợp: Tái nhận dạng (Độ tin cậy 92,9%)</span>
+              <span class="method-tag">🔹 Mô hình học sâu nội suy nét bút</span>
+              <span class="explain-text">Phân tích cấu trúc nét chữ viết tay cổ phục hồi ký tự 壳, đối chiếu phù hợp với âm tiết tương ứng.</span>
+            </td>
+            <td><span class="nom-char" style="color: #047857;">壳</span></td>
+            <td style="font-family: monospace; font-size: 11.5px; color: var(--text-sub);">U+58F3</td>
+            <td><span class="badge badge-rescue">Nhãn giải cứu</span></td>
+          </tr>
+
+          <tr>
+            <td style="text-align: center; color: var(--text-sub); font-weight: 600;">9</td>
+            <td><img class="crop-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAEoUlEQVR4nJ1XfUwUVxD/3XLiUVoOiga0li+rFAIINSVIg9BqbZuS0qq1tCEhARPa0GDSJlTFNJFK6PULm5iaNmhLakBKqsVQm0D5KAbSGCGteghW0YNDLgTxRJvj65hm394du8vd7W5/f9zMvHnvt/Nm582+0xGkuJ5tc2kByW9uelXkCXmA3BQUxHPSBSRDuz6cC45YDX3EFzLPl8Fswdu10+JRyAnorL3+Is3UNpiKL8k8F0KEZyY0+SVwwQzkMmW++vSh/Pz2OSK6tNXFMO6H4F5v76yYoOtFYdG2AX5/KYJx2A/BN4CJlw8LkNHa2rrDk6zdTiKaLgkFkHPTD0EWUMqUi7LXAwcbPgHALprPQSP2mMtSV4hsvXxC6QWkATN1k8cAPJ2dib/39UQ7O8aRvpL5H038+v4j/upgB2ClmkrBeZUUAZltiQYyjQA4vQ4QJcsX9LIdWCwIfCEPQG789i5VSSEpfgUKBa0dqiKA1JzZCgiFOhaljoCTxnOkGxCqzT4ChAUq74CTmoPAqiCPdXKdIM3vvtLji0C/bKT2SY/6iSOsl8+keQr98ciqUk7i7VBEDhORs6k4YdlM3X7lJA4ByZ300cYN/IK9BwsfkzAYlQnqAQTdfIKfvf3IDJHNarVavyvdpZbgTCDWXTnv7ChvGa/iG4gbC/aa8hCgUpGgFLpt3iYxkvl5pxKBIxXPkVZApNvdVagFnCjLk0hKh2aQB6Mb8IPmAEhUiSf/ecbVgZfh3l9YG68YgeUrUbsX47ctiUDEFrNXJ5RCbDiRwndyAJED2gmGSuJEwZq0Egwns4+hsbGMHeuMh9oImpIM7LnBvazRAZKPsgLB7EQpW6zPqerh7dalL5Mqgt9ZPYVFVLS5Bv5YoY3gW114XHqtVTTyrDYCahyU2pcf90mg91pde2S2bcrnUeBk9rn9grw2zsRI2y1e3AZQ7qPHkwSDxpcFpSSui4iaoxB7g4jqAPSSmhz0w02A9FOnctby23G9xvBZdQQtTDqyXAGm1U9rqoN+vEFEx/L4rDNMsOGhSADV6gg4g0EoYeiKPv7Z/dQm7As6pILAWY14U4Gx0mQ6ADwvcpyFJVyvog5uHEBsOdPM1bj+Pq9kZ4axK5Ft0UchkBhDwDuCVgLDRtdnuohFAHiPABKrGugWtI6049RxmL+YGW8RUadBHUGhQDD6WvcdZh8EYj5l2l61BGFXiMgEbB5zEYwwhy0KCBhWQ/A9m74LiDlONBLBEuDKgZqeWIgMGy/n8oHYvoo1SBC2Qn2hQMBdNQRr+LND5CwA+NtFmduT6CsHnOytPrVeOOWfF+MBgL7P/vTZCbzVQSEq3OriTsHP7V4gol90aiPY7FZ0rs6yeKaBPcZXAJzMrvFoMa572voCvzvQ+/SsTr3Gi5XnAPzbiKOrdMoEc5OC7HfyvwFCiA4AH54Of4tvCUoENA98cBXoXFgac2TkvTf2E+oi1b2Fzc3NnjRK4P1yQEQ6SXpHQ4y433LnJTiO4m4bgNcNlweYZ+ePkj9KS5ASiDE7Vhe9KTVgyo6J2vPjsPD/HzQRiNFfl1Qk5PR/EvjBf5BQyOvc+ZZlAAAAAElFTkSuQmCC" alt="có"></td>
+            <td style="color: var(--text-sub); font-family: monospace; font-size: 11px;">stt11_page_0012<br>c08_007</td>
+            <td><strong style="font-size: 13.5px;">có</strong></td>
+            <td><span class="nom-char">園</span></td>
+            <td>
+              <span class="case-tag">Trường hợp: Tái nhận dạng (Độ tin cậy 91,6%)</span>
+              <span class="method-tag">🔹 Mô hình học sâu nội suy nét bút</span>
+              <span class="explain-text">Loại trừ ảnh hưởng của nhiễu biên và vết lem viền khung; nhận dạng chính xác tự hình 固 theo âm đọc.</span>
+            </td>
+            <td><span class="nom-char" style="color: #047857;">固</span></td>
+            <td style="font-family: monospace; font-size: 11.5px; color: var(--text-sub);">U+56FA</td>
+            <td><span class="badge badge-rescue">Nhãn giải cứu</span></td>
+          </tr>
+
+          <tr>
+            <td style="text-align: center; color: var(--text-sub); font-weight: 600;">10</td>
+            <td><img class="crop-img" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAADxklEQVR4nO2XW0hUQRjH/3vcMrqsV6iojNSytoWwiNjQbmZp+dCD0kWlcOkhiuhCN6MbWNBDEVlUVBS+dNdAwgwrVOyy3bDMyrKHEq3UXM1VN499MWfP0dY9s+dsDxHU/2Hn+76Z+Z2Zb4aZWRDRxWikkYe6hkBWwXfyLRDRMkz91C/cOVMhzCzs0AZMq/eK34jsHUT8DqcPgIGAbYtnwVuXbe2KmSvXD5ik0o64ujisf9tBJepT4OnJCnNvX2viBCC8wT8A0Zd0BXHU2WC3P5PDNQVvWdHwSBNA1GiRCePNljNmszmTBaMw/JKjiAqX6QBQy+nlv2QhvILFgoCUkQPLJYCBoKWemjPAqyJmhhTNYMXCWwBGlIoncgEdADelm/0KAyVHzBmUdTzNAtGoH8CVgH8BcCR59Qsf1cTRt6Im2bIBwdXcfSLwwHuTl15tvVnpdhyP/R9BOoCxA4IPU1MQgF3cEYBXUTNO4mfTTlbY/QfQEgkwtyTQN0Dgzm22VHV3gUtjkYirQ8beRlMafmMKRFalf+A9fiOBPzZnp2ItsP7GFDrsGXKL2AL+BHhTeH9nq/LRyAN1ProT9SXKrYeNr/OBj3WKn3x6lF+rcM3jLkgqrezx+XnvEVR/67NHrt/kPsF8yuB5pInNAJ4UMzPVEqLd/c+diaLT1b27TLWKvOX80S9QtT4FlnjMV0siVGKLMt25r/tMRM21bZQCjAkHgvQCRuGKVFojPhNlG/Np3cELre+GIlnHMjLdbka1ZOBD+4fueXMSkQvAlHFyNFRk9A6Vd/Wax499j2H3INN4ROtchQuKsQqHx5jfXJe9Gv+X8SuiiktxtNbtXeW0ov6qHQ7sY6+THYGwEcVirRTeLAS06luFKwDaiPLYaX6KKBuRUjgCW0gfYDoAV7s1wBAVgbdEDiFaBuzRCYgFEDddiMqjQjYFKqlk0fumwC5VgKCamOct595lynbCsHVVgK1trXRBaO8DpwsILWHDwFeEsmL/WfHk03q3rbkKzutxAB64HStqWbETYalWZLpIMwfdZWVZEvSFB4Dtg7A1vDc7+swfmwBTUpIJGC0yv3lSQicrOxOAsNukDRBjYlMLiI4B2Mj8DLCHpPR/Agi9ow2gxhb2+8gEGDYQNU7G3T4AgiZMPP9KAyDrU91cCLY3dkDaAUQVSsKzSOfN1BUHDB6KvVIqiMSXJxyONACH9ALItR3AHI+jsadi4UG1WwaqAGoCkEN6ZFTfXkOWPE1dCT0y/H9s468GHBmRp4fA3yKJML7X3kg/ATYWT05vztyHAAAAAElFTkSuQmCC" alt="nhà"></td>
+            <td style="color: var(--text-sub); font-family: monospace; font-size: 11px;">stt11_page_0010<br>c07_020</td>
+            <td><strong style="font-size: 13.5px;">nhà</strong></td>
+            <td><span class="nom-char">成</span></td>
+            <td>
+              <span class="case-tag">Trường hợp: Tái nhận dạng (Độ tin cậy 89,4%)</span>
+              <span class="method-tag">🔹 Mô hình học sâu nội suy nét bút</span>
+              <span class="explain-text">Hiệu chỉnh lỗi sai lệch bộ thủ thảo nét; nhận dạng chuẩn xác chữ Nôm 茹 và khôi phục nhãn chất lượng cao.</span>
+            </td>
+            <td><span class="nom-char" style="color: #047857;">茹</span></td>
+            <td style="font-family: monospace; font-size: 11.5px; color: var(--text-sub);">U+8339</td>
+            <td><span class="badge badge-rescue">Nhãn giải cứu</span></td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

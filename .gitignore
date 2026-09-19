@@ -97,3 +97,17 @@ pipeline/align_engine/s3_proto_cache.pkl
 
 # bản dựng THỬ NGHIỆM song song (DS_OUT=dataset_out_v3 — N0a); dựng lại được, không commit
 /dataset_out_v3/
+
+# Tệp sao lưu, nén lớn và tệp tạm
+*.tar.gz
+*.tgz
+*.tar
+*.bak
+*.pre_rescue
+backups/
+
+# Thư mục clone trùng lặp trong ArcFace (dùng gannhanocr-fd ở root)
+ArcFace/gannhanocr-fd/
+
+# Symlink đệ quy (BUG-5)
+dict/dict

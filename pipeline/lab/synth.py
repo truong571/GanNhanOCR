@@ -54,6 +54,12 @@ def glyph_index(limit: int = 0) -> dict[str, str]:
             ch = chr(int(name[2:], 16))
         except ValueError:
             continue
+        try:
+            with open(p, "rb") as f:
+                if f.read(8) != b"\x89PNG\r\n\x1a\n":
+                    continue
+        except OSError:
+            continue
         out[ch] = p
         if limit and len(out) >= limit:
             break

@@ -1,0 +1,53 @@
+{
+  "tong_so_suy_dien": 31200,
+  "thong_ke_nguong": [
+    {
+      "threshold": 0.7,
+      "rescued_count": 5307,
+      "rescued_pct": 0.1701
+    },
+    {
+      "threshold": 0.75,
+      "rescued_count": 4660,
+      "rescued_pct": 0.1494
+    },
+    {
+      "threshold": 0.8,
+      "rescued_count": 3983,
+      "rescued_pct": 0.1277
+    },
+    {
+      "threshold": 0.85,
+      "rescued_count": 3144,
+      "rescued_pct": 0.1008
+    },
+    {
+      "threshold": 0.9,
+      "rescued_count": 2155,
+      "rescued_pct": 0.0691
+    },
+    {
+      "threshold": 0.95,
+      "rescued_count": 980,
+      "rescued_pct": 0.0314
+    }
+  ],
+  "phan_bo_quyet_dinh": {
+    "NOT_IN_DICT": 17399,
+    "RESCUE_V3_LOW_CONF": 8494,
+    "RESCUE_V3_HIGH": 3143,
+    "RESCUE_V3_MED": 2164
+  },
+  "tap_gold_v2": 52039,
+  "tap_gold_v3_du_kien": 57346,
+  "tong_so_o_giai_cuu_them": 5307,
+  "chi_so_mo_hinh_cuoi": {
+    "epoch": 20,
+    "train_loss": 1.4664,
+    "train_acc": 0.8182,
+    "val_loss": 1.6542,
+    "val_top1": 0.7988,
+    "val_top5": 0.9045,
+    "lr": 1e-05
+  }
+}

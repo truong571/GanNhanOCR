@@ -2,27 +2,26 @@
   "pages": 448,
   "total_pairs": 83239,
   "tiers": {
-    "GOLD": 51958,
-    "REVIEW": 12871,
-    "SYLLABLE": 18410
+    "GOLD": 49946,
+    "REVIEW": 14368,
+    "SYLLABLE": 18925
   },
   "syllable_promoted": 0,
   "syllable_tu_silver": 0,
   "rules": {
     "s1_inter_s2_direct": 46369,
-    "no_context": 12657,
+    "no_context": 12693,
     "syl_ctx:tone": 224,
     "corpus_reading:cr_7121_vồ": 73,
-    "syl_ctx:bigram": 9741,
-    "syl_ctx:corpus4": 8445,
-    "quyet_dinh_nguoi:qd01_cell_lock": 2012,
+    "syl_ctx:bigram": 10024,
+    "syl_ctx:corpus4": 8677,
+    "lop_nham:nguoi_2029A_vs_346B": 1471,
     "s1_inter_s2_similar": 2967,
     "s1_inter_s2_direct_am_sua_dau": 408,
     "s1_inter_s2_direct_lowp": 52,
     "not_plausible": 188,
     "corpus_reading:cr_50e5_nhiều": 67,
     "low_posterior": 16,
-    "lop_nham:nguoi_2029A_vs_346B": 10,
     "corpus_reading:cr_4fc2_hế": 10
   },
   "luat_moi": {
@@ -39,6 +38,10 @@
   "two_pass": true,
   "anchor_cap": 2.0,
   "n_anchor_pairs": 24466,
+  "visual_emission": {
+    "enabled": false,
+    "requested": false
+  },
   "pass1b": {
     "n_cols": 4030,
     "n_pair_keys": 14015,
@@ -51,22 +54,21 @@
   "box_rule": "syl_index",
   "detector_thr": 0.2,
   "detector_xmargin": 0.25,
-  "n_locked_cols_qd01": 1640,
+  "n_locked_cols_qd01": 0,
+  "lock_scope": "col",
+  "lock_shift": {},
   "count_source": {
-    "equal_qn": 35524,
-    "conflict": 4347,
-    "legacy_locked_col": 34679,
-    "equal_ocr": 8689
+    "equal_qn": 63048,
+    "conflict": 6591,
+    "equal_ocr": 13600
   },
   "box_source": {
-    "detector": 46644,
-    "midpoint": 1796,
-    "legacy_locked_col": 32667,
-    "qd01_locked": 2012,
-    "split": 120
+    "detector": 80438,
+    "midpoint": 2609,
+    "split": 192
   },
-  "usable_char": 51958,
-  "usable_total": 70368,
+  "usable_char": 49946,
+  "usable_total": 68871,
   "pass1c": {
     "enabled": true,
     "tier_v3": {
@@ -87,21 +89,27 @@
       "hoa": 136
     },
     "qd01": {
-      "n_cells_in_build": 2014,
-      "n_locked": 2012,
-      "n_bo": 2,
-      "n_excluded_ngoai_cells": 12,
-      "n_cells_file": 2014,
-      "n_decisions_file": 14,
+      "n_cells_in_build": 0,
+      "n_locked": 0,
+      "n_pending": 0,
+      "n_khe": 0,
+      "n_khong_khop": 0,
+      "n_bo": 0,
+      "n_khac": 0,
+      "n_excluded_ngoai_cells": 0,
+      "n_decisions_ngoai_cells_lock": 0,
+      "n_decisions_ngoai_cells_khac": 0,
+      "n_cells_file": 0,
+      "n_decisions_file": 0,
       "n_pending_rows": 0,
-      "n_bbox_eq_cu": 2012,
-      "n_md5_eq_cu": 2012,
-      "n_locked_total": 2012,
+      "n_bbox_eq_cu": 0,
+      "n_md5_eq_cu": 0,
+      "n_locked_total": 0,
       "dat_locked_pending": true
     },
     "nguoi_ngoai_khoa": {
-      "n": 277,
-      "lop_nham_review": 10
+      "n": 2295,
+      "lop_nham_review": 1471
     },
     "flank_gold": {
       "1": 40346,
@@ -147,7 +155,7 @@
         "dt_5b9e_5b9f|stt11": 9,
         "dt_57a9_580a|stt11": 1
       },
-      "lop_nham_review": 10,
+      "lop_nham_review": 1471,
       "n_label_canonical_ne_label": 1082
     }
   }

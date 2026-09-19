@@ -52,9 +52,9 @@ trọn chữ → **không** phải SAI CROP. Dị thể (viết khác nét nhưn
 Số liệu thiết kế (tầng, cỡ mẫu, trọng số, sha256 bộ nhãn): `plan.json`. Ánh xạ ô → nguồn chỉ nằm
 trong `_khoa/` và chỉ dùng ở bước ước lượng (`pipeline.ground_truth.estimate_khoi_c`, C-3).
 
-## Pilot (C-1) — chấm TRƯỚC 4 phiên
+## Pilot (C-1) — chấm TRƯỚC các phiên chính
 
 `pilot_50.html` — 50 lượt (45 ô + 5 lặp), ~5 phút. Xuất `verdicts_KC20260916-PILOT.jsonl` vào
 chính thư mục này rồi chạy `.venv/bin/python -m pipeline.ground_truth.estimate_khoi_c --pilot` để xem
-dwell / κ / mồi. Ô pilot KHÔNG trùng ô nào của 4 phiên chính. Hướng dẫn đầy đủ:
+dwell / κ / mồi. Ô pilot KHÔNG trùng ô nào của các phiên chính. Hướng dẫn đầy đủ:
 `docs/HUONG_DAN_CHAM_KHOI_C_2026-09-16.md`.

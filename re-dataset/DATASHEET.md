@@ -44,4 +44,4 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
 Dùng được: huấn luyện mô hình, thăm dò, làm điểm khởi đầu để chấm tay.
 **Chưa dùng được**: trích dẫn như dữ liệu đã kiểm chứng, hoặc làm chuẩn đánh giá.
 
-*Sinh tự động từ `labels.csv` ngày 2026-09-16 · commit `bff2a3bd28`*
+*Sinh tự động từ `labels.csv` ngày 2026-09-16 · commit `08e954752b`*

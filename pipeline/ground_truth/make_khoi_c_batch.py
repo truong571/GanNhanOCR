@@ -1168,11 +1168,11 @@ def build_pilot(df: pd.DataFrame, out: Path, labels_path: Path, seed: int) -> di
     if readme.exists() and "pilot_50.html" not in readme.read_text(encoding="utf-8"):
         with readme.open("a", encoding="utf-8") as fh:
             fh.write(f"""
-## Pilot (C-1) — chấm TRƯỚC 4 phiên
+## Pilot (C-1) — chấm TRƯỚC các phiên chính
 
 `pilot_50.html` — {len(order)} lượt ({len(allrows)} ô + {len(reps)} lặp), ~5 phút. Xuất `{fname}` vào
 chính thư mục này rồi chạy `.venv/bin/python -m pipeline.ground_truth.estimate_khoi_c --pilot` để xem
-dwell / κ / mồi. Ô pilot KHÔNG trùng ô nào của 4 phiên chính. Hướng dẫn đầy đủ:
+dwell / κ / mồi. Ô pilot KHÔNG trùng ô nào của các phiên chính. Hướng dẫn đầy đủ:
 `docs/HUONG_DAN_CHAM_KHOI_C_2026-09-16.md`.
 """)
     print(f"[C-pilot] {len(order)} lượt = {len(allrows)} ô + {len(reps)} lặp; gap lặp min={min(gaps) if gaps else '-'}; "

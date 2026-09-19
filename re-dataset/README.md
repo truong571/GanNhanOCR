@@ -112,4 +112,4 @@ như dữ liệu đã kiểm chứng**.
 
 Xem `NGUON_THU_TICH.md` cho lai lịch ba cuốn sách nguồn.
 
-*Sinh tự động từ `labels.csv` ngày 2026-09-16 · commit `bff2a3bd28`*
+*Sinh tự động từ `labels.csv` ngày 2026-09-16 · commit `08e954752b`*

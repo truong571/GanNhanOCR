@@ -67,6 +67,7 @@ from pipeline.align_engine.align_production import (                    # noqa: 
 from pipeline.align_engine.consensus import (                         # noqa: E402
     AM_DA_QUYET, am_da_quyet, chuan_am, decide_label)
 from pipeline.align_engine.bbox_fix import tighten_box, carve_neighbor_ink  # noqa: E402
+from pipeline.align_engine import recenter_f3g as rf3g                 # noqa: E402  (D-1, chỉ chạy khi --crops-v2)
 from pipeline.align_engine import tier_v3 as tv3                      # noqa: E402
 from pipeline.align_engine.visual_emission import load_page_gray as vis_load_gray  # noqa: E402  (B-2; torch nạp lười)
 from pipeline import decisions as dcs                                 # noqa: E402
@@ -916,6 +917,11 @@ def main():
                          "into the char above/below in the same column)")
     ap.add_argument("--crop-review", action="store_true",
                     help="also materialize REVIEW crops (kept in labels.csv either way)")
+    # D-1 (Khối D, mặc định TẮT): crops_v2 F3g tái định tâm theo hình chiếu mực — ghi SONG SONG
+    # $out/crops_v2/<tier>/<cùng tên>.png + $out/labels_crops_v2.csv; KHÔNG đổi crop giao nộp/labels.csv.
+    ap.add_argument("--crops-v2", action="store_true",
+                    help="D-1: thêm crops_v2/ (F3g, pipeline.align_engine.recenter_f3g) + labels_crops_v2.csv "
+                         "sidecar; crop giao nộp và labels.csv giữ nguyên byte")
     # A-5 (flow N4a–N4c): mặc định BẬT. --no-two-pass giữ đường cũ (tier ngay trong
     # vòng PASS 1, không neo ngữ liệu, không p_register) để tái lập bộ hiện tại.
     ap.add_argument("--two-pass", action=argparse.BooleanOptionalAction, default=True,
@@ -930,10 +936,9 @@ def main():
     # bộ 64.525 (selftest: bbox khớp 100%). Chỉ có nghĩa với --reseg detector.
     ap.add_argument("--box-rule", default="syl_index", choices=list(ap_mod.BOX_RULES),
                     help="luật gán hộp ảnh (A-6): syl_index (mặc định) | legacy (trọn gói cũ)")
-    ap.add_argument("--qd01-cells", default=str(REPO / "config" / "qd01_cells.csv"),
-                    help="khoá QĐ-01 (N0d): cột chứa ô khoá chạy trọn gói luật hộp cũ; "
-                         "PASS 1c khoá từng ô theo nom_idx (A-2/A-7); "
-                         "'none' = không khoá gì (CHỈ để thí nghiệm)")
+    ap.add_argument("--qd01-cells", default="none",
+                    help="khoá QĐ-01: 'none' (mặc định: tự động 100%%, không áp đặt người) | "
+                         "đường dẫn tệp CSV khoá (ví dụ config/qd01_cells.csv để thí nghiệm/tái lập cũ)")
     # B-5 (DANH_MUC 1B): phạm vi khoá QĐ-01. col (mặc định) = cột chứa ô khoá chạy trọn
     # gói luật hộp cũ (legacy_locked_col); cell = cột chạy 3 nhánh bình thường, riêng ô
     # khoá dùng bbox/prev/next_cu, hàng xóm trùng hộp (IoU >= SHIFT_IOU) về midpoint
@@ -965,14 +970,15 @@ def main():
     ap.add_argument("--visual-lambda", type=float, default=None, help="λ (mặc định config, 0,25)")
     ap.add_argument("--visual-gap", type=float, default=None, help="khe ảnh cộng vào COST_DEL/INS ×λ (mặc định 8)")
     ap.add_argument("--visual-cap", type=float, default=None, help="trần −logP (mặc định 12)")
+    ap.add_argument("--force", "-f", action="store_true", help="bỏ qua khóa .FROZEN, ép buộc ghi đè")
     args = ap.parse_args()
 
     out = Path(args.out)
     # HÀNG RÀO: bộ đã đóng băng (dataset_out/.FROZEN) không được build đè — PASS 2 dọn
-    # thư mục crop trước khi cắt. Cùng quy ước với run_pipeline.sh (FROZEN_OVERRIDE=GHIDE).
-    if (out / ".FROZEN").exists() and os.environ.get("FROZEN_OVERRIDE") != "GHIDE":
+    # thư mục crop trước khi cắt. Cùng quy ước với run_pipeline.sh (FROZEN_OVERRIDE=GHIDE hoặc cờ --force).
+    if (out / ".FROZEN").exists() and os.environ.get("FROZEN_OVERRIDE") != "GHIDE" and not args.force:
         raise SystemExit(f"[build] {out}/.FROZEN tồn tại — không build đè bộ đã đóng băng. "
-                         "Dùng --out <thư mục khác> (DS_OUT) hoặc FROZEN_OVERRIDE=GHIDE nếu CỐ Ý.")
+                         "Dùng thêm cờ --force, hoặc FROZEN_OVERRIDE=GHIDE, hoặc xóa file .FROZEN.")
     out.mkdir(parents=True, exist_ok=True)
     config = load_config(args.config)
     paths = config["paths"]
@@ -1322,44 +1328,53 @@ def main():
               f"{n_l1_giu:,} | hoà {n_l1_hoa:,} (l1_tie)", flush=True)
         # L3 (apply_cot_lech_cau_xuoi) và L5 (syllable_gate/PROMOTE) KHÔNG chạy ở đường
         # này — tier_v3 đã thay (N5c); hàm giữ cho --no-two-pass.
-        # N5g: KHOÁ QĐ-01 theo (book,page,column,nom_idx) + QĐ-01a
+        # N5g: KHOÁ QĐ-01 theo (book,page,column,nom_idx) + QĐ-01a (MẶC ĐỊNH TẮT: none)
+        cells = {}
+        decisions = {}
+        qd01_pending = []
+        qd01_st = {"n_cells_in_build": 0, "n_locked": 0, "n_pending": 0, "n_khe": 0,
+                   "n_khong_khop": 0, "n_bo": 0, "n_khac": 0, "n_excluded_ngoai_cells": 0,
+                   "n_decisions_ngoai_cells_lock": 0, "n_decisions_ngoai_cells_khac": 0}
+        lock_shift_st = {}
         if args.qd01_cells.lower() != "none":
             cells = load_qd01_cells_full(args.qd01_cells)
             decisions = load_qd01a_decisions(args.qd01a_decisions)
-        built_pages = {(b, pg) for b, pg, _png, _r in page_states}
-        seg_backend_of = {(b, pg): r.get("seg_backend", "") for b, pg, _png, r in page_states}
-        qd01_st, qd01_pending = apply_qd01_lock(records, cells, decisions, colmap, built_pages,
-                                                seg_backend_of)
-        n_cells_b = qd01_st["n_cells_in_build"]
-        n_acc = (qd01_st["n_locked"] + qd01_st["n_pending"] + qd01_st["n_bo"] + qd01_st["n_khac"])
-        print(f"  [QĐ-01] ô khoá trong {len(built_pages)} trang build: {n_cells_b:,} / "
-              f"{len(cells):,} tệp | locked {qd01_st['n_locked']:,} | pending "
-              f"{qd01_st['n_pending']:,} (khe {qd01_st['n_khe']}, không khớp "
-              f"{qd01_st['n_khong_khop']}, âm khác {qd01_st['n_pending'] - qd01_st['n_khe'] - qd01_st['n_khong_khop']}) "
-              f"| bo {qd01_st['n_bo']} | khac {qd01_st['n_khac']} | QĐ-01a ngoài khoá: excluded "
-              f"{qd01_st['n_excluded_ngoai_cells']}, lock {qd01_st['n_decisions_ngoai_cells_lock']}, "
-              f"khac {qd01_st['n_decisions_ngoai_cells_khac']}", flush=True)
-        if n_acc != n_cells_b:
-            # không dừng build (spec N5g) — ghi summary + in đỏ để đối soát
-            print(f"  [QĐ-01] 🔴 locked + pending + bo + khac = {n_acc} ≠ {n_cells_b} ô khoá "
-                  "trong build", flush=True)
-        # B-5 (--lock-scope cell): hàng xóm trùng bbox_cu ô khoá -> midpoint (shifted_by_lock)
-        if args.lock_scope != "col":
-            lock_shift_st = apply_lock_shift(records, colmap)
-            print(f"  [B-5 khoá ô] ô khoá {lock_shift_st['n_locked']:,} | hàng xóm dời về midpoint "
-                  f"{lock_shift_st['n_shifted']:,} (cùng cột {lock_shift_st['n_shifted_same_col']}, "
-                  f"cột kề {lock_shift_st['n_shifted_adj_col']}; trùng đúng byte {lock_shift_st['n_exact_eq']}) "
-                  f"| khoá–khoá trùng {lock_shift_st['n_locked_locked']} | pending trùng "
-                  f"{lock_shift_st['n_pending_overlap']} | không có midpoint {lock_shift_st['n_no_mid']} "
-                  f"| sau dời vẫn trùng {lock_shift_st['n_still_overlap']}", flush=True)
-            if args.lock_scope == "cell_fallback":
-                fb = apply_lock_fallback(records, colmap)
-                lock_shift_st.update({f"fallback_{k}": v for k, v in fb.items()})
-                print(f"  [B-5 lùi cột] cột khoá {fb['n_cols_lock']:,} | lùi về legacy "
-                      f"{fb['n_cols_fallback']:,} cột (ô khoá lệch {fb['n_cols_fallback_lech']}, "
-                      f"có hàng xóm dời {fb['n_cols_fallback_doi']}) | ô đổi hộp {fb['n_cells_fallback']:,} "
-                      f"(trong đó đã dời {fb['n_cells_was_shifted']}) | không có legacy "
-                      f"{fb['n_cols_no_legacy']} cột", flush=True)
+            built_pages = {(b, pg) for b, pg, _png, _r in page_states}
+            seg_backend_of = {(b, pg): r.get("seg_backend", "") for b, pg, _png, r in page_states}
+            qd01_st, qd01_pending = apply_qd01_lock(records, cells, decisions, colmap, built_pages,
+                                                    seg_backend_of)
+            n_cells_b = qd01_st["n_cells_in_build"]
+            n_acc = (qd01_st["n_locked"] + qd01_st["n_pending"] + qd01_st["n_bo"] + qd01_st["n_khac"])
+            print(f"  [QĐ-01] ô khoá trong {len(built_pages)} trang build: {n_cells_b:,} / "
+                  f"{len(cells):,} tệp | locked {qd01_st['n_locked']:,} | pending "
+                  f"{qd01_st['n_pending']:,} (khe {qd01_st['n_khe']}, không khớp "
+                  f"{qd01_st['n_khong_khop']}, âm khác {qd01_st['n_pending'] - qd01_st['n_khe'] - qd01_st['n_khong_khop']}) "
+                  f"| bo {qd01_st['n_bo']} | khac {qd01_st['n_khac']} | QĐ-01a ngoài khoá: excluded "
+                  f"{qd01_st['n_excluded_ngoai_cells']}, lock {qd01_st['n_decisions_ngoai_cells_lock']}, "
+                  f"khac {qd01_st['n_decisions_ngoai_cells_khac']}", flush=True)
+            if n_acc != n_cells_b:
+                # không dừng build (spec N5g) — ghi summary + in đỏ để đối soát
+                print(f"  [QĐ-01] 🔴 locked + pending + bo + khac = {n_acc} ≠ {n_cells_b} ô khoá "
+                      "trong build", flush=True)
+            # B-5 (--lock-scope cell): hàng xóm trùng bbox_cu ô khoá -> midpoint (shifted_by_lock)
+            if args.lock_scope != "col":
+                lock_shift_st = apply_lock_shift(records, colmap)
+                print(f"  [B-5 khoá ô] ô khoá {lock_shift_st['n_locked']:,} | hàng xóm dời về midpoint "
+                      f"{lock_shift_st['n_shifted']:,} (cùng cột {lock_shift_st['n_shifted_same_col']}, "
+                      f"cột kề {lock_shift_st['n_shifted_adj_col']}; trùng đúng byte {lock_shift_st['n_exact_eq']}) "
+                      f"| khoá–khoá trùng {lock_shift_st['n_locked_locked']} | pending trùng "
+                      f"{lock_shift_st['n_pending_overlap']} | không có midpoint {lock_shift_st['n_no_mid']} "
+                      f"| sau dời vẫn trùng {lock_shift_st['n_still_overlap']}", flush=True)
+                if args.lock_scope == "cell_fallback":
+                    fb = apply_lock_fallback(records, colmap)
+                    lock_shift_st.update({f"fallback_{k}": v for k, v in fb.items()})
+                    print(f"  [B-5 lùi cột] cột khoá {fb['n_cols_lock']:,} | lùi về legacy "
+                          f"{fb['n_cols_fallback']:,} cột (ô khoá lệch {fb['n_cols_fallback_lech']}, "
+                          f"có hàng xóm dời {fb['n_cols_fallback_doi']}) | ô đổi hộp {fb['n_cells_fallback']:,} "
+                          f"(trong đó đã dời {fb['n_cells_was_shifted']}) | không có legacy "
+                          f"{fb['n_cols_no_legacy']} cột", flush=True)
+        else:
+            print("  [QĐ-01] TẮT (--qd01-cells none): 100% tự động theo tier_v3, không áp đặt người", flush=True)
         # N5h: 'người' ngoài khoá — chỉ hạ ô nhãn v3 == 㝵; không chốt AM_DA_QUYET bao trùm
         # A-8: lop_nham đọc từ decisions.yaml (mục da_ky); --decisions none -> không hạ ô nào
         n_lop_nham, n_nguoi_ngoai = apply_nguoi_ngoai_khoa(
@@ -1465,6 +1480,9 @@ def main():
         for d in ("gold", "silver", "syllable", "review"):
             if (out / d).is_dir():
                 shutil.rmtree(out / d)
+        if args.crops_v2 and (out / "crops_v2").is_dir():
+            shutil.rmtree(out / "crops_v2")
+    crops_v2_rows: list[dict] = []          # D-1 sidecar (chỉ khi --crops-v2)
     by_page = defaultdict(list)
     for r in records:
         by_page[r["page_png"]].append(r)
@@ -1492,6 +1510,15 @@ def main():
             for i, r in enumerate(col_recs):
                 r["_prev_bbox"] = col_recs[i - 1]["bbox"] if i > 0 else None
                 r["_next_bbox"] = col_recs[i + 1]["bbox"] if i < len(col_recs) - 1 else None
+        if args.crops_v2 and img is not None:
+            # D-1: pitch cột = trung vị khoảng cách tâm bản ghi cùng cột (như _reseg_column), rơi về
+            # trung vị trang khi cột <2 bản ghi/lệch — gán tạm, không ghi ra labels.csv
+            _cys = {c: [(r["bbox"][1] + r["bbox"][3]) / 2.0 for r in rs] for c, rs in by_col.items()}
+            _pp = rf3g.page_pitch(_cys)
+            for c, rs in by_col.items():
+                _pc = rf3g.column_pitch(_cys[c], fallback=_pp)
+                for r in rs:
+                    r["_pitch"] = _pc
 
         for r in recs:
             img_rel = q = None
@@ -1507,6 +1534,28 @@ def main():
                               tighten=not args.no_tighten, prev_bbox=pv, next_bbox=nx)
                 if q:
                     img_rel = f"{r['tier'].lower()}/{fn}"
+                if q and args.crops_v2:
+                    # D-1: crop v2 song song, cùng tên tệp dưới crops_v2/<tier>/; gray_full có thể None
+                    # khi --no-carve -> recenter_f3g tự rơi về cửa sổ cũ (reason no_data)
+                    q2 = rf3g.save_crop_v2(img, gray_full, r.get("bbox"), pv, nx, r.get("_pitch"), args.pad,
+                                           out / "crops_v2" / r["tier"].lower() / fn,
+                                           tighten=not args.no_tighten)
+                    crops_v2_rows.append({
+                        "image": img_rel, "book": r["book"], "page": r["page"], "column": r["column"],
+                        "nom_idx": r.get("nom_idx", ""), "syl_idx": r.get("syl_idx", ""), "tier": r["tier"],
+                        "bbox": json.dumps(r.get("bbox")), "image_md5": q["md5"],
+                        "bbox_v2": json.dumps(q2["bbox_v2"]) if q2 else "",
+                        "bbox_v2_win": json.dumps(q2["bbox_v2_win"]) if q2 else "",
+                        "crop_mode": q2["crop_mode"] if q2 else "",
+                        "guard_reason": q2["meta"].get("reason", "") if q2 else "cut_fail",
+                        "recenter_shift": q2["recenter_shift"] if q2 else "",
+                        "pitch": q2["pitch"] if q2 else "",
+                        "image_md5_v2": q2["md5"] if q2 else "", "ink_pct_v2": q2["ink"] if q2 else "",
+                        "crop_w_v2": q2["w"] if q2 else "", "crop_h_v2": q2["h"] if q2 else "",
+                        "crop_quality_flag_v2": q2["crop_quality_flag"] if q2 else "",
+                        "stray_ink_v2": q2["stray_ink"] if q2 else "",
+                        "border_ink_v2": q2["border_ink"] if q2 else "",
+                    })
                 if r.get("_qd01_pending") and r.get("_bbox_cu") and r["_bbox_cu"] != r.get("bbox"):
                     # ép cắt thêm crop theo bbox_cu để người đối chiếu (qd01a_pending.csv)
                     fn_cu = fn[:-4] + "_cu.png"
@@ -1607,6 +1656,24 @@ def main():
                             "bbox_truoc": json.dumps(r.get("_bbox_truoc_shift")),
                             "bbox_sau": json.dumps(r.get("bbox")), "image": r.get("_image", "")})
         print(f"  [B-5 khoá ô] shifted_by_lock -> {out / 'lock_shift.csv'} ({len(sh)} dòng)", flush=True)
+
+    # ---------- D-1: sidecar crops_v2 (chỉ khi --crops-v2; labels.csv KHÔNG đổi) ----------
+    if args.crops_v2:
+        v2_fields = ["image", "book", "page", "column", "nom_idx", "syl_idx", "tier", "bbox", "bbox_v2",
+                     "bbox_v2_win", "crop_mode", "guard_reason", "recenter_shift", "pitch", "image_md5",
+                     "image_md5_v2", "ink_pct_v2", "crop_w_v2", "crop_h_v2", "crop_quality_flag_v2",
+                     "stray_ink_v2", "border_ink_v2"]
+        crops_v2_rows.sort(key=lambda r: (r["book"], r["page"], int(r["column"]), r["image"]))
+        with open(out / "labels_crops_v2.csv", "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=v2_fields)
+            w.writeheader()
+            for r in crops_v2_rows:
+                w.writerow(r)
+        _n_f3 = sum(1 for r in crops_v2_rows if r["crop_mode"] == "f3g")
+        _n_fb = sum(1 for r in crops_v2_rows if r["crop_mode"] == "fallback")
+        _fb_eq = sum(1 for r in crops_v2_rows if r["crop_mode"] == "fallback" and r["image_md5_v2"] == r["image_md5"])
+        print(f"  [D-1 crops_v2] {out / 'labels_crops_v2.csv'}: {len(crops_v2_rows):,} ô · f3g {_n_f3:,} · "
+              f"fallback {_n_fb:,} (md5 == v1: {_fb_eq}/{_n_fb}) -> {out / 'crops_v2'}", flush=True)
 
     # ---------- write manifest + summary ----------
     fields = ["image", "book", "page", "column", "ocr_char", "syllable", "label",

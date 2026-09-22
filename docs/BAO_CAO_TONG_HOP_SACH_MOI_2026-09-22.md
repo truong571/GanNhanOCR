@@ -1,6 +1,6 @@
 # BÁO CÁO TỔNG HỢP — gán nhãn tự động cho sách mới (LVT1883, KVK1884, Chrestomathie1872): vòng 1 + vòng 2 + I5 + run_pipeline
 
-Ngày 2026-09-22 (chiều, vòng 3) · HEAD 4e0a314bca + mã chưa commit (kế hoạch: `docs/KE_HOACH_COMMIT_VONG3_2026-09-22.md`).
+Ngày 2026-09-22 (chiều, vòng 3) · đã commit trên main: 59fde272c4 (engine pitch), 6575d4d764 (run_pipeline --book + measure + train_crop), 10e6fa1b3f (docs) — kế hoạch: `docs/KE_HOACH_COMMIT_VONG3_2026-09-22.md`.
 Báo cáo này **gộp và thay** `BAO_CAO_TONG_THE_SACH_MOI_2026-09-22.md` (vòng 1–2) và `PHUONG_AN_TU_DONG_2026-09-22.md` (hai tệp giữ làm lịch sử).
 Mọi con số sinh bởi script (0 token LLM), nguồn ghi ngay cạnh số; **không có người kiểm** (ràng buộc đề tài).
 

@@ -208,6 +208,107 @@ def test_ocr_retry():
           and ocr_api._token_cache["exp"] == 0.0)
 
 
+def test_ocr_guest_mode():
+    """Guest Mode (mock, không mạng): token lấy MỚI ở mỗi lần thử; 401 sau re-login
+    "not active" -> Guest 1 lần rồi NHỚ; đường thành công y nguyên (1 request, token)."""
+    print("[ocr_api guest mode (mock)]")
+    import os
+
+    class _Resp:
+        def __init__(self, status, text="", payload=None):
+            self.status_code = status
+            self.text = text
+            self._payload = payload if payload is not None else {"is_success": True, "data": {"file_name": "f"}}
+
+        def json(self):
+            return self._payload
+
+    def run(server, logins):
+        """server(auth_header) -> _Resp; logins = list các token mà login sinh ra."""
+        seen = []
+        posts = []
+
+        def fake_post(url, **kw):
+            auth = kw.get("headers", {}).get("Authorization", "<none>")
+            seen.append(auth)
+            return server(auth)
+
+        def fake_login(u, p):
+            tok = logins.pop(0) if logins else None
+            return (tok, 9e9) if tok else None
+
+        saved = (ocr_api.requests.post, ocr_api._login_hcmus, dict(ocr_api._token_cache),
+                 ocr_api._guest_mode, os.environ.get("SN_OCR_USERNAME"), os.environ.get("SN_OCR_PASSWORD"),
+                 os.environ.get("SN_OCR_TOKEN"))
+        ocr_api.requests.post = fake_post
+        ocr_api._login_hcmus = fake_login
+        try:
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tf:
+                tf.write(b"x"); img = tf.name
+            r1 = ocr_api.upload_image(img)
+            n1 = len(seen)
+            r2 = ocr_api.upload_image(img)       # lần 2: kiểm tra có nhớ trạng thái
+            os.unlink(img)
+            flag = ocr_api.is_guest_mode()
+            return r1, r2, seen[:n1], seen[n1:], flag
+        finally:
+            ocr_api.requests.post, ocr_api._login_hcmus = saved[0], saved[1]
+            ocr_api._token_cache.clear(); ocr_api._token_cache.update(saved[2])
+            ocr_api._guest_mode = saved[3]
+            for k, v in (("SN_OCR_USERNAME", saved[4]), ("SN_OCR_PASSWORD", saved[5]), ("SN_OCR_TOKEN", saved[6])):
+                if v is None: os.environ.pop(k, None)
+                else: os.environ[k] = v
+
+    def setup(cached="OLD"):
+        os.environ["SN_OCR_USERNAME"] = "u"; os.environ["SN_OCR_PASSWORD"] = "p"
+        os.environ.pop("SN_OCR_TOKEN", None)
+        ocr_api._token_cache["token"] = cached; ocr_api._token_cache["exp"] = 9e9
+        ocr_api.reset_guest_mode()
+
+    # (1) 200 bình thường: 1 request/lần, token cache, không login, không guest
+    setup("OLD")
+    r1, r2, a1, a2, g = run(lambda auth: _Resp(200), logins=[])
+    check("200: upload ok", r1 == "f" and r2 == "f")
+    check("200: đúng 1 request mỗi lần, token cache", a1 == ["Bearer OLD"] and a2 == ["Bearer OLD"], f"{a1} {a2}")
+    check("200: không bật guest", not g)
+
+    # (2) 401 (token hết hạn) -> re-login -> gửi token MỚI -> 200
+    setup("OLD")
+    srv = lambda auth: _Resp(200) if auth == "Bearer NEW" else _Resp(401, "token expired")
+    r1, r2, a1, a2, g = run(srv, logins=["NEW"])
+    check("401->re-login: thành công", r1 == "f" and r2 == "f")
+    check("401->re-login: lần thử 2 gửi token MỚI (không phải cũ)", a1 == ["Bearer OLD", "Bearer NEW"], str(a1))
+    check("401->re-login: lần gọi sau dùng token mới, không guest", a2 == ["Bearer NEW"] and not g, str(a2))
+
+    # (3) 401 "not active" kể cả sau re-login -> Guest 1 lần rồi NHỚ
+    setup("OLD")
+    srv = lambda auth: _Resp(200) if auth == "<none>" else _Resp(401, '{"message":"User is not active"}')
+    r1, r2, a1, a2, g = run(srv, logins=["NEW", "NEW2", "NEW3"])
+    check("not active: guest thành công", r1 == "f" and r2 == "f")
+    check("not active: OLD -> re-login NEW -> guest", a1 == ["Bearer OLD", "Bearer NEW", "<none>"], str(a1))
+    check("not active: lần gọi sau đi thẳng guest (không login/401 lặp)", a2 == ["<none>"], str(a2))
+    check("not active: cờ _guest_mode bật", g)
+    ocr_api._guest_mode = True; ocr_api.reset_guest_mode()
+    check("reset_guest_mode tắt cờ", not ocr_api.is_guest_mode())
+
+    # (4) 401 KHÔNG phải not-active và guest cũng 401 -> None, không nhớ guest
+    setup("OLD")
+    srv = lambda auth: _Resp(401, "bad")
+    r1, r2, a1, a2, g = run(srv, logins=["NEW", "NEW2"])
+    check("401 toàn bộ: trả None", r1 is None and r2 is None)
+    check("401 toàn bộ: không bật guest", not g)
+
+    # (5) 500 bền -> None, KHÔNG rơi xuống guest (guest chỉ cho 401)
+    setup("OLD")
+    real_sleep = ocr_api.time.sleep; ocr_api.time.sleep = lambda s: None
+    try:
+        r1, r2, a1, a2, g = run(lambda auth: _Resp(500), logins=[])
+    finally:
+        ocr_api.time.sleep = real_sleep
+    check("500 bền: None, không guest", r1 is None and "<none>" not in a1 and not g, str(a1))
+
+
 def test_ocr_cache_guard():
     """Chốt chặn cache OCR: cache chỉ hợp lệ với ĐÚNG ảnh đã sinh ra nó.
 
@@ -1278,6 +1379,7 @@ def main() -> int:
     test_monotone_assign()
     test_syllable_gate()
     test_ocr_retry()
+    test_ocr_guest_mode()
     test_ocr_cache_guard()
     test_proto_cache_not_poisoned()
     test_crop_geometry_wired()

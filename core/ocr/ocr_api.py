@@ -5,6 +5,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -173,14 +174,17 @@ def _invalidate_token() -> None:
 
 
 def _request_with_retry(do_request, what, max_attempts=4, base_delay=1.0,
-                        sleep=time.sleep, on_reauth=_invalidate_token):
+                        sleep=time.sleep, on_reauth=_invalidate_token, state=None):
     """Run do_request() -> requests.Response with retry/backoff.
 
     Retries 429/5xx and Timeout/ConnectionError with exponential backoff; on 401/403
     refreshes the token and retries once; permanent 4xx fail loud. Returns the Response
     on success or None once attempts are exhausted. `sleep` is injectable for tests.
+    `state` (dict, optional): on failure receives {'last_resp': Response|None,
+    'reauthed': bool} so the caller can tell a rejected token from a dead server.
     """
     last = None
+    last_resp = None
     reauthed = False
     for attempt in range(max_attempts):
         try:
@@ -195,6 +199,7 @@ def _request_with_retry(do_request, what, max_attempts=4, base_delay=1.0,
             return resp
         kind = classify_http_status(resp.status_code)
         last = f"HTTP {resp.status_code}"
+        last_resp = resp
         if kind == "reauth" and on_reauth is not None and not reauthed:
             on_reauth()
             reauthed = True
@@ -204,21 +209,101 @@ def _request_with_retry(do_request, what, max_attempts=4, base_delay=1.0,
             continue
         break                               # permanent 4xx, or attempts exhausted
     print(f"[OCR] {what} failed after {max_attempts} attempts: {last}", file=sys.stderr)
+    if state is not None:
+        state["last_resp"] = last_resp
+        state["reauthed"] = reauthed
     return None
 
 
+# --- Guest Mode (không token) ------------------------------------------------
+# Tài khoản HCMUS bị khoá ("not active") trả 401 kể cả sau khi re-login thành
+# công. Khi đó API vẫn nhận request KHÔNG có Authorization (Guest). Cờ tiến trình
+# `_guest_mode` nhớ trạng thái này để các trang sau không lặp login + 401.
+_guest_mode: bool = False
+_INACTIVE_RE = re.compile(r"not\s*activ|inactiv|deactivat|chưa kích hoạt|bị khoá|disabled", re.I)
+
+
+def is_guest_mode() -> bool:
+    return _guest_mode
+
+
+def reset_guest_mode() -> None:
+    """Quên trạng thái Guest -> lần gọi sau thử lại bằng token."""
+    global _guest_mode
+    _guest_mode = False
+
+
+def _account_inactive(resp) -> bool:
+    """401 mà thân phản hồi nói tài khoản không hoạt động."""
+    if resp is None or getattr(resp, "status_code", None) != 401:
+        return False
+    try:
+        text = resp.text or ""
+    except Exception:
+        text = ""
+    return bool(_INACTIVE_RE.search(text))
+
+
+def _base_headers() -> dict[str, str]:
+    return {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Origin": f"https://{_SN_DOMAIN}",
+        "Referer": f"https://{_SN_DOMAIN}/",
+    }
+
+
+def _authed_request(do, what):
+    """Chạy do(token) -> Response với token lấy MỚI ở MỖI lần thử.
+
+    401 -> _request_with_retry huỷ cache token -> lần thử sau _get_ocr_token()
+    re-login và gửi token MỚI (không gửi lại token cũ). Nếu vẫn 401 sau re-login
+    thì thử Guest (do("")); bật `_guest_mode` khi xác nhận tài khoản "not active"
+    (thân 401) hoặc khi Guest thành công, để các lần gọi sau đi thẳng Guest.
+    """
+    global _guest_mode
+    if _guest_mode:
+        return _request_with_retry(lambda: do(""), f"{what} (Guest)", on_reauth=None)
+
+    used = {"token": False}
+
+    def attempt():
+        token = _get_ocr_token()
+        used["token"] = used["token"] or bool(token)
+        return do(token)
+
+    state: dict = {}
+    resp = _request_with_retry(attempt, what, state=state)
+    if resp is not None:
+        return resp
+    last = state.get("last_resp")
+    if last is None or last.status_code != 401 or not used["token"]:
+        return None                         # lỗi khác 401, hoặc chưa hề có token
+    inactive = _account_inactive(last)
+    print(f"[OCR] {what}: token bị từ chối (401{', tài khoản not active' if inactive else ''}) "
+          f"kể cả sau re-login -> thử Guest Mode (không token)...", file=sys.stderr)
+    resp = _request_with_retry(lambda: do(""), f"{what} (Guest)", on_reauth=None)
+    if inactive or resp is not None:
+        _guest_mode = True
+        print("[OCR] Guest Mode: nhớ cho các lần gọi sau trong tiến trình "
+              "(reset_guest_mode() để thử lại token).", file=sys.stderr)
+    return resp
+
+
 def upload_image(image_path: str) -> str | None:
-    """Upload image to HCMUS OCR server. Returns server file_name."""
+    """Upload image to HCMUS OCR server. Returns server file_name.
+    Hỗ trợ cả chế độ có Token (thành viên) và Guest Mode (không token).
+    """
     url = f"https://{_SN_DOMAIN}/api/web/clc-sinonom/image-upload"
 
-    def do():
-        headers = {"User-Agent": "Mozilla/5.0",
-                   "Authorization": f"Bearer {_get_ocr_token()}"}
+    def do(token: str = ""):
+        headers = _base_headers()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
         with open(image_path, "rb") as f:
-            return requests.post(url, files={"image_file": f}, headers=headers,
-                                 verify=False, timeout=30)
+            return requests.post(url, files={"image_file": (Path(image_path).name, f, "image/jpeg")},
+                                 headers=headers, verify=False, timeout=30)
 
-    resp = _request_with_retry(do, "Upload")
+    resp = _authed_request(do, "Upload")
     if resp is None:
         return None
     try:
@@ -232,7 +317,9 @@ def upload_image(image_path: str) -> str | None:
 
 
 def recognize(file_name: str) -> list[dict] | None:
-    """Call OCR API, returns list of boxes [{points, transcription}, ...]."""
+    """Call OCR API, returns list of boxes [{points, transcription}, ...].
+    Hỗ trợ cả chế độ có Token (thành viên) và Guest Mode (không token).
+    """
     url = f"https://{_SN_DOMAIN}/api/web/clc-sinonom/image-ocr"
     body = {
         "file_name": file_name,
@@ -242,13 +329,14 @@ def recognize(file_name: str) -> list[dict] | None:
         "font_type": 1,
     }
 
-    def do():
-        headers = {"User-Agent": "Mozilla/5.0",
-                   "Authorization": f"Bearer {_get_ocr_token()}",
-                   "Content-Type": "application/json; charset=utf-8"}
+    def do(token: str = ""):
+        headers = _base_headers()
+        headers["Content-Type"] = "application/json; charset=utf-8"
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
         return requests.post(url, json=body, headers=headers, verify=False, timeout=60)
 
-    resp = _request_with_retry(do, "OCR")
+    resp = _authed_request(do, "OCR")
     if resp is None:
         return None
     try:

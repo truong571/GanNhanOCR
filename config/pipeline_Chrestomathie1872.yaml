@@ -14,11 +14,22 @@ books:
     n_columns: auto
     det_xmargin: 0.05
     det_thr: 0.15
+    # 2026-09-22 (I5, phương án A): pitch_decode theo bước cột — văn xuôi 1 tầng/cột, N = số âm QN của
+    # dòng (không có len_odd → tầng theo chữ kim). Số đo tham chiếu chỉ có cho LVT/KVK (config LVT1883);
+    # Chresto so trực tiếp bản _pitch với bản legacy (docs/BAO_CAO_TONG_HOP_SACH_MOI_2026-09-22.md §3).
+    box_decoder: pitch
     # Bước B4' cổng theo cơ chế (pipeline/remediation/mechanism_gates.py, agent cổng cơ chế 22/09): vắng khoá
     # chỉ bật với layout=lithograph -> bật tường minh cho văn xuôi (cùng detector CenterNet học STT, cùng lớp
     # lỗi hộp ±1 / midpoint). Chỉ mô-đun ấy đọc khoá này.
     mechanism_gates: true
     reocr: false
+
+# 2026-09-22: khối `run:` CHỈ run_pipeline.sh --book đọc; engine/adapter/step0/mechanism_gates KHÔNG đọc.
+# Lệnh tương đương: docs/CHAY_CHRESTO1872_2026-09-22.md §3.
+run:
+  ingest: prose                 # pipeline.tools.ingest_prose_book (--ocr kim, --kim-src orig mặc định, cache kim_raw/)
+  n_columns: 7                  # số cột phổ biến của sách (chỉ sửa LOG/README "trang không đủ N cột")
+  cross: false                  # không có dị bản số hoá -> không auto_precision, không cổng (d)
 
 paths:
   data_dir: prepared

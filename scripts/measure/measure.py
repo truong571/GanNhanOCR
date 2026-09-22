@@ -14,6 +14,7 @@ Bố cục đầu ra (quy ước: mỗi phép đo một thư mục con, không �
     measure_out/<book>/qn_ocr/            qn_print_ocr.py        (LVT1883, KVK1884)
     measure_out/Chrestomathie1872/chresto_map/   chresto_map.py
     measure_out/detector_transfer/        detector_transfer.py   (liên sách: LVT+KVK+STT đối chứng)
+    measure_out/box_ref/                  box_ref_eval.py        (hộp legacy vs pitch_decode so ô tham chiếu, LVT+KVK)
     measure_out/code_facts/               code_facts.py → docs/PIPELINE_FACTS.json
     measure_out/SUMMARY.json, REPORT.md, logs/<step>.log
 
@@ -37,7 +38,7 @@ HERE = Path(__file__).resolve().parent
 
 LITHO_BOOKS = ["LucVanTien1883", "KimVanKieu1884"]
 ALL_BOOKS = LITHO_BOOKS + ["Chrestomathie1872"]
-ALL_STEPS = ["code_facts", "layout", "qn_ocr", "chresto_map", "detector_transfer"]
+ALL_STEPS = ["code_facts", "layout", "qn_ocr", "chresto_map", "detector_transfer", "box_ref"]
 
 # Invariant FAIL được xếp "mềm" (không đổi mã thoát) — chỉ khi có lý do đo đạc rõ ràng.
 SOFT_INVARIANTS: dict[str, dict[str, str]] = {
@@ -105,6 +106,17 @@ KEY_METRICS: dict[str, list[tuple[str, str]]] = {
         ("STT4 pipeline_cfg", "per_book.SachThanhTruyen4.pipeline_cfg.eq_excl"),
         ("STT11 pipeline_cfg", "per_book.SachThanhTruyen11.pipeline_cfg.eq_excl"),
         ("chiếu vs N (LVT/KVK)", "agreement.nchars_proj_vs_N"),
+        ("thời gian s", "runtime_s"),
+    ],
+    "box_ref": [
+        ("trang đo", "pages.n"),
+        ("LVT I5 n_det==N @0.15 (27 trang)", "per_book.LucVanTien1883.columns.prepared@0.15.I5_n_det_eq_N_pct"),
+        ("LVT ô ok IoU≥0,5: legacy@0.15", "per_book.LucVanTien1883.cells_verified.legacy@0.15_prepared.ok_iou50_pct"),
+        ("LVT ô ok IoU≥0,5: pitch", "per_book.LucVanTien1883.cells_verified.pitch_prepared.ok_iou50_pct"),
+        ("LVT cắt vào thân chữ: legacy / pitch", "per_book.LucVanTien1883.cells_verified.legacy@0.15_prepared.cut_glyph_pct"),
+        ("KVK I5 n_det==N @0.15 (27 trang)", "per_book.KimVanKieu1884.columns.prepared@0.15.I5_n_det_eq_N_pct"),
+        ("KVK ô ok IoU≥0,5: legacy@0.15", "per_book.KimVanKieu1884.cells_verified.legacy@0.15_prepared.ok_iou50_pct"),
+        ("KVK ô ok IoU≥0,5: pitch", "per_book.KimVanKieu1884.cells_verified.pitch_prepared.ok_iou50_pct"),
         ("thời gian s", "runtime_s"),
     ],
     "code_facts": [
@@ -195,6 +207,12 @@ def plan_steps(books: list[str], steps: list[str], a) -> list[dict]:
                "--pages", str(a.det_pages), "--stt-pages", str(a.stt_pages)]
         plan.append(dict(step="detector_transfer", book="LVT+KVK+STT", out=out, cli=cli,
                          summary=out / "summary.json"))
+    if "box_ref" in steps and any(b in LITHO_BOOKS for b in books):
+        # (2026-09-22) hộp detector legacy vs pitch_decode so với ô tham chiếu tự động (kim + chiếu mực)
+        out = root / "box_ref"
+        cli = [PY, str(HERE / "box_ref_eval.py"), "--book", "all", "--out", str(out), *w, *lim,
+               "--pages", str(a.det_pages)]
+        plan.append(dict(step="box_ref", book="LVT+KVK", out=out, cli=cli, summary=out / "summary.json"))
     return plan
 
 

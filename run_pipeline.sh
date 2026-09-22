@@ -16,6 +16,11 @@
 #   5 rescue      pipeline.remediation.self_training_rescue (MỚI: giải cứu REVIEW bằng mô hình nội bộ)
 #   6 export      pipeline/export_final_dataset.py -> dataset/ (usable: GOLD+SYLLABLE)
 #
+# SÁCH MỚI (thạch bản/văn xuôi, 2026-09-22 — xem khối "SÁCH MỚI" dưới, đường STT trên KHÔNG đổi):
+#   ./run_pipeline.sh --book LucVanTien1883 | KimVanKieu1884 | Chrestomathie1872 | all-new
+#       [--dry-run] [--skip-ingest] [--no-api] [--no-auto-precision] [--suffix _rp]
+#   ./run_pipeline.sh --dry-run        # STT: chỉ in chuỗi lệnh 6 bước, không chạy
+#
 # Viết cho bash 3.2 (bash mặc định của macOS).
 # =============================================================================
 set -euo pipefail
@@ -399,6 +404,352 @@ evidence() {
   done
   ok "bảng sha256 đã ghi vào $EVIDENCE"
 }
+
+# ====================== SÁCH MỚI: --book <Book|all-new> ======================
+# Đường tắt B0→B6 của docs/HUONG_DAN_CHAY_SACH_MOI_2026-09-21.md §2 cho thạch bản (LucVanTien1883,
+# KimVanKieu1884 — chính thức B1') và văn xuôi (Chrestomathie1872). Toàn bộ mã đường mới nằm trong
+# khối này + khối THAM SỐ ngay dưới; các hàm preflight/ask_*/step_*/checkpoint/tick/assert_qd01/evidence
+# và khối MAIN của đường STT ở trên/dưới KHÔNG đổi. `./run_pipeline.sh` không tham số = STT như cũ.
+#
+#   ./run_pipeline.sh --book LucVanTien1883            # 1 sách mới, trọn B0→B6, kim cache -> 0 gọi API
+#   ./run_pipeline.sh --book KimVanKieu1884            # config chính có run_config: -> pipeline_KimVanKieu1884_b1.yaml
+#   ./run_pipeline.sh --book all-new                   # cả 3 sách mới (NEW_BOOKS_ALL)
+#   cờ: --dry-run (chỉ in lệnh) · --skip-ingest (dùng prepared*/<Book> sẵn có) · --no-api (ingest --ocr none)
+#       --no-auto-precision (bỏ auto_precision: không --cross cho B4'(d), không B6) · --suffix _rp (ra
+#       dataset_out_<Book>_rp + dataset_<Book>_rp để so với bản chốt, không ghi đè)
+#   ./run_pipeline.sh --dry-run                        # STT: in đúng chuỗi lệnh 6 bước cũ, không chạy gì
+#
+# Hồ sơ chạy mỗi sách đọc từ config/pipeline_<Book>.yaml (book_profile): khoá tuỳ chọn `run_config:` chuyển
+# sang config chính thức (KVK -> _b1) và khối `run:` {ingest, ingest_args, verses_ref_fix{ref,ref_name,
+# fuzzy_min}, dataset_out, n_columns, cross, measure_steps}; vắng khoá -> mặc định theo books[].layout.
+# Chuỗi bước: 0 setup (step0 + bộ đo measure.py nếu thiếu measure_out/<Book> + B1' verses_ref_fix)
+#   -> 1 ingest (ingest_lithograph_book | ingest_prose_book, --ocr kim, cache kim_raw/)
+#   -> 2 build (build_dataset --use-s3 --two-pass --box-rule syl_index + enrich_crop_quality)
+#   -> 3 remediate (census; apply --tau 0,62 --out dataset_out_<Book>; confusion_fix)
+#   -> 4 gates (auto_precision cross,gates trên labels_final -> mechanism_gates --cross ... -> labels_gated.csv)
+#   -> 5 export (export_final_dataset --n-columns; make_dataset_docs; make_xlsx)
+#   -> 6 measure (auto_precision cross trên labels_gated = B6, chỉ sách có CROSS_BOOKS)
+# Mỗi lệnh thật ghi vào logs/run_<Book>_<thời điểm>.log (kèm stdout/stderr); sha256 vào dataset_out_<Book>/CHECKSUMS.txt.
+NEW_BOOKS_ALL="LucVanTien1883 KimVanKieu1884 Chrestomathie1872"
+NEW_BOOKS=""
+DRY_RUN=0
+SKIP_INGEST=0
+NO_API=0
+NO_AUTO_PRECISION=0
+OUT_SUFFIX=""
+BK_LOG=/dev/null
+BK_NAME=""
+N_BK_STEPS=6
+
+usage() {
+  cat <<'EOF'
+run_pipeline.sh — GanNhanOCR
+  (không tham số)                 đường STT 6 bước (hỏi sách/cache), ra dataset/
+  --dry-run                       STT: chỉ in chuỗi lệnh, không chạy
+  --book <Book> [--book <Book>…]  sách mới (config/pipeline_<Book>.yaml): LucVanTien1883 | KimVanKieu1884 | Chrestomathie1872
+  --book all-new                  cả 3 sách mới
+    --dry-run                     chỉ in lệnh B0→B6
+    --skip-ingest                 bỏ bước ingest (dùng prepared*/<Book> đã có)
+    --no-api                      ingest --ocr none (không gọi kim; --verse-map content -> formula)
+    --no-auto-precision           bỏ auto_precision (mechanism_gates không --cross; không B6)
+    --suffix <s>                  hậu tố thư mục ra: dataset_out_<Book><s>, dataset_<Book><s>
+EOF
+}
+
+banner_bk() {   # banner_bk <số> <tên bước> <mô tả>
+  log ""
+  log "${BLD}================================================================${RST}"
+  printf '%s>>> [%s] BƯỚC %s/%s · %s%s — %s\n' "$BLD" "$BK_NAME" "$1" "$N_BK_STEPS" "$2" "$RST" "$3"
+  log "${BLD}================================================================${RST}"
+}
+
+R() {   # R <lệnh…>: in lệnh, ghi lệnh thật + toàn bộ output vào $BK_LOG, chạy (trừ --dry-run)
+  local q
+  q=$(printf '%q ' "$@")
+  printf '    %s$%s %s\n' "$CYA" "$RST" "$*"
+  if (( DRY_RUN )); then return 0; fi
+  printf '\n%s  $ %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$q" >> "$BK_LOG"
+  "$@" 2>&1 | tee -a "$BK_LOG"
+}
+
+need_file() {   # need_file <tệp> <tên bước>: bỏ qua khi --dry-run
+  (( DRY_RUN )) && return 0
+  [[ -f "$1" ]] || die "bước $2 không sinh $1"
+}
+
+bk_tick() {   # tick() của STT ghi thời gian vào $CHECKSUMS -> chỉ khi chạy thật
+  (( DRY_RUN )) || tick "$1"
+}
+
+book_profile() {   # book_profile <Book> -> các dòng BK_*=<giá trị đã shell-quote> để eval
+  "$PY" - "$1" <<'PYEOF'
+import shlex, sys
+from pathlib import Path
+import yaml
+
+book = sys.argv[1]
+
+
+def emit(k, v):
+    print(f"{k}={shlex.quote('' if v is None else str(v))}")
+
+
+p = Path("config") / f"pipeline_{book}.yaml"
+if not p.exists():
+    emit("BK_ERR", f"không thấy {p} — sách mới cần config riêng (HUONG_DAN_CHAY_SACH_MOI §2 B0)"); sys.exit(0)
+cfg = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+if cfg.get("run_config"):                      # config chính trỏ sang config chính thức (KVK -> _b1)
+    p = Path(str(cfg["run_config"]))
+    if not p.exists():
+        emit("BK_ERR", f"run_config trỏ tới {p} không tồn tại"); sys.exit(0)
+    cfg = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+b = next((x for x in (cfg.get("books") or []) if str(x.get("name", "")).lower() == book.lower()), None)
+if b is None:
+    emit("BK_ERR", f"{p}: books[] không có {book}"); sys.exit(0)
+layout = str(b.get("layout", "stt"))
+if layout not in ("lithograph", "prose"):
+    emit("BK_ERR", f"{p}: books[{book}].layout = {layout!r} — --book chỉ cho lithograph/prose (STT: chạy không tham số)")
+    sys.exit(0)
+run = cfg.get("run") or {}
+paths = cfg.get("paths") or {}
+try:
+    sys.path.insert(0, str(Path("scripts") / "measure"))
+    from auto_precision import CROSS_BOOKS      # sách có dị bản số hoá -> cross (0 API)
+    in_cross = book in CROSS_BOOKS
+except Exception:                                # noqa: BLE001
+    in_cross = False
+cross = bool(run.get("cross", in_cross)) and in_cross
+rf = run.get("verses_ref_fix") or {}
+emit("BK_CONFIG", p)
+emit("BK_LAYOUT", layout)
+emit("BK_INGEST", run.get("ingest") or layout)
+emit("BK_INGEST_ARGS", run.get("ingest_args") or "")
+emit("BK_DATA_DIR", paths.get("data_dir", "prepared"))
+emit("BK_OUT_DIR", paths.get("output_dir", f"dataset_{book}"))
+emit("BK_DS_OUT", run.get("dataset_out") or f"dataset_out_{book}")
+emit("BK_NCOL", run.get("n_columns") or (10 if layout == "lithograph" else 7))
+emit("BK_CROSS", "1" if cross else "0")
+emit("BK_REF", rf.get("ref") or "")
+emit("BK_REF_NAME", rf.get("ref_name") or "nf1871")
+emit("BK_REF_FUZZY", rf.get("fuzzy_min") or "")
+emit("BK_MEASURE_STEPS", run.get("measure_steps") or ("layout,qn_ocr" if layout == "lithograph" else "chresto_map"))
+PYEOF
+}
+
+run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
+  local book="$1" prof
+  local BK_ERR="" BK_CONFIG="" BK_LAYOUT="" BK_INGEST="" BK_INGEST_ARGS="" BK_DATA_DIR="" BK_OUT_DIR=""
+  local BK_DS_OUT="" BK_NCOL="" BK_CROSS="" BK_REF="" BK_REF_NAME="" BK_REF_FUZZY="" BK_MEASURE_STEPS=""
+  prof=$(book_profile "$book") || die "book_profile($book) lỗi"
+  eval "$prof"
+  [[ -z "$BK_ERR" ]] || die "$BK_ERR"
+  BK_NAME="$book"
+
+  local ds_out="${BK_DS_OUT}${OUT_SUFFIX}" final_dir="${BK_OUT_DIR}${OUT_SUFFIX}"
+  local labels_raw="$ds_out/labels.csv" labels_remed="$ds_out/labels_remediated.csv"
+  local labels_final="$ds_out/labels_final.csv" labels_gated="$ds_out/labels_gated.csv"
+  local trans_dir="$BK_DATA_DIR/$book/transcriptions"
+  local ap_pre="$ds_out/auto_precision" ap_post="$ds_out/auto_precision_gated"
+  local ocr="kim" verses_tsv=""
+  local -a cmd
+  (( NO_API )) && ocr="none"
+  CHECKSUMS="$ds_out/CHECKSUMS.txt"      # checkpoint()/tick() của đường STT ghi vào đây
+
+  if (( DRY_RUN )); then
+    BK_LOG=/dev/null
+  else
+    mkdir -p logs "$ds_out"
+    BK_LOG="logs/run_${book}_$(date +%Y%m%d_%H%M%S).log"
+    {
+      printf '# run_pipeline.sh --book %s  (%s)\n' "$book" "$(date +%Y-%m-%dT%H:%M:%S)"
+      printf '# git HEAD %s · cwd %s · python %s\n' "$(git rev-parse --short HEAD 2>/dev/null || echo '?')" "$REPO_ROOT" "$PY"
+      printf '# cờ: skip_ingest=%s no_api=%s no_auto_precision=%s suffix=%q\n' "$SKIP_INGEST" "$NO_API" "$NO_AUTO_PRECISION" "$OUT_SUFFIX"
+      printf '# hồ sơ: %s\n' "$(printf '%s' "$prof" | tr '\n' ' ')"
+    } >> "$BK_LOG"
+  fi
+
+  log ""
+  log "${BLD}[$book] config=$BK_CONFIG layout=$BK_LAYOUT ingest=$BK_INGEST data_dir=$BK_DATA_DIR${RST}"
+  log "  dataset_out=$ds_out  export=$final_dir  n_columns=$BK_NCOL  cross=$BK_CROSS  log=$BK_LOG"
+  [[ -n "$BK_INGEST_ARGS" ]] && log "  ingest_args: $BK_INGEST_ARGS"
+  [[ -n "$BK_REF" ]] && log "  B1' verses_ref_fix: ref=$BK_REF ($BK_REF_NAME)"
+
+  # ---- 0/6 setup ------------------------------------------------------------
+  banner_bk 0 setup "step0_setup + bộ đo (nếu thiếu measure_out/$book) + B1' verses_ref_fix"
+  R "$PY" -m pipeline.step0_setup "$BK_CONFIG"
+  local need_measure=0
+  if [[ "$BK_INGEST" == "prose" ]]; then
+    [[ -f "measure_out/$book/chresto_map/bang_truyen_trang.csv" ]] || need_measure=1
+  else
+    [[ -f "measure_out/$book/layout/layout_pages.csv" && -f "measure_out/$book/qn_ocr/verses.tsv" ]] || need_measure=1
+  fi
+  if (( need_measure )); then
+    info "thiếu measure_out/$book -> chạy bộ đo (CPU, 0 token): --steps $BK_MEASURE_STEPS"
+    R "$PY" scripts/measure/measure.py --book "$book" --steps "$BK_MEASURE_STEPS"
+  else
+    ok "bộ đo đã có: measure_out/$book"
+  fi
+  if [[ -n "$BK_REF" && "$BK_INGEST" != "prose" ]]; then
+    cmd=("$PY" scripts/measure/verses_ref_fix.py --book "$book" --ref "$BK_REF" --ref-name "$BK_REF_NAME")
+    [[ -n "$BK_REF_FUZZY" ]] && cmd+=(--fuzzy-min "$BK_REF_FUZZY")
+    R "${cmd[@]}"
+    verses_tsv="measure_out/$book/qn_ref_fix/verses_b1.tsv"
+    need_file "$verses_tsv" "verses_ref_fix"
+  fi
+  bk_tick "setup"
+
+  # ---- 1/6 ingest -----------------------------------------------------------
+  banner_bk 1 ingest "ảnh -> pages/detected/transcriptions (--ocr $ocr, cache kim_raw/) -> $BK_DATA_DIR/$book"
+  if (( SKIP_INGEST )); then
+    info "--skip-ingest: dùng $BK_DATA_DIR/$book có sẵn"
+    (( DRY_RUN )) || [[ -d "$BK_DATA_DIR/$book/transcriptions" ]] || die "--skip-ingest nhưng thiếu $BK_DATA_DIR/$book/transcriptions"
+  else
+    local ingest_args="$BK_INGEST_ARGS"
+    if [[ "$BK_INGEST" == "prose" ]]; then
+      cmd=("$PY" -m pipeline.tools.ingest_prose_book --book "$book" --ocr "$ocr" --out "$BK_DATA_DIR")
+    else
+      if (( NO_API )) && [[ " $ingest_args " == *" content "* ]]; then
+        warn "--no-api: --verse-map content cần kim -> thay bằng formula (kết quả KHÁC bản chốt)"
+        ingest_args=$(printf '%s' "$ingest_args" | sed 's/--verse-map content/--verse-map formula/')
+      fi
+      cmd=("$PY" -m pipeline.tools.ingest_lithograph_book --book "$book" --ocr "$ocr" --out "$BK_DATA_DIR")
+      [[ -n "$verses_tsv" ]] && cmd+=(--verses "$verses_tsv")
+    fi
+    # shellcheck disable=SC2206  # ingest_args cố ý tách theo khoảng trắng (chuỗi cờ trong config run.ingest_args)
+    [[ -n "$ingest_args" ]] && cmd+=($ingest_args)
+    R "${cmd[@]}"
+    need_file "$BK_DATA_DIR/$book/manifest.json" "ingest"
+  fi
+  bk_tick "ingest"
+
+  # ---- 2/6 build ------------------------------------------------------------
+  banner_bk 2 build "build_dataset (--use-s3 --two-pass --box-rule syl_index, det_* theo sách) + enrich_crop_quality -> $ds_out"
+  R "$PY" -m pipeline.align_engine.build_dataset --config "$BK_CONFIG" --reseg detector \
+      --qd01-cells none --decisions none --use-s3 --two-pass --box-rule syl_index --force --out "$ds_out"
+  need_file "$labels_raw" "build"
+  R "$PY" -m pipeline.tools.enrich_crop_quality --labels "$labels_raw" --src-root "$ds_out"
+  (( DRY_RUN )) || checkpoint build "$labels_raw"
+  bk_tick "build"
+
+  # ---- 3/6 remediate --------------------------------------------------------
+  banner_bk 3 remediate "census + apply --tau $TAU_REMEDIATE (--out $ds_out, KHÔNG đụng dataset_out/ STT) + confusion_fix -> $labels_final"
+  R "$PY" -m pipeline.remediation --labels "$labels_raw" --out "$ds_out" census
+  R "$PY" -m pipeline.remediation --labels "$labels_raw" --out "$ds_out" apply --tau "$TAU_REMEDIATE"
+  need_file "$labels_remed" "remediate"
+  [[ -f "$CONFUSION_FIXES" ]] || die "không thấy $CONFUSION_FIXES"
+  R "$PY" -m pipeline.remediation.confusion_fix \
+      --in "$labels_remed" --out "$labels_final" --fixes "$CONFUSION_FIXES" --measure
+  need_file "$labels_final" "confusion_fix"
+  (( DRY_RUN )) || { assert_qd01 "$labels_final" remediate; checkpoint remediate "$labels_final"; }
+  bk_tick "remediate"
+
+  # ---- 4/6 gates (B4') ------------------------------------------------------
+  banner_bk 4 gates "mechanism_gates (a)(b)(c)[(d) --cross] -> $labels_gated"
+  cmd=("$PY" -m pipeline.remediation.mechanism_gates --in "$labels_final" --out "$labels_gated"
+       --config "$BK_CONFIG" --book "$book" --report "$ds_out/mechanism_gates_report.json")
+  if [[ "$BK_CROSS" == "1" ]]; then
+    if (( NO_AUTO_PRECISION )); then
+      warn "--no-auto-precision: bỏ auto_precision cross -> mechanism_gates KHÔNG --cross (cổng (d) tắt, khác bản chốt)"
+    else
+      R "$PY" scripts/measure/auto_precision.py --steps cross,gates --books "$book" \
+          --labels "$labels_final" --trans "$trans_dir" --out "$ap_pre"
+      need_file "$ap_pre/cross/$book/cells.csv" "auto_precision cross"
+      cmd+=(--cross "$ap_pre/cross/$book/cells.csv")
+    fi
+  else
+    info "sách không có dị bản số hoá (CROSS_BOOKS) -> không --cross"
+  fi
+  R "${cmd[@]}"
+  need_file "$labels_gated" "mechanism_gates"
+  (( DRY_RUN )) || checkpoint gates "$labels_gated"
+  bk_tick "gates"
+
+  # ---- 5/6 export -----------------------------------------------------------
+  banner_bk 5 export "export_final_dataset --n-columns $BK_NCOL -> $final_dir/ + README/DATASHEET + xlsx"
+  R "$PY" pipeline/export_final_dataset.py \
+      --labels "$labels_gated" --src-root "$ds_out" --out "$final_dir" --n-columns "$BK_NCOL"
+  need_file "$final_dir/labels.csv" "export"
+  R "$PY" -m pipeline.tools.make_dataset_docs --dataset "$final_dir" --n-columns "$BK_NCOL"
+  R "$PY" -m pipeline.tools.make_xlsx --labels "$final_dir/labels.csv"
+  (( DRY_RUN )) || checkpoint export "$final_dir/labels.csv"
+  bk_tick "export"
+
+  # ---- 6/6 measure (B6) -----------------------------------------------------
+  banner_bk 6 measure "auto_precision cross trên labels_gated (B6, 0 API) -> $ap_post"
+  if [[ "$BK_CROSS" == "1" ]] && (( ! NO_AUTO_PRECISION )); then
+    R "$PY" scripts/measure/auto_precision.py --steps cross --books "$book" \
+        --labels "$labels_gated" --trans "$trans_dir" --out "$ap_post"
+  else
+    info "bỏ qua (không CROSS_BOOKS hoặc --no-auto-precision)"
+  fi
+  bk_tick "measure"
+
+  log ""
+  log "${GRN}${BLD}[$book] xong:${RST} $final_dir/labels.csv (+ ảnh crop GOLD/SYLLABLE, labels.xlsx, README, DATASHEET)"
+  log "  trung gian: $ds_out/{labels,labels_remediated,labels_final,labels_gated}.csv · $CHECKSUMS · log $BK_LOG"
+}
+
+stt_dry_run() {   # STT --dry-run: in đúng chuỗi 6 bước cũ; X/die/assert_qd01 chỉ in trong subshell, không ghi gì
+  BOOKS="SachThanhTruyen2 SachThanhTruyen4 SachThanhTruyen11"; BOOKS_LABEL="STT2+STT4+STT11"; FRESH_OCR=0
+  log ""
+  log "${BLD}[DRY-RUN STT] sách: $BOOKS_LABEL · cache OCR: dùng cache cũ · DS_OUT=$DS_OUT · không chạy gì${RST}"
+  log "${BLD}Sẽ chạy 6 bước:${RST} setup -> extract($BOOKS_LABEL) -> build(100% tự động) -> remediate & confusion -> rescue (Self-Training) -> export"
+  (
+    X() { printf '    %s$%s %s\n' "$CYA" "$RST" "$*"; }
+    die() { printf '    %s(dry-run: sẽ dừng nếu thiếu)%s %s\n' "$YEL" "$RST" "$*"; }
+    assert_qd01() { printf '    %s(dry-run)%s assert_qd01 %s (%s)\n' "$CYA" "$RST" "$1" "$2"; }
+    step_setup; step_extract; step_build; step_remediate; step_rescue; step_export
+    log ""
+    log "  (sau export: checkpoint/evidence sha256 -> $CHECKSUMS, $EVIDENCE)"
+  )
+}
+
+# ============================== THAM SỐ ======================================
+while (( $# )); do
+  case "$1" in
+    --book)       [[ $# -ge 2 ]] || die "--book cần tên sách"; NEW_BOOKS="$NEW_BOOKS $2"; shift 2 ;;
+    --book=*)     NEW_BOOKS="$NEW_BOOKS ${1#--book=}"; shift ;;
+    --dry-run)    DRY_RUN=1; shift ;;
+    --skip-ingest) SKIP_INGEST=1; shift ;;
+    --no-api)     NO_API=1; shift ;;
+    --no-auto-precision) NO_AUTO_PRECISION=1; shift ;;
+    --suffix)     [[ $# -ge 2 ]] || die "--suffix cần giá trị"; OUT_SUFFIX="$2"; shift 2 ;;
+    --suffix=*)   OUT_SUFFIX="${1#--suffix=}"; shift ;;
+    -h|--help)    usage; exit 0 ;;
+    *)            usage >&2; die "tham số không hiểu: $1" ;;
+  esac
+done
+
+if [[ -n "$NEW_BOOKS" ]]; then
+  _books=""
+  for _b in $NEW_BOOKS; do
+    if [[ "$_b" == "all-new" ]]; then _books="$_books $NEW_BOOKS_ALL"; else _books="$_books $_b"; fi
+  done
+  log "${BLD}================================================================${RST}"
+  log "${BLD}  GanNhanOCR — sách mới (thạch bản / văn xuôi) B0→B6:${_books}${RST}"
+  log "${BLD}================================================================${RST}"
+  (( DRY_RUN )) && info "--dry-run: chỉ in lệnh, không chạy, không ghi log"
+  for _b in $_books; do
+    [[ -f "config/pipeline_${_b}.yaml" ]] || die "không thấy config/pipeline_${_b}.yaml (sách: $_b)"
+  done
+  export PYTHONUNBUFFERED=1
+  if (( DRY_RUN )); then SKIP_DEPS=1; fi
+  preflight
+  T_STEP=$SECONDS
+  for _b in $_books; do
+    run_new_book "$_b"
+  done
+  log ""
+  log "${BLD}================================================================${RST}"
+  log "${GRN}${BLD}  Hoàn tất sách mới:${_books} · tổng ${SECONDS}s${RST}"
+  log "${BLD}================================================================${RST}"
+  exit 0
+fi
+
+if (( DRY_RUN )); then
+  stt_dry_run
+  exit 0
+fi
 
 # =============================== MAIN ========================================
 log "${BLD}================================================================${RST}"

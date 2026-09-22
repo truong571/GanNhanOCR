@@ -136,6 +136,17 @@ Lam theo [`kaggle_diffusion/README.md`](kaggle_diffusion/README.md):
 ./run_pipeline.sh                    # tat ca 3 cuon, 3 buoc: 0 (setup) -> 1 (extract) -> 2 (build dataset)
 ```
 
+Sach moi (thach ban LucVanTien1883 / KimVanKieu1884, van xuoi Chrestomathie1872; 2026-09-22) — mot lenh chay tron
+B0→B6 (step0 → bo do neu thieu → [B1' verses_ref_fix] → ingest kim cache → build → remediation → cong co che B4' →
+export dataset_<BOOK>/ → auto_precision), log tai `logs/run_<BOOK>_*.log`; `./run_pipeline.sh` khong tham so van la
+duong STT cu (khong doi):
+
+```bash
+./run_pipeline.sh --book LucVanTien1883        # hoac KimVanKieu1884 (B1' chinh thuc) | Chrestomathie1872 | all-new
+./run_pipeline.sh --book all-new --dry-run     # chi in lenh; co them --skip-ingest --no-api --no-auto-precision --suffix _rp
+```
+Chi tiet, cong nghiem thu va cach them sach thu tu: `docs/HUONG_DAN_CHAY_SACH_MOI_2026-09-21.md` §2.0/§7.
+
 Hoac chay tung phan:
 
 ```bash

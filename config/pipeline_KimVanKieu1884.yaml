@@ -23,6 +23,10 @@
   #                                   #   và cổng qn_parse_ok (thạch bản: 10)
   #   qn_syllables_per_column: 14     # chỉ với lithograph; 0 = không kiểm
   # Sách mới dùng config RIÊNG (vd config/lucvantien1883.yaml), không thêm vào books: ở đây.
+# 2026-09-22: run_pipeline.sh --book KimVanKieu1884 chuyển sang config CHÍNH THỨC B1' (data_dir prepared_b1,
+# khối run: ở đó). Chỉ run_pipeline.sh đọc khoá này; chạy tay vẫn dùng config nào cũng được.
+run_config: config/pipeline_KimVanKieu1884_b1.yaml
+
 books:
   # 2026-09-21: config RIÊNG cho thạch bản Kim Vân Kiều 1884 (NHIỆM VỤ 5, thử 8 trang). Không đụng
   # config/pipeline.yaml của STT. Ingest từ ảnh bằng pipeline/tools/ingest_lithograph_book.py
@@ -39,6 +43,8 @@ books:
     # count_source conflict 392→294, tier KHÔNG đổi (GOLD 744/SYL 38/REVIEW 334), F1 cross-col 0 ở cả hai.
     det_xmargin: 0.05
     det_thr: 0.15
+    # 2026-09-22: `box_decoder: pitch` khai ở config CHÍNH THỨC pipeline_KimVanKieu1884_b1.yaml (run_config trỏ
+    # sang đó). Config này (không B1') giữ legacy để tái lập dataset_KimVanKieu1884_v2_gates_noB1 / _v1.
     # 2026-09-22 B1' = ĐƯỜNG CHÍNH THỨC KVK (docs/CHAY_KVK1884_B1_2026-09-22.md): QN đầu vào = verses_b1.tsv
     # (scripts/measure/verses_ref_fix.py --ref 1871 Liễu Văn Đường, khớp mờ ≥ 0,9; KHÔNG --dict-boost vì tự khẳng định).
     # Khoá dưới chỉ GHI NHẬN (engine/adapter không đọc): adapter nhận qua `ingest_lithograph_book --verses <tệp này>`.

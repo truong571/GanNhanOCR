@@ -42,7 +42,25 @@ books:
     # count_source conflict 392→294, tier KHÔNG đổi (GOLD 744/SYL 38/REVIEW 334), F1 cross-col 0 ở cả hai.
     det_xmargin: 0.05
     det_thr: 0.15
+    # 2026-09-22 (I5, phương án A): pitch_decode — đo 27 trang/3.527 ô tham chiếu KVK
+    # (docs/HUONG_DAN_HUAN_LUYEN_I5_2026-09-22.md §1): IoU ≥ 0,5 94,1 → 97,0 %, miss 3,0 → 0,4 %,
+    # extra/100 ô 2,3 → 0,4, "cắt vào thân chữ" 3,8 → 2,6 %. Lý do/cơ chế: xem config LVT1883.
+    # Ablation dict-boost (pipeline_KimVanKieu1884_b1_boost.yaml) GIỮ legacy để so sánh cũ.
+    box_decoder: pitch
     reocr: false
+
+# 2026-09-22: khối `run:` CHỈ run_pipeline.sh --book KimVanKieu1884 đọc (qua run_config: của config chính);
+# engine/adapter/step0/mechanism_gates KHÔNG đọc. Lệnh tương đương: docs/CHAY_KVK1884_B1_2026-09-22.md §1.
+run:
+  ingest: lithograph
+  ingest_args: "--contrast otsu --verse-map content"      # KHÔNG --dict-boost (tự khẳng định)
+  verses_ref_fix:               # B1': scripts/measure/verses_ref_fix.py -> measure_out/KimVanKieu1884/qn_ref_fix/verses_b1.tsv -> --verses
+    ref: data/TruyenKieuPhongTinhCoLuc/thamchieu_kieu_1871_LieuVanDuong_phienam.json
+    ref_name: nf1871
+    fuzzy_min: 0.9
+  dataset_out: dataset_out_KimVanKieu1884_b1              # mặc định dataset_out_<Book>; B1' dùng hậu tố _b1 như bản chốt
+  n_columns: 10
+  cross: true                   # auto_precision cross (1871 LVĐ + 1872 DMT đối chứng) -> --cross cổng (d) + B6
 
 paths:
   data_dir: prepared_b1

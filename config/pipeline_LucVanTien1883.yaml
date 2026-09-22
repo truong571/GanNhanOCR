@@ -40,7 +40,24 @@ books:
     # thiếu của detector, không phải biên x.
     det_xmargin: 0.05
     det_thr: 0.15
+    # 2026-09-22 (I5, phương án A): giải mã hộp theo BƯỚC CỘT với ràng buộc số lượng
+    # (pipeline/align_engine/char_detector/pitch_decode.py). Đo 27 trang/3.412 ô tham chiếu
+    # (scripts/measure/box_ref_eval.py, docs/HUONG_DAN_HUAN_LUYEN_I5_2026-09-22.md §1): IoU ≥ 0,5
+    # 97,4 → 98,1 %, miss 0,5 → 0,1 %, extra/100 ô 2,0 → 0,1, "cắt vào thân chữ" (mực chạm mép
+    # > 0,20) 11,0 → 9,5 %; build --limit 10: tier y hệt, midpoint+split 53 → ink_cut+detector_low 8.
+    # n_det VẪN là số hộp thô ở det_thr (I5 không thành hằng đúng); cổng B4' chuyển sang luật (a')
+    # theo ô box_source ink_cut/detector_low (mechanism_gates.detect_pitch_mode đọc khoá này).
+    # Đổi về `legacy` = hành vi cũ (bản dataset_LucVanTien1883_v3_legacy).
+    box_decoder: pitch
     reocr: false
+
+# 2026-09-22: khối `run:` CHỈ run_pipeline.sh --book đọc (book_profile); engine/adapter/step0/mechanism_gates KHÔNG đọc.
+# Vắng khối -> mặc định theo books[].layout. Lệnh tương đương: docs/HUONG_DAN_CHAY_SACH_MOI_2026-09-21.md §2.
+run:
+  ingest: lithograph            # pipeline.tools.ingest_lithograph_book (--ocr kim, cache kim_raw/ -> 0 gọi API)
+  ingest_args: ""               # LVT: --verse-map formula (mặc định), --contrast stretch (mặc định); KHÔNG --dict-boost
+  n_columns: 10                 # export_final_dataset / make_dataset_docs --n-columns (STT 9, thạch bản 10, văn xuôi 7)
+  cross: true                   # auto_precision --steps cross (LVT1916 NF) -> mechanism_gates --cross (cổng d) + B6
 
 paths:
   data_dir: prepared

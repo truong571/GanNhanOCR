@@ -35,6 +35,8 @@ gannhanocr-fd-cache-v2/
 /kkanji2/
 *.pt
 train_crop/kaggle_pkg/
+# Nhãn yếu thạch bản cho detector v2 (7,3 MB JSON, tái sinh 24 s: train_crop/build_lithograph_manifest.py) — 2026-09-22
+/train_crop/data_lithograph/
 # pipeline output crops (generated, large)
 /dataset_out/gold/
 /dataset_out/silver/

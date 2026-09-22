@@ -37,11 +37,25 @@ PY = sys.executable
 HERE = Path(__file__).resolve().parent
 
 LITHO_BOOKS = ["LucVanTien1883", "KimVanKieu1884"]
-ALL_BOOKS = LITHO_BOOKS + ["Chrestomathie1872"]
-ALL_STEPS = ["code_facts", "layout", "qn_ocr", "chresto_map", "detector_transfer", "box_ref"]
+# 2026-09-23: 3 bộ còn lại trong data/. IHR_BOOKS = mộc bản IHR-NomDB CÓ NHÃN NGƯỜI (tập ĐÁNH GIÁ);
+# PTCL_BOOK = bản CHÉP TAY R.987, chỉ có dị bản 1871/1872 làm tham chiếu.
+IHR_BOOKS = ["LucVanTien1916", "TruyenKieu1872"]
+PTCL_BOOK = "TruyenKieuPhongTinhCoLuc"
+ALL_BOOKS = LITHO_BOOKS + ["Chrestomathie1872"] + IHR_BOOKS + [PTCL_BOOK]
+ALL_STEPS = ["code_facts", "layout", "qn_ocr", "chresto_map", "detector_transfer", "box_ref",
+             "ihr_layout", "ihr_endtoend", "ptcl_layout"]
 
 # Invariant FAIL được xếp "mềm" (không đổi mã thoát) — chỉ khi có lý do đo đạc rõ ràng.
 SOFT_INVARIANTS: dict[str, dict[str, str]] = {
+    "ihr_layout": {
+        "chieu_muc_doc_lap_khop_bbox_+-1":
+            "Đối chứng chiếu mực là phép ĐỘC LẬP yếu trên bản quét 37-40 px/chữ: tự tương quan hay "
+            "khoá vào hài nên đếm lệch (LVT1916 0/20 trang khớp ±1, TK1872 17/20). Bố cục CHÍNH THỨC "
+            "lấy từ ô cột do người vẽ (VoTT) và đã được kiểm chéo bằng SỐ CÂU (ceil(n_verses/2)) — "
+            "invariant cot_bbox_khop_so_cau PASS ở cả hai sách. Ghi lại để không tin nhầm phép đo này.",
+        "chieu_muc_buoc_cot_khop_bbox":
+            "Cùng lý do; bước cột đo được đúng ở TK1872 (20/20) nhưng lệch ở LVT1916 (9/20).",
+    },
     "detector_transfer": {
         "stt_control_pct_cols_eq_pipeline_cfg":
             "Đối chứng STT dùng MỌI cột (kể cả cột chữ dày dy≈63 px M>N); ngưỡng 90 % là của cột OCR=QN "
@@ -118,6 +132,47 @@ KEY_METRICS: dict[str, list[tuple[str, str]]] = {
         ("KVK ô ok IoU≥0,5: legacy@0.15", "per_book.KimVanKieu1884.cells_verified.legacy@0.15_prepared.ok_iou50_pct"),
         ("KVK ô ok IoU≥0,5: pitch", "per_book.KimVanKieu1884.cells_verified.pitch_prepared.ok_iou50_pct"),
         ("thời gian s", "runtime_s"),
+    ],
+    "ihr_layout": [
+        ("trang", "pages.n"),
+        ("trang có ô cột", "pages.with_bbox"),
+        ("cột/trang", "columns.hist_n_cols_bbox"),
+        ("cột = 1 cặp lục bát", "columns.rate_col_is_couplet"),
+        ("câu đúng 6/8", "columns.rate_verse_len_rule"),
+        ("cột khớp số câu", "columns.rate_bbox_eq_expected"),
+        ("px/chữ", "geometry.px_per_char_med"),
+        ("bước cột px", "geometry.col_pitch_med"),
+        ("kim ×1 đúng GT", "kim_scale.per_scale.1.rate_eq_gt"),
+        ("kim ×3 đúng GT", "kim_scale.per_scale.3.rate_eq_gt"),
+        ("kim ×1 cột đủ 14", "kim_scale.per_scale.1.rate_cols_full14"),
+        ("lượt kim mới", "kim_scale.api_calls"),
+    ],
+    "ihr_endtoend": [
+        ("ô sinh", "cells.produced"),
+        ("ô GT", "gt.n_chars"),
+        ("coverage ô", "cells.coverage_cells"),
+        ("GOLD ảnh n", "precision.gold_anh.with_gt"),
+        ("GOLD ảnh ĐÚNG", "precision.gold_anh.precision"),
+        ("GOLD ảnh CI95", "precision.gold_anh.ci95"),
+        ("GOLD (kể text_only) ĐÚNG", "precision.gold_tat_ca.precision"),
+        ("GOLD coverage", "coverage.gold_tat_ca"),
+        ("kim thô đúng GT", "kim_raw.precision"),
+        ("nhãn == kim ở ô GOLD", "kim_raw.nhan_bang_kim_tren_GOLD"),
+        ("REVIEW ĐÚNG", "precision.review.precision"),
+        ("mốc patch 22/09", "baseline_patch_2026_09_22.precision"),
+        ("chênh so mốc", "delta_vs_baseline.precision"),
+    ],
+    "ptcl_layout": [
+        ("tờ phân tích", "pages.analyzed"),
+        ("cột/tờ", "columns.hist_n_cols"),
+        ("bước cột px", "columns.col_pitch_med"),
+        ("ranh giới tầng y", "columns.tier_y_med"),
+        ("bước chữ tầng dưới px", "columns.char_pitch_bottom_med"),
+        ("chữ/cột tầng dưới (chiếu mực)", "columns.chars_bottom_med"),
+        ("kim: chữ tầng dưới trung vị", "kim.bottom_per_col_med"),
+        ("kim: cột đúng 14", "kim.rate_bottom_14"),
+        ("nền dị bản 1871↔1872", "reference.rate"),
+        ("lượt kim mới", "kim.api_calls"),
     ],
     "code_facts": [
         ("git HEAD", "git_head"),
@@ -201,6 +256,21 @@ def plan_steps(books: list[str], steps: list[str], a) -> list[dict]:
             cli = [PY, str(HERE / "chresto_map.py"), "--book", b, "--out", str(out), *w, *lim,
                    "--nomna-pages", str(a.nomna_pages)]
             plan.append(dict(step="chresto_map", book=b, out=out, cli=cli, summary=out / "summary.json"))
+        elif b in IHR_BOOKS:
+            if "ihr_layout" in steps:
+                out = root / b / "ihr_layout"
+                cli = [PY, str(HERE / "ihr_layout.py"), "--book", b, "--out", str(out), *lim,
+                       "--kim-pages", str(a.ihr_kim_pages)]
+                plan.append(dict(step="ihr_layout", book=b, out=out, cli=cli, summary=out / "summary.json"))
+            if "ihr_endtoend" in steps and (REPO / "prepared_ihr" / b / "dataset_out" / "labels_gated.csv").exists():
+                out = root / b / "ihr_endtoend"
+                cli = [PY, str(HERE / "ihr_endtoend_eval.py"), "--book", b, "--out", str(out)]
+                plan.append(dict(step="ihr_endtoend", book=b, out=out, cli=cli, summary=out / "summary.json"))
+        elif b == PTCL_BOOK and "ptcl_layout" in steps:
+            out = root / b / "ptcl_layout"
+            cli = [PY, str(HERE / "ptcl_layout.py"), "--out", str(out), *w, *lim,
+                   "--kim-pages", str(a.ptcl_kim_pages)]
+            plan.append(dict(step="ptcl_layout", book=b, out=out, cli=cli, summary=out / "summary.json"))
     if "detector_transfer" in steps and any(b in LITHO_BOOKS for b in books):
         out = root / "detector_transfer"
         cli = [PY, str(HERE / "detector_transfer.py"), "--book", "all", "--out", str(out), *w, *lim,
@@ -348,6 +418,10 @@ def main(argv=None) -> int:
     ap.add_argument("--nomna-pages", type=int, default=3, help="chresto_map: số trang Nôm chạy NomNaOCR (0 = tắt)")
     ap.add_argument("--det-pages", type=int, default=27, help="detector_transfer: trang thạch bản mỗi sách (27 → CI ≈ ±3,5 điểm; 9 trang ≈ ±6)")
     ap.add_argument("--stt-pages", type=int, default=3, help="detector_transfer: trang đối chứng mỗi sách STT")
+    ap.add_argument("--ihr-kim-pages", type=int, default=10,
+                    help="ihr_layout: số trang gọi kim mỗi hệ số phóng (cache theo md5 -> chạy lại 0 lượt)")
+    ap.add_argument("--ptcl-kim-pages", type=int, default=6,
+                    help="ptcl_layout: số tờ gọi kim (cache theo md5 -> chạy lại 0 lượt)")
     ap.add_argument("--layout-detector", action="store_true", help="layout: bật CenterNet làm phương pháp 2 (chậm)")
     ap.add_argument("--dry-run", action="store_true", help="chỉ in kế hoạch")
     ap.add_argument("--report-only", action="store_true", help="không chạy, chỉ gom summary hiện có → SUMMARY/REPORT")

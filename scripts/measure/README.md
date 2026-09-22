@@ -1,6 +1,7 @@
 # scripts/measure/ — bộ đo tái lập được (2026-09-21)
 
-Mọi phép đo về dữ liệu mới (thạch bản Lục Vân Tiên 1883, Kim Vân Kiều 1884, Chrestomathie 1872) và về mã pipeline
+Mọi phép đo về dữ liệu mới (thạch bản Lục Vân Tiên 1883, Kim Vân Kiều 1884, Chrestomathie 1872; 23/09 thêm
+mộc bản IHR-NomDB Lục Vân Tiên 1916 + Truyện Kiều 1872 và bản chép tay Truyện Kiều Phong Tình Cổ Lục) và về mã pipeline
 được gói thành script chạy bằng `.venv` + `tesseract`, **0 token LLM**, ra `summary.json` ≤ 8 KB kèm `invariants`.
 
 ## QUY ƯỚC BẮT BUỘC
@@ -23,7 +24,8 @@ cd <thư mục gốc repo GanNhanOCR>
 .venv/bin/python scripts/measure/measure.py --all --dry-run            # in kế hoạch lệnh, không chạy
 ```
 
-Tuỳ chọn: `--steps code_facts,layout,qn_ocr,chresto_map,detector_transfer` · `--workers N` · `--out DIR` ·
+Tuỳ chọn: `--steps code_facts,layout,qn_ocr,chresto_map,detector_transfer,box_ref,ihr_layout,ihr_endtoend,ptcl_layout`
+· `--ihr-kim-pages N` / `--ptcl-kim-pages N` (số trang gọi kim; cache theo md5 → chạy lại 0 lượt) · `--workers N` · `--out DIR` ·
 `--qn-engine vietocr` (chậm ~20 s/trang, chỉ để so sánh) · `--nomna-pages 0` (bỏ NomNaOCR, cần venv có TensorFlow) ·
 `--det-pages 27 --stt-pages 3` (detector; 27 trang/sách → CI ≈ ±3,5 điểm; `detector_transfer.py --page-ids 'LucVanTien1883:010,030;KimVanKieu1884:0020'` chạy đúng một mẫu trang cố định để tái lập số cũ) · `--layout-detector` (CenterNet làm phương pháp 2 cho layout, ~0,5 s/trang).
 
@@ -39,6 +41,9 @@ Invariant "mềm" (bảng `SOFT_INVARIANTS` trong `measure.py`, mỗi mục có 
 | `chresto_map.py` | 20 truyện QN ↔ cột Nôm Chrestomathie; ranh giới tự động vs bảng REF; NomNaOCR xếp hạng truyện | Chrestomathie1872 | 25 s (cache) | `qn_stories.csv`, `qn_lines.csv`, `nom_columns.csv`, `bang_truyen_trang.csv`, `nom_boundaries_auto.csv` |
 | `detector_transfer.py` | CenterNet (`train_crop/detector_r34.best.pt`) trên thạch bản: raw/stretch/otsu × thr 0.2/0.3/0.4, đối chứng STT2/4/11 | LVT+KVK+STT | ≈1–2 phút | `detector_columns.csv`, `detector_pages.csv`, `detector_configs.csv` |
 | `box_ref_eval.py` | **(22/09, I5)** hộp detector legacy@0,15/0,2 và `pitch_decode` so với Ô THAM CHIẾU tự động (hộp tầng kim cắt N−1 khe mực yếu nhất, N = âm QN): miss/extra (dup/stray/below_thr), IoU ≥ 0,5, sai số tâm, "cắt vào thân chữ" (không phụ thuộc tham chiếu); ô `ink_cut` trùng tham chiếu theo cấu tạo → bảng `*_honest` | LVT+KVK (27 trang/sách) | ≈80 s | `box_ref_cells.csv`, `box_ref_columns.csv`, `box_ref_pages.csv` |
+| `ihr_layout.py` | **(23/09)** bố cục 2 bộ IHR-NomDB: cột/trang từ `pages/bboxes.json` (VoTT) và từ số câu `annotation.json`, cột = 1 cặp lục bát hay 1 câu, px/chữ, bước cột, đối chứng chiếu mực độc lập; **thăm dò hệ số phóng kim ×1 vs ×3 so NHÃN NGƯỜI** | LVT1916, TK1872 | 40 s (+20 lượt kim lần đầu) | `pages.csv`, `cols.csv`, `kim_scale.csv`, `kim_cache/` |
+| `ihr_endtoend_eval.py` | **(23/09) ĐỘ ĐÚNG END-TO-END THẬT**: `labels_gated.csv` ↔ `data/<book>/manifest.tsv` (nhãn người từng chữ) theo (trang, cột, vị trí); precision từng tầng + Wilson CI, coverage, phân loại lỗi (dị thể/gần hình/GT PUA/khác hẳn), kim THÔ so GT, so với mốc patch 22/09 | LVT1916, TK1872 | 6 s | `cells.csv`, `errors.csv`, `summary.json` |
+| `ptcl_layout.py` | **(23/09)** bố cục bản CHÉP TAY R.987: khung, bước cột (2 lượt, khoá cửa sổ quanh trung vị sách), **ranh giới tầng** (tầng trên = lời bình chữ Hán nhỏ, tầng dưới = 1 cặp lục bát 14 chữ), bước chữ tầng dưới, số chữ/cột; kim vài tờ để đối chứng; nền dị bản 1871↔1872 | TruyenKieuPhongTinhCoLuc | 3 phút (+6 lượt kim) | `pages.csv`, `cols.csv`, `kim_cols.csv` |
 | `code_facts.py` | sự kiện mã pipeline bằng AST/grep: mọi ghim `9`, `expected_cols`, CLI từng bước, khoá JSON cache, config sách | (repo) | 2 s | `docs/PIPELINE_FACTS.json` |
 | `verses_ref_fix.py` | **B1' (22/09)**: sửa dòng QN OCR bằng phiên âm chuẩn dị bản (exact / khớp mờ ≥ 0,9 theo âm tiết, cùng parity, offset đơn điệu) → `verses_b1.tsv` (+ `qn_source`, `ref_nom`); `--check-labels/--check-trans` kiểm cơ chế sau build (kim ∈ R(âm cũ)/R(âm mới)); `--selftest` 19 phép | KVK1884 (1871 LVĐ) | 2 s | `qn_ref_fix/{verses_b1.tsv,matches.csv,summary.json,mechanism_check_*.json}` |
 | `build_metrics.py` | chỉ số một lần build `dataset_out_<X>/` (tier thô/final, n_det==N, M==N, page_ok, box/count_source, crop flag, remediation) + tier theo `qn_source` khi có transcriptions | (bất kỳ build) | 5 s | JSON stdout hoặc `--out` |

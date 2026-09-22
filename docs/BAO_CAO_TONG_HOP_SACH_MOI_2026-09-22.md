@@ -16,7 +16,12 @@ Mọi con số sinh bởi script (0 token LLM), nguồn ghi ngay cạnh số; **
 | Kênh kim đã gọi chuẩn chưa? | **Chưa, đến 23/09**: body gửi `lang_type = 1` (Hán) cho ba cuốn chữ **Nôm**. Vòng 5 thêm khoá theo sách `books[].kim_lang_type` (mặc định 1 ⇒ STT không đổi byte) và chạy lại cả 3 sách với `2` (Nôm): **GOLD ảnh +2.181 / +5.395 / +639**, khớp dị bản **độc lập** +5,4 điểm (LVT↔1916) và +5,2 điểm (KVK↔1872) (§3.4). |
 | Quyết định pitch? | **PITCH (linear) = bản chốt** cho cả 3 sách (tier không giảm, khớp dị bản không giảm, ảnh lỗi ở mức crop giảm; §3.2). Bản legacy giữ ở `*_v3_legacy/`; bản thử `area` giữ ở `*_area/` (§3.3), config ghi `detector_resize: linear` kèm số đo. |
 
-## 1. Dữ liệu (`data/`, 13 thư mục, 3 nhóm — `data/README.md`, `data/*/SOURCE.md`, `data/KIEM_TRA_KHOP_1-1_2026-09-20.md`)
+## 1. Dữ liệu (`data/`, **9 thư mục còn trên đĩa** / 13 mô tả trong `data/README.md`, 3 nhóm — `data/*/SOURCE.md`, `data/KIEM_TRA_KHOP_1-1_2026-09-20.md`)
+
+> **23/09**: 4 thư mục (`KimVanKieu1894`, `TamTuKinhDienAm`, `CacThanhTruyen1646`, `LyHangCaDao`, `IHR-NomDB_nlp`) đã bị xoá khỏi
+> working tree từ 20–21/09 (`git status -- data` = `D …`), nên `data/` hiện còn **9 bộ**. **Cả 9 nay đã được xử lý: 6 chạy trọn
+> pipeline (3 STT + LVT1883 + KVK1884 + Chresto), 2 chạy trọn với tư cách TẬP ĐÁNH GIÁ (LVT1916, TK1872), 1 mới chỉ ĐO BỐ CỤC
+> (TruyenKieuPhongTinhCoLuc)** — xem §10 và `docs/CHAY_3_BO_CON_LAI_2026-09-23.md`.
 
 | Nhóm | Thư mục | Loại · QN cùng nguồn | Trạng thái |
 |---|---|---|---|
@@ -24,8 +29,8 @@ Mọi con số sinh bởi script (0 token LLM), nguồn ghi ngay cạnh số; **
 | | **LucVanTien1883** | thạch bản, 10 cột × 2 tầng (cột = cặp 6⧺8), **2.088** câu; 139 trang QN in cùng sách | **đã chạy đủ 105/105** |
 | | **KimVanKieu1884** | thạch bản, `page = 167 − canvas`, **3.256** câu (QN 3.251 dòng, lệch 5 chưa định vị); 295 trang QN xen dịch Pháp | **đã chạy đủ 163/163** (B1') |
 | | **Chrestomathie1872** | thạch bản văn xuôi, 20 truyện, cột 3–7 chữ biến thiên; QN mức truyện (28 trang) | **đã chạy đủ 65/65** (`layout: prose`) |
-| 2 — đối chứng ngoài có phiên âm độc lập | LucVanTien1916, TruyenKieu1872 (IHR-NomDB / Nôm Foundation) | mộc bản 35 px/chữ, câu↔câu 96,6 / 99,97 % | **GT độc lập** đo precision (§4) |
-| 3 — chép tay chưa phiên âm | TruyenKieuPhongTinhCoLuc, KimVanKieu1894, TamTuKinhDienAm, CacThanhTruyen1646 | không QN cùng nguồn (dị bản sai ≥ 6 % âm) | không chạy (ngoài đề tài); 1871 LVĐ dùng làm tham chiếu B1' |
+| 2 — đối chứng ngoài có phiên âm độc lập | **LucVanTien1916**, **TruyenKieu1872** (IHR-NomDB / Nôm Foundation) | mộc bản 35–40 px/chữ, **mỗi ô cột = 1 CẶP lục bát 14 chữ** (99,9 %), 10 cột/trang | **23/09: đã CHẠY TRỌN pipeline làm TẬP ĐÁNH GIÁ** (§10) — không trộn vào tập huấn luyện |
+| 3 — chép tay chưa phiên âm | **TruyenKieuPhongTinhCoLuc** (4 thư mục kia đã xoá khỏi đĩa) | không QN cùng nguồn (nền dị bản 1871↔1872 chỉ **71,3 %** chữ trùng) | **23/09: ĐÃ ĐO BỐ CỤC, CHƯA CHẠY** — bố cục thật là 2 tầng (trên = lời bình chữ Hán, dưới = 1 cặp 14 chữ); lý do và đường chạy: §10.3 |
 | loại | LyHangCaDao | 30 px/chữ | loại |
 
 ## 2. Những gì đã xây (thành phần → tệp → kiểm chứng)
@@ -205,6 +210,53 @@ Sách thứ tư: `data/<BOOK>/pages/` + `SOURCE.md` → thêm vào `BOOKS` của
 6. **Mã**: `step2_align.py` (CLI riêng) vẫn ghim 9 cột; `remediation apply` chưa chặn thiếu `--out` trong mã; `run_pipeline.sh` STT chưa gọi B4'; bản chốt là kết quả `--suffix _pitch` đổi tên (đường dẫn `_pitch` còn trong `CHECKSUMS.txt`/`mechanism_gates_report.json`); `tools.selftest` 3 fail có sẵn ở HEAD; SILVER = 0 trên thạch bản là đúng (S3 học chữ thảo).
 7. Không làm và không nên làm: self-training từ chính hộp detector (vòng tròn), dùng khớp dị bản sau (d) làm bằng chứng cổng (tự khẳng định), trích 99 % GOLD của STT cho sách mới.
 
+
+## 10. Ba bộ còn lại của `data/` (23/09) — LucVanTien1916, TruyenKieu1872, TruyenKieuPhongTinhCoLuc
+
+Chi tiết đầy đủ (đo bố cục, adapter, rủi ro, khuyến nghị): **`docs/CHAY_3_BO_CON_LAI_2026-09-23.md`**.
+Tái lập: `./run_pipeline.sh --book all-ihr`; `.venv/bin/python scripts/measure/ihr_endtoend_eval.py --book all`;
+`.venv/bin/python scripts/measure/ptcl_layout.py --kim-pages 6`.
+
+### 10.1 Bảng đầy đủ 9 bộ trong `data/`
+
+| # | Bộ | Loại chữ | Nguồn QN dùng để gán | Vai trò | Ô sinh | GOLD ảnh | Ảnh export | Độ đúng đo được |
+|---|---|---|---|---|---|---|---|---|
+| 1 | SachThanhTruyen2 | viết tay | QN trang đối diện (VietOCR) | huấn luyện (kho chính) | — | — | — | không có nhãn người |
+| 2 | SachThanhTruyen4 | viết tay | như trên | huấn luyện | — | — | — | không có nhãn người |
+| 3 | SachThanhTruyen11 | viết tay | như trên | huấn luyện | — | — | — | không có nhãn người |
+| 4 | LucVanTien1883 | thạch bản | QN in cùng sách (tesseract) | **giao nộp** | 14.474 | **10.831** | 12.038 | khớp dị bản 1916: 78,0 % |
+| 5 | KimVanKieu1884 (B1') | thạch bản | 1871 + QN in (tesseract) | **giao nộp** | 22.750 | **19.303** | 19.921 | khớp dị bản 1871/1872: 90,2 / 78,2 % |
+| 6 | Chrestomathie1872 | thạch bản văn xuôi | QN truyện (tesseract) | **giao nộp** | 8.016 | **5.998** | 6.854 | không có dị bản |
+| 7 | **LucVanTien1916** | mộc bản | **phiên âm NGƯỜI** (Nôm Foundation) | **TẬP ĐÁNH GIÁ** | **13.761** | **8.783** | **8.872** | **nhãn người: GOLD 97,2 %** |
+| 8 | **TruyenKieu1872** | mộc bản | **phiên âm NGƯỜI** | **TẬP ĐÁNH GIÁ** | **22.499** | **13.465** | **13.513** | **nhãn người: GOLD 98,5 %** |
+| 9 | **TruyenKieuPhongTinhCoLuc** | chép tay | chỉ có **dị bản** 1871/1872 | chưa dùng | — | — | — | nền dị bản 1871↔1872 = 71,3 % |
+
+Số của bộ 4–6 là **bản chốt vòng 5** (§3.4). Bộ 7–8 dùng `prepared_ihr/`, `dataset/<Book>/`, config riêng,
+`manifest.json` mang `evaluation_only: true`, và **không** nằm trong `--book all-new`.
+
+### 10.2 Điều quan trọng nhất học được: **mức ảnh gửi kim, chứ không phải chất lượng bản in, quyết định kim đọc đúng hay sai**
+
+`auto_precision/ihr` (22/09) đo kim trên **patch từng CÂU** của hai bộ IHR và kết luận "kim thô chỉ đúng **49,2 %**
+(LVT1916) / **42,3 %** (Kiều1872)". Gửi **cả trang** cùng 10 trang ấy, cùng `lang_type = 2`: **97,2 % / 98,2 %**
+(`measure_out/<Book>/ihr_layout/summary.json`). Điều này ăn khớp với `CHOT_KENH §2` (cắt xuống mức tầng-cột làm kim
+rụng gần nửa số chữ) và **hạ bệ mốc "kim kém trên mộc bản"** — mốc ấy phải gỡ khỏi các bảng đã viết.
+Kéo theo: bảng xếp hạng nút thắt của `CHAN_DOAN_3_SACH_MOI §5` (kim = 77–81 % mất mát) đúng **cho thạch bản với QN
+OCR**, nhưng khi QN đúng và ô cột đúng thì kim chỉ còn gây ~3 % lỗi. **Suy luận này bắc qua hai miền in** (mộc bản ↔ thạch
+bản) nên là **giả thuyết có số đỡ, chưa phải kết luận**: muốn chắc thì đo lại LVT1883/KVK1884 với QN thay bằng phiên âm
+chuẩn và ô cột thay bằng ô vẽ tay trên một mẫu trang — nếu precision ở đó cũng nhảy lên ~97 % thì ngân sách lỗi của
+3 sách giao nộp đúng là nằm ở **QN (tesseract) + dò cột** chứ không ở kênh OCR Hán-Nôm.
+
+### 10.3 Vì sao TruyenKieuPhongTinhCoLuc chưa chạy
+
+Bố cục thật (đo `ptcl_layout`, xác nhận bằng chính chuỗi chữ kim): tờ đôi 2000×1820, ~14 cột có chữ (7 cột × 2 nửa tờ,
+đúng như `data/README.md`), **ranh giới tầng là một đường ngang chung cả tờ ở y ≈ 490–555**; tầng trên = **lời bình chữ
+Hán cỡ nhỏ** (cao/chữ ≈ 61 px, thường 2 cột con), tầng dưới = **ĐÚNG MỘT CẶP LỤC BÁT 14 chữ** (cao/chữ ≈ 77 px; kim
+trung vị đúng 14,0 và 85,2 % cột nằm trong [13,15]). ⇒ `ingest_lithograph_book` (tầng trên = câu lục 6) **không dùng
+được**; cần adapter riêng. Thêm ba chặn đã định lượng: không có số câu neo; kim đọc chép tay chỉ đạt thu hồi LCS
+**35–44 %** so bản 1871 trong khi **trần của phép so ấy là 71,3 %**; và QN dị bản làm cận trên lớp "nhãn sai hệ thống"
+lên tới ~29 % vị trí mà **không đo được trên chính C** (không có phiên âm của R.987). Đường chạy đã định lượng
+(~1 ngày công + ~130 lượt kim) ở `CHAY_3_BO_CON_LAI §3.4`.
+
 ## 9. Chỉ mục tài liệu và commit
 
 | Nội dung | Tệp |
@@ -214,7 +266,8 @@ Sách thứ tư: `data/<BOOK>/pages/` + `SOURCE.md` → thêm vào `BOOKS` của
 | Lần chạy từng sách (đầu tệp = chốt cuối pitch) | `docs/CHAY_LVT1883_2026-09-21.md`, `CHAY_KVK1884_B1_2026-09-22.md` (chính thức), `CHAY_KVK1884_2026-09-21.md`, `CHAY_CHRESTO1872_2026-09-22.md` |
 | Lịch sử vòng 1–2 và phương án tự động (đã gộp vào đây) | `docs/BAO_CAO_TONG_THE_SACH_MOI_2026-09-22.md`, `docs/PHUONG_AN_TU_DONG_2026-09-22.md` |
 | Số đo dữ liệu + đặc tả | `docs/KET_QUA_DO_CUOI_2026-09-21.md`, `docs/PIPELINE_SACH_MOI_2026-09-20.md`, `docs/PIPELINE_FACTS.json`, `measure_out/{SUMMARY.json,REPORT.md}` |
-| Kế hoạch commit | vòng 1 `KE_HOACH_COMMIT_2026-09-21.md` (đã commit fb345a29b1…853cadfd9c), vòng 2 `KE_HOACH_COMMIT_VONG2_2026-09-22.md` (đã commit 6b8e215576, e06f32dce7, 4e0a314bca), vòng 3 `KE_HOACH_COMMIT_VONG3_2026-09-22.md` (đã commit 59fde272c4, 6575d4d764, 10e6fa1b3f, 8c08591e9a), **vòng 4 `KE_HOACH_COMMIT_VONG4_2026-09-22.md` (chưa commit: detector_ckpt/detector_resize, lab/i5_detector_v2)** |
+| **Ba bộ còn lại (23/09): đo bố cục, chạy A/B làm tập đánh giá, độ đúng theo nhãn người, vì sao chưa chạy C** | **`docs/CHAY_3_BO_CON_LAI_2026-09-23.md`** |
+| Kế hoạch commit | vòng 1 `KE_HOACH_COMMIT_2026-09-21.md` (đã commit fb345a29b1…853cadfd9c), vòng 2 `KE_HOACH_COMMIT_VONG2_2026-09-22.md` (đã commit 6b8e215576, e06f32dce7, 4e0a314bca), vòng 3 `KE_HOACH_COMMIT_VONG3_2026-09-22.md` (đã commit 59fde272c4, 6575d4d764, 10e6fa1b3f, 8c08591e9a), vòng 4 `KE_HOACH_COMMIT_VONG4_2026-09-22.md`, vòng 5 `KE_HOACH_COMMIT_VONG5_2026-09-23.md`, **vòng 6 `KE_HOACH_COMMIT_VONG6_2026-09-23.md` (chưa commit: adapter IHR + 3 bộ đo mới + 2 config)** |
 
 Hồi quy/selftest lúc chốt (22/09 chiều): STT 3 trang md5 59e436d7… hai bên; `./run_pipeline.sh --dry-run` 6 bước; book_layout 79/79 · ingest_lithograph 61/61 · ingest_prose 33/33 · mechanism_gates 94/94 · pitch_decode 22/22 · verses_ref_fix 19/19 · phase1_engine 253/0 · tools 139/3 (có sẵn) · code_facts 18/18; `git status -- dataset_out data prepared/SachThanhTruyen*` trống.
 Vòng 4 (22/09 tối, worktree HEAD 8c08591e9a ↔ mã mới): STT 3 trang md5 **59e436d7641fa849bb6759868ac29259** hai bên (344/346 tệp giống byte, 2 tệp chỉ khác đường dẫn REPO); `--dry-run` 6 bước; book_layout **100/100** · phase1_engine 253/0 · pitch_decode 22/22 · mechanism_gates 94/94 · tools 139/3 · code_facts 18/18 (pin book_layout.py 50 → 61).

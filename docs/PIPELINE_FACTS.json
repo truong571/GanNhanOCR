@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-22T16:55:17Z",
+ "generated_at": "2026-09-22T18:13:31Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "0997cf57bb",
+ "git_head": "12a00ede3e",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 59,
@@ -17,7 +17,7 @@
   "pdf_readers": 2,
   "checkpoint_paths": 11,
   "checkpoint_exists": 5,
-  "git_dirty_pipeline_core": 10,
+  "git_dirty_pipeline_core": 3,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
  },
@@ -195,7 +195,7 @@
     "call_arg_no_column_context": 7,
     "call_kwarg_no_column_context": 5,
     "compare_no_column_context": 1,
-    "other_no_column_context": 23
+    "other_no_column_context": 24
    },
    "discarded_examples": [
     "core/image/image_processing.py:14 cv2.bilateralFilter(d=9)",
@@ -1294,11 +1294,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 237,
+       "line": 238,
        "cmd": "X \"$PY\" -m pipeline.step0_setup \"$CONFIG\""
       },
       {
-       "line": 579,
+       "line": 584,
        "cmd": "R \"$PY\" -m pipeline.step0_setup \"$BK_CONFIG\""
       }
      ]
@@ -1343,7 +1343,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 251,
+       "line": 252,
        "cmd": "X \"$PY\" -m pipeline.step1_extract \"$CONFIG\" \"$b\""
       }
      ]
@@ -1657,11 +1657,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 264,
+       "line": 265,
        "cmd": "X \"$PY\" -m pipeline.align_engine.build_dataset --config \"$CONFIG\" --reseg \"$RESEG\" --qd01-cells none --force --out \"$DS_OUT\""
       },
       {
-       "line": 631,
+       "line": 644,
        "cmd": "R \"$PY\" -m pipeline.align_engine.build_dataset --config \"$BK_CONFIG\" --reseg detector --qd01-cells none --decisions none --use-s3 --two-pass --box-rule syl_index --force --out \"$ds_out\""
       }
      ]
@@ -1724,19 +1724,19 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 305,
+       "line": 306,
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" census"
       },
       {
-       "line": 306,
+       "line": 307,
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" apply --tau \"$TAU_REMEDIATE\""
       },
       {
-       "line": 640,
+       "line": 653,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" census"
       },
       {
-       "line": 641,
+       "line": 654,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" apply --tau \"$TAU_REMEDIATE\""
       }
      ],
@@ -1794,11 +1794,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 310,
+       "line": 311,
        "cmd": "X \"$PY\" -m pipeline.remediation.confusion_fix --in \"$LABELS_REMED\" --out \"$LABELS_FINAL\" --fixes \"$CONFUSION_FIXES\" --measure"
       },
       {
-       "line": 644,
+       "line": 657,
        "cmd": "R \"$PY\" -m pipeline.remediation.confusion_fix --in \"$labels_remed\" --out \"$labels_final\" --fixes \"$CONFUSION_FIXES\" --measure"
       }
      ]
@@ -1920,7 +1920,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 652,
+       "line": 665,
        "cmd": "cmd=(\"$PY\" -m pipeline.remediation.mechanism_gates --in \"$labels_final\" --out \"$labels_gated\""
       }
      ]
@@ -2038,7 +2038,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 352,
+       "line": 353,
        "cmd": "X \"$PY\" -m pipeline.remediation.self_training_rescue \"${_args[@]}\""
       }
      ]
@@ -2102,11 +2102,11 @@
        "cmd": "#   6 export      pipeline/export_final_dataset.py -> dataset/ (usable: GOLD+SYLLABLE)"
       },
       {
-       "line": 360,
+       "line": 361,
        "cmd": "X \"$PY\" pipeline/export_final_dataset.py --labels \"$LABELS_FINAL\" --src-root \"$DS_OUT\" --out \"$FINAL_DIR\""
       },
       {
-       "line": 673,
+       "line": 686,
        "cmd": "R \"$PY\" pipeline/export_final_dataset.py --labels \"$labels_gated\" --src-root \"$ds_out\" --out \"$final_dir\" --n-columns \"$BK_NCOL\""
       }
      ]
@@ -2152,11 +2152,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 268,
+       "line": 269,
        "cmd": "X \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$LABELS_RAW\" --src-root \"$DS_OUT\""
       },
       {
-       "line": 634,
+       "line": 647,
        "cmd": "R \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$labels_raw\" --src-root \"$ds_out\""
       }
      ]
@@ -2387,7 +2387,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 618,
+       "line": 631,
        "cmd": "cmd=(\"$PY\" -m pipeline.tools.ingest_lithograph_book --book \"$book\" --ocr \"$ocr\" --out \"$BK_DATA_DIR\""
       }
      ]
@@ -3961,82 +3961,34 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "0997cf57bb",
+   "head": "12a00ede3e",
    "branch": "main",
-   "n_dirty_pipeline_core": 10,
+   "n_dirty_pipeline_core": 3,
    "dirty_pipeline_core": [
     {
-     "file": "core/ocr/ocr_api.py",
-     "status": "M",
-     "ins": 27,
-     "del": 5
+     "file": "pipeline/tools/ingest_ihr_book.py",
+     "status": "??"
     },
     {
-     "file": "pipeline/align_engine/align_production.py",
-     "status": "M",
-     "ins": 43,
-     "del": 8
+     "file": "pipeline/tools/ingest_ihr_selftest.py",
+     "status": "??"
     },
     {
-     "file": "pipeline/align_engine/anchor_align.py",
-     "status": "M",
-     "ins": 81,
-     "del": 0
-    },
-    {
-     "file": "pipeline/align_engine/book_layout.py",
-     "status": "M",
-     "ins": 101,
-     "del": 5
-    },
-    {
-     "file": "pipeline/align_engine/book_layout_selftest.py",
-     "status": "M",
-     "ins": 84,
-     "del": 1
-    },
-    {
-     "file": "pipeline/align_engine/build_dataset.py",
-     "status": "M",
-     "ins": 12,
-     "del": 5
-    },
-    {
-     "file": "pipeline/tools/ingest_lithograph_book.py",
-     "status": "M",
-     "ins": 184,
-     "del": 17
-    },
-    {
-     "file": "pipeline/tools/ingest_lithograph_selftest.py",
-     "status": "M",
-     "ins": 123,
-     "del": 0
-    },
-    {
-     "file": "pipeline/tools/ingest_prose_book.py",
-     "status": "M",
-     "ins": 21,
-     "del": 5
-    },
-    {
-     "file": "pipeline/tools/ingest_prose_selftest.py",
-     "status": "M",
-     "ins": 1,
-     "del": 1
+     "file": "pipeline/tools/mark_eval_dataset.py",
+     "status": "??"
     }
    ],
-   "untracked_pipeline_core": [],
+   "untracked_pipeline_core": [
+    "pipeline/tools/ingest_ihr_book.py",
+    "pipeline/tools/ingest_ihr_selftest.py",
+    "pipeline/tools/mark_eval_dataset.py"
+   ],
    "ocr_api_guest_mode": {
     "file": "core/ocr/ocr_api.py",
-    "has_uncommitted_diff": true,
+    "has_uncommitted_diff": false,
     "guest_mode_lines_added": 0,
-    "functions_touched": [
-     "upload_image"
-    ],
-    "added_defs": [
-     "recognize"
-    ],
+    "functions_touched": [],
+    "added_defs": [],
     "committed_version_has_guest": true,
     "worktree_has_guest": true
    },

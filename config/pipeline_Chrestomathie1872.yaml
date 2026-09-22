@@ -18,6 +18,11 @@ books:
     # dòng (không có len_odd → tầng theo chữ kim). Số đo tham chiếu chỉ có cho LVT/KVK (config LVT1883);
     # Chresto so trực tiếp bản _pitch với bản legacy (docs/BAO_CAO_TONG_HOP_SACH_MOI_2026-09-22.md §3).
     box_decoder: pitch
+    # 2026-09-22 tối (I5, răng cưa — xem config LVT1883): `area` = INTER_AREA; ảnh Chresto 2.289 px → 1.024 chỉ thu 2,2×
+    # nên gần như không khác linear: build `--suffix _area` (dataset_out_Chrestomathie1872_area/): I5 thô 70,7 → 69,3 %,
+    # GOLD ảnh 5.359 → 5.344, ảnh export 6.645 → 6.636, bleed 2,0 = 2,0 % (tất cả trong nhiễu; không có ô tham chiếu
+    # cho văn xuôi). Không có lợi → giữ `linear`.
+    detector_resize: linear
     # Bước B4' cổng theo cơ chế (pipeline/remediation/mechanism_gates.py, agent cổng cơ chế 22/09): vắng khoá
     # chỉ bật với layout=lithograph -> bật tường minh cho văn xuôi (cùng detector CenterNet học STT, cùng lớp
     # lỗi hộp ±1 / midpoint). Chỉ mô-đun ấy đọc khoá này.

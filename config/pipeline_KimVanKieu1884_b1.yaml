@@ -47,6 +47,13 @@ books:
     # extra/100 ô 2,3 → 0,4, "cắt vào thân chữ" 3,8 → 2,6 %. Lý do/cơ chế: xem config LVT1883.
     # Ablation dict-boost (pipeline_KimVanKieu1884_b1_boost.yaml) GIỮ legacy để so sánh cũ.
     box_decoder: pitch
+    # 2026-09-22 tối (I5, răng cưa — xem config LVT1883, lab/i5_detector_v2/README.md): `area` = INTER_AREA khi thu
+    # 2.789 → 1.024 (2,7×). Đo trên chính sách này (`--suffix _area`, dataset_out_KimVanKieu1884_b1_area/): I5 thô
+    # 59,2 → 77,9 %, ok50 pitch 97,0 → 98,6 %, miss 3,0 → 1,0 %, detector_low+ink_cut 879 → 350 ô, GOLD ảnh 13.908 → 14.165,
+    # text_only 510 → 201, ảnh export 17.752 → 17.999; bleed trên ảnh export 10,5 = 10,5 %; blank/truncated +40/+14 ô
+    # (đều → REVIEW bởi cổng (c)); khớp dị bản sau (a)(b)(c) 81,3 → 81,1 % (trong CI). KVK là sách duy nhất không có chỉ
+    # số nào giảm, nhưng quyết định `_area` lấy chung 3 sách (LVT bleed tăng) → giữ `linear`; đổi `area` để tái lập _area.
+    detector_resize: linear
     reocr: false
 
 # 2026-09-22: khối `run:` CHỈ run_pipeline.sh --book KimVanKieu1884 đọc (qua run_config: của config chính);

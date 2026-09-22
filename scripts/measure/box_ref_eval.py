@@ -373,6 +373,10 @@ def main():
     ap.add_argument("--variants", default=",".join(VARIANTS))
     ap.add_argument("--page-ids", default="")
     ap.add_argument("--debug-pages", type=int, default=2)
+    ap.add_argument("--ckpt", default="", help="checkpoint CenterNet (mặc định env NOM_DETECTOR_CKPT > train_crop/detector_r34.best.pt); "
+                                             "lab/i5_detector_v2: so v1 ↔ v2 bằng 2 lần chạy khác --ckpt/--out")
+    ap.add_argument("--resize", default="linear", choices=["linear", "area"],
+                    help="phép thu ảnh trang cho detector: linear (v1/pipeline mặc định) | area (= books[].detector_resize: area)")
     a = ap.parse_args()
     variants = [v for v in a.variants.split(",") if v in VARIANTS]
     books = list(LITHO_BOOKS) if a.book == "all" else [a.book]
@@ -382,8 +386,9 @@ def main():
     import torch
     torch.manual_seed(0); torch.set_num_threads(a.workers); np.random.seed(0)
     from pipeline.align_engine.char_detector.detector_infer import DetectorInfer
-    det = DetectorInfer(thr=PD.PITCH_CAND_THR, device="cpu")
-    assert det.trained, "không nạp được train_crop/detector_r34.best.pt"
+    det = DetectorInfer(ckpt=a.ckpt or None, thr=PD.PITCH_CAND_THR, device="cpu", resize=a.resize)
+    ckpt_used = a.ckpt or os.environ.get("NOM_DETECTOR_CKPT") or "train_crop/detector_r34.best.pt"
+    assert det.trained, f"không nạp được {ckpt_used}"
     page_ids = parse_page_ids(a.page_ids)
     pages = []
     for b in books:
@@ -393,7 +398,7 @@ def main():
         else:
             files = pick_even(files, min(a.pages, a.limit) if a.limit else a.pages)
         pages += [(b, f) for f in files]
-    print(f"box_ref_eval | {len(pages)} trang × {variants} × thr {THRS} | ckpt train_crop/detector_r34.best.pt", flush=True)
+    print(f"box_ref_eval | {len(pages)} trang × {variants} × thr {THRS} | ckpt {ckpt_used} | resize {a.resize}", flush=True)
     t0 = time.time()
     prow, crow, cell_out, dbg = [], [], [], 0
     for b, f in pages:
@@ -420,6 +425,7 @@ def main():
                            "pitch": "pitch_decode.decode_column (ứng viên ≥ 0,05 + ô ảo, DP), nhãn nguồn theo det_thr 0,15"},
                "caveats": ["pitch: n == N là hằng đúng", "ô ink_cut trùng tham chiếu theo cấu tạo → xem *_honest",
                            "không GT người → proxy"],
+               "detector": {"ckpt": ckpt_used, "resize": a.resize, "img": det.img},
                "pages": {"n": len(prow), "per_book": {b: e["n_pages"] for b, e in per_book.items()}},
                "variants": variants, "runtime_s": round(time.time() - t0, 1),
                "per_book": per_book, "invariants": inv,

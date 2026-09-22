@@ -103,7 +103,7 @@ PIN_IDENTS = {"expected_cols", "n_columns", "n_expected", "total_columns", "EXPE
               "NUM_COLS", "N_COLS", "max_lines", "expected_columns", "num_columns"}
 KNOWN_PINS = [                                   # (file, line, gợi ý) — đối chiếu bắt buộc (cập nhật 22/09 vòng 2)
     # align_production.py không còn ghim 9: n_columns lấy từ BookLayout (fb345a29b1); mặc định STT nằm ở book_layout.py
-    ("pipeline/align_engine/book_layout.py", 50, "DEFAULT_N_COLUMNS = 9"),   # 22/09 I5: docstring thêm khoá box_decoder (43 -> 50)
+    ("pipeline/align_engine/book_layout.py", 61, "DEFAULT_N_COLUMNS = 9"),   # 22/09 I5: docstring thêm khoá box_decoder (43 -> 50); detector_ckpt/detector_resize (50 -> 61)
     ("pipeline/step2_align.py", 62, "_get_qn_lines(n_columns=9)"),
     ("pipeline/step2_align.py", 154, "detect_nom_columns_v3(..., 9)  # CLI riêng, vẫn ghim 9"),
     ("pipeline/step2_align.py", 161, "len(qn_lines) == 9"),

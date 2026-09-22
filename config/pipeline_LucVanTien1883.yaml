@@ -49,6 +49,15 @@ books:
     # theo ô box_source ink_cut/detector_low (mechanism_gates.detect_pitch_mode đọc khoá này).
     # Đổi về `legacy` = hành vi cũ (bản dataset_LucVanTien1883_v3_legacy).
     box_decoder: pitch
+    # 2026-09-22 tối (I5, răng cưa — lab/i5_detector_v2/README.md, HUONG_DAN_HUAN_LUYEN_I5 §0): phép thu ảnh trang
+    # 3.204 → 1.024 cho detector. `linear` = cv2.resize mặc định (răng cưa khi thu 3,1× làm rụng nét mảnh) = STT không
+    # đổi byte. `area` = INTER_AREA, đã đo trên chính sách này (`./run_pipeline.sh --book LucVanTien1883 --suffix _area`,
+    # dataset_out_LucVanTien1883_area/, box_ref measure_out/box_ref_area/): I5 thô 65,2 → 77,7 %, ok50 pitch 98,1 → 99,3 %,
+    # miss 0,5 → 0,1 %, detector_low+ink_cut 236 → 97 ô, GOLD ảnh 8.650 → 8.733, text_only 130 → 43, tier văn bản/khớp
+    # dị bản không đổi; NHƯNG hộp cao hơn ~2 % (h/p 1,14 → 1,16) → crop `bleed` trên ảnh export 18,0 → 21,7 % (+429)
+    # và "cắt thân chữ" pitch 9,5 → 10,6 % → theo luật "không chỉ số nào giảm" CHƯA lấy làm bản chốt; giữ `linear`.
+    # Đổi một chữ `area` là tái lập bản _area. Detector v2 (Kaggle) so với mốc v1+area, không so với linear.
+    detector_resize: linear
     reocr: false
 
 # 2026-09-22: khối `run:` CHỈ run_pipeline.sh --book đọc (book_profile); engine/adapter/step0/mechanism_gates KHÔNG đọc.

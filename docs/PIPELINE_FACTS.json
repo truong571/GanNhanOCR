@@ -1,11 +1,11 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-22T06:23:12Z",
+ "generated_at": "2026-09-22T07:23:29Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "4e0a314bca",
+ "git_head": "8c08591e9a",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
-  "column_pins": 58,
+  "column_pins": 59,
   "column_pins_prod": 26,
   "identifier_refs": 72,
   "known_pins_found": "9/9",
@@ -15,9 +15,9 @@
   "json_keys_never_read": 8,
   "config_books": 3,
   "pdf_readers": 2,
-  "checkpoint_paths": 8,
+  "checkpoint_paths": 11,
   "checkpoint_exists": 5,
-  "git_dirty_pipeline_core": 9,
+  "git_dirty_pipeline_core": 7,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
  },
@@ -160,13 +160,13 @@
  "sections": {
   "column_pins": {
    "how": "AST: mọi ast.Constant int 9 trong pipeline/ core/ (bỏ __pycache__), phân loại theo nút cha (default_param / compare / call_arg / call_kwarg / assign); giữ khi dòng mã hoặc ngữ cảnh khớp /col|c[oộ]t|line|qn|numbered|expected|total|max_lines|N=9/i, hoặc so sánh len(x)==9, hoặc (compare/assign) 8 dòng phía trên khớp /column|c[oộ]t|expected\\s*=\\s*9|1-9/i (context=window); bỏ chỉ số x[9], gọi thư viện cv2/np, hằng không ngữ cảnh cột. Định danh: ast.Name/ast.arg ∈ ['EXPECTED', 'NUM_COLS', 'N_COLS', 'expected_cols', 'expected_columns', 'max_lines', 'n_columns', 'n_expected', 'num_columns', 'total_columns']. YAML: regex trên config/pipeline.yaml.",
-   "n_hits": 58,
+   "n_hits": 59,
    "n_hits_prod": 26,
    "by_category": {
     "assign": 3,
     "call_arg": 11,
     "call_kwarg": 3,
-    "compare": 26,
+    "compare": 27,
     "default_param": 15
    },
    "by_file": {
@@ -178,7 +178,7 @@
     "core/pdf/parser_selftest.py": 1,
     "core/pdf/pdf_parser.py": 4,
     "pipeline/align_engine/book_layout.py": 1,
-    "pipeline/align_engine/book_layout_selftest.py": 20,
+    "pipeline/align_engine/book_layout_selftest.py": 21,
     "pipeline/align_engine/char_detector/detector_infer.py": 2,
     "pipeline/align_engine/visual_emission_selftest.py": 1,
     "pipeline/check_ocr_columns.py": 1,
@@ -215,7 +215,7 @@
    "known_pins_check": [
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 50,
+     "line": 61,
      "hint": "DEFAULT_N_COLUMNS = 9",
      "found": true,
      "code": "DEFAULT_N_COLUMNS = 9",
@@ -406,7 +406,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 50,
+     "line": 61,
      "category": "assign",
      "context": "line",
      "detail": "DEFAULT_N_COLUMNS = 9",
@@ -594,8 +594,17 @@
      "lab_or_test": true
     },
     {
+     "file": "pipeline/align_engine/book_layout_selftest.py",
+     "line": 412,
+     "category": "compare",
+     "context": "line",
+     "detail": "st.n_columns == 9",
+     "code": "st is not BL.DEFAULT_LAYOUT and st.n_columns == 9 and st.detector_ckpt is None and st.detector_resize == \"area\")",
+     "lab_or_test": true
+    },
+    {
      "file": "pipeline/align_engine/char_detector/detector_infer.py",
-     "line": 114,
+     "line": 117,
      "category": "call_arg",
      "context": "line",
      "detail": "det.column_boxes(… arg#2=9)",
@@ -604,7 +613,7 @@
     },
     {
      "file": "pipeline/align_engine/char_detector/detector_infer.py",
-     "line": 116,
+     "line": 119,
      "category": "compare",
      "context": "line",
      "detail": "len(cb) == 9",
@@ -1089,43 +1098,43 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 68,
+     "line": 82,
      "ident": "n_columns",
      "code": "n_columns: int | str = DEFAULT_N_COLUMNS   # số nguyên, hoặc \"auto\" (chỉ layout=prose)"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 106,
+     "line": 122,
      "ident": "n_columns",
      "code": "n_columns = book_cfg.get(\"n_columns\", N_COLUMNS_AUTO if layout == LAYOUT_PROSE else DEFAULT_N_COLUMNS)"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 107,
+     "line": 123,
      "ident": "n_columns",
      "code": "if n_columns == N_COLUMNS_AUTO:"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 110,
+     "line": 126,
      "ident": "n_columns",
      "code": "elif isinstance(n_columns, bool) or not isinstance(n_columns, int) or n_columns < 1:"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 111,
+     "line": 127,
      "ident": "n_columns",
      "code": "raise ValueError(f\"books[{name}].n_columns = {n_columns!r}; cần số nguyên >= 1\""
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 130,
+     "line": 154,
      "ident": "n_columns",
      "code": "if (layout == LAYOUT_STT and n_columns == DEFAULT_N_COLUMNS and qpc == 0"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 133,
+     "line": 158,
      "ident": "n_columns",
      "code": "return BookLayout(layout=layout, n_columns=n_columns, qn_per_column=qpc,"
     },
@@ -2464,7 +2473,7 @@
      "reads": [
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 702,
+       "line": 733,
        "recv": "nom_chars[i]",
        "access": "get"
       },
@@ -2494,31 +2503,31 @@
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 263,
+       "line": 272,
        "recv": "c",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 264,
+       "line": 273,
        "recv": "c",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 265,
+       "line": 274,
        "recv": "c",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 373,
+       "line": 404,
        "recv": "c",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 514,
+       "line": 545,
        "recv": "c",
        "access": "subscript"
       },
@@ -2593,7 +2602,7 @@
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1352,
+       "line": 1375,
        "recv": "c",
        "access": "get"
       },
@@ -2704,13 +2713,13 @@
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1628,
+       "line": 1651,
        "recv": "r",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1661,
+       "line": 1684,
        "recv": "r",
        "access": "subscript"
       },
@@ -2854,13 +2863,13 @@
      "reads": [
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1679,
+       "line": 1702,
        "recv": "row",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1722,
+       "line": 1745,
        "recv": "r",
        "access": "subscript"
       },
@@ -2915,7 +2924,7 @@
      "reads": [
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1730,
+       "line": 1753,
        "recv": "r",
        "access": "subscript"
       },
@@ -3009,13 +3018,13 @@
      "reads": [
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1246,
+       "line": 1269,
        "recv": "cs",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1353,
+       "line": 1376,
        "recv": "cs",
        "access": "subscript"
       },
@@ -3142,12 +3151,12 @@
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 1151,
+     "line": 1173,
      "code": "trans = sorted(glob.glob(str(data_dir / \"transcriptions\" / \"page_*.json\")))"
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 1152,
+     "line": 1174,
      "code": "trans = [t for t in trans if not t.endswith(\"_qn_ocr_cache.json\")]"
     },
     {
@@ -3466,6 +3475,8 @@
    ],
    "optional_keys": [
     "box_decoder",
+    "detector_ckpt",
+    "detector_resize",
     "layout",
     "mechanism_gates",
     "n_columns",
@@ -3493,7 +3504,7 @@
    "all_key_readers": [
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 102,
+     "line": 118,
      "key": "name",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3501,7 +3512,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 103,
+     "line": 119,
      "key": "layout",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3509,7 +3520,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 106,
+     "line": 122,
      "key": "n_columns",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3517,7 +3528,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 114,
+     "line": 130,
      "key": "qn_syllables_per_column",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3525,7 +3536,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 116,
+     "line": 132,
      "key": "qn_syllables_per_column",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3533,15 +3544,47 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 127,
+     "line": 143,
      "key": "box_decoder",
      "access": "get",
      "keyerror_if_missing": false,
      "code": "box_decoder = book_cfg.get(\"box_decoder\", BOX_DECODER_LEGACY)"
     },
     {
+     "file": "pipeline/align_engine/book_layout.py",
+     "line": 146,
+     "key": "detector_ckpt",
+     "access": "get",
+     "keyerror_if_missing": false,
+     "code": "detector_ckpt = book_cfg.get(\"detector_ckpt\")"
+    },
+    {
+     "file": "pipeline/align_engine/book_layout.py",
+     "line": 151,
+     "key": "detector_resize",
+     "access": "get",
+     "keyerror_if_missing": false,
+     "code": "detector_resize = book_cfg.get(\"detector_resize\", DETECTOR_RESIZE_LINEAR)"
+    },
+    {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 1127,
+     "line": 1128,
+     "key": "name",
+     "access": "subscript",
+     "keyerror_if_missing": true,
+     "code": "det_ckpt_by_book[_b[\"name\"]] = (_ck, _lay.detector_resize)"
+    },
+    {
+     "file": "pipeline/align_engine/build_dataset.py",
+     "line": 1132,
+     "key": "name",
+     "access": "subscript",
+     "keyerror_if_missing": true,
+     "code": "print(f\"  [reseg] {_b['name']}: detector riêng sách ckpt = {_ck or '(toàn cục v1)'} | resize = \""
+    },
+    {
+     "file": "pipeline/align_engine/build_dataset.py",
+     "line": 1142,
      "key": "name",
      "access": "subscript",
      "keyerror_if_missing": true,
@@ -3706,14 +3749,30 @@
   },
   "checkpoints": {
    "how": "AST: ast.Constant/JoinedStr khớp /\\.(?:pt|pth|h5|ckpt|keras|onnx|safetensors)$/ trong pipeline/ core/; leo qua chuỗi BinOp '/' rồi ước lượng tĩnh (REPO, __file__, Path().parent, hằng module) -> đường dẫn; kiểm tồn tại + kích thước. f-string (fold{k}.pt) -> glob trong tuple/list Path cùng tệp (vd DEFAULT_MODEL_DIRS) và CKPT_DIR_HINTS. env_overrides: os.environ.get('*CKPT*').",
-   "n_paths": 8,
+   "n_paths": 11,
    "n_exists": 5,
    "missing": [
+    "/a/b/detector_r34_v2_litho.pt",
     "md / 'fold0.pt'",
     "pipeline/align_engine/char_detector/detector_r34.best.pt",
-    "pipeline/align_engine/nom_classifier/checkpoints/best.pt"
+    "pipeline/align_engine/nom_classifier/checkpoints/best.pt",
+    "train_crop/detector_r34_v2_litho.pt",
+    "train_crop/khong_co_tep_nay.pt"
    ],
    "items": [
+    {
+     "path": "/a/b/detector_r34_v2_litho.pt",
+     "literal": "/a/b/detector_r34_v2_litho.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/align_engine/book_layout_selftest.py:436"
+     ],
+     "src": "'/a/b/detector_r34_v2_litho.pt'",
+     "resolved": "/a/b/detector_r34_v2_litho.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
     {
      "path": "fold{fold}.pt",
      "literal": "fold{fold}.pt",
@@ -3826,6 +3885,9 @@
      "referenced_in": [
       "core/image/detector_seg.py:26",
       "core/image/detector_seg.py:27",
+      "pipeline/align_engine/align_production.py:351",
+      "pipeline/align_engine/book_layout_selftest.py:421",
+      "pipeline/align_engine/book_layout_selftest.py:423",
       "pipeline/align_engine/char_detector/detector_infer.py:28",
       "pipeline/phase1_engine_selftest.py:846"
      ],
@@ -3834,6 +3896,32 @@
      "unresolved_expr": false,
      "exists": true,
      "size_mb": 86.5
+    },
+    {
+     "path": "train_crop/detector_r34_v2_litho.pt",
+     "literal": "train_crop/detector_r34_v2_litho.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/align_engine/book_layout_selftest.py:409"
+     ],
+     "src": "'train_crop/detector_r34_v2_litho.pt'",
+     "resolved": "train_crop/detector_r34_v2_litho.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "train_crop/khong_co_tep_nay.pt",
+     "literal": "train_crop/khong_co_tep_nay.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/align_engine/book_layout_selftest.py:427"
+     ],
+     "src": "'train_crop/khong_co_tep_nay.pt'",
+     "resolved": "train_crop/khong_co_tep_nay.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
     }
    ],
    "env_overrides": [
@@ -3869,49 +3957,39 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "4e0a314bca",
+   "head": "8c08591e9a",
    "branch": "main",
-   "n_dirty_pipeline_core": 9,
+   "n_dirty_pipeline_core": 7,
    "dirty_pipeline_core": [
     {
      "file": "pipeline/align_engine/align_production.py",
      "status": "M",
-     "ins": 84,
+     "ins": 43,
      "del": 12
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
      "status": "M",
-     "ins": 45,
+     "ins": 44,
      "del": 2
+    },
+    {
+     "file": "pipeline/align_engine/book_layout_selftest.py",
+     "status": "M",
+     "ins": 63,
+     "del": 1
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
      "status": "M",
-     "ins": 12,
+     "ins": 24,
      "del": 1
     },
     {
-     "file": "pipeline/export_final_dataset.py",
+     "file": "pipeline/align_engine/char_detector/detector_infer.py",
      "status": "M",
-     "ins": 3,
+     "ins": 5,
      "del": 2
-    },
-    {
-     "file": "pipeline/remediation/mechanism_gates.py",
-     "status": "M",
-     "ins": 102,
-     "del": 15
-    },
-    {
-     "file": "pipeline/remediation/mechanism_gates_selftest.py",
-     "status": "M",
-     "ins": 127,
-     "del": 1
-    },
-    {
-     "file": "pipeline/align_engine/char_detector/pitch_decode.py",
-     "status": "??"
     },
     {
      "file": "pipeline/tools/kiem_nguoi_grid.py",
@@ -3923,7 +4001,6 @@
     }
    ],
    "untracked_pipeline_core": [
-    "pipeline/align_engine/char_detector/pitch_decode.py",
     "pipeline/tools/kiem_nguoi_grid.py",
     "pipeline/tools/kiem_nguoi_score.py"
    ],

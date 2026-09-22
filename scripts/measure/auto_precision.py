@@ -452,10 +452,17 @@ def match_verses(book: str, cfg: dict, min_frac: float) -> tuple[list[dict], dic
                     stat[f"{rname}:{tier}"] += 1
                     out.append({"book": book, "page": page, "column": int(col["column"]), "half": half,
                                 "syl_offset": 0 if half == 0 else lo, "n": n, "qn": " ".join(q),
+                                "qn_source": v.get("qn_source") or "ocr",      # B1': ocr | <ref>_exact | <ref>_fuzzy
                                 "ref": rname, "ref_page": rpg, "ref_verse_no": rno, "ref_qn": " ".join(rt),
                                 "ref_nom": rnom, "match_tier": tier, "n_same_syl": mx,
                                 "same_pos": "".join("1" if a == b else "0" for a, b in zip(q, rt))})
     return out, dict(stat)
+
+
+def _labels_path(cfg: dict, a) -> Path:
+    """--labels-name: đo trên tệp nhãn khác cùng thư mục (vd labels_gated.csv sau B4'); mặc định labels_final.csv."""
+    name = getattr(a, "labels_name", "") or ""
+    return cfg["labels"].with_name(name) if name else cfg["labels"]
 
 
 def load_labels(p: Path) -> list[dict]:
@@ -469,11 +476,12 @@ def step_cross(a, out: Path) -> dict:
     for book, cfg in CROSS_BOOKS.items():
         if a.books and book not in a.books:
             continue
-        if not cfg["labels"].exists():
-            print(f"[cross] {book}: thiếu {cfg['labels']}", file=sys.stderr)
+        lp = _labels_path(cfg, a)
+        if not lp.exists():
+            print(f"[cross] {book}: thiếu {lp}", file=sys.stderr)
             continue
         verses, vstat = match_verses(book, cfg, a.min_frac)
-        labels = load_labels(cfg["labels"])
+        labels = load_labels(lp)
         by_col = defaultdict(list)
         for r in labels:
             by_col[(r["page"], int(r["column"]))].append(r)
@@ -494,7 +502,7 @@ def step_cross(a, out: Path) -> dict:
                     eq = lab == ref_nom if lab else None
                     di_the = bool(lab) and not eq and (ref_nom in R) and (lab in R)
                     sim = bool(lab) and not eq and (lab in D["sim"].get(ref_nom, []) or ref_nom in D["sim"].get(lab, []))
-                    cells.append({**{k: v[k] for k in ("book", "page", "column", "half", "ref", "match_tier", "ref_verse_no")},
+                    cells.append({**{k: v[k] for k in ("book", "page", "column", "half", "ref", "match_tier", "ref_verse_no", "qn_source")},
                                   "syl_idx": si, "nom_idx": r.get("nom_idx"), "syllable": syl, "ref_nom": ref_nom,
                                   "ref_pua": int(is_pua(ref_nom) or ord(ref_nom) >= 0x30000),
                                   "ocr_char": r.get("ocr_char"), "label": lab, "tier": r["tier"], "rule": r.get("rule"),
@@ -538,7 +546,16 @@ def step_cross(a, out: Path) -> dict:
             bs["refs"][rname] = {"all_tiers": agg(rc),
                                  "exact_only": agg([c for c in rc if c["match_tier"] == "exact"]),
                                  "n_verses": sum(v["ref"] == rname for v in verses),
-                                 "n_verses_exact": sum(v["ref"] == rname and v["match_tier"] == "exact" for v in verses)}
+                                 "n_verses_exact": sum(v["ref"] == rname and v["match_tier"] == "exact" for v in verses),
+                                 # B1': tách theo nguồn QN của câu (ocr = QN OCR gốc; *_exact = QN OCR đã bằng tham chiếu
+                                 # sẵn → đầu vào không đổi; *_fuzzy = QN đã THAY theo tham chiếu → tự khẳng định nếu
+                                 # tham chiếu này cũng là tham chiếu sửa QN)
+                                 "by_qn_source": {qs: {"n_verses": sum(v["ref"] == rname and v["qn_source"] == qs for v in verses),
+                                                       **{k: agg([c for c in rc if c["qn_source"] == qs])[k]
+                                                          for k in ("n_cells", "n_GOLD", "GOLD_eq_pct", "GOLD_wilson95",
+                                                                    "GOLD_eq_nonpua_pct", "GOLD_nonpua_n", "GOLD_disagree",
+                                                                    "GOLD_disagree_shape_similar_pct")}}
+                                                  for qs in sorted({v["qn_source"] for v in verses})}}
         # 20 ô bất đồng mẫu (GOLD, khác chữ tham chiếu, ref không PUA), tham chiếu đầu tiên, seed cố định
         r0 = cfg["refs"][0][0]
         dis = [c for c in cells if c["ref"] == r0 and c["tier"] == "GOLD" and c["eq"] == 0 and not c["ref_pua"]]
@@ -606,10 +623,11 @@ def step_gates(a, out: Path) -> dict:
         if a.books and book not in a.books:
             continue
         cp = out / "cross" / book / "cells.csv"
-        if not cfg["labels"].exists() or not cp.exists():
-            print(f"[gates] {book}: cần labels_final + cross/cells.csv", file=sys.stderr)
+        lp = _labels_path(cfg, a)
+        if not lp.exists() or not cp.exists():
+            print(f"[gates] {book}: cần {lp.name} + cross/cells.csv", file=sys.stderr)
             continue
-        labels = load_labels(cfg["labels"])
+        labels = load_labels(lp)
         gold = [r for r in labels if r["tier"] == "GOLD"]
         cells = [c for c in load_labels(cp) if c["tier"] == "GOLD" and c["ref"] == cfg["refs"][0][0]]
         n_gold = len(gold)
@@ -683,6 +701,11 @@ def write_report(out: Path):
             if v.get("inter_ref_baseline"):
                 ib = v["inter_ref_baseline"]
                 L.append(f"| {b} | nền {ib['refs'][0]} ↔ {ib['refs'][1]} | — | {ib['n_positions_nonpua']} vị trí | **{ib['eq_pct']} %** (hai dị bản tham chiếu cùng chữ) | | | | |")
+            for rn, rv in v["refs"].items():
+                bq = rv.get("by_qn_source") or {}
+                if len(bq) > 1:
+                    for qs, m in bq.items():
+                        L.append(f"| {b} | {rn} · QN nguồn `{qs}` | {m['n_verses']} | {m['n_GOLD']} | {m['GOLD_eq_pct']} % {m['GOLD_wilson95']} | {m['GOLD_eq_nonpua_pct']} % (n {m['GOLD_nonpua_n']}) | {m['GOLD_disagree_shape_similar_pct']} % của {m['GOLD_disagree']} | | |")
         L.append("")
     if "gates" in S:
         s = S["gates"]
@@ -711,8 +734,23 @@ def main(argv=None) -> int:
     ap.add_argument("--min-frac", type=float, default=0.75, help="cross: tỉ lệ âm cùng vị trí tối thiểu để nhận câu")
     ap.add_argument("--min-coverage", type=float, default=80.0)
     ap.add_argument("--report-only", action="store_true")
+    ap.add_argument("--labels-name", default="", help="tên tệp nhãn thay labels_final.csv cùng thư mục dataset_out_<BOOK> "
+                    "(vd labels_gated.csv sau B4' mechanism_gates); rỗng = mặc định")
+    ap.add_argument("--labels", default=None,
+                    help="(B1') ghi đè ĐƯỜNG DẪN labels_final.csv của sách duy nhất trong --books (không đổi mặc định CROSS_BOOKS)")
+    ap.add_argument("--trans", default=None,
+                    help="(B1') ghi đè thư mục transcriptions của sách duy nhất trong --books (vd prepared_b1/<book>/transcriptions)")
     a = ap.parse_args(argv)
     a.books = [b for b in a.books.split(",") if b]
+    if a.labels or a.trans:
+        if len(a.books) != 1 or a.books[0] not in CROSS_BOOKS:
+            raise SystemExit("--labels/--trans cần đúng một sách trong --books (KimVanKieu1884 | LucVanTien1883)")
+        cfg = dict(CROSS_BOOKS[a.books[0]])
+        if a.labels:
+            cfg["labels"] = Path(a.labels)
+        if a.trans:
+            cfg["trans"] = Path(a.trans)
+        CROSS_BOOKS[a.books[0]] = cfg
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
     steps = ["ihr", "cross", "gates"] if a.all else [s for s in a.steps.split(",") if s]

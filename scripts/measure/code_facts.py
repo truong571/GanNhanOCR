@@ -12,8 +12,8 @@ Mục:
                       transcriptions/page_*.json và *_qn_ocr_cache.json (đối chiếu với khoá GHI)
   (d) config_books  — schema books trong config/pipeline.yaml + mọi nơi đọc book['pdf']
   (e) checkpoints   — checkpoint mô hình (.pt/.h5/...) được tham chiếu + trạng thái tồn tại
-  (f) git           — tệp pipeline/ core/ có diff chưa commit (Guest Mode ocr_api), dataset_out/
-                      bị xoá trong working tree
+  (f) git           — tệp pipeline/ core/ có diff chưa commit; Guest Mode ocr_api ĐÃ commit (65f7ca9,
+                      21/09); dataset_out/ STT tracked phải SẠCH (đã khôi phục 22/09 sau sự cố apply không --out)
 
 Chỉ phụ thuộc stdlib (+ PyYAML nếu có; nếu không thì đọc yaml bằng regex tối giản).
 CLI:
@@ -101,11 +101,12 @@ CTX_WINDOW = 8
 NON_COL_CALL = re.compile(r"^(cv2|np|numpy|torch|nn|F|plt|scipy|random)\.")   # thư viện: 9 không phải số cột
 PIN_IDENTS = {"expected_cols", "n_columns", "n_expected", "total_columns", "EXPECTED",
               "NUM_COLS", "N_COLS", "max_lines", "expected_columns", "num_columns"}
-KNOWN_PINS = [                                   # (file, line, gợi ý) — đối chiếu bắt buộc
-    ("pipeline/align_engine/align_production.py", 81, "detect_nom_columns_v3(..., 9)"),
-    ("pipeline/align_engine/align_production.py", 87, "len(qn_lines) == 9"),
-    ("pipeline/step2_align.py", 70, "len(v5) == 9"),
-    ("pipeline/step2_align.py", 83, "len(pn) == 9"),
+KNOWN_PINS = [                                   # (file, line, gợi ý) — đối chiếu bắt buộc (cập nhật 22/09 vòng 2)
+    # align_production.py không còn ghim 9: n_columns lấy từ BookLayout (fb345a29b1); mặc định STT nằm ở book_layout.py
+    ("pipeline/align_engine/book_layout.py", 43, "DEFAULT_N_COLUMNS = 9"),
+    ("pipeline/step2_align.py", 62, "_get_qn_lines(n_columns=9)"),
+    ("pipeline/step2_align.py", 154, "detect_nom_columns_v3(..., 9)  # CLI riêng, vẫn ghim 9"),
+    ("pipeline/step2_align.py", 161, "len(qn_lines) == 9"),
     ("core/align/parser_v5.py", 136, "max_lines: int = 9"),
     ("core/pdf/pdf_parser.py", 128, "total: int = 9"),
     ("core/pdf/pdf_parser.py", 179, "total_columns: int = 9"),
@@ -250,9 +251,11 @@ CLI_FILES = [
     ("pipeline.align_engine.build_dataset", "pipeline/align_engine/build_dataset.py"),
     ("pipeline.remediation", "pipeline/remediation/cli.py"),
     ("pipeline.remediation.confusion_fix", "pipeline/remediation/confusion_fix.py"),
+    ("pipeline.remediation.mechanism_gates", "pipeline/remediation/mechanism_gates.py"),   # B4' 22/09 (lithograph)
     ("pipeline.remediation.self_training_rescue", "pipeline/remediation/self_training_rescue.py"),
     ("pipeline.export_final_dataset", "pipeline/export_final_dataset.py"),
     ("pipeline.tools.enrich_crop_quality", "pipeline/tools/enrich_crop_quality.py"),
+    ("pipeline.tools.ingest_lithograph_book", "pipeline/tools/ingest_lithograph_book.py"),   # adapter thạch bản (B1' 22/09: --verses/--dict-boost)
 ]
 
 _PATH_ROOTS = {"REPO": "<REPO>", "ROOT": "<REPO>", "REPO_ROOT": "<REPO>", "repo": "<REPO>", "_TRAIN_CROP": "<REPO>/train_crop"}
@@ -884,12 +887,15 @@ def section_git() -> dict:
     ds_tracked = sorted(git("ls-files", "--", "dataset_out").splitlines())
     ds_status = git("status", "--porcelain", "--", "dataset_out").splitlines()
     ds_deleted = sorted(l[3:] for l in ds_status if l.startswith(" D") or l.startswith("D "))
+    ds_modified = sorted(l[3:] for l in ds_status if l[:2].strip() and l[:2].strip() not in ("D", "??"))
     ds_dir = REPO / "dataset_out"
     dataset_out = {
         "dir_exists": ds_dir.exists(),
         "n_tracked": len(ds_tracked), "n_deleted_in_worktree": len(ds_deleted),
         "tracked_files": ds_tracked, "deleted_files": ds_deleted,
         "all_tracked_deleted": bool(ds_tracked) and set(ds_tracked) == set(ds_deleted),
+        "n_modified_in_worktree": len(ds_modified), "modified_files": ds_modified,
+        "tracked_clean": bool(ds_tracked) and not ds_deleted and not ds_modified,
         "n_files_on_disk": sum(1 for _ in ds_dir.rglob("*") if _.is_file()) if ds_dir.exists() else 0,
     }
     untracked = [l[3:] for l in git("status", "--porcelain", "--untracked-files=all", "--", "pipeline", "core").splitlines()
@@ -943,10 +949,12 @@ def build_invariants(S: dict) -> list[dict]:
     det = [i for i in ck["items"] if i["literal"] == "detector_r34.best.pt" and i.get("resolved") == "train_crop/detector_r34.best.pt"]
     add("detector_r34_ckpt_exists", True, bool(det and det[0]["exists"]))
     g = S["git"]
-    add("ocr_api_guest_mode_uncommitted", True,
-        g["ocr_api_guest_mode"]["has_uncommitted_diff"] and g["ocr_api_guest_mode"]["worktree_has_guest"]
-        and not g["ocr_api_guest_mode"]["committed_version_has_guest"])
-    add("dataset_out_tracked_all_deleted_in_worktree", True, g["dataset_out"]["all_tracked_deleted"])
+    # 22/09: Guest Mode đã commit (65f7ca9) → kỳ vọng bản HEAD có guest và ocr_api.py không còn diff
+    add("ocr_api_guest_mode_committed", True,
+        g["ocr_api_guest_mode"]["committed_version_has_guest"] and g["ocr_api_guest_mode"]["worktree_has_guest"]
+        and not g["ocr_api_guest_mode"]["has_uncommitted_diff"])
+    # 22/09: dataset_out/ STT (10 tệp tracked) phải sạch — `remediation apply` không --out từng ghi đè (đã khôi phục)
+    add("dataset_out_tracked_clean", True, g["dataset_out"]["tracked_clean"])
     return inv
 
 
@@ -1011,7 +1019,7 @@ def main(argv=None) -> int:
         "config_required_keys": S["config_books"]["required_keys"],
         "checkpoints_missing": S["checkpoints"]["missing"],
         "git": {"dirty_pipeline_core": [d["file"] for d in S["git"]["dirty_pipeline_core"]],
-                "ocr_api_guest_mode_uncommitted": S["git"]["ocr_api_guest_mode"]["has_uncommitted_diff"],
+                "ocr_api_guest_mode_committed": S["git"]["ocr_api_guest_mode"]["committed_version_has_guest"],
                 "dataset_out": {k: S["git"]["dataset_out"][k] for k in ("dir_exists", "n_tracked", "n_deleted_in_worktree")}},
         "invariants": inv,
     }

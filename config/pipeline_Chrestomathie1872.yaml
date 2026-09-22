@@ -1,54 +1,28 @@
-# Config RIÊNG KimVanKieu1884 (bản sao pipeline_LucVanTien1883.yaml 2026-09-21, chỉ đổi tên sách và paths.output_dir)
+# Config RIÊNG Chrestomathie1872 (bản sao pipeline_LucVanTien1883.yaml 2026-09-22, chỉ đổi books: và paths.output_dir)
 # GanNhanOCR Pipeline Configuration
-
-  # Only Sach* — Cac* "Tuyển tập Các Thánh Truyện" books are curated subsets
-  # of the corresponding Sach* "Sách Các Thánh Truyện" full books (same scans,
-  # same text), so processing both would double-count training data.
-  # All books re-OCR'd with VietOCR (2-pass beam + greedy for text + confidence).
-  # 2026-07-20: các file PDF trên đĩa đã được đổi tên SachThanhTruyen{2,4,11}.pdf
-  # -> STT{2,4,11}.pdf. `name:` CỐ Ý GIỮ NGUYÊN SachThanhTruyen* vì tên sách đi vào
-  # tên crop (vd yen2_page_0012_c01_000.png) và cột `book` trong dataset_out/labels.csv;
-  # đổi `name` sẽ phá toàn bộ liên kết bằng chứng đã sinh.
-  #
-  # 2026-09-21: khoá TUỲ CHỌN theo sách (pipeline/align_engine/book_layout.py). Vắng
-  # khoá = hành vi STT cũ (9 cột, 1 tầng) — 3 sách STT dưới đây KHÔNG khai báo.
-  #   layout: stt | lithograph        # "lithograph" = thạch bản lục bát (LVT1883, KVK1884):
-  #                                   #   mỗi cột Nôm = 1 cặp 6⧺8 chữ, mỗi dòng .txt = 14 âm;
-  #                                   #   không cần khoá `pdf` (ingest từ ảnh, step1 bỏ qua);
-  #                                   #   page_ok đòi đủ n_columns cột Nôm/QN và mỗi cột QN
-  #                                   #   14 âm (hoặc num_syllables ghi trong transcriptions/*.json)
-  #                                   #   và phương pháp cột hybrid (không projection_fallback);
-  #                                   #   thống kê vào summary.json["layout_gate"][book]
-  #   n_columns: 9                    # số cột kỳ vọng/trang truyền vào detect_nom_columns_v3
-  #                                   #   và cổng qn_parse_ok (thạch bản: 10)
-  #   qn_syllables_per_column: 14     # chỉ với lithograph; 0 = không kiểm
-  # Sách mới dùng config RIÊNG (vd config/lucvantien1883.yaml), không thêm vào books: ở đây.
+#
+# Sách VĂN XUÔI in đá (Chrestomathie annamite, Abel des Michels 1872): 65 trang Nôm (canvas 106–170),
+# 4–7 cột/trang, ~16–21 chữ/cột, đọc cột TRÁI→PHẢI, 20 truyện; QN in (tesseract) không có số câu.
+# Ingest bằng pipeline/tools/ingest_prose_book.py (không PDF; step0/step1 bỏ qua khi layout=prose).
+# Khoá theo sách (pipeline/align_engine/book_layout.py): layout: prose, n_columns: auto (số cột kỳ vọng
+# của TRANG = số dòng transcriptions/<page>.txt adapter ghi; page_ok = số cột Nôm dò == số dòng QN,
+# không kiểm số âm/cột), det_xmargin 0,05 / det_thr 0,15 (giá trị đã đo cho hai thạch bản LVT/KVK —
+# CHƯA quét riêng cho sách này, xem docs/CHAY_CHRESTO1872_2026-09-22.md).
 books:
-  # 2026-09-21: config RIÊNG cho thạch bản Kim Vân Kiều 1884 (NHIỆM VỤ 5, thử 8 trang). Không đụng
-  # config/pipeline.yaml của STT. Ingest từ ảnh bằng pipeline/tools/ingest_lithograph_book.py
-  # (không cần khoá pdf: step0/step1 bỏ qua khi layout=lithograph).
-  - name: KimVanKieu1884
-    layout: lithograph
-    n_columns: 10
-    qn_syllables_per_column: 14
-    # 2026-09-22: biên x theo sách (mặc định lithograph 0,05, xem config LVT1883 để biết lý do).
-    # det_thr 0,15 (đo 22/09, docs/CHAY_KVK1884_2026-09-21.md §2): quét NATIVE 4 ngưỡng trên 1.630 cột/163 trang
-    # (biên x 0,05): n_det==N  0,3: 2,7 % | 0,2: 45,5 % | 0,15: 59,2 % | 0,1: 59,0 %. Ở 0,2 lỗi chủ yếu là
-    # MẤT hộp (−1: 332, −2: 162 cột/1.511 cột 14 âm — nét thạch bản KVK mảnh, điểm tin cậy thấp); 0,15 cân
-    # −1/+1 (188/242); 0,1 thừa hộp (+1: 415). Build 8 trang: n_det==N 47→53/80, midpoint 139→62, split 22→10,
-    # count_source conflict 392→294, tier KHÔNG đổi (GOLD 744/SYL 38/REVIEW 334), F1 cross-col 0 ở cả hai.
+  - name: Chrestomathie1872
+    layout: prose
+    n_columns: auto
     det_xmargin: 0.05
     det_thr: 0.15
-    # 2026-09-22 B1' = ĐƯỜNG CHÍNH THỨC KVK (docs/CHAY_KVK1884_B1_2026-09-22.md): QN đầu vào = verses_b1.tsv
-    # (scripts/measure/verses_ref_fix.py --ref 1871 Liễu Văn Đường, khớp mờ ≥ 0,9; KHÔNG --dict-boost vì tự khẳng định).
-    # Khoá dưới chỉ GHI NHẬN (engine/adapter không đọc): adapter nhận qua `ingest_lithograph_book --verses <tệp này>`.
-    # Bản đã chạy 22/09 dùng config/pipeline_KimVanKieu1884_b1.yaml (data_dir prepared_b1) → dataset_KimVanKieu1884.
-    verses_b1: measure_out/KimVanKieu1884/qn_ref_fix/verses_b1.tsv
+    # Bước B4' cổng theo cơ chế (pipeline/remediation/mechanism_gates.py, agent cổng cơ chế 22/09): vắng khoá
+    # chỉ bật với layout=lithograph -> bật tường minh cho văn xuôi (cùng detector CenterNet học STT, cùng lớp
+    # lỗi hộp ±1 / midpoint). Chỉ mô-đun ấy đọc khoá này.
+    mechanism_gates: true
     reocr: false
 
 paths:
   data_dir: prepared
-  output_dir: dataset_KimVanKieu1884   # riêng cho KVK1884; dataset_out qua --out dataset_out_KimVanKieu1884 (KHÔNG B1': bản v2_gates_noB1)
+  output_dir: dataset_Chrestomathie1872   # riêng cho Chrestomathie1872; dataset_out qua --out dataset_out_Chrestomathie1872
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv
   similar_dict: Dict/SinoNom_Similar.csv

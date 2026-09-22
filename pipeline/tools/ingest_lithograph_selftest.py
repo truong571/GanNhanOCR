@@ -162,9 +162,158 @@ def test_verse_map_anchor() -> None:
         and cols[0]["verse_even"]["seq_no"] == 12, "anchor: verse_no gán vs verse_no_tsv")
 
 
+# ---------------------------------------------------------------------------
+# --verse-map content (B1', 22/09): dữ liệu giả — dòng QN seq i có 6/8 âm "t<i>_<j>", chữ Nôm "c<i>_<j>" đọc đúng 1 âm
+# ---------------------------------------------------------------------------
+def _tok(sq: int, j: int) -> str:
+    """Âm giả toàn chữ cái (clean_line_text bỏ chữ số): dòng sq, vị trí j → vd 'qbkc'."""
+    return "q" + chr(97 + sq // 26) + chr(97 + sq % 26) + chr(97 + j)
+
+
+def _content_rows(n: int = 40) -> tuple[list[dict], dict[str, set[str]]]:
+    rows, n2q = [], {}
+    for sq in range(1, n + 1):
+        k = 6 if sq % 2 else 8
+        toks = [_tok(sq, j) for j in range(k)]
+        rows.append(dict(seq_no=str(sq), verse_no=str(sq), n_syll=str(k), line_text=" ".join(toks),
+                         anchor_source="chain_interp", page="p", page_flag="", line_flag=""))
+        for j in range(k):
+            n2q[f"c{sq}_{j}"] = {_tok(sq, j)}
+    return rows, n2q
+
+
+def _chars(sq: int, drop: int = 0, extra: int = 0) -> list[str]:
+    k = 6 if sq % 2 else 8
+    out = [f"c{sq}_{j}" for j in range(k - drop)]
+    return out + ["rac"] * extra
+
+
+def _col(a: int, **kw) -> tuple[list[str], list[str]]:
+    """Cột Nôm khớp cặp dòng (a, a+1)."""
+    return _chars(a, **kw.get("top", {})), _chars(a + 1, **kw.get("bot", {}))
+
+
+def test_verse_map_content() -> None:
+    rows, n2q = _content_rows()
+    ls = [ing._line_syllable_set(r) for r in rows]
+    # 1. offset 0: 3 cột đúng công thức first_seq=11 → dòng (11,12),(13,14),(15,16), điểm 14/cột
+    sel, info = ing.content_rows_for_page(11, [_col(11), _col(13), _col(15)], rows, n2q, line_sets=ls)
+    _ok(info["offset"] == [0, 0, 0] and info["col_score"] == [14, 14, 14] and info["total_score"] == 42
+        and [int(r[0]["seq_no"]) for r in sel] == [11, 13, 15], f"content: offset 0 ({info})")
+    _ok(info["skipped"] == [] and info["offsets_distinct"] == [0] and info["n_chars"] == 42, "content: không cột bỏ")
+    # 2. offset −4 (số in Nôm = seq QN + 4): chữ kim là dòng 7,9,11 nhưng first_seq 11 → offset −4 mọi cột
+    sel, info = ing.content_rows_for_page(11, [_col(7), _col(9), _col(11)], rows, n2q, line_sets=ls)
+    _ok(info["offset"] == [-4, -4, -4] and [int(r[0]["seq_no"]) for r in sel] == [7, 9, 11], f"content: offset −4 ({info['offset']})")
+    # 3. offset −5 (mất thêm 1 dòng QN → parity đảo: cột bắt đầu ở seq chẵn vẫn ghép được)
+    sel, info = ing.content_rows_for_page(11, [_col(6), _col(8), _col(10)], rows, n2q, line_sets=ls)
+    _ok(info["offset"] == [-5, -5, -5] and [int(r[0]["seq_no"]) for r in sel] == [6, 8, 10], f"content: offset −5 ({info['offset']})")
+    # 4. kim THIẾU 1 chữ tầng trên (5 chữ) → vẫn ghép đúng, điểm 13
+    sel, info = ing.content_rows_for_page(11, [_col(11, top=dict(drop=1)), _col(13)], rows, n2q, line_sets=ls)
+    _ok(info["offset"] == [0, 0] and info["col_score"] == [13, 14], f"content: kim thiếu 1 chữ ({info['col_score']})")
+    # 5. kim THỪA 1 chữ rác tầng dưới (9 chữ) → vẫn ghép đúng, điểm 14 (chữ rác không tra được âm)
+    sel, info = ing.content_rows_for_page(11, [_col(11), _col(13, bot=dict(extra=1))], rows, n2q, line_sets=ls)
+    _ok(info["offset"] == [0, 0] and info["col_score"] == [14, 14] and info["n_chars"] == 29, "content: kim thừa 1 chữ rác")
+    # 6. cột toàn chữ rác (cột chú nhỏ) → None + skipped, cột hai bên vẫn đúng và đơn điệu
+    sel, info = ing.content_rows_for_page(11, [_col(11), (["rac"] * 6, ["rac"] * 8), _col(15)], rows, n2q, line_sets=ls)
+    _ok(sel[1] is None and info["skipped"] == [2] and info["offset"] == [0, None, 0]
+        and info["start_seq"] == [11, None, 15], f"content: cột rác → placeholder ({info})")
+    # 7. cột có dòng QN THIẾU trong tsv (dòng 13–14 không tồn tại: chữ kim của dòng 13 không tra được) → cột bỏ,
+    #    cột sau dịch offset: kim (11), (13*), (15) với dòng 13/14 xoá khỏi rows → cột 3 ghép seq 13 (= dòng 15 cũ) offset −2
+    rows2 = [r for r in rows if int(r["seq_no"]) not in (13, 14)]
+    for i, r in enumerate(rows2, start=1):
+        r = dict(r); r["seq_no"] = str(i)
+        rows2[i - 1] = r
+    ls2 = [ing._line_syllable_set(r) for r in rows2]
+    sel, info = ing.content_rows_for_page(11, [_col(11), _col(13), _col(15)], rows2, n2q, line_sets=ls2)
+    _ok(sel[1] is None and info["offset"] == [0, None, -2] and info["skipped"] == [2],
+        f"content: dòng QN thiếu → cột bỏ, cột sau offset −2 ({info['offset']})")
+    # 8. cửa sổ: dòng đúng nằm ngoài [first_seq − W, first_seq + 2n + W] → không ghép (None), không ghép nhầm
+    sel, info = ing.content_rows_for_page(31, [_col(11), _col(13)], rows, n2q, window=5, line_sets=ls)
+    _ok(sel == [None, None] and info["skipped"] == [1, 2], f"content: ngoài cửa sổ → None ({info['offset']})")
+    sel, info = ing.content_rows_for_page(31, [_col(11), _col(13)], rows, n2q, window=25, line_sets=ls)
+    _ok(info["offset"] == [-20, -20], "content: trong cửa sổ → ghép")
+    # 9. đơn điệu: hai cột giống hệt nhau (cùng chữ) → không được gán cùng dòng; cột thứ hai bỏ hoặc dịch ≥ 2 dòng
+    sel, info = ing.content_rows_for_page(11, [_col(11), _col(11), _col(13)], rows, n2q, line_sets=ls)
+    st = [x for x in info["start_seq"] if x is not None]
+    _ok(st == sorted(st) and all(b - a >= 2 for a, b in zip(st, st[1:])) and 11 in st and 13 in st,
+        f"content: đơn điệu a_k+1 ≥ a_k + 2 ({info['start_seq']})")
+    # 10. min_col: cột chỉ 3 chữ tra được → dưới ngưỡng 4 → bỏ; hạ min_col=3 → ghép
+    weak = (_chars(11)[:3] + ["rac"] * 3, ["rac"] * 8)
+    sel, info = ing.content_rows_for_page(11, [weak, _col(13)], rows, n2q, line_sets=ls)
+    _ok(sel[0] is None and info["offset"] == [None, 0], f"content: điểm 3 < min_col 4 → bỏ ({info['col_score']})")
+    sel, info = ing.content_rows_for_page(11, [weak, _col(13)], rows, n2q, min_col=3, line_sets=ls)
+    _ok(sel[0] is not None and info["col_score"] == [3, 14], "content: min_col 3 → ghép")
+    # 11. parity/tầng: điểm tính THEO TẦNG (trên ↔ dòng a, dưới ↔ dòng a+1), không trộn 14 chữ; cột đảo tầng
+    #     (trên = chữ dòng 12, dưới = chữ dòng 11) chỉ được điểm ở tầng dưới khi a = 10 (dòng 10 ⧺ 11) → 0 + 6 = 6,
+    #     KHÔNG được 14 ở a = 11 (dòng 11 ⧺ 12) vì tầng trên phải khớp câu lục
+    sel, info = ing.content_rows_for_page(11, [(_chars(12), _chars(11)), _col(13)], rows, n2q, line_sets=ls)
+    _ok(info["start_seq"] == [10, 13] and info["col_score"] == [6, 14], f"content: điểm theo tầng, không trộn ({info})")
+    # 12. skip_pen: bỏ cột rẻ hơn ghép sai; với skip_pen rất lớn DP vẫn không được ghép cột rác (điểm < min_col)
+    sel, info = ing.content_rows_for_page(11, [(["rac"] * 6, ["rac"] * 8), _col(13)], rows, n2q, skip_pen=1000, line_sets=ls)
+    _ok(sel[0] is None and info["total_score"] == 14 - 1000, "content: skip_pen chỉ là phạt, không ép ghép cột rác")
+    # 13. line_sets tự tính = truyền sẵn
+    a = ing.content_rows_for_page(11, [_col(11), _col(13)], rows, n2q)
+    b = ing.content_rows_for_page(11, [_col(11), _col(13)], rows, n2q, line_sets=ls)
+    _ok(a[1] == b[1], "content: line_sets mặc định = truyền sẵn")
+    # 14. placeholder: 6/8 token khongkhop → num_syllables 14, không cờ n_syll, không hợp lệ QN, qn_source 'ocr'
+    from core.text.text_utils import is_plausible_qn_syllable
+    ph = {11: ing._placeholder_row(11, 6), 12: ing._placeholder_row(12, 8)}
+    cols, flags = ing.make_column_texts([(11, 12)], ph)
+    _ok(cols[0]["num_syllables"] == 14 and not flags and cols[0]["verse_odd"]["qn_source"] == "ocr"
+        and set(cols[0]["syllables"]) == {ing.CONTENT_PLACEHOLDER} and not is_plausible_qn_syllable(ing.CONTENT_PLACEHOLDER),
+        f"content: placeholder 6+8 khongkhop ({flags})")
+
+
+def test_verses_b1_and_dict_boost() -> None:
+    """B1': verses_b1.tsv (qn_source/ref_nom) đi vào make_column_texts và apply_dict_boost."""
+    rows, n2q = _content_rows()
+    r11, r12 = dict(rows[10]), dict(rows[11])
+    r11.update(qn_source="nf1871_exact", ref_idx="11", ref_sim="1.0", ref_nom="甲乙丙丁戊己", line_text_ocr="x")
+    r12.update(qn_source="nf1871_fuzzy", ref_idx="12", ref_sim="0.95", ref_nom="庚辛壬癸子丑寅卯")
+    cols, _ = ing.make_column_texts([(11, 12)], {11: r11, 12: r12})
+    vo, ve = cols[0]["verse_odd"], cols[0]["verse_even"]
+    _ok(vo["qn_source"] == "nf1871_exact" and vo["ref_idx"] == "11" and vo["line_text_ocr"] == "x"
+        and ve["qn_source"] == "nf1871_fuzzy" and ve["ref_sim"] == "0.95", "verses_b1: qn_source/ref_idx/ref_sim vào transcriptions")
+    cols0, _ = ing.make_column_texts([(13, 14)], {13: rows[12], 14: rows[13]})
+    _ok(cols0[0]["verse_odd"]["qn_source"] == "ocr" and cols0[0]["verse_odd"]["ref_idx"] == "", "verses.tsv cũ: qn_source mặc định ocr")
+
+    # apply_dict_boost: R theo âm t11_j; kim tầng trên = [甲, 乙', 丙', 丁', 戊, X]; ref = 甲乙丙丁戊己
+    R = {_tok(11, j): set(c) for j, c in enumerate([["甲"], ["乙", "乙'"], ["丙"], ["丁", "丁'"], ["戊"], ["己"]])}
+    R.update({_tok(12, j): {"庚辛壬癸子丑寅卯"[j]} for j in range(8)})
+    sim = {"乙'": {"乙"}, "丁": {"丁'"}}          # 乙' gần hình 乙 (chiều thuận); 丁' gần hình 丁 (chiều ngược)
+    col = [dict(char=c, bbox=[0, 0, 1, 1]) for c in ["甲", "乙'", "丙'", "丁'", "戊", "X"]] + \
+          [dict(char=c, bbox=[0, 0, 1, 1]) for c in "庚辛壬癸子丑寅卯"]
+    st = ing.apply_dict_boost([col], [(6, 8)], [(r11, r12)], R, sim)
+    _ok(st["boosted"] == 2 and col[1]["char"] == "乙" and col[1]["char_kim"] == "乙'" and col[1]["dict_boost"] == 1
+        and col[3]["char"] == "丁" and col[3]["char_kim"] == "丁'", f"dict_boost: kim ∈ R, ≠ ref, gần hình (2 chiều) → thay ({st})")
+    _ok(col[2]["char"] == "丙'" and st["kim_not_in_R"] == 2 and "char_kim" not in col[2], "dict_boost: kim ∉ R → giữ (丙', X)")
+    _ok(col[0]["char"] == "甲" and st["agree"] == 2 + 8 and st["n_tier_checked"] == 2, "dict_boost: kim == ref (甲, 戊 + 8 tầng dưới) → giữ, đếm agree")
+    # ref ∉ R → giữ; đồng âm không gần hình → giữ
+    R2 = dict(R); R2[_tok(11, 1)] = {"乙'"}                  # ref 乙 ∉ R(âm 1)
+    col2 = [dict(char=c, bbox=[0, 0, 1, 1]) for c in ["甲", "乙'", "丙", "丁'", "戊", "己"]] + \
+           [dict(char=c, bbox=[0, 0, 1, 1]) for c in "庚辛壬癸子丑寅卯"]
+    st2 = ing.apply_dict_boost([col2], [(6, 8)], [(r11, r12)], R2, {})
+    _ok(st2["boosted"] == 0 and st2["ref_not_in_R"] == 1 and st2["di_the_not_similar"] == 1 and col2[1]["char"] == "乙'"
+        and col2[3]["char"] == "丁'", f"dict_boost: ref ∉ R / không gần hình → không đổi ({st2})")
+    # dòng OCR (qn_source ocr) hoặc ref_nom lệch số chữ hoặc kim ≠ 6/8 → bỏ qua tầng
+    r11o = dict(r11); r11o["qn_source"] = "ocr"
+    r12s = dict(r12); r12s["ref_nom"] = "庚辛壬"
+    col3 = [dict(char=c, bbox=[0, 0, 1, 1]) for c in ["甲", "乙'", "丙", "丁'", "戊", "己"]] + \
+           [dict(char=c, bbox=[0, 0, 1, 1]) for c in "庚辛壬癸子丑寅卯"]
+    st3 = ing.apply_dict_boost([col3], [(6, 8)], [(r11o, r12s)], R, sim)
+    _ok(st3["n_tier_skipped_ocr"] == 1 and st3["n_tier_skipped_len"] == 1 and st3["boosted"] == 0 and col3[1]["char"] == "乙'",
+        f"dict_boost: bỏ qua tầng ocr / ref_nom lệch ({st3})")
+    st4 = ing.apply_dict_boost([col3[:5] + col3[6:]], [(5, 8)], [(r11, r12)], R, sim)
+    _ok(st4["n_tier_skipped_len"] == 1 and st4["n_tier_checked"] == 1, "dict_boost: kim 5 ≠ 6 chữ → bỏ qua tầng")
+    st5 = ing.apply_dict_boost([col3], [(6, 8)], [None], R, sim)
+    _ok(st5["n_tier_checked"] == 0 and st5["boosted"] == 0, "dict_boost: cột placeholder (None) → bỏ qua")
+
+
 if __name__ == "__main__":
     test_pairs_and_verses()
     test_assign_boxes()
     test_stretch()
     test_verse_map_anchor()
+    test_verse_map_content()
+    test_verses_b1_and_dict_boost()
     print(f"ingest_lithograph_selftest: {N_PASS}/{N_PASS} PASS")

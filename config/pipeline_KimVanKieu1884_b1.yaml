@@ -1,3 +1,6 @@
+# B1' (2026-09-22, docs/CHAY_KVK1884_B1_2026-09-22.md) — ĐƯỜNG CHÍNH THỨC KVK1884 (chốt vòng 2 22/09): bản sao
+# config/pipeline_KimVanKieu1884.yaml CHỈ đổi paths.data_dir → prepared_b1 (ingest_lithograph_book --verses
+# measure_out/KimVanKieu1884/qn_ref_fix/verses_b1.tsv, KHÔNG --dict-boost) và paths.output_dir. Tham số sách giữ nguyên.
 # Config RIÊNG KimVanKieu1884 (bản sao pipeline_LucVanTien1883.yaml 2026-09-21, chỉ đổi tên sách và paths.output_dir)
 # GanNhanOCR Pipeline Configuration
 
@@ -39,16 +42,11 @@ books:
     # count_source conflict 392→294, tier KHÔNG đổi (GOLD 744/SYL 38/REVIEW 334), F1 cross-col 0 ở cả hai.
     det_xmargin: 0.05
     det_thr: 0.15
-    # 2026-09-22 B1' = ĐƯỜNG CHÍNH THỨC KVK (docs/CHAY_KVK1884_B1_2026-09-22.md): QN đầu vào = verses_b1.tsv
-    # (scripts/measure/verses_ref_fix.py --ref 1871 Liễu Văn Đường, khớp mờ ≥ 0,9; KHÔNG --dict-boost vì tự khẳng định).
-    # Khoá dưới chỉ GHI NHẬN (engine/adapter không đọc): adapter nhận qua `ingest_lithograph_book --verses <tệp này>`.
-    # Bản đã chạy 22/09 dùng config/pipeline_KimVanKieu1884_b1.yaml (data_dir prepared_b1) → dataset_KimVanKieu1884.
-    verses_b1: measure_out/KimVanKieu1884/qn_ref_fix/verses_b1.tsv
     reocr: false
 
 paths:
-  data_dir: prepared
-  output_dir: dataset_KimVanKieu1884   # riêng cho KVK1884; dataset_out qua --out dataset_out_KimVanKieu1884 (KHÔNG B1': bản v2_gates_noB1)
+  data_dir: prepared_b1
+  output_dir: dataset_KimVanKieu1884   # B1' chính thức: export vào dataset_KimVanKieu1884; dataset_out qua --out dataset_out_KimVanKieu1884_b1
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv
   similar_dict: Dict/SinoNom_Similar.csv

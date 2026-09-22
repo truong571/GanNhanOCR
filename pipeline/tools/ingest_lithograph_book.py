@@ -29,6 +29,13 @@ Chạy:
                        content_rows_for_page); cột không khớp (cột chú nhỏ, dòng QN thiếu) → cột QN rỗng + cờ.
                        Dùng khi số câu in của bản Nôm và bản QN đánh khác nhau (KVK1884 từ trang 55: Nôm = QN + 4).
   --plan-only        : chỉ so 2 cách ghép (formula/anchor) mọi trang chọn → verse_map_plan.json, không ghi ảnh/cache
+  --verses PATH      : (B1', 22/09) dùng tệp verses khác thay measure_out/<book>/qn_ocr/verses.tsv — vd verses_b1.tsv do
+                       scripts/measure/verses_ref_fix.py sinh (QN OCR đã thay bằng phiên âm dị bản khi khớp; cột
+                       qn_source/ref_idx/ref_sim/ref_nom/line_text_ocr được chép vào transcriptions/*.json).
+  --dict-boost       : (B1', tuỳ chọn) khi dòng QN của cột đến từ dị bản (qn_source ≠ ocr, có ref_nom cùng số chữ) và
+                       tầng kim đủ 6/8 chữ: ô có chữ kim ∈ R(âm) nhưng ≠ chữ dị bản, chữ dị bản ∈ R(âm) và hai chữ
+                       GẦN HÌNH (SinoNom_Similar) → thay `char` bằng chữ dị bản (giữ `char_kim`, `dict_boost=1`).
+                       KHÔNG đổi khi kim ∉ R(âm) hoặc chữ dị bản ∉ R(âm) hoặc không gần hình. Xem apply_dict_boost.
 Test: .venv/bin/python -m pipeline.tools.ingest_lithograph_selftest
 """
 from __future__ import annotations
@@ -293,7 +300,10 @@ def make_column_texts(vpairs: list[tuple[int, int]], verses: dict[int, dict]) ->
                         n_syll_tsv=int(row.get("n_syll") or 0), page_qn=row.get("page", ""),
                         anchor_source=row.get("anchor_source", ""), page_flag=row.get("page_flag", ""),
                         line_flag=row.get("line_flag", ""),
-                        verse_no_tsv=int(row.get("verse_no") or v), seq_no=int(row.get("seq_no") or 0))
+                        verse_no_tsv=int(row.get("verse_no") or v), seq_no=int(row.get("seq_no") or 0),
+                        # B1' (verses_b1.tsv): nguồn QN của dòng; vắng cột → "ocr"
+                        qn_source=row.get("qn_source") or "ocr", ref_idx=row.get("ref_idx") or "",
+                        ref_sim=row.get("ref_sim") or "", line_text_ocr=row.get("line_text_ocr", ""))
             if len(syl) != exp:
                 flags.append(f"col{k}:verse{v}:n_syll={len(syl)}!={exp}")
             parts.append((row["line_text"], syl, info))
@@ -405,6 +415,79 @@ def projection_columns(pairs: list[dict]) -> list[list[dict]]:
     return columns
 
 
+def _qn_dicts() -> tuple[dict[str, set[str]], dict[str, set[str]]]:
+    """(R: âm chuẩn hoá → tập chữ Nôm, SIM: chữ → tập chữ gần hình) từ Dict/ của pipeline (nạp 1 lần)."""
+    global _QD
+    try:
+        return _QD
+    except NameError:
+        pass
+    from core.text.dictionary import load_qn_to_nom, load_similarity_dict
+    from core.text.text_utils import normalize_tone_marks
+    q2n = load_qn_to_nom(str(REPO / "Dict/QuocNgu_SinoNom.csv"))
+    R = {}
+    for k, v in q2n.items():
+        R.setdefault(normalize_tone_marks(k.lower()), set()).update(v)
+    sim = {k: set(v) for k, v in load_similarity_dict(str(REPO / "Dict/SinoNom_Similar.csv")).items()}
+    _QD = (R, sim)
+    return _QD
+
+
+def apply_dict_boost(columns: list[list[dict]], tier_split: list[tuple[int, int]],
+                     row_pairs: list[tuple[dict, dict] | None], R: dict[str, set[str]] | None = None,
+                     sim: dict[str, set[str]] | None = None) -> dict:
+    """--dict-boost: phân xử dị thể đồng âm bằng chữ Nôm của dị bản (cột ref_nom trong verses_b1.tsv).
+
+    Với cột k, tầng t (0 = câu lục, 1 = câu bát): chỉ xét khi dòng QN có qn_source ≠ ocr, ref_nom đủ số chữ = số âm
+    của dòng = số chữ kim của tầng (ghép theo VỊ TRÍ). Ô i: kim = k_i, ref = c_i, âm s_i (chuẩn hoá dấu, thường):
+      k_i == c_i                          → giữ (đếm `agree`)
+      k_i ∉ R(s_i)                        → giữ (`kim_not_in_R`, engine sẽ không GOLD trực tiếp; không ghi đè)
+      c_i ∉ R(s_i)                        → giữ (`ref_not_in_R`)
+      k_i ≠ c_i, cả hai ∈ R(s_i), không gần hình → giữ (`di_the_not_similar`: không phân biệt được kim nhầm hay dị bản)
+      k_i ≠ c_i, cả hai ∈ R(s_i), gần hình (SinoNom_Similar 2 chiều) → char := c_i, char_kim := k_i, dict_boost := 1
+    Sửa `columns` tại chỗ; trả thống kê. Hộp thô kim (boxes_raw/kim_raw) không đổi."""
+    if R is None or sim is None:
+        R, sim = _qn_dicts()
+    from core.text.text_utils import normalize_tone_marks
+    st = dict(n_tier_checked=0, n_tier_skipped_ocr=0, n_tier_skipped_len=0, agree=0, kim_not_in_R=0, ref_not_in_R=0,
+              di_the_not_similar=0, boosted=0, boosted_pairs=[])
+    for col, (nt, nb), pair in zip(columns, tier_split, row_pairs):
+        if pair is None:
+            continue
+        for t, (row, lo, n) in enumerate(((pair[0], 0, nt), (pair[1], nt, nb))):
+            if (row.get("qn_source") or "ocr") == "ocr" or not row.get("ref_nom"):
+                st["n_tier_skipped_ocr"] += 1
+                continue
+            syls = [normalize_tone_marks(x.lower()) for x in lithograph_syllables(row["line_text"])]
+            ref = row["ref_nom"]
+            if not (len(syls) == len(ref) == n):
+                st["n_tier_skipped_len"] += 1
+                continue
+            st["n_tier_checked"] += 1
+            for i in range(n):
+                ch = col[lo + i]
+                k, c, sy = ch.get("char"), ref[i], syls[i]
+                if k is None or k == c:
+                    st["agree"] += int(k == c)
+                    continue
+                Rs = R.get(sy, set())
+                if k not in Rs:
+                    st["kim_not_in_R"] += 1
+                    continue
+                if c not in Rs:
+                    st["ref_not_in_R"] += 1
+                    continue
+                if c in sim.get(k, set()) or k in sim.get(c, set()):
+                    ch["char_kim"] = k
+                    ch["char"] = c
+                    ch["dict_boost"] = 1
+                    st["boosted"] += 1
+                    st["boosted_pairs"].append(f"{k}>{c}:{sy}")
+                else:
+                    st["di_the_not_similar"] += 1
+    return st
+
+
 # ---------------------------------------------------------------------------
 # 3. Ảnh
 # ---------------------------------------------------------------------------
@@ -480,17 +563,21 @@ def _rel(p: Path) -> str:
 
 def ingest(book: str, pages: list[int] | None, limit: int | None, ocr: str, force: bool, out_root: Path,
            measure_dir: Path, contrast: str, skip_uncovered: bool, verbose: bool = True,
-           verse_map: str = "formula", plan_only: bool = False) -> dict:
+           verse_map: str = "formula", plan_only: bool = False, verses_tsv: Path | None = None,
+           dict_boost: bool = False) -> dict:
     """Chạy adapter cho các trang chọn; trả manifest (đã ghi ra out_root/<book>/manifest.json).
 
     verse_map: "formula" (mặc định, hành vi cũ: câu = first_seq + 2k theo verse_no) | "anchor" (đoạn neo, xem
-    anchor_rows_for_page). plan_only: chỉ ghi verse_map_plan.json so sánh 2 cách, không ghi ảnh/cache."""
+    anchor_rows_for_page). plan_only: chỉ ghi verse_map_plan.json so sánh 2 cách, không ghi ảnh/cache.
+    verses_tsv: tệp verses thay mặc định measure_out/<book>/qn_ocr/verses.tsv (B1': verses_b1.tsv).
+    dict_boost: xem apply_dict_boost (cần verses có cột ref_nom/qn_source; chỉ với --ocr kim)."""
     from core.ocr.ocr_api import _file_md5, _pixel_hash, verify_cache_image
 
     cfg = BOOKS[book]
     layout = load_layout(book, measure_dir)
-    verses, dups = load_verses(measure_dir / book / "qn_ocr" / "verses.tsv")
-    vrows = load_verse_rows(measure_dir / book / "qn_ocr" / "verses.tsv")
+    verses_tsv = verses_tsv or (measure_dir / book / "qn_ocr" / "verses.tsv")
+    verses, dups = load_verses(verses_tsv)
+    vrows = load_verse_rows(verses_tsv)
     sel = sorted(layout) if not pages else [p for p in pages if p in layout]
     if pages and len(sel) != len(pages):
         raise SystemExit(f"[ingest] trang không có trong layout: {sorted(set(pages) - set(sel))}")
@@ -554,8 +641,11 @@ def ingest(book: str, pages: list[int] | None, limit: int | None, ocr: str, forc
     results, flagged = [], {}
     g = dict(n_pages=0, n_pages_10cols=0, n_cols=0, n_cols_syll14=0, n_cols_kim14=0, n_cols_kim_6_8=0,
              n_boxes_unassigned=0, n_number_boxes=0, n_chars_nonpair=0, n_cache_ok=0, cols_per_page={}, n_pages_skipped=0,
-             ocr_calls=0, n_cols_content_unmatched=0, n_pages_content_offset=0)
+             ocr_calls=0, n_cols_content_unmatched=0, n_pages_content_offset=0,
+             qn_source_lines={}, n_cols_qn_ref_both=0, dict_boost=None)
     line_sets = [_line_syllable_set(r) for r in vrows] if verse_map == "content" else None
+    boost_tot = dict(n_tier_checked=0, n_tier_skipped_ocr=0, n_tier_skipped_len=0, agree=0, kim_not_in_R=0,
+                     ref_not_in_R=0, di_the_not_similar=0, boosted=0, boosted_pairs=[]) if dict_boost else None
     for p in sel:
         name = f"page_{p:04d}"
         if p in uncovered:
@@ -645,8 +735,21 @@ def ingest(book: str, pages: list[int] | None, limit: int | None, ocr: str, forc
             g["n_pages_content_offset"] += int(any(o for o in cinfo["offset"] if o))
         elif verse_map == "content":
             flags.append("verse_map:content_no_kim→anchor/formula")
+        # B1' --dict-boost: chữ dị bản phân xử dị thể đồng âm gần hình (chỉ khi có chữ kim)
+        bstat = None
+        if dict_boost and stats:
+            row_pairs = [(verses_page[vo], verses_page[ve]) for vo, ve in vpairs]
+            bstat = apply_dict_boost(columns, stats["chars_per_tier"], row_pairs)
+            for kk, vv in bstat.items():
+                boost_tot[kk] += vv
+            if bstat["boosted"]:
+                flags.append(f"dict_boost:{bstat['boosted']}")
         cols_txt, tflags = make_column_texts(vpairs, verses_page)
         flags += tflags
+        for c in cols_txt:
+            for v in (c["verse_odd"], c["verse_even"]):
+                g["qn_source_lines"][v["qn_source"]] = g["qn_source_lines"].get(v["qn_source"], 0) + 1
+            g["n_cols_qn_ref_both"] += int(c["verse_odd"]["qn_source"] != "ocr" and c["verse_even"]["qn_source"] != "ocr")
         for c in cols_txt:
             for key in ("page_flag", "line_flag"):
                 for v in (c["verse_odd"], c["verse_even"]):
@@ -693,18 +796,22 @@ def ingest(book: str, pages: list[int] | None, limit: int | None, ocr: str, forc
                             num_columns=len(pairs), total_syllables=sum(c["num_syllables"] for c in cols_txt),
                             ocr_chars=sum(len(c) for c in columns), qn_page_confidence=None,
                             first_seq=L["first_seq"], n_cols_syll14=n14, box_source=box_source,
-                            kim_stats=stats or None, flags=flags,
+                            kim_stats=stats or None, flags=flags, dict_boost=bstat,
                             verse_map=dict(mode=verse_map, differs_from_formula=vinfo["differs"],
                                            anchor=vinfo["anchor"], content=cinfo)))
         if verbose:
             print(f"  {name}: {len(pairs)} cột, syl14={n14}, chữ={sum(len(c) for c in columns)}, "
                   f"src={box_source}, cờ={len(flags)}", flush=True)
 
+    if boost_tot is not None:
+        boost_tot["n_boosted_pairs_distinct"] = len(set(boost_tot["boosted_pairs"]))
+        boost_tot["boosted_pairs"] = sorted(set(boost_tot["boosted_pairs"]))[:200]
+        g["dict_boost"] = boost_tot
     g["n_pages_verse_map_differs"] = sum(1 for r in results if r["verse_map"]["differs_from_formula"])
     g["pages_verse_map_differs"] = [r["book_page"] for r in results if r["verse_map"]["differs_from_formula"]]
     manifest = dict(book=book, pdf=cfg["pdf"], source="images", layout="lithograph", n_columns=N_COLUMNS,
                     tiers=2, qn_per_column="couplet", contrast=contrast, ocr=ocr, verse_map=verse_map,
-                    measure_dir=_rel(measure_dir),
+                    measure_dir=_rel(measure_dir), verses_tsv=_rel(verses_tsv), dict_boost=dict_boost,
                     pages=results, total_pages=len(results),
                     total_syllables=sum(r["total_syllables"] for r in results),
                     gates=dict(**g, pages_flagged=flagged, n_pages_flagged=len(flagged)))
@@ -743,10 +850,18 @@ def main(argv=None) -> int:
                          "content: từng cột chọn 2 dòng QN khớp chữ kim nhất (từ điển), đơn điệu theo cột (cần --ocr kim)")
     ap.add_argument("--plan-only", action="store_true",
                     help="chỉ so sánh formula/anchor → <out>/<book>/verse_map_plan.json, không ghi ảnh/cache")
+    ap.add_argument("--verses", default=None,
+                    help="tệp verses.tsv thay mặc định measure_out/<book>/qn_ocr/verses.tsv (B1': verses_b1.tsv của "
+                         "scripts/measure/verses_ref_fix.py)")
+    ap.add_argument("--dict-boost", action="store_true",
+                    help="chữ Nôm dị bản (cột ref_nom) phân xử dị thể đồng âm gần hình với chữ kim (xem apply_dict_boost)")
     a = ap.parse_args(argv)
     os.chdir(REPO)
+    if a.dict_boost and a.ocr != "kim":
+        raise SystemExit("[ingest] --dict-boost cần --ocr kim")
     m = ingest(a.book, _parse_pages(a.pages), a.limit, a.ocr, a.force, Path(a.out), Path(a.measure_dir),
-               a.contrast, a.skip_uncovered, verse_map=a.verse_map, plan_only=a.plan_only)
+               a.contrast, a.skip_uncovered, verse_map=a.verse_map, plan_only=a.plan_only,
+               verses_tsv=Path(a.verses) if a.verses else None, dict_boost=a.dict_boost)
     gates = {k: v for k, v in m["gates"].items() if k not in ("pages_flagged", "cols_per_page")}
     print(json.dumps(dict(out=str(Path(a.out) / a.book), gates=gates,
                           pages_flagged=list(m["gates"]["pages_flagged"])), ensure_ascii=False))

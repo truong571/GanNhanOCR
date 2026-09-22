@@ -39,6 +39,9 @@ Invariant "mềm" (bảng `SOFT_INVARIANTS` trong `measure.py`, mỗi mục có 
 | `chresto_map.py` | 20 truyện QN ↔ cột Nôm Chrestomathie; ranh giới tự động vs bảng REF; NomNaOCR xếp hạng truyện | Chrestomathie1872 | 25 s (cache) | `qn_stories.csv`, `qn_lines.csv`, `nom_columns.csv`, `bang_truyen_trang.csv`, `nom_boundaries_auto.csv` |
 | `detector_transfer.py` | CenterNet (`train_crop/detector_r34.best.pt`) trên thạch bản: raw/stretch/otsu × thr 0.2/0.3/0.4, đối chứng STT2/4/11 | LVT+KVK+STT | ≈1–2 phút | `detector_columns.csv`, `detector_pages.csv`, `detector_configs.csv` |
 | `code_facts.py` | sự kiện mã pipeline bằng AST/grep: mọi ghim `9`, `expected_cols`, CLI từng bước, khoá JSON cache, config sách | (repo) | 2 s | `docs/PIPELINE_FACTS.json` |
+| `verses_ref_fix.py` | **B1' (22/09)**: sửa dòng QN OCR bằng phiên âm chuẩn dị bản (exact / khớp mờ ≥ 0,9 theo âm tiết, cùng parity, offset đơn điệu) → `verses_b1.tsv` (+ `qn_source`, `ref_nom`); `--check-labels/--check-trans` kiểm cơ chế sau build (kim ∈ R(âm cũ)/R(âm mới)); `--selftest` 19 phép | KVK1884 (1871 LVĐ) | 2 s | `qn_ref_fix/{verses_b1.tsv,matches.csv,summary.json,mechanism_check_*.json}` |
+| `build_metrics.py` | chỉ số một lần build `dataset_out_<X>/` (tier thô/final, n_det==N, M==N, page_ok, box/count_source, crop flag, remediation) + tier theo `qn_source` khi có transcriptions | (bất kỳ build) | 5 s | JSON stdout hoặc `--out` |
+| `auto_precision.py` | (1) GT độc lập IHR, (2) đối chứng dị bản, (3) cổng máy — xem docstring; 22/09: `--labels/--trans` (đo một build khác, không đổi mặc định), `by_qn_source` trong `cross/summary.json` | KVK1884, LVT1883 | 8 s (cross,gates) | `measure_out/auto_precision/` |
 
 Mỗi mô-đun cũng chạy độc lập: `--book`, `--out`, `--limit N`, `--workers N` (xem `--help`).
 

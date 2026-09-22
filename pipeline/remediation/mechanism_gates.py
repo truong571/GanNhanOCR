@@ -18,6 +18,19 @@ tự động được và proxy văn bản (khớp dị bản) MÙ với nó; ch
         và s1_inter_s2_direct_am_sua_dau                               độc lập; âm QN bị sửa dấu để khớp dict)
     (a) n_det ≠ n_qn HOẶC box_source ∈ {midpoint, split}   → GOLD_text_only (giữ label/unicode/syllable;
                                                                        KHÔNG export ảnh crop)
+    (a') CHẾ ĐỘ PITCH (books[].box_decoder: pitch — pipeline/align_engine/char_detector/pitch_decode.py,
+         2026-09-22): hộp đã được giải mã theo bước cột nên `n_det ≠ n_qn` KHÔNG còn nghĩa "hộp lệch"
+         (n_det giữ nghĩa hộp THÔ ở det_thr để I5 không thành hằng đúng); cổng (a) đổi thành theo Ô:
+           box_source ∈ {ink_cut, detector_low}  → GOLD_text_only  (ô detector không tự tin: ô ảo chiếu
+                                                                     mực / hộp 0,05 ≤ điểm < det_thr)
+           box_source ∈ {midpoint, split}        → GOLD_text_only  (cột rơi về legacy — vẫn như (a))
+           n_det ≠ n_qn                           → chỉ ghi cờ n_det_mismatch=1 (mọi tầng), KHÔNG hạ
+         Đo 27 trang/sách (docs/HUONG_DAN_HUAN_LUYEN_I5_2026-09-22.md §2): ink_cut+detector_low ≈ 1,5 %
+         (LVT) / 4,1 % (KVK) ô, thay vì loại 35–45 % ô GOLD theo cột như (a).
+         Nhận biết chế độ pitch (detect_pitch_mode, thứ tự): --box-decoder pitch|legacy (ghi đè) >
+         config books[].box_decoder == pitch > summary.json detector_params_by_book[book].box_decoder
+         (cạnh --in) > labels có box_source ∈ {ink_cut, detector_low} hoặc count_source ∈ {pitch, pitch_ocr}.
+         Mặc định (legacy) KHÔNG đổi: không có cột n_det_mismatch, (a) theo cột như cũ.
 
 Thứ tự ưu tiên khi một ô trúng nhiều cổng: (c) > (d) > (b) > (a); `gate_reason` ghi cổng quyết định,
 báo cáo JSON ghi số trúng THÔ từng cổng. Ô QUARANTINE/REVIEW không đụng.
@@ -34,6 +47,7 @@ Chạy:
   .venv/bin/python -m pipeline.remediation.mechanism_gates --in dataset_out_<BOOK>/labels_final.csv \
       --out dataset_out_<BOOK>/labels_gated.csv --config config/pipeline_<BOOK>.yaml --book <BOOK> \
       [--cross measure_out/auto_precision/cross/<BOOK>/cells.csv] [--report dataset_out_<BOOK>/mechanism_gates_report.json]
+      [--box-decoder auto|legacy|pitch] [--summary dataset_out_<BOOK>/summary.json]
 """
 from __future__ import annotations
 
@@ -49,10 +63,19 @@ import yaml
 
 REPO = Path(__file__).resolve().parents[2]
 
+
+def _s(v) -> str:
+    return "" if v is None else str(v).strip()
+
+
 TIER_TEXT_ONLY = "GOLD_text_only"
 IMAGE_TIERS = ("GOLD", "SILVER", "SYLLABLE")          # tầng có ảnh crop được export
 BAD_CROP = ("blank", "truncated")
 BOX_NOT_DETECTOR = ("midpoint", "split")
+BOX_LOW_CONF = ("ink_cut", "detector_low")        # (a') pitch_decode: ô detector không tự tin
+COUNT_SOURCE_PITCH = ("pitch", "pitch_ocr")       # count_source do assign_boxes_pitch ghi
+BOX_DECODER_MODES = ("auto", "legacy", "pitch")
+COL_NDET_MISMATCH = "n_det_mismatch"              # cờ (a') thay cho hạ theo cột
 RULE_BRIDGE = "s1_inter_s2_similar"
 TIER_V3_BRIDGE = "CHAR_B"
 RULE_AM_SUA_DAU = "s1_inter_s2_direct_am_sua_dau"
@@ -65,6 +88,7 @@ G_BRIDGE = "bridge_similar"
 G_TONE = "am_sua_dau"
 G_NDET = "n_det_ne_n_qn"
 G_BOX = "box_not_detector"
+G_BOX_LOW = "box_low_conf"                        # (a') chỉ trong chế độ pitch
 
 
 # --------------------------------------------------------------------------- config
@@ -93,6 +117,39 @@ def gates_enabled(book_cfg: dict | None, enable: str = "auto") -> bool:
             raise ValueError(f"books[{book_cfg.get('name')}].mechanism_gates = {v!r}; cần true/false")
         return v
     return book_cfg.get("layout") == LAYOUT_LITHOGRAPH
+
+
+def detect_pitch_mode(df: pd.DataFrame | None, book_cfg: dict | None, summary_path: Path | None = None,
+                      book: str | None = None, box_decoder: str = "auto") -> tuple[bool, str]:
+    """(a') Chế độ pitch? Trả (bool, nguồn quyết định). Thứ tự: --box-decoder ghi đè > config
+    books[].box_decoder > summary.json (detector_params_by_book[book].box_decoder, build_dataset ghi)
+    > chính labels (box_source ink_cut/detector_low hoặc count_source pitch/pitch_ocr — chỉ
+    assign_boxes_pitch mới ghi các giá trị này). Không thấy gì → legacy."""
+    if box_decoder not in BOX_DECODER_MODES:
+        raise ValueError(f"--box-decoder = {box_decoder!r}; chỉ nhận {BOX_DECODER_MODES}")
+    if box_decoder != "auto":
+        return box_decoder == "pitch", "cli"
+    if book_cfg and "box_decoder" in book_cfg:
+        v = book_cfg.get("box_decoder")
+        if v not in ("legacy", "pitch"):
+            raise ValueError(f"books[{book_cfg.get('name')}].box_decoder = {v!r}; chỉ nhận legacy|pitch")
+        return v == "pitch", "config"
+    if summary_path and Path(summary_path).exists():
+        try:
+            sm = json.loads(Path(summary_path).read_text(encoding="utf-8"))
+            params = sm.get("detector_params_by_book") or {}
+            for k, v in params.items():
+                if book is None or str(k).lower() == str(book).lower():
+                    if isinstance(v, dict) and "box_decoder" in v:
+                        return v["box_decoder"] == "pitch", "summary"
+        except (OSError, ValueError):
+            pass
+    if df is not None:
+        if "box_source" in df.columns and df["box_source"].map(_s).isin(BOX_LOW_CONF).any():
+            return True, "labels:box_source"
+        if "count_source" in df.columns and df["count_source"].map(_s).isin(COUNT_SOURCE_PITCH).any():
+            return True, "labels:count_source"
+    return False, "legacy"
 
 
 # --------------------------------------------------------------------------- cross (d)
@@ -127,17 +184,17 @@ def load_cross(path: Path) -> dict[str, dict]:
 
 
 # --------------------------------------------------------------------------- áp cổng
-def _s(v) -> str:
-    return "" if v is None else str(v).strip()
-
-
-def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None) -> tuple[pd.DataFrame, dict]:
-    """Hàm THUẦN (không mutate df). Trả (df mới, báo cáo dict)."""
+def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
+                pitch: bool = False) -> tuple[pd.DataFrame, dict]:
+    """Hàm THUẦN (không mutate df). Trả (df mới, báo cáo dict). `pitch=True` = luật (a') thay (a):
+    hạ theo Ô box_source ink_cut/detector_low (+ midpoint/split), n_det ≠ n_qn chỉ ghi cờ."""
     out = df.copy()
     n = len(out)
     for c in ("gate_reason", "di_ban_khac"):
         if c not in out.columns:
             out[c] = ""
+    if pitch and COL_NDET_MISMATCH not in out.columns:
+        out[COL_NDET_MISMATCH] = ""          # chỉ chế độ pitch mới có cột này (legacy không đổi schema)
     # đọc cột an toàn (thế hệ cũ có thể thiếu cột → coi như rỗng, cổng đó không trúng)
     col = lambda name: out[name].map(_s) if name in out.columns else pd.Series([""] * n, index=out.index)
     tier = col("tier")
@@ -155,8 +212,10 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None) -> tuple
     hit_crop = is_img_tier & flag.isin(BAD_CROP)
     hit_bridge = is_gold & ((rule == RULE_BRIDGE) | (tier_v3 == TIER_V3_BRIDGE))
     hit_tone = is_gold & (rule == RULE_AM_SUA_DAU)
-    hit_ndet = is_gold & (n_det != n_qn)
+    ndet_mismatch = (n_det != n_qn)                     # thô, mọi tầng
+    hit_ndet = is_gold & ndet_mismatch & (not pitch)    # (a) chỉ legacy; pitch → cờ, không hạ
     hit_box = is_gold & box.isin(BOX_NOT_DETECTOR)
+    hit_box_low = is_gold & box.isin(BOX_LOW_CONF) & bool(pitch)   # (a') chỉ pitch
     if cross is not None:
         cx = image.map(lambda i: cross.get(i))
         agree = cx.map(lambda d: bool(d and d["agree"]))
@@ -179,8 +238,9 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None) -> tuple
         "cross_GOLD_in_cells": n_in_cross if cross is not None else None,
         G_BRIDGE: int(hit_bridge.sum()),
         G_TONE: int(hit_tone.sum()),
-        G_NDET: int(hit_ndet.sum()),
+        G_NDET: int((is_gold & ndet_mismatch).sum()),   # trúng thô (pitch: chỉ ghi cờ, không hạ)
         G_BOX: int(hit_box.sum()),
+        G_BOX_LOW: int((is_gold & box.isin(BOX_LOW_CONF)).sum()),   # thô; chỉ hạ khi pitch
         "box_source_GOLD": {k: int(v) for k, v in box[is_gold].value_counts().items()},
         "n_det_blank_GOLD": int((is_gold & (n_det == "")).sum()),
     }
@@ -198,7 +258,7 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None) -> tuple
     m_cross = take(hit_cross)
     m_bridge = take(hit_bridge)
     m_tone = take(hit_tone)
-    m_box = take(hit_ndet | hit_box)
+    m_box = take(hit_ndet | hit_box | hit_box_low)
 
     # (c) → REVIEW: giữ label (truy vết), label_level rỗng như confusion_fix
     out.loc[m_crop, "gate_reason"] = G_CROP + ":" + flag[m_crop]
@@ -227,13 +287,17 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None) -> tuple
                 out.loc[m, c] = ""
         if "label_level" in out.columns:
             out.loc[m, "label_level"] = "syllable"
-    # (a) → GOLD_text_only: giữ nguyên nhãn/luật, chỉ đổi tầng + lý do
+    # (a)/(a') → GOLD_text_only: giữ nguyên nhãn/luật, chỉ đổi tầng + lý do
     reason_a = pd.Series([""] * n, index=out.index)
     reason_a[hit_ndet] = G_NDET
     reason_a[hit_box] = reason_a[hit_box].where(reason_a[hit_box] == "", reason_a[hit_box] + "+") \
         + G_BOX + ":" + box[hit_box]
+    reason_a[hit_box_low] = G_BOX_LOW + ":" + box[hit_box_low]
     out.loc[m_box, "gate_reason"] = reason_a[m_box]
     out.loc[m_box, "tier"] = TIER_TEXT_ONLY
+    if pitch:
+        # (a') n_det ≠ n_qn: cờ trên MỌI dòng (sự kiện cấp cột), không hạ tầng
+        out.loc[ndet_mismatch, COL_NDET_MISMATCH] = "1"
 
     before = {k: int(v) for k, v in df["tier"].value_counts().items()}
     after = {k: int(v) for k, v in out["tier"].value_counts().items()}
@@ -254,6 +318,10 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None) -> tuple
         "images_to_export_before": sum(before.get(t, 0) for t in IMAGE_TIERS),
         "di_ban_khac": int((out["di_ban_khac"] == "1").sum()),
         "n_rows": n,
+        "pitch_mode": bool(pitch),
+        COL_NDET_MISMATCH: (int((out[COL_NDET_MISMATCH] == "1").sum()) if pitch else None),
+        "n_det_mismatch_GOLD_kept": (int((is_gold & ndet_mismatch & (out["tier"] == "GOLD")).sum())
+                                     if pitch else None),
     }
     # proxy khớp dị bản của tầng GOLD-ảnh trước/sau (chỉ khi có cross): tính trên ô có eq ∈ {0,1}
     if cross is not None:
@@ -266,7 +334,8 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None) -> tuple
             "GOLD_before": proxy(is_gold),
             # dùng mặt nạ TRÚNG THÔ (không phải mặt nạ ưu tiên): ô vừa trúng (d) vừa trúng (a)/(b)
             # phải bị loại ở đây, nếu không tập "abc_only" còn giữ chính các ô bất đồng mà (a)/(b) sẽ hạ
-            "GOLD_image_after_abc_only": proxy(is_gold & ~hit_crop & ~hit_bridge & ~hit_tone & ~hit_ndet & ~hit_box),
+            "GOLD_image_after_abc_only": proxy(is_gold & ~hit_crop & ~hit_bridge & ~hit_tone & ~hit_ndet
+                                               & ~hit_box & ~hit_box_low),
             "GOLD_image_after": proxy(out["tier"] == "GOLD"),
             "GOLD_text_only_after": proxy(out["tier"] == TIER_TEXT_ONLY),
             "note": "agree = có tham chiếu nào khớp hẳn; 'after' đã trừ (d) nên tự khẳng định — "
@@ -277,13 +346,17 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None) -> tuple
 
 # --------------------------------------------------------------------------- CLI
 def run(in_csv: Path, out_csv: Path, config: Path | None, book: str | None, cross: Path | None,
-        enable: str, report_path: Path | None) -> dict:
+        enable: str, report_path: Path | None, box_decoder: str = "auto",
+        summary_path: Path | None = None) -> dict:
     book_cfg = load_book_cfg(config, book) if (config and book) else None
     enabled = gates_enabled(book_cfg, enable)
+    if summary_path is None:
+        summary_path = in_csv.parent / "summary.json"      # build_dataset ghi cạnh labels.csv
     rep: dict = {"enabled": enabled, "book": book, "config": str(config) if config else None,
                  "in": str(in_csv), "out": str(out_csv), "cross": str(cross) if cross else None,
                  "layout": (book_cfg or {}).get("layout"),
-                 "mechanism_gates_key": (book_cfg or {}).get("mechanism_gates")}
+                 "mechanism_gates_key": (book_cfg or {}).get("mechanism_gates"),
+                 "box_decoder_arg": box_decoder}
     out_csv.parent.mkdir(parents=True, exist_ok=True)
     if not enabled:
         shutil.copyfile(in_csv, out_csv)          # BYTE-IDENTICAL: STT không đổi
@@ -294,12 +367,20 @@ def run(in_csv: Path, out_csv: Path, config: Path | None, book: str | None, cros
         # dtype=str + keep_default_na=False: mọi ô đi qua NGUYÊN VĂN ("nan" là âm 難, "0.10" giữ số 0)
         df = pd.read_csv(in_csv, dtype=str, keep_default_na=False)
         cx = load_cross(cross) if cross else None
-        out, r = apply_gates(df, cx)
+        pitch, pitch_src = detect_pitch_mode(df, book_cfg, summary_path, book, box_decoder)
+        rep["pitch_mode_source"] = pitch_src
+        out, r = apply_gates(df, cx, pitch=pitch)
         out.to_csv(out_csv, index=False)
         rep.update(r)
         g = r["gold_image"]
+        mode_txt = ("pitch — luật (a') theo ô ink_cut/detector_low, n_det≠N chỉ ghi cờ" if pitch
+                    else "legacy — luật (a) theo cột n_det≠N")
+        print(f"[gates] {book}: chế độ hộp = {mode_txt} [nguồn: {pitch_src}]")
         print(f"[gates] {book}: GOLD ảnh {g['before']:,} → {g['after']:,} ({g['coverage_pct']} %); "
               f"GOLD_text_only {r['gold_text_only']:,}; quyết định theo cổng {r['gates_decided']}")
+        if pitch:
+            print(f"[gates] (a') n_det_mismatch cờ {r[COL_NDET_MISMATCH]:,} dòng (GOLD giữ ảnh dù n_det≠N: "
+                  f"{r['n_det_mismatch_GOLD_kept']:,}); box_low_conf thô {r['gates_raw_hits'][G_BOX_LOW]:,}")
         print(f"[gates] tier trước: {r['tier_before']}")
         print(f"[gates] tier sau  : {r['tier_after']}")
         print(f"[gates] ảnh sẽ export {r['images_to_export_before']:,} → {r['images_to_export']:,}; "
@@ -329,12 +410,18 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--enable", choices=("auto", "on", "off"), default="auto",
                     help="auto (mặc định: theo config) | on | off (ghi đè, thí nghiệm)")
     ap.add_argument("--report", default=None, help="JSON báo cáo (mặc định <out dir>/mechanism_gates_report.json)")
+    ap.add_argument("--box-decoder", choices=BOX_DECODER_MODES, default="auto",
+                    help="auto (mặc định: config books[].box_decoder > summary.json > labels) | legacy | pitch — "
+                         "pitch = luật (a') theo ô box_source ink_cut/detector_low, n_det≠N chỉ ghi cờ")
+    ap.add_argument("--summary", default=None,
+                    help="summary.json của build_dataset (mặc định cạnh --in) — đọc detector_params_by_book[book].box_decoder")
     a = ap.parse_args(argv)
     if a.enable == "auto" and not (a.config and a.book):
         print("[gates] --enable auto cần --config và --book (hoặc dùng --enable on|off)", file=sys.stderr)
         return 2
     run(Path(a.in_csv), Path(a.out), Path(a.config) if a.config else None, a.book,
-        Path(a.cross) if a.cross else None, a.enable, Path(a.report) if a.report else None)
+        Path(a.cross) if a.cross else None, a.enable, Path(a.report) if a.report else None,
+        box_decoder=a.box_decoder, summary_path=Path(a.summary) if a.summary else None)
     return 0
 
 

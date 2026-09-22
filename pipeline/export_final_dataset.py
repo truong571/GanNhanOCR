@@ -46,8 +46,9 @@ TRACE = ["image", "nom_idx", "syl_idx", "syllable_ocr", "syllable_raw", "tier_v3
          "l1_support", "l1_tie", "flank_gold", "box_source", "qd01_locked", "qd01_excluded",
          "label_canonical", "crop_quality_flag", "stray_ink", "border_ink", "ink_pct",
          "crop_w", "crop_h", "seg_flag", "s3_cosine",
-         # B4' cổng cơ chế (mechanism_gates): chỉ có ở sách lithograph đã qua cổng
-         "gate_reason", "di_ban_khac",
+         # B4' cổng cơ chế (mechanism_gates): chỉ có ở sách lithograph đã qua cổng;
+         # n_det_mismatch chỉ có khi cổng chạy ở chế độ pitch (luật a', 2026-09-22)
+         "gate_reason", "di_ban_khac", "n_det_mismatch",
          # B-2 (--visual-emission): chỉ có khi build bật cờ; tắt cờ -> không ghi (không bịa cột)
          "p_visual_syl", "visual_fold", "visual_argmax", "visual_max_p"]
 # columns.csv: khoá (book,page,column) + các đại lượng cấp CỘT (giá trị đầu tiên gặp).

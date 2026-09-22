@@ -5,7 +5,8 @@
 Dữ liệu GIẢ (không đọc dataset_out*), kiểm: bật/tắt theo config, từng cổng (a)(b)(c)(d), thứ tự
 ưu tiên, không mutate, idempotent, bản sao byte khi tắt, "nan" là âm 難 không bị nuốt, export
 ghi GOLD_text_only vào labels.csv nhưng KHÔNG copy ảnh, export không có tầng mới = như cũ,
-make_dataset_docs chỉ thêm khối khi có tầng.
+make_dataset_docs chỉ thêm khối khi có tầng; [5] luật (a') chế độ pitch (2026-09-22): nhận biết
+chế độ (cli > config > summary > labels), ink_cut/detector_low → text_only, n_det≠N chỉ cờ, legacy không đổi.
 """
 from __future__ import annotations
 
@@ -201,6 +202,130 @@ def test_run_cli(tmp: Path) -> None:
     check("--enable auto thiếu --config/--book → exit 2", rc == 2)
 
 
+def _synthetic_pitch() -> pd.DataFrame:
+    """Bản build box_decoder=pitch: count_source pitch/pitch_ocr, box_source detector|detector_low|ink_cut."""
+    rows = [
+        _row(1, count_source="pitch"),                                              # sạch, detector
+        _row(2, count_source="pitch", n_det="15"),                                  # n_det≠N nhưng hộp detector → GIỮ ảnh + cờ
+        _row(3, count_source="pitch", box_source="ink_cut"),                        # (a') ô ảo → text_only
+        _row(4, count_source="pitch", box_source="detector_low", n_det="13"),       # (a') + cờ
+        _row(5, count_source="conflict", box_source="midpoint", n_det="15"),        # cột rơi về legacy: midpoint vẫn hạ
+        _row(6, count_source="pitch", box_source="ink_cut", crop_quality_flag="blank"),  # (c) thắng (a')
+        _row(7, count_source="pitch_ocr", n_det="13", n_qn="14", n_ocr="13"),       # pitch_ocr, n_det≠n_qn → cờ, giữ
+        _row(8, tier="SYLLABLE", label="", unicode="", label_level="syllable",
+             image="syllable/b_page_0001_c01_008.png", rule="syl_ctx:tone",
+             count_source="pitch", box_source="ink_cut", n_det="15"),               # SYLLABLE: không (a'), có cờ
+        _row(9, count_source="pitch", box_source="detector_low",
+             rule="s1_inter_s2_similar", tier_v3="CHAR_B"),                         # (b) thắng (a')
+    ]
+    return pd.DataFrame(rows, dtype=str)
+
+
+def test_pitch(tmp: Path) -> None:
+    print("[5] luật (a') chế độ pitch (box_decoder: pitch)")
+    dfp = _synthetic_pitch()
+    dfl = _synthetic()
+    # --- nhận biết chế độ
+    check("detect: legacy labels + không config → legacy", mg.detect_pitch_mode(dfl, None) == (False, "legacy"))
+    check("detect: config box_decoder pitch → pitch/config",
+          mg.detect_pitch_mode(dfl, {"name": "x", "layout": "lithograph", "box_decoder": "pitch"}) == (True, "config"))
+    check("detect: config box_decoder legacy thắng labels pitch → legacy/config",
+          mg.detect_pitch_mode(dfp, {"name": "x", "box_decoder": "legacy"}) == (False, "config"))
+    check("detect: labels box_source ink_cut → pitch/labels",
+          mg.detect_pitch_mode(dfp, {"name": "x", "layout": "lithograph"}) == (True, "labels:box_source"))
+    only_cs = dfp[dfp["box_source"] == "detector"]
+    check("detect: labels chỉ count_source pitch → pitch/labels",
+          mg.detect_pitch_mode(only_cs, None) == (True, "labels:count_source"))
+    check("detect: --box-decoder legacy ghi đè mọi thứ",
+          mg.detect_pitch_mode(dfp, {"box_decoder": "pitch"}, box_decoder="legacy") == (False, "cli"))
+    check("detect: --box-decoder pitch ghi đè", mg.detect_pitch_mode(dfl, None, box_decoder="pitch") == (True, "cli"))
+    sm = tmp / "summary.json"
+    sm.write_text('{"detector_params_by_book": {"B": {"det_thr": 0.15, "box_decoder": "pitch"}}}', encoding="utf-8")
+    check("detect: summary.json box_decoder pitch → pitch/summary",
+          mg.detect_pitch_mode(dfl, {"name": "B"}, sm, "b") == (True, "summary"))
+    sm.write_text('{"detector_params_by_book": {"B": {"det_thr": 0.15, "box_decoder": "legacy"}}}', encoding="utf-8")
+    check("detect: summary.json legacy thắng labels pitch → legacy/summary",
+          mg.detect_pitch_mode(dfp, {"name": "B"}, sm, "B") == (False, "summary"))
+    try:
+        mg.detect_pitch_mode(dfl, {"name": "x", "box_decoder": "xyz"})
+        check("detect: config box_decoder sai → ValueError", False)
+    except ValueError:
+        check("detect: config box_decoder sai → ValueError", True)
+    # --- áp (a')
+    out, rep = mg.apply_gates(dfp, None, pitch=True)
+    T = dict(zip(out["nom_idx"], out["tier"]))
+    R = dict(zip(out["nom_idx"], out["gate_reason"]))
+    F = dict(zip(out["nom_idx"], out[mg.COL_NDET_MISMATCH]))
+    check("pitch: ô detector sạch giữ GOLD", T["1"] == "GOLD" and R["1"] == "" and F["1"] == "")
+    check("pitch: n_det≠N + hộp detector → GIỮ GOLD ảnh, cờ n_det_mismatch=1",
+          T["2"] == "GOLD" and R["2"] == "" and F["2"] == "1")
+    check("pitch: ink_cut → GOLD_text_only, lý do box_low_conf:ink_cut",
+          T["3"] == mg.TIER_TEXT_ONLY and R["3"] == "box_low_conf:ink_cut")
+    check("pitch: detector_low → GOLD_text_only + cờ", T["4"] == mg.TIER_TEXT_ONLY
+          and R["4"] == "box_low_conf:detector_low" and F["4"] == "1")
+    check("pitch: cột rơi về legacy (midpoint) vẫn → text_only, KHÔNG kèm n_det_ne_n_qn",
+          T["5"] == mg.TIER_TEXT_ONLY and R["5"] == "box_not_detector:midpoint" and F["5"] == "1")
+    check("pitch: (c) blank thắng (a')", T["6"] == "REVIEW" and R["6"] == "crop_bad:blank")
+    check("pitch: pitch_ocr n_det≠n_qn → giữ GOLD + cờ", T["7"] == "GOLD" and F["7"] == "1")
+    check("pitch: SYLLABLE ink_cut không hạ (chỉ GOLD), vẫn cờ", T["8"] == "SYLLABLE" and R["8"] == "" and F["8"] == "1")
+    check("pitch: (b) cầu thắng (a')", T["9"] == "SYLLABLE" and R["9"] == mg.G_BRIDGE)
+    a3 = out[out["nom_idx"] == "3"].iloc[0]
+    check("pitch: text_only giữ label/unicode/rule", a3["label"] == "城" and a3["unicode"] == "U+57CE"
+          and a3["rule"] == "s1_inter_s2_direct")
+    raw = rep["gates_raw_hits"]
+    check("pitch: báo cáo pitch_mode, n_det_mismatch 5, GOLD giữ ảnh dù n_det≠N 2, box_low thô 4, ndet thô 4",
+          rep["pitch_mode"] is True and rep[mg.COL_NDET_MISMATCH] == 5 and rep["n_det_mismatch_GOLD_kept"] == 2
+          and raw[mg.G_BOX_LOW] == 4 and raw[mg.G_NDET] == 4, f"{rep[mg.COL_NDET_MISMATCH]} {rep['n_det_mismatch_GOLD_kept']} {raw}")
+    check("pitch: gates_decided không có n_det_ne_n_qn", mg.G_NDET not in rep["gates_decided"]
+          and rep["gates_decided"].get(mg.G_BOX_LOW) == 2, str(rep["gates_decided"]))
+    out2, _ = mg.apply_gates(out, None, pitch=True)
+    check("pitch: idempotent", out2.equals(out))
+    # --- legacy KHÔNG đổi: cùng dữ liệu pitch nhưng pitch=False → luật (a) theo cột, không cột cờ
+    outl, repl = mg.apply_gates(dfp, None, pitch=False)
+    Tl = dict(zip(outl["nom_idx"], outl["tier"]))
+    Rl = dict(zip(outl["nom_idx"], outl["gate_reason"]))
+    check("legacy: n_det≠N vẫn hạ theo cột (a)", Tl["2"] == mg.TIER_TEXT_ONLY and Rl["2"] == mg.G_NDET)
+    check("legacy: ink_cut/detector_low KHÔNG bị (a') (n_det==N → giữ GOLD)", Tl["3"] == "GOLD" and Rl["3"] == "")
+    check("legacy: không có cột n_det_mismatch, pitch_mode False, n_det_mismatch None",
+          mg.COL_NDET_MISMATCH not in outl.columns and repl["pitch_mode"] is False and repl[mg.COL_NDET_MISMATCH] is None)
+    outl0, _ = mg.apply_gates(_synthetic(), _cross())
+    outl1, _ = mg.apply_gates(_synthetic(), _cross(), pitch=False)
+    check("legacy: apply_gates mặc định == pitch=False (bộ giả cũ)", outl0.equals(outl1))
+    # --- CLI: auto theo config
+    src = tmp / "labels_final_pitch.csv"
+    dfp.to_csv(src, index=False)
+    cfg = tmp / "cp.yaml"
+    cfg.write_text("books:\n  - name: B\n    layout: lithograph\n    box_decoder: pitch\n"
+                   "  - name: L\n    layout: lithograph\n", encoding="utf-8")
+    with redirect_stdout(io.StringIO()):
+        rep_p = mg.run(src, tmp / "p.csv", cfg, "b", None, "auto", tmp / "p.json")
+        rep_l = mg.run(src, tmp / "l.csv", cfg, "L", None, "auto", tmp / "l.json", box_decoder="legacy")
+        rep_a = mg.run(src, tmp / "a.csv", cfg, "L", None, "auto", tmp / "a.json", summary_path=tmp / "khong_co.json")
+    pcsv = pd.read_csv(tmp / "p.csv", dtype=str, keep_default_na=False)
+    check("CLI: config pitch → pitch_mode_source config, cột n_det_mismatch trong CSV",
+          rep_p["pitch_mode_source"] == "config" and rep_p["pitch_mode"] is True and mg.COL_NDET_MISMATCH in pcsv.columns)
+    check("CLI: --box-decoder legacy → cli, không cột cờ",
+          rep_l["pitch_mode_source"] == "cli" and rep_l["pitch_mode"] is False
+          and mg.COL_NDET_MISMATCH not in pd.read_csv(tmp / "l.csv", dtype=str, keep_default_na=False).columns)
+    check("CLI: sách không khai box_decoder, không summary → theo labels (labels:box_source)",
+          rep_a["pitch_mode_source"] == "labels:box_source" and rep_a["pitch_mode"] is True)
+    # --- export: n_det_mismatch vào labels_trace
+    from pipeline.export_final_dataset import export_dataset, TRACE
+    check("TRACE có n_det_mismatch", mg.COL_NDET_MISMATCH in TRACE)
+    src_root = tmp / "src_p"
+    for rel in pcsv["image"]:
+        if rel:
+            (src_root / rel).parent.mkdir(parents=True, exist_ok=True)
+            (src_root / rel).write_bytes(b"png")
+    (src_root / "labels_gated.csv").write_bytes((tmp / "p.csv").read_bytes())
+    with redirect_stdout(io.StringIO()):
+        export_dataset(src_root / "labels_gated.csv", src_root, tmp / "dataset_p")
+    tr = list(csv.DictReader(open(tmp / "dataset_p" / "labels_trace.csv", encoding="utf-8")))
+    check("export: labels_trace có n_det_mismatch, ô 2 = 1 và vẫn có ảnh",
+          mg.COL_NDET_MISMATCH in tr[0] and any(r[mg.COL_NDET_MISMATCH] == "1" for r in tr)
+          and (tmp / "dataset_p" / "gold/b_page_0001_c01_002.png").exists())
+
+
 def test_export(tmp: Path) -> None:
     print("[4] export tầng GOLD_text_only")
     from pipeline.export_final_dataset import export_dataset, TRACE, GIAO_NOP
@@ -262,6 +387,7 @@ def main() -> int:
         test_apply()
         test_run_cli(tmp)
         test_export(tmp)
+        test_pitch(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("=" * 64)

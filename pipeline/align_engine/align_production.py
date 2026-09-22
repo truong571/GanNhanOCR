@@ -35,7 +35,8 @@ from pipeline.align_engine.syllable_normalize import build_readings, normalize_c
 from pipeline.align_engine.consensus import decide_label
 from pipeline.align_engine.bbox_fix import frame_offset, correct_columns
 from pipeline.align_engine.book_layout import (BookLayout, DEFAULT_LAYOUT,
-                                                lithograph_gate, prose_gate, expected_qn_counts)
+                                                lithograph_gate, prose_gate, expected_qn_counts,
+                                                expected_tier_counts)
 
 
 def _detect(page_name: str, data_dir: Path, qn_dict_set: set,
@@ -590,10 +591,47 @@ def assign_boxes(G, ops, n_ocr, n_qn, cluster=None, cb=None, det=None, guard=Non
     return boxes, src, "conflict"
 
 
+def pitch_target_count(n_ocr: int, n_qn: int, n_det: int) -> tuple[int, str]:
+    """(box_decoder=pitch) Số ô N để giải mã + cách gán:
+      (n_ocr == n_qn) hoặc (n_det != n_ocr)  -> N = n_qn, gán theo syl_idx ('pitch')
+      n_det == n_ocr != n_qn                  -> N = n_ocr, gán theo nom_idx ('pitch_ocr')
+    Vì: khi kim và detector cùng đếm n_ocr mà QN lệch (OCR QN rụng/thừa âm — đo build --limit 10:
+    100 % cột equal_ocr), ép n_qn ô lên n_ocr chữ làm mọi hộp sau khe lệch một chữ. Đây chính là
+    nhánh (b) của assign_boxes, giữ nguyên nghĩa."""
+    if n_ocr == n_qn or n_det != n_ocr:
+        return n_qn, "pitch"
+    return n_ocr, "pitch_ocr"
+
+
+def assign_boxes_pitch(G, G_src, ops, n_ocr, n_qn):
+    """(box_decoder=pitch, 2026-09-22) Gán hộp đã GIẢI MÃ THEO BƯỚC (pitch_decode.decode_column)
+    cho từng chữ OCR. len(G) == n_qn: theo syl_idx của match (nhánh (a) của assign_boxes),
+    count_source 'pitch'; len(G) == n_ocr != n_qn: theo nom_idx (nhánh (b)), count_source
+    'pitch_ocr'. Nguồn hộp từng ô lấy từ G_src ('detector' | 'detector_low' | 'ink_cut').
+    KHÔNG ghi 'equal_qn' (n == n_qn là hằng đúng khi ép N). Không khớp -> (None, None, '') để
+    bên gọi rơi về assign_boxes cũ."""
+    if not G or not G_src or len(G) != len(G_src):
+        return None, None, ""
+    if len(G) == n_qn:
+        boxes: list = [None] * n_ocr
+        src: list = [""] * n_ocr
+        for o in ops:
+            if o.get("op") == "match":
+                i, j = o["nom_idx"], o["syl_idx"]
+                if 0 <= i < n_ocr and 0 <= j < n_qn:
+                    boxes[i] = [int(v) for v in G[j][:4]]
+                    src[i] = G_src[j]
+        return boxes, src, "pitch"
+    if len(G) == n_ocr:
+        return [[int(v) for v in g[:4]] for g in G], list(G_src), "pitch_ocr"
+    return None, None, ""
+
+
 def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
                     binary=None, reseg: bool = True, reseg_mode: str = "midpoint",
                     encoder=None, page_bgr=None, det=None, page_boxes=None,
-                    box_rule: str = "syl_index", legacy_page_boxes=None
+                    box_rule: str = "syl_index", legacy_page_boxes=None,
+                    box_decoder: str = "legacy", page_boxes_low=None, tier_n=None
                     ) -> tuple[list[dict], int, list[dict], list | None, dict]:
     """Như `_pair_new` nhưng trả thêm (ops lượt 1, reseg_boxes, box_info) — trạng thái
     cột cho PASS 1b (flow N3g): build_dataset chạy DP lại với `cost_fn` neo ngữ liệu
@@ -620,11 +658,27 @@ def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
         reseg_boxes = None
     elif use_det and box_rule == "syl_index":
         G = det.raw_column_boxes(page_boxes, cluster["x_range"], DETECTOR_XMARGIN)
-        n_det = len(G)
-        if len(G) != n_qn and len(G) != n_ocr:
-            cb = det.enforce_count(G, n_qn)       # nhánh (c): ép đếm trên ảnh xám ĐÚNG trang
-        reseg_boxes, box_source, count_source = assign_boxes(G, ops, n_ocr, n_qn,
-                                                             cluster=cluster, cb=cb)
+        n_det = len(G)                            # số hộp thô ở det_thr — giữ nguyên nghĩa I5 cả khi pitch
+        G_src = None
+        if box_decoder == "pitch" and page_boxes_low is not None and n_qn > 0:
+            # (2026-09-22) giải mã theo bước cột: ứng viên ≥ 0,05 + ô ảo chiếu mực -> đúng N hộp
+            # (N = n_qn, hoặc n_ocr khi detector đồng ý với kim mà QN lệch — pitch_target_count)
+            from pipeline.align_engine.char_detector import pitch_decode as _pd
+            N_pitch, _mode = pitch_target_count(n_ocr, n_qn, n_det)
+            Gp, G_src, _pinfo = _pd.decode_column(cluster, page_boxes_low, det._gray, N_pitch,
+                                                  DETECTOR_THR, DETECTOR_XMARGIN,
+                                                  tier_n=(tier_n if N_pitch == n_qn else None))
+            reseg_boxes, box_source, count_source = assign_boxes_pitch(Gp, G_src, ops, n_ocr, n_qn)
+            if reseg_boxes is not None:
+                G = [[int(b[0]), int(b[1]), int(b[2]), int(b[3]), float(b[4])] for b in Gp]
+                box_rule = "pitch"               # PASS 1b gán lại bằng assign_boxes_pitch
+            else:
+                G_src = None
+        if G_src is None:
+            if len(G) != n_qn and len(G) != n_ocr:
+                cb = det.enforce_count(G, n_qn)   # nhánh (c): ép đếm trên ảnh xám ĐÚNG trang
+            reseg_boxes, box_source, count_source = assign_boxes(G, ops, n_ocr, n_qn,
+                                                                 cluster=cluster, cb=cb)
     else:
         pb = legacy_page_boxes if (use_det and legacy_page_boxes is not None) else page_boxes
         reseg_boxes = _pick_reseg(cluster, syllables, binary, reseg_mode, encoder, page_bgr,
@@ -640,7 +694,8 @@ def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
             box_source = [reseg_mode if reseg_mode != "detector" else "midpoint"] * n_ocr
     box_info = {"G": G, "cb": cb, "n_ocr": n_ocr, "n_qn": n_qn, "n_det": n_det,
                 "count_source": count_source, "box_source": box_source,
-                "box_rule": box_rule if use_det else reseg_mode}
+                "box_rule": box_rule if use_det else reseg_mode,
+                "G_src": (G_src if (use_det and box_rule == "pitch") else None)}
     out = []
     for p in mp:
         i = p["nom_idx"]
@@ -715,6 +770,10 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
     detector = None
     page_boxes = None
     legacy_page_boxes = None
+    page_boxes_low = None          # box_decoder=pitch: hộp ở ngưỡng ứng viên 0,05
+    tier_n_by_line: dict = {}      # box_decoder=pitch: số âm QN mỗi tầng theo cột (transcriptions)
+    seg_backend_suffix = ""
+    box_decoder = getattr(layout, "box_decoder", "legacy") if layout is not None else "legacy"
     locked_columns = set(locked_columns or ())
     legacy_also_columns = set(legacy_also_columns or ())
     if reseg_mode in ("valley_guarded", "detector"):
@@ -726,14 +785,25 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
             raise DetectorUnavailableError(
                 f"reseg=detector nhưng không đọc được ảnh trang {page_name}.png. {_HINT}")
         thr = LEGACY_DETECTOR_THR if box_rule == "legacy" else DETECTOR_THR
-        detector = _get_detector(strict=True, thr=thr)   # thiếu ckpt -> ném lỗi, KHÔNG rơi ngầm
-        page_boxes = detector.boxes_for_page(page_bgr)   # all char boxes, once per page
+        if box_decoder == "pitch" and box_rule == "syl_index":
+            # (2026-09-22) pitch_decode: chạy detector 1 lần ở ngưỡng ứng viên 0,05; hộp ở
+            # det_thr = lọc lại theo điểm (cùng tập với lần chạy ở det_thr — decode top-k rồi
+            # lọc, như _legacy_page_boxes). Cùng một model, chỉ khác ngưỡng lọc.
+            from pipeline.align_engine.char_detector.pitch_decode import PITCH_CAND_THR as _pthr
+            detector = _get_detector(strict=True, thr=min(_pthr, thr))
+            page_boxes_low = detector.boxes_for_page(page_bgr)
+            page_boxes = [b for b in page_boxes_low if b[4] >= thr]
+            tier_n_by_line = expected_tier_counts(data_dir, page_name)
+            seg_backend_suffix = "+pitch"
+        else:
+            detector = _get_detector(strict=True, thr=thr)   # thiếu ckpt -> ném lỗi, KHÔNG rơi ngầm
+            page_boxes = detector.boxes_for_page(page_bgr)   # all char boxes, once per page
         if box_rule == "legacy":
             legacy_page_boxes = page_boxes
         elif locked_columns or legacy_also_columns:
             # cột có ô khoá QĐ-01: hộp ở ngưỡng cũ 0,3 (lọc lại từ lần chạy 0,2 — cùng tập)
             legacy_page_boxes = _legacy_page_boxes(page_boxes, thr, page_bgr)
-        seg_backend = "detector_centernet_v1"
+        seg_backend = "detector_centernet_v1" + seg_backend_suffix
 
     pairs: list[dict] = []
     # col_states (flow N3g): trạng thái từng cột sau lượt DP 1 — build_dataset PASS 1b
@@ -772,7 +842,9 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                 binary=binary, reseg_mode=reseg_mode,
                 encoder=encoder, page_bgr=page_bgr,
                 det=detector, page_boxes=page_boxes,
-                box_rule=col_rule, legacy_page_boxes=legacy_page_boxes)
+                box_rule=col_rule, legacy_page_boxes=legacy_page_boxes,
+                box_decoder=box_decoder, page_boxes_low=page_boxes_low,
+                tier_n=tier_n_by_line.get(line_id))
             n_gap_total += n_gap
             # syllable_raw = âm SAU normalize_column (đầu vào DP); syllable_ocr = âm
             # VietOCR nguyên văn. Chỉ PHÁT THÊM vào pair, không đổi hành vi ghép.

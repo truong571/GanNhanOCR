@@ -15,6 +15,13 @@ Khoá tuỳ chọn trong `books:` của config/pipeline.yaml (vắng = hành vi 
     det_thr: 0.15                   # ngưỡng tin cậy CenterNet cho sách này; vắng -> None
                                     # (= step2.det_thr toàn cục). Chỉ luật --box-rule syl_index
                                     # đọc hai khoá này (legacy giữ trọn gói 0,3 / ±0,5w).
+    box_decoder: pitch              # (2026-09-22, tuỳ chọn) "legacy" (mặc định) = hộp thô ở det_thr
+                                    # + assign_boxes 3 nhánh; "pitch" = pitch_decode.decode_column:
+                                    # ứng viên detector ở 0,05 + ô ảo chiếu mực, quy hoạch động chọn
+                                    # ĐÚNG n_qn hộp theo bước cột (chỉ với --box-rule syl_index và
+                                    # --reseg detector). n_det trong labels.csv VẪN là số hộp thô ở
+                                    # det_thr (I5 không thành hằng đúng); box_source ghi
+                                    # detector | detector_low | ink_cut; count_source = 'pitch'.
 
 Nguyên tắc: `book_layout({})` == `book_layout(None)` == BookLayout() == hành vi STT
 (n_columns 9, không cổng lithograph, det_xmargin/det_thr None = toàn cục). Không sách
@@ -49,6 +56,9 @@ LITHO_QN_PER_COLUMN = 14          # 6 (câu lục, tầng trên) + 8 (câu bát,
 LITHO_DET_XMARGIN = 0.05          # biên x mặc định cho thạch bản (xem docstring mô-đun)
 N_COLUMNS_AUTO = "auto"           # chỉ layout=prose: số cột theo trang = số dòng QN
 PROSE_DET_XMARGIN = LITHO_DET_XMARGIN   # văn xuôi in đá: hộp kim cũng rộng so với bước cột
+BOX_DECODER_LEGACY = "legacy"
+BOX_DECODER_PITCH = "pitch"
+BOX_DECODERS = (BOX_DECODER_LEGACY, BOX_DECODER_PITCH)
 
 
 @dataclass(frozen=True)
@@ -59,6 +69,7 @@ class BookLayout:
     qn_per_column: int = 0        # 0 = không kiểm số âm tiết mỗi cột
     det_xmargin: float | None = None   # None = step2.det_xmargin toàn cục (STT: 0,25)
     det_thr: float | None = None       # None = step2.det_thr toàn cục (STT: 0,2)
+    box_decoder: str = BOX_DECODER_LEGACY   # "legacy" | "pitch" (pitch_decode, tuỳ chọn)
 
     @property
     def is_lithograph(self) -> bool:
@@ -113,11 +124,14 @@ def book_layout(book_cfg: dict | None) -> BookLayout:
                               else PROSE_DET_XMARGIN if layout == LAYOUT_PROSE else None),
                              lo=0.0, hi=1.0)
     det_thr = _float_key(book_cfg, name, "det_thr", None, lo=0.0, hi=1.0)
+    box_decoder = book_cfg.get("box_decoder", BOX_DECODER_LEGACY)
+    if box_decoder not in BOX_DECODERS:
+        raise ValueError(f"books[{name}].box_decoder = {box_decoder!r}; chỉ nhận {BOX_DECODERS}")
     if (layout == LAYOUT_STT and n_columns == DEFAULT_N_COLUMNS and qpc == 0
-            and det_xmargin is None and det_thr is None):
+            and det_xmargin is None and det_thr is None and box_decoder == BOX_DECODER_LEGACY):
         return DEFAULT_LAYOUT
     return BookLayout(layout=layout, n_columns=n_columns, qn_per_column=qpc,
-                      det_xmargin=det_xmargin, det_thr=det_thr)
+                      det_xmargin=det_xmargin, det_thr=det_thr, box_decoder=box_decoder)
 
 
 def _float_key(book_cfg: dict, name: str, key: str, default: float | None,
@@ -176,6 +190,35 @@ def prose_gate(cols: list, qn_lines: dict, lay: BookLayout) -> tuple[bool, dict]
         ok = ok and n_nom == lay.n_columns
     return ok, {"layout": lay.layout, "n_columns": lay.n_columns,
                 "n_nom_cols": n_nom, "n_qn_cols": n_qn, "bad_syl_cols": []}
+
+
+def expected_tier_counts(data_dir, page_name: str) -> dict[int, list[int]]:
+    """(box_decoder=pitch) Số âm QN MỖI TẦNG của từng cột từ transcriptions/<page>.json:
+    thạch bản ghi `len_odd` (câu lục, tầng trên) và `num_syllables` → [len_odd, num − len_odd].
+    Trả {line_id: [n_tầng_trên, n_tầng_dưới]}; thiếu tệp/khoá -> {} (decoder chia theo chữ kim /
+    chiều cao tầng). Chỉ đọc khi box_decoder=pitch; đường STT không đọc tệp này."""
+    import json
+    from pathlib import Path
+    p = Path(data_dir) / "transcriptions" / f"{page_name}.json"
+    if not p.exists():
+        return {}
+    try:
+        data = json.load(open(p, encoding="utf-8"))
+    except Exception:
+        return {}
+    out: dict[int, list[int]] = {}
+    for i, c in enumerate(data.get("columns") or []):
+        if not isinstance(c, dict):
+            continue
+        lid = c.get("column", i + 1)
+        n = c.get("num_syllables")
+        lo = c.get("len_odd")
+        if lo is None and isinstance(c.get("verse_odd"), dict):
+            lo = c["verse_odd"].get("n_syll")
+        if (isinstance(n, int) and isinstance(lo, int) and not isinstance(n, bool) and not isinstance(lo, bool)
+                and 0 < lo < n and isinstance(lid, int)):
+            out[lid] = [lo, n - lo]
+    return out
 
 
 def expected_qn_counts(data_dir, page_name: str) -> dict[int, int]:

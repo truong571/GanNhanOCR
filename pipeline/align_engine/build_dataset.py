@@ -1143,7 +1143,11 @@ def main():
                       f"biên x = ±{ap_mod.DETECTOR_XMARGIN}w (toàn cục {det_thr_global} / "
                       f"±{det_xmargin_global}w)", flush=True)
             det_params_by_book[book] = {"det_thr": ap_mod.DETECTOR_THR,
-                                        "det_xmargin": ap_mod.DETECTOR_XMARGIN}
+                                        "det_xmargin": ap_mod.DETECTOR_XMARGIN,
+                                        "box_decoder": lay.box_decoder}
+            if lay.box_decoder != "legacy":
+                print(f"[align] {book}: box_decoder = {lay.box_decoder} (pitch_decode: ứng viên ≥ 0,05 + ô ảo "
+                      f"chiếu mực, DP theo bước cột; n_det vẫn = hộp thô ở det_thr)", flush=True)
         trans = sorted(glob.glob(str(data_dir / "transcriptions" / "page_*.json")))
         trans = [t for t in trans if not t.endswith("_qn_ocr_cache.json")]
         if args.limit:
@@ -1272,6 +1276,13 @@ def main():
                     reseg_boxes, box_source, count_source = ap_mod.assign_boxes(
                         cs["G"], ops2, cs["n_ocr"], cs["n_qn"], cluster=cs["cluster"],
                         cb=cs.get("cb"))
+                elif cs.get("box_rule") == "pitch":
+                    # box_decoder=pitch (2026-09-22): hộp đã giải mã theo bước, gán lại theo syl_idx
+                    # của ops lượt 2; nguồn hộp từng ô giữ G_src (detector/detector_low/ink_cut)
+                    _rb, _bs, _cs = ap_mod.assign_boxes_pitch(cs["G"], cs.get("G_src"), ops2,
+                                                              cs["n_ocr"], cs["n_qn"])
+                    if _rb is not None:
+                        reseg_boxes, box_source, count_source = _rb, _bs, _cs
                 # PASS 1c (A-7) cần ops CUỐI + hộp cuối của cột (khe QĐ-01 không có record)
                 cs["ops2"], cs["post"], cs["boxes2"] = ops2, post, reseg_boxes
                 cs["box_source2"], cs["count_source2"] = box_source, count_source

@@ -18,6 +18,7 @@
 #
 # SÁCH MỚI (thạch bản/văn xuôi, 2026-09-22 — xem khối "SÁCH MỚI" dưới, đường STT trên KHÔNG đổi):
 #   ./run_pipeline.sh --book LucVanTien1883 | KimVanKieu1884 | Chrestomathie1872 | all-new
+#                            | LucVanTien1916 | TruyenKieu1872 | all-ihr   (tập ĐÁNH GIÁ, có nhãn người)
 #       [--dry-run] [--skip-ingest] [--no-api] [--no-auto-precision] [--suffix _rp]
 #   ./run_pipeline.sh --dry-run        # STT: chỉ in chuỗi lệnh 6 bước, không chạy
 #
@@ -431,6 +432,9 @@ evidence() {
 #   -> 6 measure (auto_precision cross trên labels_gated = B6, chỉ sách có CROSS_BOOKS)
 # Mỗi lệnh thật ghi vào logs/run_<Book>_<thời điểm>.log (kèm stdout/stderr); sha256 vào dataset_out_<Book>/CHECKSUMS.txt.
 NEW_BOOKS_ALL="LucVanTien1883 KimVanKieu1884 Chrestomathie1872"
+# 2026-09-23: 2 bộ IHR-NomDB (tập ĐÁNH GIÁ, có nhãn người) chạy riêng, KHÔNG gộp vào all-new
+# để không lẫn vào bộ giao nộp: ./run_pipeline.sh --book LucVanTien1916|TruyenKieu1872
+EVAL_BOOKS_IHR="LucVanTien1916 TruyenKieu1872"
 NEW_BOOKS=""
 DRY_RUN=0
 SKIP_INGEST=0
@@ -447,7 +451,8 @@ run_pipeline.sh — GanNhanOCR
   (không tham số)                 đường STT 6 bước (hỏi sách/cache), ra dataset/
   --dry-run                       STT: chỉ in chuỗi lệnh, không chạy
   --book <Book> [--book <Book>…]  sách mới (config/pipeline_<Book>.yaml): LucVanTien1883 | KimVanKieu1884 | Chrestomathie1872
-  --book all-new                  cả 3 sách mới
+  --book all-new                  cả 3 sách mới (bộ giao nộp)
+  --book all-ihr                  2 bộ IHR-NomDB có nhãn người (TẬP ĐÁNH GIÁ, không giao nộp)
     --dry-run                     chỉ in lệnh B0→B6
     --skip-ingest                 bỏ bước ingest (dùng prepared*/<Book> đã có)
     --no-api                      ingest --ocr none (không gọi kim; --verse-map content -> formula)
@@ -580,6 +585,9 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
   local need_measure=0
   if [[ "$BK_INGEST" == "prose" ]]; then
     [[ -f "measure_out/$book/chresto_map/bang_truyen_trang.csv" ]] || need_measure=1
+  elif [[ "$BK_INGEST" == "ihr" ]]; then
+    # IHR-NomDB: bố cục nằm sẵn trong data/<book>/pages/bboxes.json; bộ đo chỉ để KIỂM + lấy số
+    [[ -f "measure_out/$book/ihr_layout/summary.json" ]] || need_measure=1
   else
     [[ -f "measure_out/$book/layout/layout_pages.csv" && -f "measure_out/$book/qn_ocr/verses.tsv" ]] || need_measure=1
   fi
@@ -607,6 +615,11 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
     local ingest_args="$BK_INGEST_ARGS"
     if [[ "$BK_INGEST" == "prose" ]]; then
       cmd=("$PY" -m pipeline.tools.ingest_prose_book --book "$book" --ocr "$ocr" --out "$BK_DATA_DIR"
+           --kim-config "$BK_CONFIG")
+    elif [[ "$BK_INGEST" == "ihr" ]]; then
+      # IHR-NomDB (LucVanTien1916 / TruyenKieu1872): ô cột + QN lấy từ data/<book>/pages/*.json,
+      # KHÔNG đọc nhãn chữ Nôm. Bộ ra là TẬP ĐÁNH GIÁ (manifest.evaluation_only = true).
+      cmd=("$PY" -m pipeline.tools.ingest_ihr_book --book "$book" --ocr "$ocr" --out "$BK_DATA_DIR"
            --kim-config "$BK_CONFIG")
     else
       if (( NO_API )) && [[ " $ingest_args " == *" content "* ]]; then
@@ -675,6 +688,12 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
   need_file "$final_dir/labels.csv" "export"
   R "$PY" -m pipeline.tools.make_dataset_docs --dataset "$final_dir" --n-columns "$BK_NCOL"
   R "$PY" -m pipeline.tools.make_xlsx --labels "$final_dir/labels.csv"
+  # Bộ IHR-NomDB có NHÃN NGƯỜI -> đóng dấu TẬP ĐÁNH GIÁ vào thư mục export (không sửa labels.csv).
+  # Chặn rủi ro R1 (rò rỉ tập đánh giá vào tập huấn luyện) — docs/CHAY_3_BO_CON_LAI_2026-09-23.md §5.
+  if [[ "$BK_INGEST" == "ihr" ]]; then
+    R "$PY" -m pipeline.tools.mark_eval_dataset --dataset "$final_dir" --book "$book" \
+        --gt "data/$book/manifest.tsv"
+  fi
   (( DRY_RUN )) || checkpoint export "$final_dir/labels.csv"
   bk_tick "export"
 
@@ -727,7 +746,9 @@ done
 if [[ -n "$NEW_BOOKS" ]]; then
   _books=""
   for _b in $NEW_BOOKS; do
-    if [[ "$_b" == "all-new" ]]; then _books="$_books $NEW_BOOKS_ALL"; else _books="$_books $_b"; fi
+    if [[ "$_b" == "all-new" ]]; then _books="$_books $NEW_BOOKS_ALL"
+    elif [[ "$_b" == "all-ihr" ]]; then _books="$_books $EVAL_BOOKS_IHR"
+    else _books="$_books $_b"; fi
   done
   log "${BLD}================================================================${RST}"
   log "${BLD}  GanNhanOCR — sách mới (thạch bản / văn xuôi) B0→B6:${_books}${RST}"

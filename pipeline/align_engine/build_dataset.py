@@ -67,6 +67,7 @@ from pipeline.align_engine.align_production import (                    # noqa: 
 from pipeline.align_engine.consensus import (                         # noqa: E402
     AM_DA_QUYET, am_da_quyet, chuan_am, decide_label)
 from pipeline.align_engine.bbox_fix import tighten_box, carve_neighbor_ink  # noqa: E402
+from pipeline.align_engine.book_layout import book_layout, DEFAULT_LAYOUT  # noqa: E402  (n_columns/layout theo sách)
 from pipeline.align_engine import recenter_f3g as rf3g                 # noqa: E402  (D-1, chỉ chạy khi --crops-v2)
 from pipeline.align_engine import tier_v3 as tv3                      # noqa: E402
 from pipeline.align_engine.visual_emission import load_page_gray as vis_load_gray  # noqa: E402  (B-2; torch nạp lười)
@@ -1027,6 +1028,10 @@ def main():
     else:
         print(f"  [hộp] luật = legacy TRỌN GÓI (thr {ap_mod.LEGACY_DETECTOR_THR}, biên x "
               f"±{ap_mod.LEGACY_DETECTOR_XMARGIN}w, ép đếm + _monotone_assign)", flush=True)
+    # Giá trị TOÀN CỤC (step2) — sách khai books[].det_xmargin / det_thr (book_layout) ghi
+    # đè cho riêng sách đó trong vòng lặp PASS 1 rồi khôi phục; sách STT không khai -> y hệt.
+    det_thr_global, det_xmargin_global = ap_mod.DETECTOR_THR, ap_mod.DETECTOR_XMARGIN
+    det_params_by_book: dict = {}
     pages_sel: set | None = None
     if args.pages:
         with open(args.pages, encoding="utf-8", newline="") as f:
@@ -1117,9 +1122,28 @@ def main():
     records = []
     pages_done = 0
     page_states = []        # [(book_code, page, page_png, rec)] — chỉ khi --two-pass
+    layout_gate_stats: dict = {}   # {book: {...}} chỉ với sách khai layout/n_columns (không STT)
     for b in config["books"]:
         book = b["name"]
         data_dir = data_root / book
+        # Bố cục theo sách (khoá tuỳ chọn layout/n_columns; vắng = STT 9 cột). Đọc
+        # TRƯỚC khi duyệt trang: giá trị sai -> ValueError ngay, không rơi ngầm về 9.
+        lay = book_layout(b)
+        if lay is not DEFAULT_LAYOUT:
+            print(f"[align] {book}: layout={lay.layout} n_columns={lay.n_columns} "
+                  f"qn_syllables_per_column={lay.qn_per_column}", flush=True)
+        # Tham số detector THEO SÁCH (2026-09-22): chỉ luật syl_index đọc DETECTOR_*; legacy
+        # trọn gói hằng cũ. Vắng khoá -> giá trị step2 toàn cục (STT: 0,2 / ±0,25w, không đổi).
+        if args.box_rule == "syl_index":
+            ap_mod.DETECTOR_THR = (det_thr_global if lay.det_thr is None else lay.det_thr)
+            ap_mod.DETECTOR_XMARGIN = (det_xmargin_global if lay.det_xmargin is None
+                                       else lay.det_xmargin)
+            if (ap_mod.DETECTOR_THR, ap_mod.DETECTOR_XMARGIN) != (det_thr_global, det_xmargin_global):
+                print(f"[align] {book}: detector theo sách thr = {ap_mod.DETECTOR_THR} | "
+                      f"biên x = ±{ap_mod.DETECTOR_XMARGIN}w (toàn cục {det_thr_global} / "
+                      f"±{det_xmargin_global}w)", flush=True)
+            det_params_by_book[book] = {"det_thr": ap_mod.DETECTOR_THR,
+                                        "det_xmargin": ap_mod.DETECTOR_XMARGIN}
         trans = sorted(glob.glob(str(data_dir / "transcriptions" / "page_*.json")))
         trans = [t for t in trans if not t.endswith("_qn_ocr_cache.json")]
         if args.limit:
@@ -1138,7 +1162,8 @@ def main():
                                  locked_columns=(None if args.lock_scope != "col"
                                                  else locked_cols.get((_book_code(book), page))),
                                  legacy_also_columns=(locked_cols.get((_book_code(book), page))
-                                                      if args.lock_scope != "col" else None))
+                                                      if args.lock_scope != "col" else None),
+                                 layout=lay)
             except DetectorUnavailableError:
                 # KHÔNG nuốt: thiếu detector mà vẫn chạy tiếp = lặng lẽ tách chữ bằng
                 # trung điểm cho TOÀN BỘ corpus. Phải dừng hẳn.
@@ -1149,6 +1174,23 @@ def main():
             if rec is None:
                 continue
             pages_done += 1
+            if lay is not DEFAULT_LAYOUT:
+                # Cổng bố cục theo sách (chỉ sách khai layout/n_columns): đếm page_ok,
+                # phương pháp cột, cột QN lệch âm -> summary.json["layout_gate"][book]
+                g = rec.get("layout_gate") or {}
+                lg = layout_gate_stats.setdefault(book, {
+                    "layout": lay.layout, "n_columns": lay.n_columns,
+                    "qn_syllables_per_column": lay.qn_per_column,
+                    "pages": 0, "page_ok": 0, "col_method": {}, "pages_not_ok": []})
+                lg["pages"] += 1
+                lg["page_ok"] += int(bool(rec.get("page_ok")))
+                m = g.get("col_method", "?")
+                lg["col_method"][m] = lg["col_method"].get(m, 0) + 1
+                if not rec.get("page_ok"):
+                    lg["pages_not_ok"].append({"page": page, "col_method": m,
+                                               "n_nom_cols": g.get("n_nom_cols"),
+                                               "n_qn_cols": g.get("n_qn_cols"),
+                                               "bad_syl_cols": g.get("bad_syl_cols", [])})
             page_png = str(data_dir / "pages" / f"{page}.png")
             if args.two_pass:
                 # N3g: KHÔNG tier trong vòng — chỉ gom trạng thái cột; PASS 1b bên dưới
@@ -1161,6 +1203,9 @@ def main():
                                    qn_to_nom, similar, s3=s3, anchored=p.get("anchored", False))
                 records.append(_record(_book_code(book), page, page_png, idx, p, dec, s3,
                                        rec.get("seg_backend", "")))
+
+    if args.box_rule == "syl_index":
+        ap_mod.DETECTOR_THR, ap_mod.DETECTOR_XMARGIN = det_thr_global, det_xmargin_global
 
     # ---------- PASS 1b: đệ quy hai lượt (flow N4a–N4c) ----------
     n_anchor_pairs = 0          # số cặp lượt 2 được neo LOO hạ chi phí thật (N4a "ô được neo")
@@ -1756,6 +1801,8 @@ def main():
                          else ap_mod.DETECTOR_THR),
         "detector_xmargin": (ap_mod.LEGACY_DETECTOR_XMARGIN if args.box_rule == "legacy"
                              else ap_mod.DETECTOR_XMARGIN),
+        # tham số detector từng sách (books[].det_thr / det_xmargin ghi đè step2; chỉ syl_index)
+        "detector_params_by_book": det_params_by_book,
         "n_locked_cols_qd01": sum(len(v) for v in locked_cols.values()),
         # B-5: phạm vi khoá + thống kê dời hàng xóm (chỉ khác rỗng khi --lock-scope cell)
         "lock_scope": args.lock_scope,
@@ -1788,6 +1835,9 @@ def main():
                               1 for r in records if r.get("label_canonical", r["label"]) != r["label"])},
         },
     }
+    if layout_gate_stats:
+        # chỉ xuất hiện khi có sách khai layout/n_columns -> summary.json STT không đổi
+        summary["layout_gate"] = layout_gate_stats
     json.dump(summary, open(out / "summary.json", "w", encoding="utf-8"),
               ensure_ascii=False, indent=2)
     # A-8: decisions_report.json — đếm áp/chờ ký từng mục (mục cho_ky CHỈ được báo cáo)

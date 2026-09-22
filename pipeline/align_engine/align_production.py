@@ -34,14 +34,23 @@ from pipeline.align_engine.anchor_align import realign_column, matched_pairs
 from pipeline.align_engine.syllable_normalize import build_readings, normalize_column
 from pipeline.align_engine.consensus import decide_label
 from pipeline.align_engine.bbox_fix import frame_offset, correct_columns
+from pipeline.align_engine.book_layout import (BookLayout, DEFAULT_LAYOUT,
+                                                lithograph_gate, expected_qn_counts)
 
 
-def _detect(page_name: str, data_dir: Path, qn_dict_set: set):
+def _detect(page_name: str, data_dir: Path, qn_dict_set: set,
+            layout: BookLayout | None = None, gate_out: dict | None = None):
     """Replicate the detection + QN parse + iter-plan of process_page_structural.
 
     Returns (cols, qn_lines, iter_pairs, binary, page_ok) or None if the page
-    cannot be processed.
+    cannot be processed (5 phần tử như cũ — pipeline/lab/extract_columns.py còn unpack 5).
+    `layout` (pipeline.align_engine.book_layout) cho số cột kỳ vọng: None/mặc định
+    = 9 (STT, byte-identical); layout=lithograph thêm cổng page_ok (số cột ==
+    n_columns, mỗi cột QN 14 âm hoặc như transcriptions ghi). `gate_out`: dict do
+    bên gọi đưa vào để nhận chi tiết cổng (chỉ được ghi khi layout=lithograph).
     """
+    lay = layout or DEFAULT_LAYOUT
+    n_exp = lay.n_columns
     pages_dir = data_dir / "pages"
     denoised_dir = data_dir / "pages_denoised"
     img_path = pages_dir / f"{page_name}.png"
@@ -64,7 +73,7 @@ def _detect(page_name: str, data_dir: Path, qn_dict_set: set):
                               ocr_data.get("frame_pad", 12))
         correct_columns(ocr_columns, ox, oy)
 
-    qn_lines, _ = _get_qn_lines(data_dir, page_name, qn_dict_set)
+    qn_lines, _ = _get_qn_lines(data_dir, page_name, qn_dict_set, n_columns=n_exp)
     qn_keys = sorted(qn_lines.keys())
     if not qn_keys:
         return None
@@ -78,19 +87,33 @@ def _detect(page_name: str, data_dir: Path, qn_dict_set: set):
         binary = None
 
     if binary is not None:
-        cols, col_method = detect_nom_columns_v3(binary, ocr_columns, 9)
+        cols, col_method = detect_nom_columns_v3(binary, ocr_columns, n_exp)
     else:
         from core.align.run_full import nom_cols_hybrid
         cols, col_method = nom_cols_hybrid(ocr_columns, min_len=4), "hybrid_no_image"
 
     page_col_match = (len(cols) == len(qn_keys))
-    qn_parse_ok = (len(qn_lines) == 9)
+    qn_parse_ok = (len(qn_lines) == n_exp)
     nom_suspect = (col_method == "suspect")
     max_qn = max(qn_keys) if qn_keys else 0
     partial_recovery = (not qn_parse_ok and not nom_suspect
                         and len(cols) >= max_qn and max_qn > 0)
     page_ok = ((page_col_match and qn_parse_ok and not nom_suspect)
                or partial_recovery)
+    if lay.is_lithograph:
+        # Cổng thạch bản: đủ n_columns cột Nôm VÀ QN, mỗi cột QN đủ 14 âm (6⧺8) hoặc
+        # đúng num_syllables ghi trong transcriptions/<page>.json. Không partial_recovery.
+        # projection_fallback LUÔN trả đúng n_expected cột (ép chiếu ảnh) nên đếm cột là
+        # tautology ở nhánh đó -> thạch bản đòi phương pháp hybrid* (SPEC §7: >= 95 % trang).
+        g_ok, gate = lithograph_gate(cols, qn_lines, lay,
+                                     expected_qn_counts(data_dir, page_name))
+        gate["col_method"] = col_method
+        # "hybrid_no_image" = không nhị phân hoá được ảnh (cột chỉ từ cache OCR): không
+        # phải kết quả dò trên ảnh -> không qua cổng (crop cũng không dựng được).
+        page_ok = bool(g_ok and str(col_method).startswith("hybrid")
+                       and col_method != "hybrid_no_image")
+        if gate_out is not None:
+            gate_out.update(gate)
 
     if partial_recovery:
         iter_pairs = [(lid - 1, lid) for lid in qn_keys if (lid - 1) < len(cols)]
@@ -639,8 +662,11 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                qn_to_nom: dict, similar: dict, mode: str,
                reseg_mode: str = "midpoint", encoder=None,
                box_rule: str = "syl_index", locked_columns=None,
-               legacy_also_columns=None) -> dict | None:
+               legacy_also_columns=None, layout: BookLayout | None = None) -> dict | None:
     """Align one page in the given mode. Returns per-page record with pairs.
+
+    layout (pipeline.align_engine.book_layout.BookLayout, tuỳ chọn): số cột kỳ vọng
+    và kiểu trang của sách; None = STT 9 cột (mặc định, không đổi kết quả).
 
     reseg_mode (only used when mode != 'old'): 'midpoint' (default) | 'valley_n' |
     'valley_guarded'. valley_guarded needs `encoder` (NomEncoder) + loads the page
@@ -661,7 +687,8 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
     G, cb, n_ocr, n_qn, n_det, count_source, box_source, box_rule} để build_dataset
     PASS 1b chạy DP lại với neo ngữ liệu và gán lại hộp mà không dò lại trang.
     """
-    det = _detect(page_name, data_dir, qn_dict_set)
+    layout_gate: dict = {}          # chỉ được ghi khi layout=lithograph
+    det = _detect(page_name, data_dir, qn_dict_set, layout=layout, gate_out=layout_gate)
     if det is None:
         return None
     cols, qn_lines, iter_pairs, binary, page_ok = det
@@ -762,8 +789,11 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                 p.update(column=line_id, matched=matched,
                          anchored=bool(nbr))
             pairs.extend(col_pairs)
-    return {"page": page_name, "page_ok": page_ok, "pairs": pairs,
-            "n_review_gap": n_gap_total, "seg_backend": seg_backend,
-            "n_syllable_normalized": n_norm_total,
-            # N3g: trạng thái cột cho PASS 1b; `pairs` giữ nguyên để tương thích
-            "col_states": col_states}
+    rec = {"page": page_name, "page_ok": page_ok, "pairs": pairs,
+           "n_review_gap": n_gap_total, "seg_backend": seg_backend,
+           "n_syllable_normalized": n_norm_total,
+           # N3g: trạng thái cột cho PASS 1b; `pairs` giữ nguyên để tương thích
+           "col_states": col_states}
+    if layout_gate:
+        rec["layout_gate"] = layout_gate      # chỉ có với layout=lithograph
+    return rec

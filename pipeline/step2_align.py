@@ -59,15 +59,20 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 def _get_qn_lines(book_dir: Path, page_name: str,
-                  qn_dict: set | None) -> tuple[dict, str]:
-    """Load QN lines via parser_v5 from VietOCR cache, fall back to v1 txt."""
+                  qn_dict: set | None, n_columns: int = 9) -> tuple[dict, str]:
+    """Load QN lines via parser_v5 from VietOCR cache, fall back to v1 txt.
+
+    n_columns: số cột QN kỳ vọng (mặc định 9 = STT, không đổi hành vi); sách khác
+    truyền n_columns của sách (pipeline.align_engine.book_layout). Đường .txt (v1)
+    không phụ thuộc n_columns.
+    """
     cache = book_dir / "transcriptions" / f"{page_name}_qn_ocr_cache.json"
     if cache.exists():
         try:
             text = json.load(open(cache, "r", encoding="utf-8")).get("text", "")
             if text:
-                v5, _ = parse_v5(text, qn_dict=qn_dict)
-                if len(v5) == 9:
+                v5, _ = parse_v5(text, max_lines=n_columns, qn_dict=qn_dict)
+                if len(v5) == n_columns:
                     return v5, "v5"
                 # HAI BỘ BÓC GIỎI Ở NHỮNG TRANG KHÁC NHAU. Khi VietOCR làm hỏng marker
                 # ("1." mất hẳn, dòng 1 bắt đầu thẳng bằng chữ), parse_v5 bỏ dòng đó còn
@@ -77,10 +82,10 @@ def _get_qn_lines(book_dir: Path, page_name: str,
                 # Chỉ chạy khi v5 ĐÃ hỏng, nên 442 trang kia giữ nguyên hành vi.
                 from core.pdf.pdf_parser import parse_numbered_lines
                 try:
-                    pn = parse_numbered_lines(text)
+                    pn = parse_numbered_lines(text, n_columns)
                 except Exception:
                     pn = {}
-                if len(pn) == 9:
+                if len(pn) == n_columns:
                     return pn, "v5_fallback_numbered"
                 if v5:
                     return v5, "v5"

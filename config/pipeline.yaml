@@ -8,6 +8,20 @@
   # -> STT{2,4,11}.pdf. `name:` CỐ Ý GIỮ NGUYÊN SachThanhTruyen* vì tên sách đi vào
   # tên crop (vd yen2_page_0012_c01_000.png) và cột `book` trong dataset_out/labels.csv;
   # đổi `name` sẽ phá toàn bộ liên kết bằng chứng đã sinh.
+  #
+  # 2026-09-21: khoá TUỲ CHỌN theo sách (pipeline/align_engine/book_layout.py). Vắng
+  # khoá = hành vi STT cũ (9 cột, 1 tầng) — 3 sách STT dưới đây KHÔNG khai báo.
+  #   layout: stt | lithograph        # "lithograph" = thạch bản lục bát (LVT1883, KVK1884):
+  #                                   #   mỗi cột Nôm = 1 cặp 6⧺8 chữ, mỗi dòng .txt = 14 âm;
+  #                                   #   không cần khoá `pdf` (ingest từ ảnh, step1 bỏ qua);
+  #                                   #   page_ok đòi đủ n_columns cột Nôm/QN và mỗi cột QN
+  #                                   #   14 âm (hoặc num_syllables ghi trong transcriptions/*.json)
+  #                                   #   và phương pháp cột hybrid (không projection_fallback);
+  #                                   #   thống kê vào summary.json["layout_gate"][book]
+  #   n_columns: 9                    # số cột kỳ vọng/trang truyền vào detect_nom_columns_v3
+  #                                   #   và cổng qn_parse_ok (thạch bản: 10)
+  #   qn_syllables_per_column: 14     # chỉ với lithograph; 0 = không kiểm
+  # Sách mới dùng config RIÊNG (config/pipeline_LucVanTien1883.yaml, config/pipeline_KimVanKieu1884.yaml), không thêm vào books: ở đây.
 books:
   - name: SachThanhTruyen2
     pdf: data/SachThanhTruyen2/STT2.pdf

@@ -1,6 +1,7 @@
 # BÁO CÁO TỔNG HỢP — gán nhãn tự động cho sách mới (LVT1883, KVK1884, Chrestomathie1872): vòng 1 + vòng 2 + I5 + run_pipeline
 
 Ngày 2026-09-22 (chiều, vòng 3; **cập nhật tối, vòng 4: răng cưa INTER_AREA §3.3/§6**) · đã commit trên main: 59fde272c4 (engine pitch), 6575d4d764 (run_pipeline --book + measure + train_crop), 10e6fa1b3f + 8c08591e9a (docs) — kế hoạch vòng 3: `docs/KE_HOACH_COMMIT_VONG3_2026-09-22.md`; **vòng 4 (chưa commit: khoá `detector_ckpt`/`detector_resize`, lab/i5_detector_v2): `docs/KE_HOACH_COMMIT_VONG4_2026-09-22.md`**.
+**Cập nhật 2026-09-23 (vòng 5)**: bản chốt 3 sách đổi sang kênh kim `lang_type = 2` (Nôm) + luật đếm QN 6/8 + rào tầng DP — **§3.4**; kế hoạch commit `docs/KE_HOACH_COMMIT_VONG5_2026-09-23.md`; cơ sở đo `docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN_2026-09-23.md` và `docs/CHAN_DOAN_3_SACH_MOI_2026-09-23.md`. Mọi số ở §3 (không kể §3.4) là bản vòng 4, nay giữ ở `dataset/<Book>_v5_lang1/`.
 Báo cáo này **gộp và thay** `BAO_CAO_TONG_THE_SACH_MOI_2026-09-22.md` (vòng 1–2) và `PHUONG_AN_TU_DONG_2026-09-22.md` (hai tệp giữ làm lịch sử).
 Mọi con số sinh bởi script (0 token LLM), nguồn ghi ngay cạnh số; **không có người kiểm** (ràng buộc đề tài).
 
@@ -9,9 +10,10 @@ Mọi con số sinh bởi script (0 token LLM), nguồn ghi ngay cạnh số; **
 | Câu hỏi | Trả lời |
 |---|---|
 | Chạy được sách mới bằng pipeline STT không? | **Có, 1 lệnh**: `./run_pipeline.sh --book LucVanTien1883 \| KimVanKieu1884 \| Chrestomathie1872 \| all-new` (B0→B6, 0 API khi có cache kim; 169 / 236 / 137 s). Đường STT (`./run_pipeline.sh` không tham số) **không đổi byte** (§2). |
-| Kết quả chốt cuối (sau pitch + cổng a')? | LVT **8.650** GOLD ảnh + 130 text_only → **11.013 ảnh**; KVK (B1') **13.908** + 510 → **17.752 ảnh**; Chresto **5.359** + 126 → **6.645 ảnh** (§3). |
+| Kết quả chốt cuối (sau pitch + cổng a')? | **CẬP NHẬT 23/09 (vòng 5, §3.4)**: LVT **10.831** GOLD ảnh + 149 text_only → **12.038 ảnh**; KVK (B1') **19.303** + 727 → **19.921 ảnh**; Chresto **5.998** + 226 → **6.854 ảnh**. Bản vòng 4 (kim `lang_type = 1`) giữ ở `dataset/<Book>_v5_lang1/`: LVT 8.650 + 130 → 11.013; KVK 13.908 + 510 → 17.752; Chresto 5.359 + 126 → 6.645 (§3). |
 | Nhãn đúng bao nhiêu (không người)? | Precision **văn bản** GOLD trên GT độc lập IHR-NomDB (mộc bản): **89,3 %** (LVT1916) / **84,6 %** (Kiều 1872); khớp dị bản trên chính thạch bản: KVK↔1871 **81,3 %** sau cổng (a)(b)(c), ↔1872 độc lập 78,5 % (B6), nền dị bản 1871↔1872 chỉ 82,9 % (§4). **Độ đúng hộp/ảnh không đo được** — chỉ có proxy ô tham chiếu tự động (§6). |
 | I5 (detector đếm lệch ±1) đã chữa chưa? | Chữa phần **hoà giải** bằng `box_decoder: pitch` (hộp IoU ≥ 0,5 với ô tham chiếu 97,4 → 98,1 % LVT, 94,1 → 97,0 % KVK) và cổng (a') theo ô; **gốc mô hình chưa chữa trong bản chốt** (I5 thô 65,2 / 59,2 / 70,7 %). **Tối 22/09 tìm ra gốc**: phần lớn I5 là **răng cưa** khi thu ảnh 3.200 → 1.024 bằng INTER_LINEAR — chỉ đổi INTER_AREA (`detector_resize: area`, cùng ckpt v1) cho I5 thô **77,7 / 77,9** / 69,3 %, ok50 99,3 / 98,6 %, GOLD ảnh +83 / +257; nhưng LVT `bleed` ảnh export 18,0 → 21,7 % và Chresto không lợi → theo luật "không chỉ số nào giảm" **chưa lấy làm chốt** (§3.3). Phương án B (huấn luyện v2 trên Kaggle, mốc = v1+area) đã gói sẵn, chưa chạy (§6). |
+| Kênh kim đã gọi chuẩn chưa? | **Chưa, đến 23/09**: body gửi `lang_type = 1` (Hán) cho ba cuốn chữ **Nôm**. Vòng 5 thêm khoá theo sách `books[].kim_lang_type` (mặc định 1 ⇒ STT không đổi byte) và chạy lại cả 3 sách với `2` (Nôm): **GOLD ảnh +2.181 / +5.395 / +639**, khớp dị bản **độc lập** +5,4 điểm (LVT↔1916) và +5,2 điểm (KVK↔1872) (§3.4). |
 | Quyết định pitch? | **PITCH (linear) = bản chốt** cho cả 3 sách (tier không giảm, khớp dị bản không giảm, ảnh lỗi ở mức crop giảm; §3.2). Bản legacy giữ ở `*_v3_legacy/`; bản thử `area` giữ ở `*_area/` (§3.3), config ghi `detector_resize: linear` kèm số đo. |
 
 ## 1. Dữ liệu (`data/`, 13 thư mục, 3 nhóm — `data/README.md`, `data/*/SOURCE.md`, `data/KIEM_TRA_KHOP_1-1_2026-09-20.md`)
@@ -99,6 +101,53 @@ GOLD-ảnh LVT bleed 18,0 → 21,6 %; "cắt thân chữ" pitch LVT +1,1 điểm
 cho KVK), đổi `detector_resize: linear → area` trong config sách đó và đổi tên `_area` thành chốt. Với detector v2 (Kaggle), mốc so sánh là **v1+area**
 (`docs/HUONG_DAN_HUAN_LUYEN_I5_2026-09-22.md` §0, `lab/i5_detector_v2/README.md`); v2 phải giảm cả bleed lẫn cắt (học lại kích thước hộp thạch bản).
 
+### 3.4 Vòng 5 (23/09) — kênh kim `lang_type = 2` (Nôm) + luật đếm 6/8 + rào tầng DP = **BẢN CHỐT MỚI**
+
+Cơ sở đo: `docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN_2026-09-23.md` (§1 kênh kim, §5–§6 quy hoạch gán) và
+`docs/CHAN_DOAN_3_SACH_MOI_2026-09-23.md` (§1 sổ kế toán, §5 trần lợi ích). Ba thay đổi đi **cùng một lần chạy**
+(`./run_pipeline.sh --book all-new`, ingest lại 331 lượt kim, ~60 phút):
+
+1. **`books[].kim_lang_type: 2`** — body `/image-ocr` gửi `lang_type = 2` (Nôm) thay 1 (Hán). Mặc định vẫn là 1 nên
+   đường STT không đổi byte (md5 59e436d7…). Cache `kim_raw/` tách theo tham số: `page_XXXX.json` (lang 1) và
+   `page_XXXX_lt2.json` (lang 2) cùng tồn tại ⇒ quay lại tốn **0 lượt API**.
+2. **Luật đếm QN 6/8 trước DP** (`--qn-count-rule`, chỉ lithograph): ba luật **giữ nguyên vị trí** mọi âm đọc được —
+   `restore_unreadable` (âm mờ bị tesseract trả token không chữ cái, đúng chỗ → giữ lại làm âm không đọc được),
+   `drop_verse_number` (câu chia hết 5 mà bộ đọc số lề không tách được → số câu in còn dính đầu dòng), `merge_unreadable`
+   (một âm bị tách đôi thành 2 token rác) + `resplit_6_8` (cột đủ 14 âm mà chia ≠ 6/8). Chạm **165 tầng LVT** (sửa 138)
+   và **126 tầng KVK** (sửa 97 + 2 cột resplit).
+3. **`books[].tier_dp: true`** — DP chữ↔âm chạy 6↔6 rồi 8↔8 thay 14↔14, và `expected_tier_counts` lấy **luật 6/8**
+   thay `len_odd` của QN khi cột đủ 14 âm.
+
+| Chỉ số (vòng 4 lang 1 → **vòng 5 lang 2 + 6/8 + rào tầng**) | LucVanTien1883 | KimVanKieu1884 (B1') | Chrestomathie1872 |
+|---|---|---|---|
+| Ô sinh ra | 14.476 → 14.474 | 22.704 → **22.750** | 8.303 → **8.016** (−287) |
+| Cột QN đủ 14 âm (ingest) | 85,5 → **97,4 %** | 92,8 → **98,4 %** | — (văn xuôi) |
+| Cột kim đọc đủ 14 chữ | 98,1 → **93,0 %** ↓ | 95,8 → **98,5 %** | — |
+| **M==N** | 83,8 → **90,4 %** | 88,8 → **96,9 %** | 69,5 → **44,0 %** ↓↓ |
+| I5 thô `n_det==N` | 65,2 → **70,7 %** | 59,2 → **62,3 %** | 70,7 → 66,7 % ↓ |
+| tier thô GOLD | 9.667 → **11.431** | 15.931 → **20.636** | 5.892 → **6.569** |
+| **GOLD ảnh / GOLD_text_only** | 8.650 / 130 → **10.831 / 149** | 13.908 / 510 → **19.303 / 727** | 5.359 / 126 → **5.998 / 226** |
+| SYLLABLE / REVIEW | 2.363 / 3.319 → **1.207 / 2.259** | 3.844 / 4.340 → **618 / 1.971** | 1.286 / 1.532 → **856 / 936** |
+| QUARANTINE (F1 cross-col) | 14 → 28 | 102 → 131 | 0 → 0 |
+| **Ảnh export** · dòng `labels.csv` | 11.013 · 11.143 → **12.038 · 12.187** | 17.752 · 18.262 → **19.921 · 20.648** | 6.645 · 6.771 → **6.854 · 7.080** |
+| `count_source = pitch_ocr` (cột QN lệch) | 1.319 → **319** | 1.088 → **256** | 1.902 → 1.109 |
+| crop `bleed` / tổng dòng | 17,8 → 18,0 % | 10,4 → 10,4 % | 2,02 → 1,96 % |
+| **Khớp dị bản GOLD (bỏ ref PUA) — trước cổng** | 1916: 72,6 (n 2.796) → **78,0 %** (n 3.293) | 1871: 80,6 (n 11.463) → **90,2 %** (n 14.635) · **1872 độc lập**: 73,0 → **78,2 %** (n 14.976) | không có dị bản |
+| **…B6 (labels_gated)** | 79,1 → **82,1 %** (n 3.068) | 1871: 85,8 → **92,0 %** · 1872: 78,5 → **79,9 %** | — |
+
+**Vì sao nhận**: cổng đặt trước khi chạy (`CHOT_KENH_OCR §6 #1`) là "khớp dị bản tăng ≥ 5 điểm, chỉ số hộp không giảm".
+Đạt ở cả hai sách có dị bản (**+5,4** LVT↔1916 và **+5,2** KVK↔**1872 độc lập**; 1871 +9,6 điểm nhưng chiều đó có phần
+tự khẳng định vì 1871 là nguồn QN của B1'), cờ `bleed` không xấu đi ở cả ba sách, I5 thô **tăng** ở hai sách thạch bản.
+KVK khớp 1871 92,0 % nay **vượt nền dị bản 1871↔1872 = 82,9 %**.
+
+**Nợ còn lại — Chrestomathie1872**: GOLD +639 và ảnh +209 nên theo luật quyết định (giữ lang 1 *chỉ khi* GOLD giảm) thì
+nhận; **nhưng** M==N 69,5 → 44,0 % và số ô sinh ra −287, mà sách này **không có dị bản** để kiểm chéo ⇒ bằng chứng chỉ
+một chiều ("hợp từ điển"). Quay lại bằng đúng một khoá: `books[].kim_lang_type: 1` trong `config/pipeline_Chrestomathie1872.yaml`
+rồi `./run_pipeline.sh --book Chrestomathie1872` (0 API).
+
+**Đường dẫn**: bản chốt mới `dataset/<Book>/` + `prepared*/<Book>/dataset_out*`; bản vòng 4 giữ nguyên ở
+`dataset/<Book>_v5_lang1/` + `prepared*/<Book>/dataset_out*_v5_lang1/`. Kế hoạch commit: `docs/KE_HOACH_COMMIT_VONG5_2026-09-23.md`.
+
 ## 4. Độ đúng tự động thay người kiểm (`scripts/measure/auto_precision.py --all` → `measure_out/auto_precision/`; chi tiết cũ: PHUONG_AN_TU_DONG §1–§3)
 
 | Phép đo | KVK1884 / Kiều | LVT1883 / Lục Vân Tiên | Ý nghĩa / caveat |
@@ -141,6 +190,12 @@ không phải model. Chưa chốt vì bleed LVT (§3.3). Engine: khoá `detector
 Sách thứ tư: `data/<BOOK>/pages/` + `SOURCE.md` → thêm vào `BOOKS` của `scripts/measure/` → `measure.py --book <BOOK>` → chọn `layout` (lithograph: cột = cặp 6⧺8, `ingest_lithograph_book --plan-only`; prose: `ingest_prose_book` + bảng truyện↔trang) → `config/pipeline_<BOOK>.yaml` (`books[]`: layout, n_columns, det_xmargin 0,05, quét `det_thr`, **`box_decoder: pitch`**; khối `run:`) → thêm vào `NEW_BOOKS_ALL` (run_pipeline.sh) và `CROSS_BOOKS` (auto_precision.py) nếu có dị bản → `./run_pipeline.sh --book <BOOK>` → viết `docs/CHAY_<BOOK>.md`. Selftest trước commit: §9.
 
 ## 8. Giới hạn thật và việc chưa làm
+
+0. **(vòng 5, 23/09)** Bản chốt đã đổi sang kim `lang_type = 2` (§3.4). Ba việc còn mở ngay từ lần chạy này:
+   (a) **Chresto M==N 44,0 %** — cột kim và cột QN lệch số chữ ở hơn nửa số cột, không có dị bản để kiểm;
+   (b) **27 tầng LVT + 29 tầng KVK** vẫn `qn_count_unfixed` (thiếu âm, không luật nào chữa được mà không dịch chỗ);
+   (c) `GOLD_text_only` tăng (130 → 149, 510 → 727, 126 → 226) vì có nhiều ô GOLD hơn đi qua cổng (a') `box_low_conf` —
+   phần này chờ detector v2 / INTER_AREA chứ không phải lỗi kênh kim.
 
 1. **Không có GT người** — mọi độ đúng là proxy: văn bản (mộc bản IHR, dị bản), hộp (ô tham chiếu tự động). Precision ảnh crop **không đo được**; GOLD-ảnh trong cột n_det≠N (2.910 / 5.430 / 1.502 ô) ước ≈ 4,7 % hộp lệch. Bộ mẫu mù `kiem_nguoi_*.py` để ngoài commit.
 2. **I5 gốc chưa chữa trong bản chốt**: I5 thô 65,2 / 59,2 / 70,7 % < 75 %; gốc đã định vị là răng cưa (INTER_AREA cho 77,7 / 77,9 %, §3.3) nhưng chưa chốt vì bleed LVT +3,7 điểm; phương án B (Kaggle) chưa chạy; detector thích ảnh nhị phân hoàn toàn (KVK otsu 65,6 vs prepared 54,4 %) nhưng engine chưa tách "ảnh cho detector" khỏi "ảnh để crop".

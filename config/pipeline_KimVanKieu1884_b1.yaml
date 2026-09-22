@@ -47,6 +47,17 @@ books:
     # extra/100 ô 2,3 → 0,4, "cắt vào thân chữ" 3,8 → 2,6 %. Lý do/cơ chế: xem config LVT1883.
     # Ablation dict-boost (pipeline_KimVanKieu1884_b1_boost.yaml) GIỮ legacy để so sánh cũ.
     box_decoder: pitch
+    # 2026-09-23 (vòng 5, docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN_2026-09-23.md §1/§6 #1): kênh OCR Hán-Nôm
+    # (kim/kinhhannom) vẫn đang được gọi với `lang_type = 1` = HÁN cho sách chữ NÔM. Đo 5 trang/sách, hai tiêu
+    # chí không vòng tròn, CI Wilson KHÔNG chồng nhau: "kim ∈ tập chữ của âm QN" 72,5 -> 92,7 %, "kim == chữ dị bản
+    # độc lập" 64,4 -> 86,3 % (nền dị bản 82,9 %). Cái giá đã đo: tỉ lệ cột kim đếm đúng N 90 -> 78 %. Cache kim_raw/ tách theo
+    # tham số (page_XXXX_lt2.json) nên bản lang_type 1 vẫn còn nguyên để so.
+    kim_lang_type: 2
+    # 2026-09-23 (vòng 5, §5.2 bước 5 / §6 #3): DP chữ↔âm chạy RIÊNG trong từng tầng (6↔6 rồi 8↔8) thay vì
+    # cả cột 14↔14 -> ranh giới câu lục/câu bát thành ràng buộc CỨNG (khe ở câu lục không trôi sang câu bát).
+    # Phơi nhiễm đã đo: ghép xuyên tầng 18/1.044 cột (LVT), 17/1.628 (KVK). Mặc định false = hành vi cũ;
+    # STT/prose không nhận khoá này (book_layout kiểm layout).
+    tier_dp: true
     # 2026-09-22 tối (I5, răng cưa — xem config LVT1883, lab/i5_detector_v2/README.md): `area` = INTER_AREA khi thu
     # 2.789 → 1.024 (2,7×). Đo trên chính sách này (`--suffix _area`, dataset_out_KimVanKieu1884_b1_area/): I5 thô
     # 59,2 → 77,9 %, ok50 pitch 97,0 → 98,6 %, miss 3,0 → 1,0 %, detector_low+ink_cut 879 → 350 ô, GOLD ảnh 13.908 → 14.165,
@@ -60,18 +71,21 @@ books:
 # engine/adapter/step0/mechanism_gates KHÔNG đọc. Lệnh tương đương: docs/CHAY_KVK1884_B1_2026-09-22.md §1.
 run:
   ingest: lithograph
-  ingest_args: "--contrast otsu --verse-map content"      # KHÔNG --dict-boost (tự khẳng định)
+  # --contrast otsu trên bản quét này là ÁNH XẠ ĐỒNG NHẤT: nền KVK đã 255 nên otsu_gray không đổi một điểm
+  # ảnh nào (đo 2026-09-23, crop `none` và `otsu` TRÙNG md5 — CHOT_KENH_OCR §3). Giữ khoá để pages/*.png
+  # không đổi md5 so với bản chốt. --qn-count-rule: sửa số đếm âm QN theo luật 6/8 trước DP (§6 #2).
+  ingest_args: "--contrast otsu --verse-map content --qn-count-rule"      # KHÔNG --dict-boost (tự khẳng định)
   verses_ref_fix:               # B1': scripts/measure/verses_ref_fix.py -> measure_out/KimVanKieu1884/qn_ref_fix/verses_b1.tsv -> --verses
     ref: data/TruyenKieuPhongTinhCoLuc/thamchieu_kieu_1871_LieuVanDuong_phienam.json
     ref_name: nf1871
     fuzzy_min: 0.9
-  dataset_out: dataset_out_KimVanKieu1884_b1              # mặc định dataset_out_<Book>; B1' dùng hậu tố _b1 như bản chốt
+  dataset_out: prepared_b1/KimVanKieu1884/dataset_out_b1  # lưu trung gian trong prepared_b1, không tạo thư mục ở root
   n_columns: 10
   cross: true                   # auto_precision cross (1871 LVĐ + 1872 DMT đối chứng) -> --cross cổng (d) + B6
 
 paths:
   data_dir: prepared_b1
-  output_dir: dataset_KimVanKieu1884   # B1' chính thức: export vào dataset_KimVanKieu1884; dataset_out qua --out dataset_out_KimVanKieu1884_b1
+  output_dir: dataset/KimVanKieu1884   # B1' chính thức: export vào dataset/KimVanKieu1884
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv
   similar_dict: Dict/SinoNom_Similar.csv

@@ -43,6 +43,12 @@ books:
     # count_source conflict 392→294, tier KHÔNG đổi (GOLD 744/SYL 38/REVIEW 334), F1 cross-col 0 ở cả hai.
     det_xmargin: 0.05
     det_thr: 0.15
+    # 2026-09-23 (vòng 5, docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN_2026-09-23.md §1/§6 #1): kênh OCR Hán-Nôm
+    # (kim/kinhhannom) vẫn đang được gọi với `lang_type = 1` = HÁN cho sách chữ NÔM. Đo 5 trang/sách, hai tiêu
+    # chí không vòng tròn, CI Wilson KHÔNG chồng nhau: "kim ∈ tập chữ của âm QN" 72,5 -> 92,7 %, "kim == chữ dị bản
+    # độc lập" 64,4 -> 86,3 % (nền dị bản 82,9 %). Cái giá đã đo: tỉ lệ cột kim đếm đúng N 90 -> 78 %. Cache kim_raw/ tách theo
+    # tham số (page_XXXX_lt2.json) nên bản lang_type 1 vẫn còn nguyên để so.
+    kim_lang_type: 2
     # 2026-09-22: `box_decoder: pitch` khai ở config CHÍNH THỨC pipeline_KimVanKieu1884_b1.yaml (run_config trỏ
     # sang đó). Config này (không B1') giữ legacy để tái lập dataset_KimVanKieu1884_v2_gates_noB1 / _v1.
     # 2026-09-22 B1' = ĐƯỜNG CHÍNH THỨC KVK (docs/CHAY_KVK1884_B1_2026-09-22.md): QN đầu vào = verses_b1.tsv
@@ -54,7 +60,7 @@ books:
 
 paths:
   data_dir: prepared
-  output_dir: dataset_KimVanKieu1884   # riêng cho KVK1884; dataset_out qua --out dataset_out_KimVanKieu1884 (KHÔNG B1': bản v2_gates_noB1)
+  output_dir: dataset/KimVanKieu1884   # lưu vào trong folder dataset/KimVanKieu1884/ theo quy chuẩn
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv
   similar_dict: Dict/SinoNom_Similar.csv

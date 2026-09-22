@@ -48,7 +48,7 @@ books:
 
 paths:
   data_dir: prepared_b1_boost
-  output_dir: dataset_KimVanKieu1884_b1_boost   # B1': KHÔNG export; dataset_out qua --out dataset_out_KimVanKieu1884_b1_boost
+  output_dir: dataset/KimVanKieu1884_b1_boost   # lưu vào dataset/
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv
   similar_dict: Dict/SinoNom_Similar.csv

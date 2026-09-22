@@ -49,6 +49,17 @@ books:
     # theo ô box_source ink_cut/detector_low (mechanism_gates.detect_pitch_mode đọc khoá này).
     # Đổi về `legacy` = hành vi cũ (bản dataset_LucVanTien1883_v3_legacy).
     box_decoder: pitch
+    # 2026-09-23 (vòng 5, docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN_2026-09-23.md §1/§6 #1): kênh OCR Hán-Nôm
+    # (kim/kinhhannom) vẫn đang được gọi với `lang_type = 1` = HÁN cho sách chữ NÔM. Đo 5 trang/sách, hai tiêu
+    # chí không vòng tròn, CI Wilson KHÔNG chồng nhau: "kim ∈ tập chữ của âm QN" 70,0 -> 88,4 %, "kim == chữ dị bản
+    # độc lập" 55,8 -> 72,7 % (nền dị bản 82,9 %). Cái giá đã đo: tỉ lệ cột kim đếm đúng N 84 -> 74 %. Cache kim_raw/ tách theo
+    # tham số (page_XXXX_lt2.json) nên bản lang_type 1 vẫn còn nguyên để so.
+    kim_lang_type: 2
+    # 2026-09-23 (vòng 5, §5.2 bước 5 / §6 #3): DP chữ↔âm chạy RIÊNG trong từng tầng (6↔6 rồi 8↔8) thay vì
+    # cả cột 14↔14 -> ranh giới câu lục/câu bát thành ràng buộc CỨNG (khe ở câu lục không trôi sang câu bát).
+    # Phơi nhiễm đã đo: ghép xuyên tầng 18/1.044 cột (LVT), 17/1.628 (KVK). Mặc định false = hành vi cũ;
+    # STT/prose không nhận khoá này (book_layout kiểm layout).
+    tier_dp: true
     # 2026-09-22 tối (I5, răng cưa — lab/i5_detector_v2/README.md, HUONG_DAN_HUAN_LUYEN_I5 §0): phép thu ảnh trang
     # 3.204 → 1.024 cho detector. `linear` = cv2.resize mặc định (răng cưa khi thu 3,1× làm rụng nét mảnh) = STT không
     # đổi byte. `area` = INTER_AREA, đã đo trên chính sách này (`./run_pipeline.sh --book LucVanTien1883 --suffix _area`,
@@ -64,13 +75,17 @@ books:
 # Vắng khối -> mặc định theo books[].layout. Lệnh tương đương: docs/HUONG_DAN_CHAY_SACH_MOI_2026-09-21.md §2.
 run:
   ingest: lithograph            # pipeline.tools.ingest_lithograph_book (--ocr kim, cache kim_raw/ -> 0 gọi API)
-  ingest_args: ""               # LVT: --verse-map formula (mặc định), --contrast stretch (mặc định); KHÔNG --dict-boost
+  # --contrast stretch là MẶC ĐỊNH và trên bản quét này là ÁNH XẠ ĐỒNG NHẤT: ảnh gốc LVT đã có p2 = 0 và
+  # p90 = 255 nên stretch_gray không đổi một điểm ảnh nào (đo 2026-09-23, crop `none` và `stretch` TRÙNG md5 —
+  # docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN_2026-09-23.md §3). Giữ khoá mặc định để pages/*.png không đổi md5;
+  # KHÔNG dùng `otsu` (đo: kém hơn stretch — eq_label 88,1 vs 93,2). --qn-count-rule: luật 6/8 (§6 #2).
+  ingest_args: "--qn-count-rule"   # LVT: --verse-map formula (mặc định), --contrast stretch (mặc định, ánh xạ đồng nhất); KHÔNG --dict-boost
   n_columns: 10                 # export_final_dataset / make_dataset_docs --n-columns (STT 9, thạch bản 10, văn xuôi 7)
   cross: true                   # auto_precision --steps cross (LVT1916 NF) -> mechanism_gates --cross (cổng d) + B6
 
 paths:
   data_dir: prepared
-  output_dir: dataset_LucVanTien1883   # riêng cho LVT1883; dataset_out qua --out dataset_out_LucVanTien1883
+  output_dir: dataset/LucVanTien1883   # lưu vào trong folder dataset/LucVanTien1883/ theo quy chuẩn
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv
   similar_dict: Dict/SinoNom_Similar.csv

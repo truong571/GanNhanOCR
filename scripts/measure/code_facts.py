@@ -103,7 +103,7 @@ PIN_IDENTS = {"expected_cols", "n_columns", "n_expected", "total_columns", "EXPE
               "NUM_COLS", "N_COLS", "max_lines", "expected_columns", "num_columns"}
 KNOWN_PINS = [                                   # (file, line, gợi ý) — đối chiếu bắt buộc (cập nhật 22/09 vòng 2)
     # align_production.py không còn ghim 9: n_columns lấy từ BookLayout (fb345a29b1); mặc định STT nằm ở book_layout.py
-    ("pipeline/align_engine/book_layout.py", 61, "DEFAULT_N_COLUMNS = 9"),   # 22/09 I5: docstring thêm khoá box_decoder (43 -> 50); detector_ckpt/detector_resize (50 -> 61)
+    ("pipeline/align_engine/book_layout.py", 83, "DEFAULT_N_COLUMNS = 9"),   # 22/09 I5: docstring thêm khoá box_decoder (43 -> 50); detector_ckpt/detector_resize (50 -> 61); 23/09 vòng 5: kim_lang_type/kim_ocr_id/kim_font_type/tier_dp (61 -> 83)
     ("pipeline/step2_align.py", 62, "_get_qn_lines(n_columns=9)"),
     ("pipeline/step2_align.py", 154, "detect_nom_columns_v3(..., 9)  # CLI riêng, vẫn ghim 9"),
     ("pipeline/step2_align.py", 161, "len(qn_lines) == 9"),
@@ -949,10 +949,14 @@ def build_invariants(S: dict) -> list[dict]:
     det = [i for i in ck["items"] if i["literal"] == "detector_r34.best.pt" and i.get("resolved") == "train_crop/detector_r34.best.pt"]
     add("detector_r34_ckpt_exists", True, bool(det and det[0]["exists"]))
     g = S["git"]
-    # 22/09: Guest Mode đã commit (65f7ca9) → kỳ vọng bản HEAD có guest và ocr_api.py không còn diff
+    # 22/09: Guest Mode đã commit (65f7ca9) → kỳ vọng bản HEAD **và** bản worktree đều có guest.
+    # 23/09 (vòng 5): bỏ mệnh đề "ocr_api.py không có diff" khỏi BẤT BIẾN. Mệnh đề ấy sinh ra khi
+    # Guest Mode chỉ tồn tại trong worktree (chưa commit) — nó bắt đúng lỗi ĐÓ. Nay guest đã ở
+    # trong git, còn ocr_api.py vẫn được sửa hợp lệ (vòng 5: tham số kim ocr_id/lang_type/
+    # reading_direction/font_type cho recognize) nên "có diff" KHÔNG còn là dấu hiệu hỏng.
+    # Trạng thái diff vẫn được GHI trong summary.git (ocr_api_guest_mode.has_uncommitted_diff).
     add("ocr_api_guest_mode_committed", True,
-        g["ocr_api_guest_mode"]["committed_version_has_guest"] and g["ocr_api_guest_mode"]["worktree_has_guest"]
-        and not g["ocr_api_guest_mode"]["has_uncommitted_diff"])
+        g["ocr_api_guest_mode"]["committed_version_has_guest"] and g["ocr_api_guest_mode"]["worktree_has_guest"])
     # 22/09: dataset_out/ STT (10 tệp tracked) phải sạch — `remediation apply` không --out từng ghi đè (đã khôi phục)
     add("dataset_out_tracked_clean", True, g["dataset_out"]["tracked_clean"])
     return inv

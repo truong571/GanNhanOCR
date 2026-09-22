@@ -2,8 +2,10 @@
 
 Khoá tuỳ chọn trong `books:` của config/pipeline.yaml (vắng = hành vi STT cũ):
 
-    layout: stt | lithograph        # mặc định "stt" (1 tầng, 9 cột QN đánh số)
-    n_columns: 9                    # số cột Nôm/QN kỳ vọng mỗi trang (mặc định 9)
+    layout: stt | lithograph | prose  # mặc định "stt" (1 tầng, 9 cột QN đánh số)
+    n_columns: 9                    # số cột Nôm/QN kỳ vọng mỗi trang (mặc định 9);
+                                    # layout=prose nhận thêm "auto" (mặc định của prose):
+                                    # số cột THEO TRANG = số dòng transcriptions/<page>.txt
     qn_syllables_per_column: 14     # chỉ dùng khi layout=lithograph: số âm tiết mỗi cột
                                     # (1 cột = 1 cặp lục bát 6⧺8); 0 = không kiểm
     det_xmargin: 0.05               # biên x lọc hộp thô detector theo cột (± phần bề rộng
@@ -17,6 +19,14 @@ Khoá tuỳ chọn trong `books:` của config/pipeline.yaml (vắng = hành vi 
 Nguyên tắc: `book_layout({})` == `book_layout(None)` == BookLayout() == hành vi STT
 (n_columns 9, không cổng lithograph, det_xmargin/det_thr None = toàn cục). Không sách
 STT nào khai báo khoá này nên labels.csv STT không đổi byte.
+
+layout=prose (2026-09-22, Chrestomathie1872 — văn xuôi, số cột mỗi trang biến thiên 4–7,
+cột ~21 chữ, không có số âm cố định): n_columns mặc định "auto" = số cột kỳ vọng của
+trang lấy từ số dòng QN adapter ghi (mỗi dòng .txt = chuỗi âm tiết đã ghép cho 1 cột Nôm,
+xem pipeline/tools/ingest_prose_book.py). Cổng page_ok (prose_gate): số cột Nôm dò được ==
+số dòng QN (== n_columns nếu khai số nguyên), KHÔNG kiểm số âm/cột, và phương pháp cột
+hybrid* như thạch bản. det_xmargin vắng -> PROSE_DET_XMARGIN (= 0,05, hộp kim rộng so với
+bước cột 140 px như thạch bản).
 
 Vì sao det_xmargin theo sách (2026-09-22, LVT1883): cửa sổ lọc hộp = x_range ± m·w với
 x_range = (min x1, max x2) của hộp kim trong cột. Trên thạch bản hộp kim rộng (w ≈
@@ -33,16 +43,19 @@ from dataclasses import dataclass
 DEFAULT_N_COLUMNS = 9
 LAYOUT_STT = "stt"
 LAYOUT_LITHOGRAPH = "lithograph"
-LAYOUTS = (LAYOUT_STT, LAYOUT_LITHOGRAPH)
+LAYOUT_PROSE = "prose"
+LAYOUTS = (LAYOUT_STT, LAYOUT_LITHOGRAPH, LAYOUT_PROSE)
 LITHO_QN_PER_COLUMN = 14          # 6 (câu lục, tầng trên) + 8 (câu bát, tầng dưới)
 LITHO_DET_XMARGIN = 0.05          # biên x mặc định cho thạch bản (xem docstring mô-đun)
+N_COLUMNS_AUTO = "auto"           # chỉ layout=prose: số cột theo trang = số dòng QN
+PROSE_DET_XMARGIN = LITHO_DET_XMARGIN   # văn xuôi in đá: hộp kim cũng rộng so với bước cột
 
 
 @dataclass(frozen=True)
 class BookLayout:
     """Bố cục một sách; mặc định = STT (9 cột, không cổng phụ)."""
     layout: str = LAYOUT_STT
-    n_columns: int = DEFAULT_N_COLUMNS
+    n_columns: int | str = DEFAULT_N_COLUMNS   # số nguyên, hoặc "auto" (chỉ layout=prose)
     qn_per_column: int = 0        # 0 = không kiểm số âm tiết mỗi cột
     det_xmargin: float | None = None   # None = step2.det_xmargin toàn cục (STT: 0,25)
     det_thr: float | None = None       # None = step2.det_thr toàn cục (STT: 0,2)
@@ -50,6 +63,15 @@ class BookLayout:
     @property
     def is_lithograph(self) -> bool:
         return self.layout == LAYOUT_LITHOGRAPH
+
+    @property
+    def is_prose(self) -> bool:
+        return self.layout == LAYOUT_PROSE
+
+    @property
+    def n_columns_auto(self) -> bool:
+        """True khi số cột kỳ vọng lấy theo trang (số dòng QN) — chỉ với layout=prose."""
+        return self.n_columns == N_COLUMNS_AUTO
 
 
 DEFAULT_LAYOUT = BookLayout()
@@ -70,17 +92,25 @@ def book_layout(book_cfg: dict | None) -> BookLayout:
     layout = book_cfg.get("layout", LAYOUT_STT)
     if layout not in LAYOUTS:
         raise ValueError(f"books[{name}].layout = {layout!r}; chỉ nhận {LAYOUTS}")
-    n_columns = book_cfg.get("n_columns", DEFAULT_N_COLUMNS)
-    if isinstance(n_columns, bool) or not isinstance(n_columns, int) or n_columns < 1:
-        raise ValueError(f"books[{name}].n_columns = {n_columns!r}; cần số nguyên >= 1")
+    n_columns = book_cfg.get("n_columns", N_COLUMNS_AUTO if layout == LAYOUT_PROSE else DEFAULT_N_COLUMNS)
+    if n_columns == N_COLUMNS_AUTO:
+        if layout != LAYOUT_PROSE:
+            raise ValueError(f"books[{name}].n_columns = 'auto' chỉ hợp lệ với layout=prose (đang {layout!r})")
+    elif isinstance(n_columns, bool) or not isinstance(n_columns, int) or n_columns < 1:
+        raise ValueError(f"books[{name}].n_columns = {n_columns!r}; cần số nguyên >= 1"
+                         + (" hoặc 'auto'" if layout == LAYOUT_PROSE else ""))
     if layout == LAYOUT_LITHOGRAPH:
         qpc = book_cfg.get("qn_syllables_per_column", LITHO_QN_PER_COLUMN)
     else:
         qpc = book_cfg.get("qn_syllables_per_column", 0)
     if isinstance(qpc, bool) or not isinstance(qpc, int) or qpc < 0:
         raise ValueError(f"books[{name}].qn_syllables_per_column = {qpc!r}; cần số nguyên >= 0")
+    if layout == LAYOUT_PROSE and qpc:
+        raise ValueError(f"books[{name}].qn_syllables_per_column = {qpc!r}; văn xuôi (prose) không có "
+                         "số âm cố định mỗi cột — bỏ khoá hoặc đặt 0")
     det_xmargin = _float_key(book_cfg, name, "det_xmargin",
-                             LITHO_DET_XMARGIN if layout == LAYOUT_LITHOGRAPH else None,
+                             (LITHO_DET_XMARGIN if layout == LAYOUT_LITHOGRAPH
+                              else PROSE_DET_XMARGIN if layout == LAYOUT_PROSE else None),
                              lo=0.0, hi=1.0)
     det_thr = _float_key(book_cfg, name, "det_thr", None, lo=0.0, hi=1.0)
     if (layout == LAYOUT_STT and n_columns == DEFAULT_N_COLUMNS and qpc == 0
@@ -127,6 +157,25 @@ def lithograph_gate(cols: list, qn_lines: dict, lay: BookLayout,
     ok = (n_nom == lay.n_columns and n_qn == lay.n_columns and not bad_cols)
     return ok, {"layout": lay.layout, "n_columns": lay.n_columns,
                 "n_nom_cols": n_nom, "n_qn_cols": n_qn, "bad_syl_cols": bad_cols}
+
+
+def prose_gate(cols: list, qn_lines: dict, lay: BookLayout) -> tuple[bool, dict]:
+    """Cổng page_ok cho layout=prose (văn xuôi, số cột biến thiên theo trang).
+
+    PASS khi số cột Nôm dò được == số dòng QN của trang (adapter ghi 1 dòng .txt cho
+    mỗi cột Nôm có chữ kim; cột không ghép được nội dung vẫn có dòng giữ chỗ). Nếu
+    n_columns khai số nguyên thì cả hai còn phải == n_columns. KHÔNG kiểm số âm/cột
+    (bad_syl_cols luôn []; giữ khoá để build_dataset gom thống kê cùng dạng thạch bản).
+    align_production._detect còn đòi phương pháp cột hybrid* (không projection_fallback,
+    không hybrid_no_image) như thạch bản.
+    """
+    n_nom = len(cols)
+    n_qn = len(qn_lines)
+    ok = (n_nom == n_qn and n_qn > 0)
+    if not lay.n_columns_auto:
+        ok = ok and n_nom == lay.n_columns
+    return ok, {"layout": lay.layout, "n_columns": lay.n_columns,
+                "n_nom_cols": n_nom, "n_qn_cols": n_qn, "bad_syl_cols": []}
 
 
 def expected_qn_counts(data_dir, page_name: str) -> dict[int, int]:

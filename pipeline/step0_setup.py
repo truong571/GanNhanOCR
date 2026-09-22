@@ -46,9 +46,9 @@ def validate_environment(config: dict) -> bool:
 
     # Check PDF files
     for book in config["books"]:
-        if book.get("layout") == "lithograph" and "pdf" not in book:
-            # Sách ảnh (thạch bản): ingest từ ảnh, không cần PDF. STT giữ book["pdf"].
-            print(f"[INFO] {book.get('name')}: layout=lithograph, không có khoá pdf (ingest từ ảnh)")
+        if book.get("layout") in ("lithograph", "prose") and "pdf" not in book:
+            # Sách ảnh (thạch bản / văn xuôi in đá): ingest từ ảnh, không cần PDF. STT giữ book["pdf"].
+            print(f"[INFO] {book.get('name')}: layout={book.get('layout')}, không có khoá pdf (ingest từ ảnh)")
             continue
         pdf_path = Path(book["pdf"])
         if not pdf_path.exists():

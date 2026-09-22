@@ -11,6 +11,10 @@ Kiểm:
      -> 10 cột, page_ok, gate_out đủ; trang 10 cột với mặc định 9 -> gộp về 9 (hành vi
      cũ giữ nguyên). pipeline/lab/extract_columns.py unpack 5 phần tử vẫn chạy.
   5. Chữ ký align_page/build_dataset có tham số layout mặc định None.
+  6. layout=prose (2026-09-22): n_columns "auto" mặc định, số nguyên vẫn nhận, "auto" ngoài prose /
+     qn_syllables_per_column≠0 -> ValueError; prose_gate; _detect trang giả 5 cột/5 dòng (số âm
+     khác nhau) -> page_ok True, gate n_nom=n_qn=5; 5 cột/6 dòng -> False; cột ngắn 2 chữ vẫn
+     đếm (hybrid_9_short_cols); STT mặc định không đổi.
 Exit 0 = all pass.
 """
 from __future__ import annotations
@@ -152,8 +156,10 @@ def test_get_qn_lines():
 
 
 def _fake_page(root: Path, n_cols: int, n_chars: int = 14, n_lines: int | None = None,
-               syl_per_line: int = 14):
-    """Trang giả: ảnh trắng có ô mực đen theo cột, ocr_cache fullpage, .txt + .json."""
+               syl_per_line: int = 14, chars_per_col: list[int] | None = None,
+               syl_per_col: list[int] | None = None):
+    """Trang giả: ảnh trắng có ô mực đen theo cột, ocr_cache fullpage, .txt + .json.
+    chars_per_col / syl_per_col (prose): số chữ kim / số âm từng cột (phải->trái) thay n_chars / syl_per_line."""
     import numpy as np
     import cv2
     W, H = 1400, 1800
@@ -164,7 +170,7 @@ def _fake_page(root: Path, n_cols: int, n_chars: int = 14, n_lines: int | None =
     for k in range(n_cols):
         x1 = x0 - k * pitch_x - 60
         col = []
-        for j in range(n_chars):
+        for j in range(chars_per_col[k] if chars_per_col else n_chars):
             y1 = 100 + j * 110
             cv2.rectangle(img, (x1, y1), (x1 + 60, y1 + 80), (0, 0, 0), -1)
             col.append({"char": "丁", "y_center": y1 + 40.0, "bbox": [x1, y1, x1 + 60, y1 + 80]})
@@ -175,10 +181,11 @@ def _fake_page(root: Path, n_cols: int, n_chars: int = 14, n_lines: int | None =
              "n_columns": n_cols, "columns": columns, "boxes_raw": []}
     (root / "detected" / "page_0001_ocr_cache.json").write_text(json.dumps(cache), encoding="utf-8")
     n_lines = n_cols if n_lines is None else n_lines
+    spl = syl_per_col if syl_per_col else [syl_per_line] * n_lines
     (root / "transcriptions" / "page_0001.txt").write_text(
-        "\n".join(" ".join(["đinh"] * syl_per_line) for _ in range(n_lines)), encoding="utf-8")
+        "\n".join(" ".join(["đinh"] * spl[i]) for i in range(n_lines)), encoding="utf-8")
     (root / "transcriptions" / "page_0001.json").write_text(json.dumps(
-        {"book_page": 1, "columns": [{"column": i + 1, "num_syllables": syl_per_line} for i in range(n_lines)]}),
+        {"book_page": 1, "columns": [{"column": i + 1, "num_syllables": spl[i]} for i in range(n_lines)]}),
         encoding="utf-8")
 
 
@@ -295,18 +302,104 @@ def test_signatures():
           "lay = book_layout(b)" in src and "layout=lay)" in src)
     src0 = (REPO / "pipeline" / "step0_setup.py").read_text(encoding="utf-8")
     src1 = (REPO / "pipeline" / "step1_extract.py").read_text(encoding="utf-8")
-    check("step0/step1: chỉ nhánh layout=lithograph được vắng pdf",
-          'book.get("layout") == "lithograph" and "pdf" not in book' in src0
-          and 'book_cfg.get("layout") == "lithograph" and "pdf" not in book_cfg' in src1)
+    check("step0/step1: chỉ nhánh layout=lithograph|prose được vắng pdf",
+          'book.get("layout") in ("lithograph", "prose") and "pdf" not in book' in src0
+          and 'book_cfg.get("layout") in ("lithograph", "prose") and "pdf" not in book_cfg' in src1)
     import yaml
     cfg = yaml.safe_load((REPO / "config" / "pipeline.yaml").read_text(encoding="utf-8"))
     check("config/pipeline.yaml: 3 sách STT không khai layout/n_columns -> DEFAULT_LAYOUT",
           all(BL.book_layout(b) is BL.DEFAULT_LAYOUT for b in cfg["books"]) and len(cfg["books"]) == 3)
 
 
+def test_prose():
+    print("[6] layout=prose (văn xuôi, n_columns auto)")
+    pr = BL.book_layout({"name": "Chrestomathie1872", "layout": "prose"})
+    check("prose vắng n_columns -> 'auto', is_prose, n_columns_auto, qn_per_column 0, det_xmargin 0,05",
+          pr.is_prose and pr.n_columns == "auto" and pr.n_columns_auto and pr.qn_per_column == 0
+          and pr.det_xmargin == BL.PROSE_DET_XMARGIN == 0.05 and not pr.is_lithograph, pr)
+    check("prose n_columns tường minh 'auto' + det_thr 0,15 -> đọc đúng",
+          BL.book_layout({"name": "C", "layout": "prose", "n_columns": "auto", "det_thr": 0.15}).det_thr == 0.15)
+    pr7 = BL.book_layout({"name": "C", "layout": "prose", "n_columns": 7})
+    check("prose n_columns=7 (số nguyên) -> 7, không auto", pr7.n_columns == 7 and not pr7.n_columns_auto)
+    check("STT mặc định: is_prose False, n_columns_auto False, DEFAULT_LAYOUT không đổi",
+          not BL.DEFAULT_LAYOUT.is_prose and not BL.DEFAULT_LAYOUT.n_columns_auto
+          and BL.DEFAULT_LAYOUT == BL.BookLayout() and BL.LAYOUTS == ("stt", "lithograph", "prose"))
+    for bad in ({"name": "x", "n_columns": "auto"}, {"name": "x", "layout": "lithograph", "n_columns": "auto"},
+                {"name": "x", "layout": "prose", "qn_syllables_per_column": 14},
+                {"name": "x", "layout": "prose", "n_columns": 0}, {"name": "x", "layout": "prose", "n_columns": "7"}):
+        try:
+            BL.book_layout(bad)
+            check(f"giá trị sai {bad} -> ValueError", False)
+        except ValueError:
+            check(f"giá trị sai {bad} -> ValueError", True)
+    # prose_gate
+    cols5 = [{"chars": []} for _ in range(5)]
+    qn5 = {i + 1: ["a"] * (3 + 4 * i) for i in range(5)}      # 3, 7, 11, 15, 19 âm — không kiểm số âm
+    ok, g = BL.prose_gate(cols5, qn5, pr)
+    check("prose_gate 5 cột / 5 dòng số âm khác nhau -> PASS, bad_syl_cols []",
+          ok and g["n_nom_cols"] == 5 and g["n_qn_cols"] == 5 and g["bad_syl_cols"] == [] and g["layout"] == "prose", g)
+    ok, g = BL.prose_gate(cols5[:4], qn5, pr)
+    check("prose_gate 4 cột / 5 dòng -> FAIL", not ok and g["n_nom_cols"] == 4)
+    ok, _ = BL.prose_gate(cols5, {k: v for k, v in qn5.items() if k <= 4}, pr)
+    check("prose_gate 5 cột / 4 dòng -> FAIL", not ok)
+    check("prose_gate 0 cột / 0 dòng -> FAIL (trang rỗng không qua)", not BL.prose_gate([], {}, pr)[0])
+    check("prose_gate n_columns=7 số nguyên: 5/5 -> FAIL, 7/7 -> PASS",
+          not BL.prose_gate(cols5, qn5, pr7)[0]
+          and BL.prose_gate([{"chars": []}] * 7, {i + 1: ["a"] for i in range(7)}, pr7)[0])
+    # _detect với trang giả: 5 cột, số chữ 21/19/22/8/2, số âm 20/19/23/8/2 (không đòi bằng nhau)
+    calls = []
+    orig = AP.detect_nom_columns_v3
+
+    def spy(binary, kim_columns, n_expected=9):
+        calls.append(n_expected)
+        return orig(binary, kim_columns, n_expected)
+    AP.detect_nom_columns_v3 = spy
+    try:
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td) / "P5"
+            _fake_page(root, 5, chars_per_col=[21, 19, 22, 8, 2], syl_per_col=[20, 19, 23, 8, 2])
+            g5: dict = {}
+            det5 = AP._detect("page_0001", root, set(), layout=pr, gate_out=g5)
+            check("prose auto: detect_nom_columns_v3 nhận n_expected = 5 (số dòng QN của trang)", calls[-1] == 5, calls)
+            check("prose auto: 5 cột, page_ok True, 5 phần tử, gate n_nom=n_qn=5, col_method hybrid*",
+                  det5 is not None and len(det5) == 5 and len(det5[0]) == 5 and det5[4] is True
+                  and g5.get("n_nom_cols") == 5 and g5.get("n_qn_cols") == 5
+                  and str(g5.get("col_method", "")).startswith("hybrid"), (g5, None if det5 is None else det5[4]))
+            check("prose auto: cột ngắn 2 chữ vẫn là cột riêng (hybrid_9_short_cols), iter_pairs 5 cặp",
+                  g5.get("col_method") == "hybrid_9_short_cols" and det5 is not None
+                  and det5[2] == [(i, i + 1) for i in range(5)], g5.get("col_method"))
+            check("prose auto: dòng QN theo cột giữ số âm riêng (20/19/23/8/2)",
+                  det5 is not None and [len(det5[1][i + 1]) for i in range(5)] == [20, 19, 23, 8, 2])
+            rec5 = AP.align_page("page_0001", root, set(), {}, {}, "old", layout=pr)
+            check("align_page prose: bản ghi có layout_gate + page_ok True",
+                  rec5 is not None and rec5.get("page_ok") is True and rec5.get("layout_gate", {}).get("layout") == "prose")
+            # 5 cột kim / 6 dòng QN -> FAIL (n_exp = 6, hybrid ra 5, projection ép 6 -> không hybrid)
+            root = Path(td) / "P56"
+            _fake_page(root, 5, n_lines=6, chars_per_col=[21, 19, 22, 8, 12], syl_per_col=[20, 19, 23, 8, 12, 9])
+            g56: dict = {}
+            det56 = AP._detect("page_0001", root, set(), layout=pr, gate_out=g56)
+            check("prose auto: 5 cột kim / 6 dòng QN -> page_ok False, col_method không hybrid",
+                  det56 is not None and det56[4] is False and calls[-1] == 6
+                  and not str(g56.get("col_method", "")).startswith("hybrid"), g56)
+            # cùng trang 5 cột với n_columns=7 số nguyên -> FAIL dù 5/5
+            root = Path(td) / "P5n7"
+            _fake_page(root, 5, chars_per_col=[21, 19, 22, 8, 12], syl_per_col=[20, 19, 23, 8, 12])
+            det57 = AP._detect("page_0001", root, set(), layout=pr7)
+            check("prose n_columns=7 số nguyên, trang 5/5 -> page_ok False", det57 is not None and det57[4] is False)
+            # trang 7 cột với mặc định STT: hành vi cũ (gộp về 9? -> không: 7 < 9 -> projection/suspect) và không gate
+            root = Path(td) / "P5stt"
+            _fake_page(root, 5, chars_per_col=[21, 19, 22, 8, 12], syl_per_col=[20, 19, 23, 8, 12])
+            gs: dict = {}
+            dets = AP._detect("page_0001", root, set(), gate_out=gs)
+            check("trang 5 cột với STT mặc định: vẫn gọi n_expected=9, gate_out không bị ghi (hành vi cũ)",
+                  calls[-1] == 9 and gs == {} and (dets is None or len(dets) == 5))
+    finally:
+        AP.detect_nom_columns_v3 = orig
+
+
 def main():
     for t in (test_book_layout, test_det_params, test_gate, test_get_qn_lines, test_detect,
-              test_signatures):
+              test_signatures, test_prose):
         try:
             t()
         except Exception as e:      # noqa: BLE001

@@ -40,7 +40,7 @@ NHAN_VN = {
 }
 
 
-def stats(labels: Path) -> dict:
+def stats(labels: Path, n_columns: int = 9) -> dict:
     rows = list(csv.DictReader(open(labels, encoding="utf-8")))
     char = [r for r in rows if (r.get("label") or "").strip()]
     syl = [r for r in rows if not (r.get("label") or "").strip()]
@@ -59,7 +59,7 @@ def stats(labels: Path) -> dict:
         _pg = collections.defaultdict(set)
         for r in csv.DictReader(open(cols_p, encoding="utf-8")):
             _pg[(r.get("book"), r.get("page"))].add(r.get("column"))
-        trang_lech = sorted(k for k, v in _pg.items() if len(v) != 9)
+        trang_lech = sorted(k for k, v in _pg.items() if len(v) != n_columns)
         _co_trang = {(r.get("book"), r.get("page")) for r in rows}
         trang_lech = [k for k in trang_lech if k in _co_trang]
     else:
@@ -70,7 +70,18 @@ def stats(labels: Path) -> dict:
     # ĐO tỷ lệ chữ ngoài khối CJK cơ bản. Trước 2026-08-25 con số này là chuỗi ghim cứng
     # "1,63%" nằm lọt giữa một f-string mà mọi số quanh nó đều động — đo lại được 2,25%.
     _ngoai = sum(1 for r in char if not ("\u4e00" <= r["label"] <= "\u9fff"))
+    # B4' (2026-09-22, sách lithograph): tầng GOLD_text_only = nhãn ký tự KHÔNG kèm ảnh crop.
+    # Bộ STT không có tầng này → mọi khối dưới đây in y như cũ (README byte-identical).
+    _tier = collections.Counter(r.get("tier", "") for r in rows)
+    _gto = _tier.get("GOLD_text_only", 0)
+    _gr = {r.get("image"): (r.get("gate_reason") or "").split(":")[0] for r in trace if r.get("gate_reason")}
+    _gate = collections.Counter(_gr[r["image"]] for r in rows
+                                if r.get("tier") == "GOLD_text_only" and r["image"] in _gr)
+    # ô hạ SYLLABLE bởi cổng (b): ảnh vẫn ở gold/ (đường `image` là khoá bền), tầng đọc ở cột tier
+    _syl_gate = sum(1 for r in rows if r.get("tier") == "SYLLABLE" and r["image"] in _gr)
     return {
+        "n_columns": n_columns, "tier": dict(_tier), "gold_text_only": _gto, "gold_anh": _tier.get("GOLD", 0),
+        "gate_reason": dict(_gate), "syllable_gate": _syl_gate,
         "dong": len(rows), "nhan_ky_tu": len(char), "chu_giai_am": len(syl),
         "lop_chu": len({r["label"] for r in char}),
         "sach": sorted({r["book"] for r in rows}),
@@ -136,14 +147,25 @@ NGHIA_TRACE = {
     "ink_pct": "tỷ lệ điểm mực trên crop",
     "crop_w": "rộng crop (px)", "crop_h": "cao crop (px)", "seg_flag": "cờ tách chữ của bước crop",
     "s3_cosine": "cosine với nguyên mẫu thị giác S3 (rỗng khi không tính / S3 tắt)",
+    "gate_reason": "cổng cơ chế B4' đã quyết ô này (`n_det_ne_n_qn`/`box_not_detector:*` → GOLD_text_only; "
+                   "`bridge_similar`/`am_sua_dau` → SYLLABLE; `crop_bad:*`/`cross_similar` → REVIEW); rỗng = không qua cổng",
+    "di_ban_khac": "1 = nhãn khác chữ ở dị bản tham chiếu nhưng KHÔNG gần hình (giữ tầng, chỉ cờ)",
 }
 
 
 def _khoi_cot(s: dict) -> str:
     """Bảng cột đọc từ CHÍNH header trên đĩa — cột lạ (thế hệ cũ) vẫn liệt kê, không nói dối."""
     t = ["## Cột của `labels.csv`", "", "| cột | nghĩa |", "|---|---|"]
+    nghia = dict(NGHIA_COT)
+    _nc = s.get("n_columns", 9)
+    if _nc != 9:
+        nghia["column"] = f"số cột trên trang (1–{_nc}, bố cục thạch bản {_nc} cột, mỗi cột một cặp lục bát)"
+    if s.get("gold_text_only"):
+        nghia["tier"] = ("`GOLD` = nhãn cấp ký tự CÓ ảnh · `GOLD_text_only` = nhãn cấp ký tự, **không giao ảnh** "
+                         "(hộp nghi lệch, cổng B4') · `SYLLABLE` = chỉ có âm")
+        nghia["image"] = "đường ảnh crop tương đối, **khoá chính** (duy nhất); ở tầng `GOLD_text_only` tệp KHÔNG có trong bộ"
     for c in s["cot_labels"]:
-        t.append(f"| `{c}` | {NGHIA_COT.get(c, '(cột thế hệ cũ, xem lịch sử README)')} |")
+        t.append(f"| `{c}` | {nghia.get(c, '(cột thế hệ cũ, xem lịch sử README)')} |")
     if s["cot_trace"]:
         t += ["", "## Sidecar `labels_trace.csv` — chẩn đoán, CÙNG số dòng và thứ tự, khoá `image`", "",
               "Không cần cho việc dùng nhãn; giữ để truy vết vì sao một ô được gán như vậy.", "",
@@ -180,6 +202,26 @@ def _khoi_khong_chia(s: dict) -> str:
         f"sẽ vứt luôn {s['chu_giai_am']:,} dòng SYLLABLE có `label` rỗng."])
 
 
+def _khoi_text_only(s: dict) -> str:
+    """Tầng GOLD_text_only (B4' cổng cơ chế, sách lithograph). Rỗng khi bộ không có tầng này."""
+    n = s.get("gold_text_only", 0)
+    if not n:
+        return ""
+    g = s.get("gate_reason", {})
+    ly_do = ", ".join(f"`{k}` {v:,}" for k, v in sorted(g.items(), key=lambda kv: -kv[1])) or "xem `labels_trace.csv`"
+    return "\n".join([
+        "",
+        f"## Tầng `GOLD_text_only` — {n:,} nhãn ký tự KHÔNG kèm ảnh", "",
+        f"Trong {s['nhan_ky_tu']:,} nhãn cấp ký tự có **{s['gold_anh']:,} ô `GOLD` kèm ảnh crop** và **{n:,} ô",
+        f"`GOLD_text_only`**: nhãn văn bản (chữ↔âm) được giữ, nhưng hộp ảnh do detector đếm lệch số chữ",
+        "(`n_det ≠ n_qn`) hoặc suy từ cột kề (`box_source` = `midpoint`/`split`) nên **không giao ảnh crop**",
+        "(cổng cơ chế B4', `pipeline/remediation/mechanism_gates.py`; lỗi vị trí hộp không đo tự động được).",
+        f"Đường `image` của các ô này KHÔNG tồn tại trong `gold/`. Lý do theo `gate_reason` (`labels_trace.csv`): {ly_do}.",
+        f"Cùng cổng ấy, {s.get('syllable_gate', 0):,} ô GOLD luật cầu/âm sửa dấu đã hạ `SYLLABLE` (`gate_reason` = `bridge_similar`/"
+        f"`am_sua_dau`): ảnh vẫn nằm ở `gold/…` vì đường `image` là khoá bền — tầng đọc ở cột `tier`, không đọc theo thư mục.",
+        "Huấn luyện mô hình ẢNH: lọc `tier == \"GOLD\"`; thống kê văn bản/tần suất chữ: dùng cả hai tầng.", ""])
+
+
 def readme(s: dict) -> str:
     return f"""# Bộ dữ liệu gán nhãn chữ Nôm — Sách Thánh Truyện
 
@@ -199,7 +241,7 @@ def readme(s: dict) -> str:
 | `columns.csv` | một dòng mỗi cột trang (`book,page,column`) |
 | `gold/` | ảnh crop của các ô có nhãn cấp ký tự |
 | `syllable/` | ảnh crop của các ô chỉ có chú giải âm |
-
+{_khoi_text_only(s)}
 {_khoi_cot(s)}
 
 {_khoi_khong_chia(s)}
@@ -208,7 +250,7 @@ def readme(s: dict) -> str:
 
 - **{s['anh_hong']} ô** có ảnh trắng hoặc bị cắt mất nét (`crop_quality_flag` = `blank`/`truncated`
   trong `labels_trace.csv`). Nhãn có thể vẫn đúng; đừng chấm chiều ảnh ở các ô này.
-- **{s['cot_lech']} ô trên {s['trang_cot_lech']} trang không đủ 9 cột** ({', '.join(s['ds_trang_lech']) or 'không có'}):
+- **{s['cot_lech']} ô trên {s['trang_cot_lech']} trang không đủ {s['n_columns']} cột** ({', '.join(s['ds_trang_lech']) or 'không có'}):
   ghép cột Nôm↔Quốc ngữ trên trang đó có thể đã trượt — suy từ `columns.csv`.
 
 ## 🔴 Trạng thái kiểm định
@@ -263,6 +305,16 @@ tình trạng bản quyền của bản quét, và điều kiện bên lưu gi�
 """
 
 
+def _datasheet_text_only(s: dict) -> str:
+    n = s.get("gold_text_only", 0)
+    if not n:
+        return ""
+    return (f"9. **{n:,} ô `GOLD_text_only` không kèm ảnh crop** (cổng cơ chế B4': `n_det ≠ n_qn` hoặc hộp\n"
+            f"   `midpoint`/`split`). Nhãn văn bản giữ, ảnh không giao vì vị trí hộp không kiểm tự động được;\n"
+            f"   `GOLD` kèm ảnh còn **{s['gold_anh']:,}** ô. Các ô luật cầu `s1_inter_s2_similar`/`am_sua_dau`\n"
+            f"   đã hạ SYLLABLE, ảnh `blank`/`truncated` và bất đồng dị bản gần hình đã hạ REVIEW (không trong bộ).\n")
+
+
 def datasheet(s: dict) -> str:
     fl = " · ".join(f"`{k}` {v:,} ({100*v/s['dong']:.2f}%)" for k, v in sorted(s["flag"].items()))
     return f"""# Datasheet
@@ -298,15 +350,15 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
    **chưa áp dụng**.
 5. **{s['anh_hong']} ô có ảnh hỏng** (`crop_quality_flag` = `blank`/`truncated` trong
    `labels_trace.csv`) vẫn nằm trong bộ — nhãn có thể đúng, ảnh thì không dùng được.
-6. **{s['cot_lech']} ô nằm trên {s['trang_cot_lech']} trang không đủ 9 cột**
+6. **{s['cot_lech']} ô nằm trên {s['trang_cot_lech']} trang không đủ {s['n_columns']} cột**
    ({', '.join(s['ds_trang_lech']) or 'không có'} — suy từ `columns.csv`).
-   Bố cục trang luôn 9 cột, nên thiếu cột nghĩa là phép ghép cột Nôm↔Quốc ngữ trên
+   Bố cục trang luôn {s['n_columns']} cột, nên thiếu cột nghĩa là phép ghép cột Nôm↔Quốc ngữ trên
    trang đó có thể đã trượt một nhịp. Chỉ nêu sự việc, không kết luận nhãn sai.
 7. **Không có recall.** Bộ này chỉ chứa ô đã gán được nhãn; phần bị bỏ không nằm ở đây.
 8. **Không chia train/val/test.** Bộ giao nộp không mang cột `split`; ai cần thì chia theo
    **trang** (`book` + `page`) bằng công thức ghi trong README, rồi tự tính lớp chữ có mặt
    trong train của phép chia đó.
-
+{_datasheet_text_only(s)}
 ## Khuyến nghị dùng
 Dùng được: huấn luyện mô hình, thăm dò, làm điểm khởi đầu để chấm tay.
 **Chưa dùng được**: trích dẫn như dữ liệu đã kiểm chứng, hoặc làm chuẩn đánh giá.
@@ -319,6 +371,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="pipeline.tools.make_dataset_docs")
     ap.add_argument("--dataset", default=str(REPO / "dataset"))
     ap.add_argument("--check", action="store_true", help="exit 1 nếu còn mục ⬜ CHƯA ĐIỀN")
+    ap.add_argument("--n-columns", type=int, default=9, help="số cột/trang kỳ vọng (STT 9; thạch bản 10)")
     args = ap.parse_args(argv)
 
     root = Path(args.dataset)
@@ -336,7 +389,7 @@ def main(argv: list[str] | None = None) -> int:
         print("[docs] lai lịch thư tịch đã điền đủ")
         return 0
 
-    s = stats(lab)
+    s = stats(lab, args.n_columns)
     for name, body in (("README.md", readme(s)), ("DATASHEET.md", datasheet(s)),
                        ("NGUON_THU_TICH.md", nguon(s))):
         (root / name).write_text(body, encoding="utf-8")

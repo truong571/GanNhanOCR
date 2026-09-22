@@ -37,9 +37,9 @@ def process_book(config: dict, book_name: str, verbose: bool = True):
 
     paths = config["paths"]
     data_dir = Path(paths["data_dir"]) / book_name
-    if book_cfg.get("layout") == "lithograph" and "pdf" not in book_cfg:
-        # Bước 1 chỉ nhận PDF (đường STT). Sách thạch bản ingest bằng adapter riêng.
-        print(f"[ERROR] {book_name}: layout=lithograph không có khoá pdf — bước 1 chỉ xử lý PDF; "
+    if book_cfg.get("layout") in ("lithograph", "prose") and "pdf" not in book_cfg:
+        # Bước 1 chỉ nhận PDF (đường STT). Sách thạch bản / văn xuôi ingest bằng adapter riêng.
+        print(f"[ERROR] {book_name}: layout={book_cfg.get('layout')} không có khoá pdf — bước 1 chỉ xử lý PDF; "
               "dùng adapter ingest ảnh (xem docs/PIPELINE_SACH_MOI_2026-09-20.md §3).", file=sys.stderr)
         return
     pdf_path = Path(book_cfg["pdf"])

@@ -11,6 +11,8 @@ SCHEMA GIAO NỘP (A-9/A-10, DANH_MUC_SUA_DOI_CUOI_2026-09-16 §2-§3, từ 16/0
     labels_trace.csv  sidecar chẩn đoán, CÙNG số dòng/thứ tự, khoá `image`
                       (chỉ ghi cột CÓ trong nguồn — thế hệ cũ thiếu tier_v3/p_register…).
     columns.csv       một dòng mỗi cột (book,page,column): n_ocr, n_qn, n_det, count_source.
+    GOLD_text_only    (chỉ sách lithograph đã qua B4' mechanism_gates) dòng vào labels.csv với tier
+                      này, ảnh crop KHÔNG copy; labels không có tier này -> hành vi y như trước.
 
 Usage:
     python3 pipeline/export_final_dataset.py \
@@ -25,7 +27,12 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-USABLE_TIERS = {"GOLD", "SILVER", "SYLLABLE"}
+# Tầng GOLD_text_only (B4' pipeline/remediation/mechanism_gates.py, thạch bản 2026-09-22): nhãn
+# văn bản GOLD nhưng hộp ảnh nghi lệch (n_det ≠ N / midpoint / split) → vào labels.csv, KHÔNG copy
+# ảnh crop. Tầng chỉ xuất hiện khi cổng cơ chế chạy; labels STT không có → hành vi export như cũ.
+TIER_TEXT_ONLY = "GOLD_text_only"
+IMAGE_TIERS = {"GOLD", "SILVER", "SYLLABLE"}
+USABLE_TIERS = IMAGE_TIERS | {TIER_TEXT_ONLY}
 
 # 12 cột giao nộp — thứ tự cố định. Bỏ hẳn (hàm thuần của cột khác, xem §2): label_level
 # (= f(tier)), usable_image (= f(crop_quality_flag)), page_cot_lech (suy từ columns.csv),
@@ -39,6 +46,8 @@ TRACE = ["image", "nom_idx", "syl_idx", "syllable_ocr", "syllable_raw", "tier_v3
          "l1_support", "l1_tie", "flank_gold", "box_source", "qd01_locked", "qd01_excluded",
          "label_canonical", "crop_quality_flag", "stray_ink", "border_ink", "ink_pct",
          "crop_w", "crop_h", "seg_flag", "s3_cosine",
+         # B4' cổng cơ chế (mechanism_gates): chỉ có ở sách lithograph đã qua cổng
+         "gate_reason", "di_ban_khac",
          # B-2 (--visual-emission): chỉ có khi build bật cờ; tắt cờ -> không ghi (không bịa cột)
          "p_visual_syl", "visual_fold", "visual_argmax", "visual_max_p"]
 # columns.csv: khoá (book,page,column) + các đại lượng cấp CỘT (giá trị đầu tiên gặp).
@@ -46,7 +55,7 @@ COT_KHOA = ["book", "page", "column"]
 COT_CSV = ["n_ocr", "n_qn", "n_det", "count_source"]
 
 
-def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
+def export_dataset(labels_path: Path, src_root: Path, out_root: Path, n_columns: int = 9) -> int:
     if not labels_path.exists():
         print(f"[export] không thấy {labels_path}", file=sys.stderr)
         return 1
@@ -94,7 +103,11 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
 
     n_copied = 0
     n_missing = 0
+    n_text_only = 0
     for r in rows:
+        if r.get("tier") == TIER_TEXT_ONLY:
+            n_text_only += 1          # nhãn văn bản vào labels.csv; ảnh KHÔNG giao (hộp nghi lệch)
+            continue
         rel = r["image"]
         src = src_root / rel
         if not src.exists():
@@ -124,7 +137,8 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
     _cot_theo_trang: dict[tuple, set] = {}
     for r in all_rows:
         _cot_theo_trang.setdefault((r.get("book"), r.get("page")), set()).add(r.get("column"))
-    _trang_lech = {k for k, v in _cot_theo_trang.items() if len(v) != 9}
+    # n_columns: 9 (STT, mặc định) | 10 (thạch bản LVT1883/KVK1884, --n-columns); chỉ đổi LOG, không đổi tệp.
+    _trang_lech = {k for k, v in _cot_theo_trang.items() if len(v) != n_columns}
     _n_lech = sum(1 for r in rows if (r.get("book"), r.get("page")) in _trang_lech)
 
     # BỎ split/split_group/label_in_train (A-10 giai đoạn 1): ba cột là hàm thuần của
@@ -176,12 +190,16 @@ def export_dataset(labels_path: Path, src_root: Path, out_root: Path) -> int:
           f"SYLLABLE {tiers.get('SYLLABLE', 0)})")
     print(f"[export] ⚠️ con số đem so với bộ dữ liệu Hán Nôm khác là {_nchar:,}, "
           f"KHÔNG phải {len(rows):,}")
+    if n_text_only:
+        print(f"[export] tầng {TIER_TEXT_ONLY}: {n_text_only:,} ô có nhãn ký tự trong labels.csv "
+              f"nhưng KHÔNG giao ảnh crop (cổng cơ chế B4': hộp nghi lệch — gate_reason ở labels_trace.csv); "
+              f"GOLD có ảnh = {tiers.get('GOLD', 0):,}")
     print(f"[export] labels.csv {len(GIAO_NOP)} cột · labels_trace.csv {len(_trace_cols)} cột "
           f"(thiếu trong nguồn: {[c for c in TRACE if c not in fieldnames] or 'không'}) · "
           f"columns.csv {len(_cot_seen):,} cột trang (cột đo: {_cot_csv or 'chưa có'})")
     if _n_lech:
         _rv_all = sum(1 for r in all_rows if r.get("tier") == "REVIEW") / max(1, len(all_rows))
-        print(f"[export] 🔴 trang KHÔNG đủ 9 cột: {_n_lech:,} ô trên {len(_trang_lech)} trang "
+        print(f"[export] 🔴 trang KHÔNG đủ {n_columns} cột: {_n_lech:,} ô trên {len(_trang_lech)} trang "
               f"(mức REVIEW chung {100*_rv_all:.1f}%; suy lại được từ columns.csv):")
         for b, pg in sorted(_trang_lech):
             _pr = [r for r in all_rows if r.get("book") == b and r.get("page") == pg]
@@ -210,8 +228,10 @@ def main() -> None:
     ap.add_argument("--labels", default="dataset_out/labels_remediated.csv")
     ap.add_argument("--src-root", default="dataset_out")
     ap.add_argument("--out", default="dataset")
+    ap.add_argument("--n-columns", type=int, default=9,
+                    help="số cột kỳ vọng mỗi trang cho LOG trang thiếu cột (STT 9 mặc định; thạch bản 10)")
     args = ap.parse_args()
-    sys.exit(export_dataset(Path(args.labels), Path(args.src_root), Path(args.out)))
+    sys.exit(export_dataset(Path(args.labels), Path(args.src_root), Path(args.out), args.n_columns))
 
 
 if __name__ == "__main__":

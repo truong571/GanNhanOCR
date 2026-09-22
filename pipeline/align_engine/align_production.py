@@ -35,7 +35,7 @@ from pipeline.align_engine.syllable_normalize import build_readings, normalize_c
 from pipeline.align_engine.consensus import decide_label
 from pipeline.align_engine.bbox_fix import frame_offset, correct_columns
 from pipeline.align_engine.book_layout import (BookLayout, DEFAULT_LAYOUT,
-                                                lithograph_gate, expected_qn_counts)
+                                                lithograph_gate, prose_gate, expected_qn_counts)
 
 
 def _detect(page_name: str, data_dir: Path, qn_dict_set: set,
@@ -46,8 +46,11 @@ def _detect(page_name: str, data_dir: Path, qn_dict_set: set,
     cannot be processed (5 phần tử như cũ — pipeline/lab/extract_columns.py còn unpack 5).
     `layout` (pipeline.align_engine.book_layout) cho số cột kỳ vọng: None/mặc định
     = 9 (STT, byte-identical); layout=lithograph thêm cổng page_ok (số cột ==
-    n_columns, mỗi cột QN 14 âm hoặc như transcriptions ghi). `gate_out`: dict do
-    bên gọi đưa vào để nhận chi tiết cổng (chỉ được ghi khi layout=lithograph).
+    n_columns, mỗi cột QN 14 âm hoặc như transcriptions ghi); layout=prose với
+    n_columns="auto" lấy số cột kỳ vọng THEO TRANG = số dòng QN trong transcriptions
+    (.txt, adapter ghi 1 dòng/cột Nôm) và cổng page_ok = số cột Nôm == số dòng QN
+    (không kiểm số âm). `gate_out`: dict do bên gọi đưa vào để nhận chi tiết cổng
+    (chỉ được ghi khi layout=lithograph|prose).
     """
     lay = layout or DEFAULT_LAYOUT
     n_exp = lay.n_columns
@@ -73,7 +76,13 @@ def _detect(page_name: str, data_dir: Path, qn_dict_set: set,
                               ocr_data.get("frame_pad", 12))
         correct_columns(ocr_columns, ox, oy)
 
-    qn_lines, _ = _get_qn_lines(data_dir, page_name, qn_dict_set, n_columns=n_exp)
+    if lay.is_prose and lay.n_columns_auto:
+        # Văn xuôi: số cột kỳ vọng của TRANG = số dòng QN adapter ghi (đường .txt của
+        # _get_qn_lines không phụ thuộc n_columns). Chỉ nhánh prose đi vào đây.
+        qn_lines, _ = _get_qn_lines(data_dir, page_name, qn_dict_set)
+        n_exp = len(qn_lines)
+    else:
+        qn_lines, _ = _get_qn_lines(data_dir, page_name, qn_dict_set, n_columns=n_exp)
     qn_keys = sorted(qn_lines.keys())
     if not qn_keys:
         return None
@@ -110,6 +119,16 @@ def _detect(page_name: str, data_dir: Path, qn_dict_set: set,
         gate["col_method"] = col_method
         # "hybrid_no_image" = không nhị phân hoá được ảnh (cột chỉ từ cache OCR): không
         # phải kết quả dò trên ảnh -> không qua cổng (crop cũng không dựng được).
+        page_ok = bool(g_ok and str(col_method).startswith("hybrid")
+                       and col_method != "hybrid_no_image")
+        if gate_out is not None:
+            gate_out.update(gate)
+    elif lay.is_prose:
+        # Cổng văn xuôi: số cột Nôm == số dòng QN của trang (== n_columns nếu khai số),
+        # không kiểm số âm; cùng đòi hybrid* (projection_fallback ép đúng n_exp cột nên
+        # đếm cột ở nhánh đó là tautology; hybrid_no_image = không dò trên ảnh).
+        g_ok, gate = prose_gate(cols, qn_lines, lay)
+        gate["col_method"] = col_method
         page_ok = bool(g_ok and str(col_method).startswith("hybrid")
                        and col_method != "hybrid_no_image")
         if gate_out is not None:
@@ -687,7 +706,7 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
     G, cb, n_ocr, n_qn, n_det, count_source, box_source, box_rule} để build_dataset
     PASS 1b chạy DP lại với neo ngữ liệu và gán lại hộp mà không dò lại trang.
     """
-    layout_gate: dict = {}          # chỉ được ghi khi layout=lithograph
+    layout_gate: dict = {}          # chỉ được ghi khi layout=lithograph|prose
     det = _detect(page_name, data_dir, qn_dict_set, layout=layout, gate_out=layout_gate)
     if det is None:
         return None
@@ -795,5 +814,5 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
            # N3g: trạng thái cột cho PASS 1b; `pairs` giữ nguyên để tương thích
            "col_states": col_states}
     if layout_gate:
-        rec["layout_gate"] = layout_gate      # chỉ có với layout=lithograph
+        rec["layout_gate"] = layout_gate      # chỉ có với layout=lithograph|prose
     return rec

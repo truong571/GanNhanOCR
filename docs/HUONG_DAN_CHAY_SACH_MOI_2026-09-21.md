@@ -1,138 +1,139 @@
-# Hướng dẫn chạy sách thạch bản mới (LVT1883 / KVK1884) — 2026-09-21
+# Hướng dẫn chạy sách mới (LVT1883 / KVK1884 thạch bản; Chrestomathie1872 văn xuôi) — 2026-09-21, cập nhật vòng 2 22/09
 
-Tài liệu tổng hợp các nhiệm vụ 21–22/09 (NV1 engine → NV5 KVK thử; NV-B det_xmargin/det_thr LVT; NV-D KVK 163 trang). Chi tiết từng lần chạy:
-`docs/CHAY_LVT1883_2026-09-21.md` (§6 = lần chạy cuối), `docs/CHAY_KVK1884_2026-09-21.md` (thay bản THU 8 trang); hợp đồng dữ liệu/cổng:
-`docs/PIPELINE_SACH_MOI_2026-09-20.md` §2–§7; kế hoạch commit: `docs/KE_HOACH_COMMIT_2026-09-21.md`.
-Trạng thái tiến trình: lúc 09:07 22/09 không còn tiến trình pipeline nào chạy (mọi bước đã kết thúc). **Chưa commit.**
+Tổng hợp NV1–NV5 (21/09), NV-B/NV-D (22/09 sáng) và **vòng 2** 22/09: (A) cổng cơ chế B4' + tầng `GOLD_text_only`; (B) B1' KVK
+(QN đầu vào = phiên âm 1871, `verses_ref_fix.py`); (C) `layout: prose` + adapter văn xuôi (Chrestomathie1872). Chi tiết từng lần chạy:
+`docs/CHAY_LVT1883_2026-09-21.md` §6, `docs/CHAY_KVK1884_2026-09-21.md` (không B1'), `docs/CHAY_KVK1884_B1_2026-09-22.md` (**chính thức**),
+`docs/CHAY_CHRESTO1872_2026-09-22.md`; hợp đồng dữ liệu/cổng: `docs/PIPELINE_SACH_MOI_2026-09-20.md` §2–§7; tổng thể:
+`docs/BAO_CAO_TONG_THE_SACH_MOI_2026-09-22.md` §9; kế hoạch commit vòng 2: `docs/KE_HOACH_COMMIT_VONG2_2026-09-22.md`. **Chưa commit.**
 
 ## 1. Trạng thái — cái gì đã chạy được
 
 | Thành phần | Trạng thái | Bằng chứng |
 |---|---|---|
-| API kim (`core/ocr/ocr_api.py`) | token qua SN_OCR_USERNAME/PASSWORD (60 phút); Guest Mode (diff chưa commit) KHÔNG kích hoạt | 10/10 request HTTP 200; STT2 page_0024 9 cột, 206/206 chữ trùng cache 20/09, bbox lệch 0 px |
-| kim trên thạch bản nền xám 128 | KHÔNG mù: raw và stretch cùng 22 hộp/143 chữ, 8/10 cột đúng 14 = 6⧺8 | LVT trang 10: chars/cột [14,14,14,16,14,14,14,14,15,14] |
-| Engine `layout: lithograph` (`pipeline/align_engine/book_layout.py`) | mọi tham số mới có mặc định = hành vi cũ (n_columns 9, DEFAULT_LAYOUT); 22/09 thêm khoá theo sách `books[].det_xmargin` / `det_thr` (None = `step2.*` toàn cục; lithograph vắng khoá → det_xmargin 0,05) | book_layout_selftest 57/57; phase1_engine_selftest 253/0; tools.selftest 125 pass/4 fail (1 fail do `dataset_out/` bị xoá, 3 fail có sẵn ở HEAD — `docs/KE_HOACH_COMMIT_2026-09-21.md` §4) |
-| Adapter `pipeline/tools/ingest_lithograph_book.py` | `--verse-map formula\|anchor\|content` (`content` = ghép cột Nôm ↔ cặp dòng QN theo NỘI DUNG chữ kim tra `dict/QuocNgu_SinoNom.csv`, DP đơn điệu; cột không khớp → 14 token `khongkhop` → chỉ REVIEW), `--plan-only`, `--contrast otsu` | ingest_lithograph_selftest 35/35 (bộ cũ — `content` CHƯA có selftest) |
-| Hồi quy STT (NV4, chạy lại 22/09 sau NV-B) | worktree sạch @ c499c8277c vs bản sửa, 3 trang stt2/0024, stt4/0050, stt11/0100 | labels.csv byte-identical, md5 59e436d7641fa849bb6759868ac29259 (556 dòng); 344/346 tệp giống byte (summary thêm `detector_params_by_book`, decisions khác đường dẫn tuyệt đối); 448/448 trang `_detect` byte-identical (NV1) |
-| Bộ mẫu người kiểm mù `pipeline/tools/kiem_nguoi_grid.py` / `kiem_nguoi_score.py` | 300 GOLD + 100 SYLLABLE mỗi sách, phân tầng theo trang, người kiểm không thấy nhãn máy (mục 4) | LVT 400 ô / KVK 400 ô, 400/400 có ngữ cảnh, nhãn máy nằm trong ứng viên 400/400; chưa có selftest, chưa review |
+| API kim (`core/ocr/ocr_api.py`) | token qua SN_OCR_USERNAME/PASSWORD; Guest Mode đã commit 65f7ca9 (chưa từng kích hoạt) | 10/10 HTTP 200; STT2 page_0024 206/206 chữ trùng cache, bbox lệch 0 |
+| kim trên thạch bản nền xám 128 | KHÔNG mù: raw và stretch cùng 22 hộp/143 chữ | LVT trang 10: chars/cột [14,14,14,16,14,14,14,14,15,14] |
+| Engine `layout: lithograph` / **`prose`** (`pipeline/align_engine/book_layout.py`) | mọi tham số có mặc định = STT; khoá theo sách `n_columns` (prose: `auto` = số dòng QN của trang), `det_xmargin`/`det_thr`; prose: cổng `prose_gate` (số cột Nôm == số dòng QN) | book_layout_selftest **79/79**; phase1_engine 253/0; hồi quy STT 3 trang byte-identical (§3) |
+| Adapter thạch bản `pipeline/tools/ingest_lithograph_book.py` | `--verse-map formula\|anchor\|content`, `--plan-only`, `--contrast otsu`, **`--verses PATH`** (B1'), `--dict-boost` (KHÔNG dùng — tự khẳng định) | ingest_lithograph_selftest **61/61** (35 cũ + 26 content/verses_b1/dict_boost) |
+| **B1' `scripts/measure/verses_ref_fix.py`** | thay dòng QN OCR bằng câu phiên âm dị bản (1871 LVĐ) khi exact / khớp mờ ≥ 0,9 cùng parity, offset ≤ 3 → `verses_b1.tsv` + `matches.csv` | `--selftest` 19/19; KVK: exact 465 · fuzzy 1.548 · giữ ocr 1.238 / 3.251 dòng |
+| **Adapter văn xuôi `pipeline/tools/ingest_prose_book.py`** | ô cột từ `chresto_map.analyze_nom`, kim 1 hộp/cột, DP đơn điệu chuỗi chữ kim cả truyện ↔ âm tiết (`bang_truyen_trang.csv`), cột 1 = phải nhất | ingest_prose_selftest **33/33**; Chresto 65/65 trang, 404/417 cột ghép |
+| Hồi quy STT (chạy lại 22/09 sau vòng 2, worktree HEAD 853cadfd9c) | 3 trang stt2/0024, stt4/0050, stt11/0100 | labels.csv md5 **59e436d7641fa849bb6759868ac29259** (556 dòng) cả hai bên; 344/346 tệp giống byte (2 tệp khác đường dẫn REPO); không `layout_gate` |
+| Cổng cơ chế B4' `pipeline/remediation/mechanism_gates.py` + tầng `GOLD_text_only` (`export_final_dataset.py`/`make_dataset_docs.py`) | tự bật khi `books[].layout == lithograph`; prose PHẢI khai `books[].mechanism_gates: true` (config Chresto đã khai); STT tắt = sao byte | selftest 62/62; STT export HEAD vs mới `diff -rq` rỗng (71.592 tệp) |
+| Bộ mẫu người kiểm mù `kiem_nguoi_grid.py`/`kiem_nguoi_score.py` | 300 GOLD + 100 SYLLABLE/sách (bản v1) | chưa có selftest, chưa review, không có người kiểm → để ngoài commit |
 
-### Số liệu cuối LVT1883 (105/105 trang, `det_xmargin 0,05 / det_thr 0,15`, `dataset_out_LucVanTien1883/`; CHAY_LVT §6.4)
-- Ingest (`--verse-map formula`): 8 ph 15 s, 100 gọi kim, cache_ok 105/105; 1.044 cột = 2.088 câu; kim 6⧺8 đúng 1.024/1.044; QN đủ 14 âm 893/1.044 (85,5 %); hộp không gán 12; số câu in lọc 169.
-- Build (2 ph 22 s): 14.476 ô — GOLD 9.680 / SILVER 0 / SYLLABLE 1.685 / REVIEW 3.111 (tier KHÔNG đổi so với ±0,25w — tier là luật văn bản); **page_ok 103/105** (2 trang biên page_0001 cột tựa, page_0105 projection_fallback); **M==N 83,8 %** (872/1.041); ocr_char 100 %; p_register≥0,8 99,0 %; n_anchor_pairs 2.292; **n_det==N 65,2 %** (679/1.041; trước 60,6 %) — I5 <75 % KHÔNG đạt.
-- Remediation: F1 cross-col **16 ô/8 nhóm** (trước 393/196) → quarantine 16 (conflict 16); demoted 0; confusion_fix n_fixes 1, demoted 0; qd01 0.
-- labels_final: GOLD **9.666** / SYLLABLE 1.683 / REVIEW 3.111 / QUARANTINE 16 (trước 9.344/1.634/3.111/387) → export `dataset_LucVanTien1883/` **11.349 ảnh** (0 thiếu; 14 ô blank/truncated: 8 + 6). Bản cũ ±0,25w dời sang `dataset_LucVanTien1883_xmargin025/`.
+### Số liệu chốt vòng 2 (labels_final → B4' → export; chi tiết §3)
+- **LVT1883** (105 trang, `formula`, 0,05/0,15; `dataset_out_LucVanTien1883/` → `dataset_LucVanTien1883/`): 14.476 ô; labels_final GOLD 9.666 / SYL 1.683 / REVIEW 3.111 / QUAR 16;
+  sau B4' **GOLD ảnh 5.793 / GOLD_text_only 2.985** / SYL 2.363 / REVIEW 3.319 → export **8.156 ảnh** (11.141 dòng). Bản trước cổng: `dataset_LucVanTien1883_v1/` (11.349 ảnh).
+- **KVK1884 — chính thức B1'** (163 trang, `content --contrast otsu`, QN = `verses_b1.tsv`, 0,05/0,15; `prepared_b1/` → `dataset_out_KimVanKieu1884_b1/` → `dataset_KimVanKieu1884/`):
+  22.704 ô; labels_final GOLD **15.938** (+882 so với không B1') / SYL 3.209 / REVIEW 3.465 / QUAR 92; sau B4' **GOLD ảnh 8.593 / GOLD_text_only 5.784** / SYL 3.844 / REVIEW 4.391
+  → export **12.437 ảnh** (18.221 dòng). Bản không B1' + cổng: `dataset_KimVanKieu1884_v2_gates_noB1/` (8.124 + 5.451; 12.344 ảnh); bản v1 không cổng: `dataset_KimVanKieu1884_v1/` (18.560 ảnh).
+- **Chrestomathie1872** (65 trang, prose `n_columns: auto`, 0,05/0,15; `dataset_out_Chrestomathie1872/` → `dataset_Chrestomathie1872/`): 8.303 ô; page_ok 65/65; labels_final GOLD 5.892 / SYL 998 /
+  REVIEW 1.413 / QUAR 0; sau B4' **GOLD ảnh 3.922 / GOLD_text_only 1.557** / SYL 1.287 / REVIEW 1.537 → export **5.209 ảnh** (6.766 dòng); không có dị bản → không cổng (d).
 
-### Số liệu cuối KVK1884 (163/163 trang, `--verse-map content --contrast otsu`, `det_xmargin 0,05 / det_thr 0,15`; CHAY_KVK1884 §2–§4)
-- Vì sao `content`: `anchor` neo theo số câu in, nhưng số in Nôm = seq QN + 4 từ trang 54 cột 7 (verses.tsv mất 4 dòng quanh 1069–1072) và + 5 từ trang 153 (mất 1 dòng quanh ~3045) → build anchor 162 trang chỉ GOLD 5.108/22.558 (22,6 %). `content` offset 0: 534 cột · −4: 983 · −5: 102 · không khớp **9 cột** (126 ô `khongkhop` → REVIEW); trang 163 ghép đủ 8 cột (offset −5), không bỏ.
-- Ingest lại (3 s, **0 gọi API** — đọc `kim_raw/` từ lượt anchor): cache_ok 163/163; 162 trang 10 cột (page_0163 = 8 cặp); 1.628 cột = 3.256 câu; kim 6⧺8 1.560/1.628 (95,8 %); QN đủ 14 âm 1.511/1.628 (92,8 %); unassigned 27; số in lọc 210.
-- Chọn det_thr (quét NATIVE 1.630 cột): 0,3 → n_det==N 2,7 %; 0,2 → 45,5 %; **0,15 → 59,2 %**; 0,1 → 59,0 % (thừa hộp +1 gấp đôi) → 0,15, trùng LVT.
-- Build (3 ph 11 s): 22.704 ô — GOLD 15.133 / SILVER 0 / SYLLABLE 3.520 / REVIEW 4.051; **page_ok 162/163** (99,4 %; chỉ page_0163 n_qn_cols 8 ≠ 10 nhưng nội dung đúng); **M==N 88,8 %** (1.445/1.628); ocr_char 100 %; p_register≥0,8 99,7 %; n_anchor_pairs 4.244; **n_det==N 59,2 %** (964/1.628) — I5 KHÔNG đạt; 0 trang REVIEW > 50 %.
-- Remediation: F1 cross-col 90 ô/45 nhóm → quarantine 88 (conflict 86, dup 2); demoted 0; confusion_fix **total_demoted 5** (5 ô GOLD 㝵/người → REVIEW theo luật `confusion_fixes.yaml`, hợp lệ; LVT 0 vì không có ô này); qd01 0.
-- labels_final: GOLD **15.056** / SYLLABLE 3.504 / REVIEW 4.056 / QUARANTINE 88 → export `dataset_KimVanKieu1884/` **18.560 ảnh** (0 thiếu); crop blank 216 (1,16 %; đo 40 ô: có mực trên ảnh gốc, không phải otsu xoá nét) + truncated 12 → 226 ô có cờ `crop_quality_flag` trong `labels_trace.csv`, vẫn export.
+## 2. Lệnh chạy từng bước cho một sách `<BOOK>`
 
-## 2. Lệnh chạy từng bước cho một sách thạch bản `<BOOK>`
-
-Tiền đề: `data/<BOOK>/pages/`, `measure_out/<BOOK>/layout/layout_pages.csv`, `measure_out/<BOOK>/qn_ocr/verses.tsv` (sinh bởi `scripts/measure/measure.py`), `.env` có SN_OCR_USERNAME/PASSWORD.
+Tiền đề: `data/<BOOK>/pages/`, `measure_out/<BOOK>/layout/layout_pages.csv` (+ `qn_ocr/verses.tsv` thạch bản; văn xuôi: `chresto/{qn_lines,qn_stories,bang_truyen_trang}.csv`)
+sinh bởi `scripts/measure/measure.py`; `.env` có SN_OCR_USERNAME/PASSWORD.
 
 ```bash
 cd /Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR
 PY=.venv/bin/python
-# B0. Config riêng (copy config/pipeline_LucVanTien1883.yaml, đổi tên sách/output_dir; KHÔNG khai pdf)
-#     books.<BOOK>: layout: lithograph, n_columns: 10, qn_syllables_per_column: 14,
-#                   det_xmargin: 0.05 (mặc định lithograph), det_thr: 0.15 (ĐO THEO SÁCH — quét 0,3/0,2/0,15/0,1 như CHAY_KVK1884 §3;
-#                   LVT1883 và KVK1884 cùng ra 0,15) ; paths.output_dir: dataset_<BOOK>. STT config/pipeline.yaml KHÔNG khai 2 khoá này.
-$PY -m pipeline.step0_setup config/pipeline_<BOOK>.yaml            # kỳ vọng: "Validation passed", BookLayout(lithograph,10,14, det_xmargin 0.05, det_thr 0.15)
-# B1. So cách ghép câu trước khi gọi API (formula / anchor / content). KVK: anchor lệch +4/+5 từ trang 54 → dùng content
+# B0. Config riêng (copy config/pipeline_LucVanTien1883.yaml; KHÔNG khai pdf). books.<BOOK>:
+#     thạch bản: layout: lithograph, n_columns: 10, qn_syllables_per_column: 14 | văn xuôi: layout: prose, n_columns: auto, (không khai qn_syllables_per_column), mechanism_gates: true
+#     det_xmargin: 0.05 (mặc định), det_thr: 0.15 (ĐO THEO SÁCH — quét 0,3/0,2/0,15/0,1, CHAY_KVK1884 §3); paths.data_dir/output_dir riêng.
+$PY -m pipeline.step0_setup config/pipeline_<BOOK>.yaml            # "Validation passed"; BookLayout(lithograph,10,14,…) | BookLayout(prose,auto,0,…)
+# B1. Thạch bản: so cách ghép câu trước khi gọi API. KVK: anchor lệch +4/+5 từ trang 54 → content
 $PY -m pipeline.tools.ingest_lithograph_book --book <BOOK> --ocr none --plan-only --out <scratch>/plan
-# B2. Ingest có kim (thử 5 trang trước, rồi bỏ --limit); kim_raw/ đã có → 0 gọi API, --force để gọi lại
-$PY -m pipeline.tools.ingest_lithograph_book --book <BOOK> --limit 5 --ocr kim --out prepared
+# B1'. (tuỳ chọn, KHUYẾN NGHỊ khi có phiên âm dị bản gần) sửa QN OCR bằng câu tham chiếu — KVK dùng 1871 LVĐ, 1872 DMT để ĐỐI CHỨNG độc lập
+$PY scripts/measure/verses_ref_fix.py --book <BOOK> --ref data/<ref>/<phienam>.json --ref-name nf1871    # --fuzzy-min 0.9; → measure_out/<BOOK>/qn_ref_fix/verses_b1.tsv
+# B2. Ingest có kim (thử --limit 5 rồi bỏ); kim_raw/ đã có → 0 gọi API (--force để gọi lại). LVT: formula; KVK: --contrast otsu --verse-map content --verses …
 $PY -m pipeline.tools.ingest_lithograph_book --book <BOOK> --ocr kim --out prepared \
-   [--contrast otsu] [--verse-map formula|anchor|content]           # LVT: formula (mặc định); KVK: --contrast otsu --verse-map content
-# B3. Build (thử --limit 8 rồi toàn bộ; det_thr/det_xmargin lấy từ config theo sách — log phải có dòng "detector theo sách")
-$PY -m pipeline.align_engine.build_dataset --config config/pipeline_<BOOK>.yaml --reseg detector \
-   --qd01-cells none --decisions none --use-s3 --two-pass --box-rule syl_index --force --limit 8 --out <scratch>/build8
+   [--contrast otsu] [--verse-map formula|anchor|content] [--verses measure_out/<BOOK>/qn_ref_fix/verses_b1.tsv]   # KHÔNG --dict-boost
+#     Văn xuôi (Chrestomathie): 1 lượt kim/trang trên JPG gốc, truyện↔cột theo bang_truyen_trang.csv
+$PY -m pipeline.tools.ingest_prose_book --book <BOOK> --limit 5 --ocr kim ; $PY -m pipeline.tools.ingest_prose_book --book <BOOK> --ocr kim
+# B3. Build (thử --limit 8 rồi toàn bộ; det_thr/det_xmargin từ config theo sách — log phải có "detector theo sách")
 $PY -m pipeline.align_engine.build_dataset --config config/pipeline_<BOOK>.yaml --reseg detector \
    --qd01-cells none --decisions none --use-s3 --two-pass --box-rule syl_index --force --out dataset_out_<BOOK>
-$PY -m pipeline.tools.enrich_crop_quality --labels dataset_out_<BOOK>/labels.csv --src-root dataset_out_<BOOK>   # + dòng build vào CHECKSUMS.txt
-# B4. Remediation
-$PY -m pipeline.remediation --labels dataset_out_<BOOK>/labels.csv census
-$PY -m pipeline.remediation --labels dataset_out_<BOOK>/labels.csv apply --tau 0.62
+$PY -m pipeline.tools.enrich_crop_quality --labels dataset_out_<BOOK>/labels.csv --src-root dataset_out_<BOOK>
+# B4. Remediation. **CẢNH BÁO: `pipeline.remediation apply` KHÔNG có `--out` sẽ ghi đè `dataset_out/` của STT (đang tracked trong git) —
+#     đã xảy ra 2 lần 22/09, khôi phục bằng `git checkout -- dataset_out`. LUÔN truyền `--out dataset_out_<BOOK>`.**
+$PY -m pipeline.remediation --labels dataset_out_<BOOK>/labels.csv --out dataset_out_<BOOK> census
+$PY -m pipeline.remediation --labels dataset_out_<BOOK>/labels.csv --out dataset_out_<BOOK> apply --tau 0.62
 $PY -m pipeline.remediation.confusion_fix --in dataset_out_<BOOK>/labels_remediated.csv \
    --out dataset_out_<BOOK>/labels_final.csv --fixes config/confusion_fixes.yaml --measure
-# B5. Export + docs + xlsx
-$PY pipeline/export_final_dataset.py --labels dataset_out_<BOOK>/labels_final.csv --src-root dataset_out_<BOOK> --out dataset_<BOOK>
-#     make_dataset_docs ; make_xlsx (như LVT)
-# Test trước/sau mỗi lần sửa mã
-$PY pipeline/align_engine/book_layout_selftest.py ; $PY pipeline/tools/ingest_lithograph_selftest.py
-$PY -m pipeline.phase1_engine_selftest ; $PY -m pipeline.tools.selftest
+git status --short -- dataset_out            # PHẢI trống
+# B4'. Cổng theo CƠ CHẾ (PHUONG_AN_TU_DONG §4). Tự bật khi books[].layout == lithograph; prose PHẢI khai books[].mechanism_gates: true;
+#      STT không khai → TẮT, --out = sao BYTE của --in. (a) n_det≠n_qn | box_source midpoint/split → GOLD_text_only (giữ nhãn, KHÔNG export ảnh);
+#      (b) s1_inter_s2_similar (CHAR_B) | direct_am_sua_dau → SYLLABLE; (c) blank/truncated → REVIEW; (d) chỉ khi có --cross (cells.csv của
+#      auto_precision bước cross chạy TRƯỚC trên labels_final): GOLD bất đồng dị bản gần hình → REVIEW, không gần hình → cờ di_ban_khac.
+#      Ưu tiên (c)>(d)>(b)>(a); gate_reason ghi cổng quyết; báo cáo JSON. Số đo SAU (d) là tự khẳng định (đọc `after_abc_only` để so công bằng).
+$PY scripts/measure/auto_precision.py --steps cross --books <BOOK> [--labels dataset_out_<BOOK>/labels_final.csv --trans prepared[_b1]/<BOOK>/transcriptions --out <dir>]
+$PY -m pipeline.remediation.mechanism_gates --in dataset_out_<BOOK>/labels_final.csv --out dataset_out_<BOOK>/labels_gated.csv \
+   --config config/pipeline_<BOOK>.yaml --book <BOOK> [--cross <dir>/cross/<BOOK>/cells.csv] --report dataset_out_<BOOK>/mechanism_gates_report.json
+# B5. Export + docs + xlsx — đầu vào labels_gated.csv; --n-columns chỉ sửa LOG/README "trang không đủ N cột" (STT 9; thạch bản 10; văn xuôi 7 = số cột phổ biến)
+$PY pipeline/export_final_dataset.py --labels dataset_out_<BOOK>/labels_gated.csv --src-root dataset_out_<BOOK> --out dataset_<BOOK> --n-columns 10
+$PY -m pipeline.tools.make_dataset_docs --dataset dataset_<BOOK> --n-columns 10 ; $PY -m pipeline.tools.make_xlsx --labels dataset_<BOOK>/labels.csv
+# B6. Khớp dị bản của tầng GOLD-ảnh SAU cổng (thư mục riêng để measure_out/auto_precision giữ số "trước")
+$PY scripts/measure/auto_precision.py --steps cross --books <BOOK> --labels dataset_out_<BOOK>/labels_gated.csv --trans prepared[_b1]/<BOOK>/transcriptions --out <dir>_gated
+# Test trước/sau mỗi lần sửa mã (kỳ vọng: 79/79, 61/61, 33/33, 62/62, 19/19, 253/0, tools 139 pass/3 fail có sẵn)
+$PY pipeline/align_engine/book_layout_selftest.py ; $PY pipeline/tools/ingest_lithograph_selftest.py ; $PY pipeline/tools/ingest_prose_selftest.py
+$PY -m pipeline.remediation.mechanism_gates_selftest ; $PY scripts/measure/verses_ref_fix.py --selftest ; $PY -m pipeline.phase1_engine_selftest ; $PY -m pipeline.tools.selftest
 ```
-Tham chiếu CLI thật: `docs/PIPELINE_FACTS.json`. Không chạm `data/`, `prepared/SachThanhTruyen*`, `dataset_out`.
+Lệnh đúng như đã chạy cho KVK B1': `docs/CHAY_KVK1884_B1_2026-09-22.md` §1 (config `config/pipeline_KimVanKieu1884_b1.yaml`, `data_dir: prepared_b1`);
+Chrestomathie: `docs/CHAY_CHRESTO1872_2026-09-22.md` §3. Tham chiếu CLI thật: `docs/PIPELINE_FACTS.json`. Không chạm `data/`, `prepared/SachThanhTruyen*`, `dataset_out`.
 
-## 3. Cổng nghiệm thu từng bước
+## 3. Cổng nghiệm thu từng bước — 3 sách sau vòng 2
 
-Giá trị thật của lần chạy cuối mỗi sách (LVT1883 105 trang, det_xmargin 0,05 / det_thr 0,15 — CHAY_LVT §6.4; KVK1884 163 trang, `content`, 0,05 / 0,15 — CHAY_KVK1884 §2–§4).
+Giá trị thật của lần chạy chốt: LVT1883 105 trang (`formula`, 0,05/0,15; CHAY_LVT §6.4); KVK1884 163 trang **B1'** (`content`, otsu, `verses_b1.tsv`, 0,05/0,15; CHAY_KVK1884_B1);
+Chrestomathie1872 65 trang (prose, `auto`, 0,05/0,15; CHAY_CHRESTO §4).
 
-| Bước | Cổng | Ngưỡng / kỳ vọng | LVT1883 (105 trang) | KVK1884 (163 trang) |
-|---|---|---|---|---|
-| B0 | step0 Validation passed; `book_layout(b)` = BookLayout(lithograph,10,14, det_xmargin, det_thr) | bắt buộc | đạt (0,05 / 0,15) | đạt (0,05 / 0,15) |
-| B1 | cách ghép câu chọn xong bằng `--plan-only`; cổng phủ câu verses.tsv | 0 trang thiếu câu; cột không khớp → chỉ REVIEW | formula: 1.044 cặp, 0 trang thiếu | content: offset 0/−4/−5 = 534/983/102 cột; **9 cột không khớp** → 126 ô REVIEW (anchor bị loại: lệch +4/+5 từ trang 54) |
-| B2 | n_cache_ok = n_pages (`verify_cache_image`='ok'); n_pages_10cols; kim 6⧺8; QN đủ 14 âm; unassigned | cache_ok 100 %; kim 6⧺8 ≥ ~96 %; QN 14 âm là cờ (không ép) | 105/105; 103; 1.024/1.044 (98,1 %); 893/1.044 (85,5 %); 12 | 163/163 (0 gọi API); 162; 1.560/1.628 (95,8 %); 1.511/1.628 (92,8 %); 27 |
-| B3 | page_ok (cột Nôm == n_columns & cột QN == n_columns & QN đủ 14 & col_method ≠ hybrid_no_image); M==N; ocr_char; p_register≥0,8; SPEC §7 I5 n_det==N | page_ok ≥ ~98 %; ocr_char 100 %; **I5 ≥ 75 %** | 103/105 (98,1 %); 83,8 %; 100 %; 99,0 %; **65,2 % KHÔNG đạt** | 162/163 (99,4 %); 88,8 %; 100 %; 99,7 %; **59,2 % KHÔNG đạt** |
-| B4 | census F1 cross-col → quarantine; demoted (apply) / confusion_fix demoted / qd01 | ghi số; demoted == 0 kỳ vọng SPEC §6 | 16 ô/8 nhóm → quar 16; 0; 0; 0 | 90/45 → quar 88 (conflict 86, dup 2); 0; **5** (㝵/người theo luật — hợp lệ); 0 |
-| B5 | ảnh copy = usable, 0 thiếu; crop blank/truncated chỉ cờ | 0 thiếu | **11.349**, 0 thiếu; 14 ô cờ | **18.560**, 0 thiếu; 226 ô cờ (blank 216 + truncated) |
-| STT | labels.csv 3 trang byte-identical HEAD vs bản sửa; summary không có `layout_gate` | bắt buộc trước commit | md5 59e436d7… cả hai bên (chạy lại 22/09 sau NV-B, KE_HOACH_COMMIT §1) | không cần chạy lại: chỉ đổi `config/pipeline_KimVanKieu1884.yaml`, không đụng mã/STT config |
+| Bước | Cổng | Ngưỡng / kỳ vọng | LVT1883 | KVK1884 (B1') | Chrestomathie1872 |
+|---|---|---|---|---|---|
+| B0 | step0 Validation passed; `book_layout(b)` đúng layout/n_columns/det_* | bắt buộc | đạt (lithograph,10,14) | đạt (lithograph,10,14) | đạt (prose,auto,0) |
+| B1/B1' | cách ghép câu chọn xong (`--plan-only`); phủ câu; B1': dòng exact/fuzzy/ocr | 0 trang thiếu câu; cột không khớp → chỉ REVIEW | formula 1.044 cặp, 0 thiếu; không B1' (LVT1916 xa, 29 % câu khớp) | content offset 0/−4/−5; B1': 465/1.548/1.238 dòng, 0 đổi số âm; **6 cột không khớp** → 84 ô REVIEW (trước 9/126) | truyện↔cột theo bảng đo: 404/417 cột ghép (96,9 %), 13 giữ chỗ; LTR thắng 20/20 truyện |
+| B2 | cache_ok = n_pages; kim 6⧺8 (thạch bản); QN đủ 14 âm; unassigned; lượt kim | cache 100 %; 6⧺8 ≥ ~96 % | 105/105; 1.024/1.044; 893/1.044 (85,5 %); 12; 100 lượt | 163/163 (**0 lượt**, kim_raw chép); 1.560/1.628; 1.511/1.628 (B1' ≥ 0,9 không sửa dòng lệch số âm); 27 | 65/65; kim 1 hộp/cột, 8.500 chữ (bộ đo ước 8.692); khớp dict 0,645; 60 lượt |
+| B3 | page_ok; M==N; ocr_char; p_register≥0,8; **I5 n_det==N ≥ 75 %** | page_ok ≥ ~98 %; ocr_char 100 % | 103/105; 83,8 %; 100 %; 99,0 %; **65,2 % ❌** | 162/163; 88,8 %; 100 %; 99,7 %; **59,2 % ❌** (B1' không đổi hộp) | **65/65**; 69,5 %; 100 %; —; **70,7 % ❌** |
+| B4 | census F1 cross-col → quarantine; apply demoted; confusion_fix demoted; qd01 | ghi số; apply demoted 0 | 16/8 → quar 16; 0; 0; 0 | 94/47 → quar 92; 0; **5** (㝵/người); 0 | 0 → 0; 0; 0; 0 |
+| labels_final | GOLD / SYLLABLE / REVIEW / QUARANTINE | — | 9.666 / 1.683 / 3.111 / 16 | **15.938** / 3.209 / 3.465 / 92 | 5.892 / 998 / 1.413 / 0 |
+| B4' | GOLD ảnh còn / GOLD_text_only / hạ SYL (b: cầu + sửa dấu) / hạ REVIEW (c blank-cụt + d dị bản gần hình) | bật (lithograph/prose) | **5.793** (59,9 %) / **2.985** / 569 + 112 / 14 + 194 | **8.593** (53,9 %) / **5.784** / 601 + 58 / 230 + 696 | **3.922** (66,6 %) / **1.557** / 238 + 71 / 124 + — |
+| B5 | ảnh copy = GOLD + SYLLABLE, 0 thiếu; text_only trong labels.csv không ảnh | 0 thiếu | **8.156** (v1 11.349) | **12.437** (v2_gates_noB1 12.344; v1 18.560) | **5.209** (trước cổng 6.890) |
+| B6 | khớp dị bản ô GOLD-ảnh trong câu khớp, bỏ ref PUA (proxy văn bản, MÙ lỗi hộp; +(d) = tự khẳng định) | ≥ trước, trong CI | LVT1916: 72,6 % (n 2.796) → (a)(b)(c) 73,4 % (n 1.866) → +(d) 79,5 %; text_only 77,9 % | 1871: 80,6 % (n 11.467) → (a)(b)(c) **81,2 %** [80,2–82,1] (n 6.772) → +(d) 85,7 %; **1872 (độc lập với B1')**: 73,0 % → **74,1 %** [73,0–75,1] (n 6.848) → +(d) 78,4 %; text_only (abc) 80,2 / 72,7 % | không có dị bản số hoá |
+| STT | labels.csv 3 trang byte-identical HEAD vs bản sửa; không `layout_gate`; export/gates STT sao byte | bắt buộc trước commit | md5 **59e436d7641fa849bb6759868ac29259** hai bên (22/09 sau vòng 2); mechanism_gates với config/pipeline.yaml → TẮT, labels_gated == labels_final; export `diff -rq` rỗng | (chung mã) | (chung mã) |
 
-**I5 chưa đạt ở cả hai sách (65,2 % / 59,2 % < 75 %)** và KHÔNG sửa được bằng tham số theo sách (det_xmargin chỉ chữa F1 cross-col: 393 → 16 ô LVT; det_thr đã ở đỉnh 0,15 cho cả hai). Hai gốc còn lại (đo trên 1.050 cột LVT / 1.630 cột KVK):
-(a) **detector CenterNet (học chữ STT) đếm lệch ±1 trên thạch bản** — LVT ở cột n_ocr = 14 (thr 0,2): n_det − 14 = −1: 142 / +1: 135, ở thr 0,15 còn chủ yếu +1: 215 cột; KVK ở cột n_qn = 14: −1: 188 / +1: 242 (+1 = hộp trùng lệch nửa chữ trong cột) → cần NMS theo bước dọc hoặc fine-tune detector;
-(b) **cột QN lệch số âm** (OCR QN in): LVT 151/1.044, KVK 117/1.628 → N sai → thay `verses.tsv` bằng phiên âm chuẩn (Nôm Foundation). Chưa có chặn `n_det ≠ N → REVIEW` như SPEC §7 I5 đòi; ô ở cột lệch vẫn vào GOLD qua midpoint/syl_index.
+**I5 chưa đạt ở cả ba sách (65,2 / 59,2 / 70,7 % < 75 %)** và KHÔNG sửa được bằng tham số (det_xmargin chỉ chữa F1 cross-col 393 → 16 ô LVT; det_thr đã ở đỉnh 0,15).
+Gốc: (a) detector CenterNet (học chữ STT) đếm lệch ±1 trên thạch bản (KVK ở cột 14 âm: −1: 188 / +1: 242) → cần NMS theo bước dọc hoặc fine-tune (không có hộp GT);
+(b) cột QN lệch số âm (LVT 151/1.044, KVK 117/1.628 — B1' ≥ 0,9 không sửa được vì 5/6, 7/8 < 0,9). B4'(a) chặn hậu quả ở export (`GOLD_text_only`), không chữa gốc.
 
-## 4. Bước kiểm người (bắt buộc trước khi công bố tier GOLD — hiện CHƯA có ground truth người cho sách mới)
+## 4. Kiểm người (không có người kiểm trong đề tài → thay bằng đo tự động §3 B6 + `docs/PHUONG_AN_TU_DONG_2026-09-22.md`)
 
-Bộ mẫu **mù** đã tạo (seed 20260921, 300 GOLD + 100 SYLLABLE, phân tầng theo trang, phân bổ tỷ lệ → tỷ lệ đúng trên mẫu = ước lượng
-không chệch cho tier; người kiểm KHÔNG thấy nhãn máy, chọn trong 3–5 ứng viên Nôm cùng âm / "không có" / "crop sai" / "không chắc"):
-
-| Sách | Lưới cho người kiểm | Tổng thể có crop | Phủ trang GOLD / SYLLABLE | Khoá (KHÔNG đưa người kiểm) |
-|---|---|---|---|---|
-| LVT1883 | `dataset_LucVanTien1883/kiem_nguoi/index.html` (400 ô) | GOLD 9.666 / SYLLABLE 1.683 | 103 / 98 | `dataset_LucVanTien1883/kiem_nguoi/items.csv`, `summary.json` |
-| KVK1884 | `dataset_KimVanKieu1884/kiem_nguoi/index.html` (400 ô) | GOLD 15.056 / SYLLABLE 3.504 | 163 / 100 | `dataset_KimVanKieu1884/kiem_nguoi/items.csv`, `summary.json` |
-
-```bash
-# Tạo lại (idempotent theo seed): --n-gold 300 --n-second 100; --second-tier auto = SYLLABLE (REVIEW không có crop trong export)
-$PY pipeline/tools/kiem_nguoi_grid.py --dataset dataset_<BOOK> --pages prepared/<BOOK>/pages --seed 20260921 --n-gold 300 --n-second 100
-# Người kiểm: mở index.html (không cần server), chấm, bấm "Xuất CSV" → verdicts_<tên>_<ngày>.csv (item_id, verdict, choice_index, reviewer, ts)
-# Chấm điểm: precision GOLD + Wilson 95 % CI (bảo thủ: "Không chắc" = sai), tách lý do sai; SYLLABLE: tỷ lệ xác nhận âm; ≥2 người trùng ≥10 ô → % đồng thuận + κ
-$PY pipeline/tools/kiem_nguoi_score.py --items dataset_<BOOK>/kiem_nguoi/items.csv --verdicts <csv|thư mục> [--out dataset_<BOOK>/kiem_nguoi/score.json]
-```
-Giới hạn: tối đa 5 ứng viên nên 375/400 (LVT) và 376/400 (KVK) ô bị cắt bớt danh sách — "Không có trong danh sách" vẫn tính nhãn máy SAI
-(đúng cho precision) nhưng không định vị được chữ đúng. 10 ô GOLD mẫu đọc nhanh: CHAY_LVT §4, CHAY_KVK1884 §5. Ngoài mẫu, người cần xem
-thêm: KVK 9 cột không khớp (CHAY_KVK1884 §2, 126 ô REVIEW) + 226 ô blank/truncated (`labels_trace.csv` cột `crop_quality_flag`); LVT 2 trang biên page_0001/page_0105.
-Hai công cụ `kiem_nguoi_*.py` chưa có selftest, chưa review (KE_HOACH_COMMIT R-19) — commit riêng sau khi review.
+Bộ mẫu mù v1 (seed 20260921, 300 GOLD + 100 SYLLABLE/sách) nằm ở `dataset_LucVanTien1883_v1/kiem_nguoi/`, `dataset_KimVanKieu1884_v1/kiem_nguoi/` (tạo bằng
+`kiem_nguoi_grid.py --dataset dataset_<BOOK>_v1 --pages prepared/<BOOK>/pages --seed 20260921`; chấm bằng `kiem_nguoi_score.py`). Bản sau cổng chưa tạo lại;
+hai công cụ chưa có selftest/review → không commit vòng 2. Nếu có người: ưu tiên KVK 6 cột không khớp (CHAY_KVK1884_B1 §3), 230 ô blank/truncated (đã hạ REVIEW), LVT 2 trang biên.
 
 ## 5. Kế hoạch commit
 
-Theo `docs/KE_HOACH_COMMIT_2026-09-21.md`: (1) `git checkout -- dataset_out` trước (10 tệp STT đang `D`; tools.selftest kỳ vọng 139/3 sau khôi phục);
-(2) quyết R-08 (`data/LucVanTien1883/luc_van_tien_quoc_ngu.txt` bị D); (3) sửa R-01/R-03/R-04/R-05/R-07 nếu đồng ý → chạy lại selftest + hồi quy 3 trang
-(md5 phải giữ 59e436d7…); (4) `$PY scripts/measure/code_facts.py` sinh lại FACTS → **commit 1** engine (book_layout, det_* theo sách) → **commit 2** tools
-(adapter, config 2 sách, scripts/measure, docs) → **commit 3** ocr_api Guest Mode → **commit data** riêng (`data/` 268 MB). `git add` đích danh, không `-A`.
-Chưa quyết: docs KVK (`CHAY_KVK1884_2026-09-21.md`, `CHAY_KVK1884_THU…`, `KVK1884_TRANG_CAN_XAC_NHAN.csv` lỗi thời), `kiem_nguoi_*.py` — review rồi commit riêng.
-Diff Guest Mode `core/ocr/ocr_api.py`: chưa kích hoạt trong mọi lần chạy (token OK; KVK content 0 gọi API) → giữ hay hoàn nguyên do người quyết.
+`docs/KE_HOACH_COMMIT_VONG2_2026-09-22.md` (3 commit: engine prose + gates/export; tools adapter B1'/prose + config + measure; docs). Trước commit: `git status --short -- dataset_out data` trống,
+selftest như §2, hồi quy STT md5 59e436d7…, `scripts/measure/code_facts.py` 18/18. `git add` đích danh, không `-A`; `dataset_*`, `dataset_out_*`, `prepared*`, `measure_out/` không commit.
 
-## 6. Việc còn mở
+## 6. Việc còn mở (sau vòng 2)
 
-1. **I5 chưa đạt cả hai sách** (65,2 % / 59,2 % < 75 %) — gốc (a) detector ±1, (b) QN lệch số âm (mục 3); chưa có chặn `n_det ≠ N → REVIEW`. Ngoài phạm vi "tham số theo sách".
-2. **`--verse-map content` chưa có selftest** (`ingest_lithograph_selftest` 35/35 = bộ cũ); `CONTENT_WINDOW 60 / SKIP_PEN 2 / MIN_COL 4` là hằng cứng; nên đối chiếu với phiên âm chuẩn (Nôm Foundation) khi có.
-3. **KVK 9 cột không khớp** (54 c5–c6, 153 c5 = chỗ verses.tsv mất 4 + 1 dòng; 76 c10, 80 c7, 143 c7, 145 c6, 150 c2, 158 c6 = dòng QN có nhưng điểm < 4 chữ) → người đối chiếu 2 dòng QN tương ứng.
-4. **KVK 226 ô blank/truncated** trong bộ export (blank 216 = 1,16 %, GOLD 186 / SYLLABLE 30; truncated 12) — chỉ cờ; ngưỡng `enrich_crop_quality` hiệu chuẩn trên STT.
-5. Người kiểm ≥ 300 GOLD mỗi sách (mục 4) chưa chấm → chưa công bố tier GOLD; `make_dataset_docs` sinh NGUON_THU_TICH.md theo khuôn STT, 7 mục ⬜ chờ người giữ bản quét (cả 2 sách).
-6. **`docs/KVK1884_TRANG_CAN_XAC_NHAN.csv` LỖI THỜI** (27 trang formula≠anchor): `content` quyết từng cột bằng chữ; danh sách người cần xem = 9 cột ở điểm 3 trên — đã ghi chú ở đầu `docs/CHAY_KVK1884_2026-09-21.md`.
-7. Hồi quy STT: đã chạy lại 22/09 sau NV-B (md5 59e436d7…); đổi `config/pipeline_KimVanKieu1884.yaml` (det_thr 0,15) KHÔNG cần chạy lại vì chỉ là config riêng — chạy lại chỉ khi sửa mã `pipeline/`, `core/` hoặc `config/pipeline.yaml`.
-8. `--use-s3` dựng 0 lớp nguyên mẫu crop (index.csv trỏ `dataset_out/` STT đã xoá — lỗi sẵn có, ~6.500 dòng WARN imread); tier không phụ thuộc S3 ở đường `--two-pass`.
-9. LVT: page_0001 (cột tựa) / page_0105 (5 cặp) `projection_fallback` → REVIEW 89 %/82 %, cần bỏ 2 trang biên hoặc adapter ghi n_columns theo trang; 151 cột QN lệch số âm.
+1. **I5 chưa đạt cả ba sách** (§3) — gốc detector ±1 chưa chữa; B4'(a) chỉ chặn ở export (LVT 2.985, KVK 5.784, Chresto 1.557 ô text_only).
+2. **B1' KVK**: thay cả dòng theo 1871 làm cột `syllable` mang chính tả Bắc ở 676 dòng (sanh→sinh, nhơn→nhân…; `qn_source` có trong `transcriptions/*.json`, CHƯA vào labels/export);
+   50 âm (2,0 %) nghi xoá dị bản QN thật của 1884; 125 dòng lệch số âm không sửa được ở 0,9 (0,8 thêm 240 âm nghi xoá → không hạ ngưỡng). `--dict-boost` LOẠI (tự khẳng định 100 % trên 1871).
+3. **Blank KVK 230 ô** hạ REVIEW bởi (c): ngưỡng `enrich_crop_quality` hiệu chuẩn trên STT, 40 ô đo có mực trên ảnh gốc → có thể hạ oan.
+4. **`run_pipeline.sh` (STT) chưa gọi B4'**; sách mới chạy tay §2. `pipeline.remediation apply` chưa chặn trong mã việc ghi `dataset_out/` khi thiếu `--out` (chỉ cảnh báo ở §2).
+5. **Chrestomathie**: QN tesseract lỗi âm ≈ 13 % + mất dòng → 1.239 ô `no_context` REVIEW, 12 cột giữ chỗ; chưa quét `det_thr` riêng; kim 8.500 vs ước 8.692 chữ (−2,2 %); 2 ô trang 65 không có chữ kim.
+6. `--verse-map content`/prose DP: hằng `CONTENT_WINDOW 60 / SKIP_PEN 2 / MIN_COL 4`, `n_match < 3 | ratio < 0,25` cứng; cổng (b) hạ SYLLABLE nhưng ảnh vẫn nằm `gold/…` (đường `image` là khoá bền).
+7. `docs/KVK1884_TRANG_CAN_XAC_NHAN.csv` lỗi thời (27 trang formula≠anchor) — `content` quyết từng cột; `CHAY_KVK1884_THU_2026-09-21.md` chỉ còn giá trị lịch sử.
+8. `--use-s3` dựng 0 lớp nguyên mẫu crop (index.csv trỏ `dataset_out/` STT — lỗi sẵn có); README các sách vẫn tiêu đề khuôn STT; NGUON_THU_TICH 7 mục ⬜ chờ người giữ bản quét.
+9. LVT page_0001/page_0105 `projection_fallback` → REVIEW 89 %/82 %; tools.selftest 3 fail có sẵn ở HEAD (KE_HOACH_COMMIT_2026-09-21 §4).
 
 ## 7. Thêm sách thứ tư
 
-1. Dữ liệu: `data/<BOOK>/pages/` (+ `SOURCE.md`), QN theo trang nếu có.
-2. Bộ đo: thêm sách vào `BOOKS` trong `scripts/measure/` (xem `scripts/measure/README.md`), chạy `measure.py --all` → `measure_out/<BOOK>/layout/layout_pages.csv` + `qn_ocr/verses.tsv`; kiểm invariants PASS trong `measure_out/REPORT.md`.
-3. Adapter: đọc trực tiếp `measure_out/<BOOK>/`; nếu đánh số trang khác (như KVK page = 167 − canvas) thì bổ sung map vào `ingest_lithograph_book.py` và thêm phép kiểm vào `ingest_lithograph_selftest.py`; nếu số câu in không theo công thức verse_no = 20(page−1)+2k−1,2k thì so `--plan-only` cả 3 cách; **nếu verses.tsv mất dòng (số in ≠ seq QN) thì `anchor` cũng sai → dùng `--verse-map content`** (bài học KVK).
-4. Config: `config/pipeline_<BOOK>.yaml` (mục 2 B0): quét `det_thr` trên toàn sách trước khi khoá (KVK §3); `det_xmargin` để mặc định 0,05. STT `config/pipeline.yaml` KHÔNG khai layout → hành vi cũ.
-5. Chạy B0→B5, điền bảng cổng mục 3, viết `docs/CHAY_<BOOK>_<ngày>.md`, tạo bộ mẫu người kiểm (mục 4). Hồi quy STT 3 trang chỉ cần chạy lại khi sửa mã `pipeline/`/`core/` hoặc `config/pipeline.yaml` (config riêng của sách không đòi).
+1. Dữ liệu: `data/<BOOK>/pages/` (+ `SOURCE.md`), QN cùng nguồn theo trang (thạch bản: số câu in; văn xuôi: theo truyện/đoạn).
+2. Bộ đo: thêm sách vào `BOOKS` của `scripts/measure/` (README ở đó), `measure.py --all` → `measure_out/<BOOK>/layout/` + `qn_ocr/verses.tsv` (thạch bản) hoặc `chresto/*.csv` (văn xuôi); invariants PASS.
+3. **Chọn layout**: cột đều, mỗi cột = cặp lục bát 6⧺8 → `lithograph` + `ingest_lithograph_book` (so `--plan-only` 3 cách; verses.tsv mất dòng → `content`; có phiên âm dị bản gần → B1' `verses_ref_fix`).
+   Cột số chữ biến thiên, QN theo truyện/đoạn không đánh số → `prose` + `ingest_prose_book` (cần bảng truyện↔trang như `bang_truyen_trang.csv`, `n_columns: auto`).
+   Đánh số trang khác (KVK page = 167 − canvas; Chresto page = canvas − 105) → thêm map vào adapter + phép kiểm selftest.
+4. Config `config/pipeline_<BOOK>.yaml` (§2 B0): quét `det_thr` trên toàn sách trước khi khoá; `det_xmargin` mặc định 0,05; STT `config/pipeline.yaml` KHÔNG khai layout.
+5. Chạy B0→B6, điền bảng §3, viết `docs/CHAY_<BOOK>_<ngày>.md`; nếu sách có dị bản số hoá thì thêm vào `CROSS_BOOKS` của `auto_precision.py` để có B6 và cổng (d).
+   Hồi quy STT 3 trang chỉ cần chạy lại khi sửa `pipeline/`, `core/` hoặc `config/pipeline.yaml`.

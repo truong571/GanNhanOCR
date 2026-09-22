@@ -316,17 +316,39 @@ def upload_image(image_path: str) -> str | None:
     return None
 
 
-def recognize(file_name: str) -> list[dict] | None:
+# --- Tham số body của /image-ocr (giá trị hợp lệ lấy từ mã trang web kinhhannom) ---
+#   ocr_id            : -1 Tự động · 1 Văn bản thông thường · 2 Hành chính · 3 Ngoại cảnh
+#                       · 4 Y học dân tộc · 5 Văn bia · 6 Kinh Phật
+#   lang_type         : 0 Tự động · 1 Hán · 2 Nôm
+#   reading_direction : 0 Tự động · 1 Dọc · 2 Ngang
+#   font_type         : 0 Tự động · 1 In · 2 Viết tay
+# MẶC ĐỊNH GIỮ NGUYÊN BỘ CŨ (1, 1, 1, 1) — mọi lời gọi không truyền tham số (đường STT,
+# _ocr_one_pass, phase1_engine_selftest) gửi body BYTE-IDENTICAL với trước 2026-09-23.
+KIM_OCR_ID_DEFAULT = 1
+KIM_LANG_TYPE_DEFAULT = 1          # 1 = Hán (bộ cũ); 2 = Nôm (books[].kim_lang_type)
+KIM_READING_DIRECTION_DEFAULT = 1
+KIM_FONT_TYPE_DEFAULT = 1
+KIM_LANG_TYPES = (0, 1, 2)
+KIM_FONT_TYPES = (0, 1, 2)
+
+
+def recognize(file_name: str, *, ocr_id: int | None = None, lang_type: int | None = None,
+              reading_direction: int | None = None, font_type: int | None = None) -> list[dict] | None:
     """Call OCR API, returns list of boxes [{points, transcription}, ...].
     Hỗ trợ cả chế độ có Token (thành viên) và Guest Mode (không token).
+
+    Tham số CHỈ TỪ KHOÁ, None = hằng KIM_*_DEFAULT (bộ cũ 1/1/1/1). Không có biến
+    toàn cục nào đổi mặc định: sách nào muốn `lang_type = 2` (Nôm) phải truyền
+    tường minh (books[].kim_lang_type -> adapter ingest -> tham số hàm này).
     """
     url = f"https://{_SN_DOMAIN}/api/web/clc-sinonom/image-ocr"
     body = {
         "file_name": file_name,
-        "ocr_id": 1,
-        "lang_type": 1,
-        "reading_direction": 1,
-        "font_type": 1,
+        "ocr_id": KIM_OCR_ID_DEFAULT if ocr_id is None else int(ocr_id),
+        "lang_type": KIM_LANG_TYPE_DEFAULT if lang_type is None else int(lang_type),
+        "reading_direction": (KIM_READING_DIRECTION_DEFAULT if reading_direction is None
+                              else int(reading_direction)),
+        "font_type": KIM_FONT_TYPE_DEFAULT if font_type is None else int(font_type),
     }
 
     def do(token: str = ""):

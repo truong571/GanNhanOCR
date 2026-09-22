@@ -63,7 +63,7 @@ if str(REPO) not in sys.path:
 
 from pipeline.tools.ingest_lithograph_book import (  # noqa: E402  (lõi dùng chung)
     CONTENT_PLACEHOLDER, _nom_to_qn_readings, _rel, expand_box_chars, box_rect,
-    kim_boxes, lithograph_syllables, prepare_image)
+    kim_boxes, kim_cache_suffix, kim_params_of, book_kim_params, lithograph_syllables, prepare_image)
 
 BOOKS = {
     "Chrestomathie1872": dict(
@@ -371,13 +371,16 @@ def _sel_pages(book: str, pages: list[int] | None, limit: int | None) -> list[in
 
 
 def ingest(book: str, pages: list[int] | None, limit: int | None, ocr: str, force: bool, out_root: Path,
-           measure_dir: Path, contrast: str = "stretch", kim_src: str = "orig", verbose: bool = True) -> dict:
+           measure_dir: Path, contrast: str = "stretch", kim_src: str = "orig", verbose: bool = True,
+           kim: dict | None = None) -> dict:
     """Chạy adapter cho các trang chọn; trả manifest (đã ghi ra out_root/<book>/manifest.json)."""
     import cv2
     from core.image.image_processing import denoise_image
     from core.ocr.ocr_api import _file_md5, _pixel_hash, verify_cache_image
 
     cfg = BOOKS[book]
+    kim = kim_params_of(kim)
+    kim_sfx = kim_cache_suffix(kim)
     sel = _sel_pages(book, pages, limit)
     table = load_story_table(measure_dir, book)
     stories = load_story_syllables(measure_dir, book, table)
@@ -417,9 +420,9 @@ def ingest(book: str, pages: list[int] | None, limit: int | None, ocr: str, forc
         if ocr == "kim" and not lay["blank"]:
             ocr_img = src if kim_src == "orig" else png
             ocr_hash = _file_md5(str(ocr_img))
-            raw_path = dirs["kim_raw"] / f"{name}.json"
+            raw_path = dirs["kim_raw"] / f"{name}{kim_sfx}.json"
             had = raw_path.exists() and not force
-            boxes = kim_boxes(ocr_img, raw_path, ocr_hash, force)
+            boxes = kim_boxes(ocr_img, raw_path, ocr_hash, force, kim=kim)
             if not had:
                 g["ocr_calls"] += 1
             if boxes is None:
@@ -570,6 +573,7 @@ def ingest(book: str, pages: list[int] | None, limit: int | None, ocr: str, forc
                               n_stories_ltr_better=sum(1 for s in g["stories"].values() if s["score"] > s["score_reversed_in_page"]),
                               n_stories=len(g["stories"]))
     manifest = dict(book=book, source="images", layout="prose", n_columns="auto", contrast=contrast, ocr=ocr, kim_src=kim_src,
+                    kim_params=kim, kim_cache_suffix=kim_sfx,
                     reading_direction="ltr" if cfg["read_ltr"] else "rtl", page_of_canvas="page = canvas - 105",
                     measure_dir=_rel(measure_dir), dp=dict(match=PROSE_MATCH, sub=PROSE_SUB, gap=PROSE_GAP,
                                                               min_match=PROSE_MIN_MATCH, min_ratio=PROSE_MIN_RATIO),
@@ -605,10 +609,22 @@ def main(argv=None) -> int:
     ap.add_argument("--contrast", choices=["stretch", "otsu", "none"], default="stretch")
     ap.add_argument("--kim-src", choices=["orig", "prepared"], default="orig",
                     help="ảnh gửi kim: orig = JPG gốc (kim đọc thạch bản tốt hơn), prepared = pages/*.png (cùng kích thước)")
+    ap.add_argument("--kim-lang-type", type=int, default=None, choices=[0, 1, 2],
+                    help="lang_type gửi kênh kim: 0 Tự động · 1 Hán · 2 Nôm. Vắng -> books[].kim_lang_type "
+                         "của config/pipeline_<book>.yaml (vắng nữa -> 1 = bộ cũ); cache kim_raw/ tách theo tham số")
+    ap.add_argument("--kim-ocr-id", type=int, default=None, choices=[-1, 1, 2, 3, 4, 5, 6])
+    ap.add_argument("--kim-font-type", type=int, default=None, choices=[0, 1, 2])
+    ap.add_argument("--kim-config", default=None,
+                    help="config đọc books[].kim_* (mặc định config/pipeline_<book>.yaml)")
     a = ap.parse_args(argv)
     os.chdir(REPO)
+    kim = book_kim_params(a.book, dict(ocr_id=a.kim_ocr_id, lang_type=a.kim_lang_type,
+                                       font_type=a.kim_font_type),
+                          Path(a.kim_config) if a.kim_config else None)
+    if a.ocr == "kim":
+        print(f"[ingest] kim: {kim} · cache kim_raw/*{kim_cache_suffix(kim)}.json", file=sys.stderr)
     m = ingest(a.book, _parse_pages(a.pages), a.limit, a.ocr, a.force, Path(a.out), Path(a.measure_dir),
-               a.contrast, a.kim_src)
+               a.contrast, a.kim_src, kim=kim)
     gates = {k: v for k, v in m["gates"].items() if k not in ("pages_flagged", "cols_per_page", "stories")}
     print(json.dumps(dict(out=str(Path(a.out) / a.book), gates=gates,
                           stories={k: dict(score=v["score"], rev=v["score_reversed_in_page"], match=v["match_ratio"],

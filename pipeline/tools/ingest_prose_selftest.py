@@ -121,7 +121,7 @@ def test_ingest_and_engine() -> None:
         story_syl = "truyện thứ nhất a b c d e f a b c d e f a b c".split()
         saved = (ing.page_columns, ing.kim_boxes, ing.load_story_table, ing.load_story_syllables, ing._nom_to_qn_readings)
         ing.page_columns = lambda canvas: lay
-        ing.kim_boxes = lambda png, raw, h, force: boxes
+        ing.kim_boxes = lambda png, raw, h, force, kim=None: boxes
         ing.load_story_table = lambda md, b: [dict(so=1, tieu_de="t", qn_canvas=1, nom_canvas_dau=1, nom_slot_dau=1,
                                                    nom_trang="1", nom_n_cols=3, ranh_gioi="sau ô", can_nguoi_ra=True)]
         ing.load_story_syllables = lambda md, b, t: {1: dict(so=1, tieu_de="t", title_syllables=story_syl[:3],

@@ -4,7 +4,9 @@
 """
 from __future__ import annotations
 
+import json
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # chạy trực tiếp không cần PYTHONPATH=.
@@ -309,6 +311,126 @@ def test_verses_b1_and_dict_boost() -> None:
     _ok(st5["n_tier_checked"] == 0 and st5["boosted"] == 0, "dict_boost: cột placeholder (None) → bỏ qua")
 
 
+def test_kim_params_and_qn_rule():
+    """Vòng 5 (2026-09-23): tham số gọi kim theo sách + cache tách theo tham số;
+    luật sửa số đếm âm QN 6/8."""
+    from core.ocr import ocr_api
+    import inspect
+    # --- 1. recognize: mặc định BYTE-IDENTICAL bộ cũ, tham số chỉ-từ-khoá ---
+    sig = inspect.signature(ocr_api.recognize)
+    _ok([k for k, v in sig.parameters.items() if v.kind == v.KEYWORD_ONLY]
+        == ["ocr_id", "lang_type", "reading_direction", "font_type"],
+        "recognize: 4 tham số CHỈ TỪ KHOÁ (lời gọi cũ recognize(fn) không đổi)")
+    _ok((ocr_api.KIM_OCR_ID_DEFAULT, ocr_api.KIM_LANG_TYPE_DEFAULT,
+         ocr_api.KIM_READING_DIRECTION_DEFAULT, ocr_api.KIM_FONT_TYPE_DEFAULT) == (1, 1, 1, 1),
+        "recognize: hằng mặc định = bộ cũ (1, 1, 1, 1)")
+    body = {}
+
+    def _fake_authed(do, what, **kw):
+        class R:
+            @staticmethod
+            def json():
+                return {"is_success": True, "data": {"details": {"details": []}}}
+        return R()
+    import core.ocr.ocr_api as OA
+    saved_req, saved_post = OA._authed_request, None
+    try:
+        import requests
+        saved_post = requests.post
+
+        def _cap(url, json=None, headers=None, **kw):     # noqa: A002
+            body.update(json or {})
+
+            class R:
+                status_code = 200
+
+                @staticmethod
+                def json():
+                    return {"is_success": True, "data": {"details": {"details": [{"x": 1}]}}}
+            return R()
+        requests.post = _cap
+        OA._authed_request = lambda do, what, on_reauth=None: do("")
+        OA.recognize("f.png")
+        _ok(body == {"file_name": "f.png", "ocr_id": 1, "lang_type": 1,
+                     "reading_direction": 1, "font_type": 1},
+            f"recognize(fn) gửi body BỘ CŨ nguyên văn ({body})")
+        body.clear()
+        OA.recognize("f.png", lang_type=2)
+        _ok(body.get("lang_type") == 2 and body.get("ocr_id") == 1 and body.get("font_type") == 1,
+            f"recognize(lang_type=2) chỉ đổi lang_type ({body})")
+    finally:
+        OA._authed_request = saved_req
+        if saved_post is not None:
+            import requests
+            requests.post = saved_post
+    # --- 2. cache kim tách theo tham số ---
+    _ok(ing.kim_cache_suffix(None) == "" and ing.kim_cache_suffix({"lang_type": 1}) == "",
+        "kim_cache_suffix: bộ cũ -> '' (dùng lại kim_raw/ cũ)")
+    _ok(ing.kim_cache_suffix({"lang_type": 2}) == "_lt2"
+        and ing.kim_cache_suffix({"lang_type": 2, "font_type": 2}) == "_lt2f2",
+        "kim_cache_suffix: lang_type 2 -> '_lt2'")
+    with tempfile.TemporaryDirectory() as td:
+        raw = Path(td) / "page_0001.json"
+        raw.write_text(json.dumps(dict(image="x", image_hash="H", boxes=[{"a": 1}])), encoding="utf-8")
+        _ok(ing.kim_boxes(Path("x.png"), raw, "H", False) == [{"a": 1}],
+            "kim_boxes: cache CŨ (không có kim_params) hợp lệ với bộ cũ -> 0 lượt gọi")
+        called = []
+        import core.ocr.ocr_api as OA2
+        u, r = OA2.upload_image, OA2.recognize
+        try:
+            OA2.upload_image = lambda p: called.append(("up", p)) or "fn"
+            OA2.recognize = lambda fn, **kw: called.append(("rec", kw)) or [{"b": 2}]
+            got = ing.kim_boxes(Path("x.png"), raw, "H", False, kim={"lang_type": 2})
+        finally:
+            OA2.upload_image, OA2.recognize = u, r
+        _ok(got == [{"b": 2}] and ("rec", {"ocr_id": 1, "lang_type": 2, "font_type": 1}) in called,
+            f"kim_boxes: cache cũ KHÔNG dùng cho lang_type 2 -> gọi lại đúng tham số ({called})")
+        d2 = json.loads(raw.read_text(encoding="utf-8"))
+        _ok(d2.get("kim_params") == {"ocr_id": 1, "lang_type": 2, "font_type": 1},
+            "kim_boxes: cache ghi kim_params")
+    # --- 3. luật số đếm âm QN 6/8 ---
+    V = ing._qn_valid_syllables()
+    _ok(ing.repair_tier_syllables("Trước đèn xem truyện tây 1⁄25,", 6,
+                                  {"verse_no": "1", "num_read": ""}, V)
+        == (["Trước", "đèn", "xem", "truyện", "tây", ing.QN_UNREADABLE], "restore_unreadable"),
+        "repair: thiếu âm + token không chữ cái ĐÚNG chỗ -> khôi phục, GIỮ vị trí")
+    _ok(ing.repair_tier_syllables("sọ «Äi ai mà chẳng lập thân buỗi nẩy?", 8,
+                                  {"verse_no": "20", "num_read": ""}, V)[1] == "drop_verse_number",
+        "repair: thừa 1 âm ở câu mod 5 mà num_read rỗng -> bỏ số câu in dính đầu dòng")
+    _ok(ing.repair_tier_syllables("sọ «Äi ai mà chẳng lập thân buỗi nẩy?", 8,
+                                  {"verse_no": "20", "num_read": "20"}, V)[1].startswith("count_unfixed"),
+        "repair: num_read ĐÃ đọc được -> KHÔNG bỏ token đầu (chỉ cờ)")
+    _ok(ing.repair_tier_syllables("Văn đà khổi P»ø đăng Dao;", 6,
+                                  {"verse_no": "13", "num_read": ""}, V)
+        == (["Văn", "đà", "khổi", ing.QN_UNREADABLE, "đăng", "Dao"], "merge_unreadable"),
+        "repair: 1 âm bị tách đôi thành 2 token rác -> gộp, GIỮ vị trí")
+    _ok(ing.repair_tier_syllables("Trai thời trung hiếu làm đầu,", 6,
+                                  {"verse_no": "5", "num_read": "5"}, V)[1] == "",
+        "repair: câu vốn đúng 6 âm -> không đụng")
+    from core.text.text_utils import is_plausible_qn_syllable
+    _ok(not is_plausible_qn_syllable(ing.QN_UNREADABLE),
+        "QN_UNREADABLE không phải âm hợp lệ -> ô ấy chỉ có thể là REVIEW")
+    _ok(ing.resplit_couplet(["a"] * 7, ["b"] * 7)[2] == "resplit_6_8"
+        and [len(x) for x in ing.resplit_couplet(["a"] * 7, ["b"] * 7)[:2]] == [6, 8],
+        "resplit_couplet: tổng 14 chia 7+7 -> cắt lại 6+8")
+    _ok(ing.resplit_couplet(["a"] * 5, ["b"] * 8)[2] == "" ,
+        "resplit_couplet: tổng ≠ 14 -> giữ nguyên (chỉ cờ)")
+    # --- 4. make_column_texts: qn_rule=False byte-identical ---
+    rows = {1: dict(verse_no=1, line_text="Trước đèn xem truyện tây 1⁄25,", n_syll=5, num_read=""),
+            2: dict(verse_no=2, line_text="Giảm cười hai chữ ab cd éo le", n_syll=8, num_read="")}
+    c0, _ = ing.make_column_texts([(1, 2)], rows, qn_rule=False)
+    c1, _ = ing.make_column_texts([(1, 2)], rows, qn_rule=True)
+    _ok(c0[0]["num_syllables"] == 13 and c0[0]["len_odd"] == 5,
+        f"make_column_texts qn_rule=False = hành vi cũ ({c0[0]['num_syllables']}, {c0[0]['len_odd']})")
+    _ok(c1[0]["num_syllables"] == 14 and c1[0]["len_odd"] == 6,
+        f"make_column_texts qn_rule=True -> 14 âm, 6+8 ({c1[0]['num_syllables']}, {c1[0]['len_odd']})")
+    # --- 5. đọc tham số kim từ config ---
+    kp = ing.book_kim_params("LucVanTien1883")
+    _ok(kp["lang_type"] == 2, f"book_kim_params đọc books[].kim_lang_type của config sách ({kp})")
+    _ok(ing.book_kim_params("LucVanTien1883", {"lang_type": 1})["lang_type"] == 1,
+        "book_kim_params: CLI ghi đè config")
+
+
 if __name__ == "__main__":
     test_pairs_and_verses()
     test_assign_boxes()
@@ -316,4 +438,5 @@ if __name__ == "__main__":
     test_verse_map_anchor()
     test_verse_map_content()
     test_verses_b1_and_dict_boost()
+    test_kim_params_and_qn_rule()
     print(f"ingest_lithograph_selftest: {N_PASS}/{N_PASS} PASS")

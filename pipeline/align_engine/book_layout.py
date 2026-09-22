@@ -29,6 +29,28 @@ Khoá tuỳ chọn trong `books:` của config/pipeline.yaml (vắng = hành vi 
                                     # -> STT không đổi. Đường dẫn tuyệt đối hoặc tương đối gốc repo;
                                     # build_dataset kiểm tệp tồn tại TRƯỚC khi align (fail fast).
                                     # Engine cache detector theo (ckpt, resize, thr); chỉ luật syl_index đọc.
+    kim_lang_type: 2                # (2026-09-23, tuỳ chọn) tham số `lang_type` gửi kênh OCR Hán-Nôm
+                                    # (kim / kinhhannom) khi ingest sách này: 0 Tự động · 1 Hán (MẶC ĐỊNH =
+                                    # bộ cũ) · 2 Nôm. Đo 5 trang/sách (docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN
+                                    # _2026-09-23.md §1): 1 -> 2 nâng "kim ∈ tập chữ của âm QN" LVT 70,0 ->
+                                    # 88,4 %, KVK 72,5 -> 92,7 %, CHR 74,9 -> 85,0 % và "kim == chữ dị bản
+                                    # độc lập" LVT 55,8 -> 72,7 %, KVK 64,4 -> 86,3 % (CI không chồng);
+                                    # cái giá: tỉ lệ cột kim đếm đúng N giảm (LVT 84 -> 74, KVK 90 -> 78,
+                                    # CHR 83 -> 51 %). CHỈ adapter ingest đọc (cache kim_raw/ tách theo
+                                    # tham số); engine/step2 không đọc. STT không khai -> gửi lang_type 1.
+    tier_dp: true                   # (2026-09-23, tuỳ chọn, CHỈ layout=lithograph) chạy DP chữ↔âm
+                                    # RIÊNG trong từng tầng (6↔6 rồi 8↔8) thay vì cả cột 14↔14
+                                    # (anchor_align.realign_column_tiered). Ranh giới câu lục/câu bát
+                                    # thành ràng buộc CỨNG: khe ở câu lục không trôi sang câu bát.
+                                    # Mặc định false = hành vi cũ (STT/prose không nhận khoá này).
+                                    # Chỉ có hiệu lực khi số chữ kim mỗi tầng và số âm mỗi tầng đều
+                                    # xác định (tier_split trong ocr_cache + luật 6/8); cột không đủ
+                                    # điều kiện tự rơi về DP cả cột.
+    kim_ocr_id: 1                   # (2026-09-23, tuỳ chọn) `ocr_id` của kênh kim: -1 Tự động · 1 Văn bản
+                                    # thông thường (mặc định) · 2 Hành chính · 3 Ngoại cảnh · 4 Y học ·
+                                    # 5 Văn bia · 6 Kinh Phật. Đã đo: 5 (+epitaph) KÉM hơn -> giữ 1.
+    kim_font_type: 1                # (2026-09-23, tuỳ chọn) `font_type`: 0 Tự động · 1 In (mặc định) ·
+                                    # 2 Viết tay. Đã đo: 2 KÉM hơn trên sách in -> giữ 1.
     detector_resize: area           # (2026-09-22, tuỳ chọn) phép thu ảnh trang cho detector: "linear"
                                     # (mặc định = cv2.resize cũ, STT không đổi) | "area" (INTER_AREA khử
                                     # răng cưa khi thu ~3×; đo v1 27 trang thạch bản: tầng n==N 77,0 →
@@ -70,6 +92,12 @@ PROSE_DET_XMARGIN = LITHO_DET_XMARGIN   # văn xuôi in đá: hộp kim cũng r�
 BOX_DECODER_LEGACY = "legacy"
 BOX_DECODER_PITCH = "pitch"
 BOX_DECODERS = (BOX_DECODER_LEGACY, BOX_DECODER_PITCH)
+KIM_LANG_TYPES = (0, 1, 2)        # 0 Tự động · 1 Hán (mặc định = bộ cũ) · 2 Nôm
+KIM_OCR_IDS = (-1, 1, 2, 3, 4, 5, 6)
+KIM_FONT_TYPES = (0, 1, 2)        # 0 Tự động · 1 In (mặc định) · 2 Viết tay
+KIM_LANG_TYPE_DEFAULT = 1
+KIM_OCR_ID_DEFAULT = 1
+KIM_FONT_TYPE_DEFAULT = 1
 DETECTOR_RESIZE_LINEAR = "linear"
 DETECTOR_RESIZE_AREA = "area"
 DETECTOR_RESIZES = (DETECTOR_RESIZE_LINEAR, DETECTOR_RESIZE_AREA)
@@ -86,6 +114,23 @@ class BookLayout:
     box_decoder: str = BOX_DECODER_LEGACY   # "legacy" | "pitch" (pitch_decode, tuỳ chọn)
     detector_ckpt: str | None = None   # None = ckpt toàn cục (v1); chuỗi = ckpt riêng sách (v2)
     detector_resize: str = DETECTOR_RESIZE_LINEAR   # "linear" (v1) | "area" (khử răng cưa)
+    tier_dp: bool = False           # True = DP riêng từng tầng 6/8 (chỉ lithograph)
+    kim_lang_type: int = KIM_LANG_TYPE_DEFAULT      # body lang_type của kênh kim (1 = Hán = bộ cũ)
+    kim_ocr_id: int = KIM_OCR_ID_DEFAULT            # body ocr_id (1 = văn bản thông thường)
+    kim_font_type: int = KIM_FONT_TYPE_DEFAULT      # body font_type (1 = in)
+
+    @property
+    def kim_params(self) -> dict:
+        """Tham số body cho core.ocr.ocr_api.recognize (chỉ adapter ingest dùng)."""
+        return {"ocr_id": self.kim_ocr_id, "lang_type": self.kim_lang_type,
+                "font_type": self.kim_font_type}
+
+    @property
+    def kim_is_default(self) -> bool:
+        """True khi bộ tham số kim == bộ cũ (1, 1, 1) -> cache kim_raw/ KHÔNG đổi tên."""
+        return (self.kim_lang_type == KIM_LANG_TYPE_DEFAULT
+                and self.kim_ocr_id == KIM_OCR_ID_DEFAULT
+                and self.kim_font_type == KIM_FONT_TYPE_DEFAULT)
 
     @property
     def is_lithograph(self) -> bool:
@@ -151,13 +196,25 @@ def book_layout(book_cfg: dict | None) -> BookLayout:
     detector_resize = book_cfg.get("detector_resize", DETECTOR_RESIZE_LINEAR)
     if detector_resize not in DETECTOR_RESIZES:
         raise ValueError(f"books[{name}].detector_resize = {detector_resize!r}; chỉ nhận {DETECTOR_RESIZES}")
+    tier_dp = book_cfg.get("tier_dp", False)
+    if not isinstance(tier_dp, bool):
+        raise ValueError(f"books[{name}].tier_dp = {tier_dp!r}; cần true/false")
+    if tier_dp and layout != LAYOUT_LITHOGRAPH:
+        raise ValueError(f"books[{name}].tier_dp = true chỉ hợp lệ với layout=lithograph (đang {layout!r})")
+    kim_lang_type = _enum_key(book_cfg, name, "kim_lang_type", KIM_LANG_TYPE_DEFAULT, KIM_LANG_TYPES)
+    kim_ocr_id = _enum_key(book_cfg, name, "kim_ocr_id", KIM_OCR_ID_DEFAULT, KIM_OCR_IDS)
+    kim_font_type = _enum_key(book_cfg, name, "kim_font_type", KIM_FONT_TYPE_DEFAULT, KIM_FONT_TYPES)
     if (layout == LAYOUT_STT and n_columns == DEFAULT_N_COLUMNS and qpc == 0
             and det_xmargin is None and det_thr is None and box_decoder == BOX_DECODER_LEGACY
-            and detector_ckpt is None and detector_resize == DETECTOR_RESIZE_LINEAR):
+            and detector_ckpt is None and detector_resize == DETECTOR_RESIZE_LINEAR
+            and kim_lang_type == KIM_LANG_TYPE_DEFAULT and kim_ocr_id == KIM_OCR_ID_DEFAULT
+            and kim_font_type == KIM_FONT_TYPE_DEFAULT and not tier_dp):
         return DEFAULT_LAYOUT
     return BookLayout(layout=layout, n_columns=n_columns, qn_per_column=qpc,
                       det_xmargin=det_xmargin, det_thr=det_thr, box_decoder=box_decoder,
-                      detector_ckpt=detector_ckpt, detector_resize=detector_resize)
+                      detector_ckpt=detector_ckpt, detector_resize=detector_resize,
+                      tier_dp=tier_dp, kim_lang_type=kim_lang_type, kim_ocr_id=kim_ocr_id,
+                      kim_font_type=kim_font_type)
 
 
 def resolve_detector_ckpt(detector_ckpt: str | None, repo_root) -> str | None:
@@ -174,6 +231,17 @@ def resolve_detector_ckpt(detector_ckpt: str | None, repo_root) -> str | None:
             return str(c.resolve())
     raise FileNotFoundError(f"books[].detector_ckpt = {detector_ckpt!r} không tồn tại (thử {[str(c) for c in cands]}); "
                             "bỏ khoá để dùng ckpt toàn cục v1, hoặc chạy lab/i5_detector_v2/apply_v2.sh <best.pt>")
+
+
+def _enum_key(book_cfg: dict, name: str, key: str, default: int, allowed: tuple) -> int:
+    """Khoá số nguyên tuỳ chọn trong tập `allowed`; vắng -> default; sai kiểu/miền -> ValueError
+    (dừng TRƯỚC khi tiêu lượt gọi API, không rơi ngầm về mặc định)."""
+    if key not in book_cfg:
+        return default
+    v = book_cfg[key]
+    if isinstance(v, bool) or not isinstance(v, int) or v not in allowed:
+        raise ValueError(f"books[{name}].{key} = {v!r}; chỉ nhận {allowed}")
+    return int(v)
 
 
 def _float_key(book_cfg: dict, name: str, key: str, default: float | None,
@@ -234,11 +302,34 @@ def prose_gate(cols: list, qn_lines: dict, lay: BookLayout) -> tuple[bool, dict]
                 "n_nom_cols": n_nom, "n_qn_cols": n_qn, "bad_syl_cols": []}
 
 
-def expected_tier_counts(data_dir, page_name: str) -> dict[int, list[int]]:
+# Luật thể thơ lục bát: tầng trên (câu lục) 6 âm, tầng dưới (câu bát) 8 âm. Dùng làm
+# RÀNG BUỘC CỨNG khi tổng số âm của cột đúng 14 — thay vì tin `len_odd` do tesseract
+# đếm (docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN_2026-09-23.md §5.2 bước 6 và §6 #4: tách tầng
+# của kim đúng 100 % khi đủ 14 chữ, còn số đếm QN mới là khâu yếu).
+LITHO_TIER_RULE = (6, 8)
+
+
+def tier_rule_for(lay) -> tuple[int, ...] | None:
+    """Luật đếm tầng theo sách: lithograph 14 âm/cột -> (6, 8); còn lại -> None
+    (prose/STT giữ nguyên hành vi cũ)."""
+    if lay is None or not getattr(lay, "is_lithograph", False):
+        return None
+    if lay.qn_per_column != sum(LITHO_TIER_RULE):
+        return None
+    return LITHO_TIER_RULE
+
+
+def expected_tier_counts(data_dir, page_name: str,
+                         tier_rule: tuple[int, ...] | None = None) -> dict[int, list[int]]:
     """(box_decoder=pitch) Số âm QN MỖI TẦNG của từng cột từ transcriptions/<page>.json:
-    thạch bản ghi `len_odd` (câu lục, tầng trên) và `num_syllables` → [len_odd, num − len_odd].
+    thạch bản ghi `len_odd` (câu lục, tầng trên) và `num_syllables` -> [len_odd, num - len_odd].
     Trả {line_id: [n_tầng_trên, n_tầng_dưới]}; thiếu tệp/khoá -> {} (decoder chia theo chữ kim /
-    chiều cao tầng). Chỉ đọc khi box_decoder=pitch; đường STT không đọc tệp này."""
+    chiều cao tầng). Chỉ đọc khi box_decoder=pitch; đường STT không đọc tệp này.
+
+    tier_rule (2026-09-23, chỉ lithograph — xem `tier_rule_for`): khi tổng số âm của cột ĐÚNG
+    sum(tier_rule) (14) thì trả LUẬT (6, 8) thay cho `len_odd` của QN, vì `len_odd` là số âm
+    tesseract đếm được cho câu lục còn luật lục bát là bất biến của bản in; hai số chỉ khác
+    nhau khi QN đếm sai. None = hành vi cũ (đường STT/prose)."""
     import json
     from pathlib import Path
     p = Path(data_dir) / "transcriptions" / f"{page_name}.json"
@@ -249,6 +340,7 @@ def expected_tier_counts(data_dir, page_name: str) -> dict[int, list[int]]:
     except Exception:
         return {}
     out: dict[int, list[int]] = {}
+    rule_n = sum(tier_rule) if tier_rule else None
     for i, c in enumerate(data.get("columns") or []):
         if not isinstance(c, dict):
             continue
@@ -257,6 +349,10 @@ def expected_tier_counts(data_dir, page_name: str) -> dict[int, list[int]]:
         lo = c.get("len_odd")
         if lo is None and isinstance(c.get("verse_odd"), dict):
             lo = c["verse_odd"].get("n_syll")
+        if (rule_n is not None and isinstance(n, int) and not isinstance(n, bool)
+                and n == rule_n and isinstance(lid, int)):
+            out[lid] = list(tier_rule)          # luật 6/8 thắng len_odd khi cột đủ 14 âm
+            continue
         if (isinstance(n, int) and isinstance(lo, int) and not isinstance(n, bool) and not isinstance(lo, bool)
                 and 0 < lo < n and isinstance(lid, int)):
             out[lid] = [lo, n - lo]

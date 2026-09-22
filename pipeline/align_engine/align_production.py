@@ -30,13 +30,14 @@ from core.align.export_dataset_v4 import resegment_col
 from core.image.char_segmenter import segment_characters_in_column
 from core.image.image_processing import load_and_binarize
 
-from pipeline.align_engine.anchor_align import realign_column, matched_pairs
+from pipeline.align_engine.anchor_align import (realign_column, realign_column_tiered,
+                                                 matched_pairs, tiers_valid)
 from pipeline.align_engine.syllable_normalize import build_readings, normalize_column
 from pipeline.align_engine.consensus import decide_label
 from pipeline.align_engine.bbox_fix import frame_offset, correct_columns
 from pipeline.align_engine.book_layout import (BookLayout, DEFAULT_LAYOUT,
                                                 lithograph_gate, prose_gate, expected_qn_counts,
-                                                expected_tier_counts)
+                                                expected_tier_counts, tier_rule_for)
 
 
 def _detect(page_name: str, data_dir: Path, qn_dict_set: set,
@@ -658,11 +659,35 @@ def assign_boxes_pitch(G, G_src, ops, n_ocr, n_qn):
     return None, None, ""
 
 
+def column_tiers(cluster: dict, tier_n) -> list | None:
+    """(tier_dp) [(số chữ kim, số âm QN)] của từng tầng trong cột, hoặc None.
+
+    Chữ kim -> tầng bằng chính `pitch_decode.group_tiers` (khe y lớn nhất trong cột,
+    cùng hàm mà bộ giải mã hộp dùng) nên rào tầng của DP và rào tầng của hộp LUÔN
+    cùng một ranh giới. tier_n = số âm QN mỗi tầng (luật 6/8, expected_tier_counts).
+    Trả None khi số tầng hai bên khác nhau hoặc có tầng rỗng -> bên gọi rơi về DP cả cột."""
+    if not tier_n or len(tier_n) < 2:
+        return None
+    chars = cluster.get("chars") or []
+    if not chars:
+        return None
+    try:
+        from pipeline.align_engine.char_detector.pitch_decode import group_tiers, DEFAULT_PARAMS
+        idx = group_tiers(chars, DEFAULT_PARAMS["tier_gap_frac"])
+    except Exception:
+        return None
+    if len(idx) != len(tier_n):
+        return None
+    tiers = [(len(g), int(n)) for g, n in zip(idx, tier_n)]
+    return tiers if tiers_valid(tiers, len(chars), sum(int(n) for n in tier_n)) else None
+
+
 def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
                     binary=None, reseg: bool = True, reseg_mode: str = "midpoint",
                     encoder=None, page_bgr=None, det=None, page_boxes=None,
                     box_rule: str = "syl_index", legacy_page_boxes=None,
-                    box_decoder: str = "legacy", page_boxes_low=None, tier_n=None
+                    box_decoder: str = "legacy", page_boxes_low=None, tier_n=None,
+                    tier_dp: bool = False
                     ) -> tuple[list[dict], int, list[dict], list | None, dict]:
     """Như `_pair_new` nhưng trả thêm (ops lượt 1, reseg_boxes, box_info) — trạng thái
     cột cho PASS 1b (flow N3g): build_dataset chạy DP lại với `cost_fn` neo ngữ liệu
@@ -675,10 +700,16 @@ def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
     n_det, count_source, box_source (theo nom_idx), box_rule} để PASS 1b gán lại hộp
     theo ops lượt 2 mà không cần detector.
     """
-    ops = realign_column(cluster["chars"], syllables, qn_to_nom, similar)
-    mp = matched_pairs(ops)
     nom_chars = cluster["chars"]
     n_ocr, n_qn = len(nom_chars), len(syllables)
+    # (2026-09-23) rào tầng: DP 6↔6 rồi 8↔8 thay 14↔14 khi books[].tier_dp và hai bên
+    # cùng số tầng (anchor_align.realign_column_tiered; cột không đủ điều kiện -> cả cột).
+    col_tiers = column_tiers(cluster, tier_n) if tier_dp else None
+    if col_tiers is not None:
+        ops = realign_column_tiered(nom_chars, syllables, qn_to_nom, similar, tiers=col_tiers)
+    else:
+        ops = realign_column(nom_chars, syllables, qn_to_nom, similar)
+    mp = matched_pairs(ops)
     use_det = (reseg_mode == "detector" and det is not None and page_boxes is not None
                and bool(cluster.get("x_range")))
     G = cb = None
@@ -726,7 +757,8 @@ def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
     box_info = {"G": G, "cb": cb, "n_ocr": n_ocr, "n_qn": n_qn, "n_det": n_det,
                 "count_source": count_source, "box_source": box_source,
                 "box_rule": box_rule if use_det else reseg_mode,
-                "G_src": (G_src if (use_det and box_rule == "pitch") else None)}
+                "G_src": (G_src if (use_det and box_rule == "pitch") else None),
+                "col_tiers": col_tiers}     # (tier_dp) [(chữ, âm)] mỗi tầng; None = DP cả cột
     out = []
     for p in mp:
         i = p["nom_idx"]
@@ -803,6 +835,8 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
     legacy_page_boxes = None
     page_boxes_low = None          # box_decoder=pitch: hộp ở ngưỡng ứng viên 0,05
     tier_n_by_line: dict = {}      # box_decoder=pitch: số âm QN mỗi tầng theo cột (transcriptions)
+    tier_rule = tier_rule_for(layout)          # (2026-09-23) lithograph 14 âm -> (6, 8), else None
+    tier_dp = bool(getattr(layout, "tier_dp", False)) if layout is not None else False
     seg_backend_suffix = ""
     box_decoder = getattr(layout, "box_decoder", "legacy") if layout is not None else "legacy"
     locked_columns = set(locked_columns or ())
@@ -824,7 +858,7 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
             detector = _get_detector(strict=True, thr=min(_pthr, thr))
             page_boxes_low = detector.boxes_for_page(page_bgr)
             page_boxes = [b for b in page_boxes_low if b[4] >= thr]
-            tier_n_by_line = expected_tier_counts(data_dir, page_name)
+            tier_n_by_line = expected_tier_counts(data_dir, page_name, tier_rule=tier_rule)
             seg_backend_suffix = "+pitch"
         else:
             detector = _get_detector(strict=True, thr=thr)   # thiếu ckpt -> ném lỗi, KHÔNG rơi ngầm
@@ -875,7 +909,8 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                 det=detector, page_boxes=page_boxes,
                 box_rule=col_rule, legacy_page_boxes=legacy_page_boxes,
                 box_decoder=box_decoder, page_boxes_low=page_boxes_low,
-                tier_n=tier_n_by_line.get(line_id))
+                tier_n=tier_n_by_line.get(line_id),
+                tier_dp=tier_dp)
             n_gap_total += n_gap
             # syllable_raw = âm SAU normalize_column (đầu vào DP); syllable_ocr = âm
             # VietOCR nguyên văn. Chỉ PHÁT THÊM vào pair, không đổi hành vi ghép.

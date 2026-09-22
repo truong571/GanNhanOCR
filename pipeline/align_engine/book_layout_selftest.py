@@ -459,9 +459,92 @@ def test_detector_ckpt():
             check(f"_get_detector ckpt/resize chạy được ({type(e).__name__}: {e})", False)
 
 
+def test_kim_and_tier_dp():
+    """Vòng 5 (2026-09-23): khoá kim_* / tier_dp + luật tầng 6/8 + rào tầng cho DP."""
+    print("[9] kim_* / tier_dp / luật 6/8")
+    from pipeline.align_engine import anchor_align as aa
+    d = BL.DEFAULT_LAYOUT
+    check("mặc định kim = bộ cũ (1, 1, 1) và kim_is_default",
+          d.kim_params == {"ocr_id": 1, "lang_type": 1, "font_type": 1} and d.kim_is_default
+          and d.tier_dp is False)
+    check("khai kim_lang_type=1 / tier_dp=false tường minh vẫn == DEFAULT_LAYOUT (STT không đổi byte)",
+          BL.book_layout({"name": "s", "kim_lang_type": 1, "kim_ocr_id": 1, "kim_font_type": 1})
+          is BL.DEFAULT_LAYOUT)
+    lv = BL.book_layout({"name": "LucVanTien1883", "layout": "lithograph", "n_columns": 10,
+                         "kim_lang_type": 2, "tier_dp": True})
+    check("kim_lang_type=2 -> kim_params lang_type 2, không còn là bộ mặc định",
+          lv.kim_params == {"ocr_id": 1, "lang_type": 2, "font_type": 1} and not lv.kim_is_default
+          and lv.tier_dp is True)
+    bad = 0
+    for cfg in ({"name": "x", "kim_lang_type": 3}, {"name": "x", "kim_lang_type": "2"},
+                {"name": "x", "kim_lang_type": True}, {"name": "x", "kim_font_type": 9},
+                {"name": "x", "kim_ocr_id": 7}, {"name": "x", "tier_dp": "yes"},
+                {"name": "x", "tier_dp": True}):
+        try:
+            BL.book_layout(cfg)
+        except ValueError:
+            bad += 1
+    check("giá trị kim_*/tier_dp sai kiểu-miền hoặc tier_dp ngoài lithograph -> ValueError (7/7)", bad == 7,
+          f"bad={bad}")
+    check("tier_rule_for: lithograph 14 âm -> (6, 8); STT/prose -> None",
+          BL.tier_rule_for(lv) == (6, 8) and BL.tier_rule_for(BL.DEFAULT_LAYOUT) is None
+          and BL.tier_rule_for(BL.book_layout({"name": "p", "layout": "prose"})) is None
+          and BL.tier_rule_for(None) is None)
+    with tempfile.TemporaryDirectory() as td:
+        tdp = Path(td)
+        (tdp / "transcriptions").mkdir()
+        (tdp / "transcriptions" / "page_0001.json").write_text(json.dumps({"columns": [
+            {"column": 1, "num_syllables": 14, "len_odd": 7},
+            {"column": 2, "num_syllables": 13, "len_odd": 5},
+            {"column": 3, "num_syllables": 14, "len_odd": 6}]}), encoding="utf-8")
+        old = BL.expected_tier_counts(tdp, "page_0001")
+        new = BL.expected_tier_counts(tdp, "page_0001", tier_rule=(6, 8))
+        check("expected_tier_counts không luật = hành vi cũ (len_odd của QN)",
+              old == {1: [7, 7], 2: [5, 8], 3: [6, 8]}, f"{old}")
+        check("expected_tier_counts + luật 6/8: cột đủ 14 âm -> [6, 8]; cột 13 âm giữ len_odd",
+              new == {1: [6, 8], 2: [5, 8], 3: [6, 8]}, f"{new}")
+    # --- rào tầng cho DP ---
+    chars = [{"char": c} for c in "一二三四五六七八九十甲乙丙丁"]
+    syl = ["a"] * 6 + ["b"] * 8
+    check("tiers_valid: phủ đúng cột + tầng nào cũng khác rỗng",
+          aa.tiers_valid([(6, 6), (8, 8)], 14, 14) and not aa.tiers_valid([(6, 6), (7, 8)], 14, 14)
+          and not aa.tiers_valid([(14, 14)], 14, 14) and not aa.tiers_valid(None, 14, 14)
+          and not aa.tiers_valid([(0, 6), (14, 8)], 14, 14))
+    ops_t = aa.realign_column_tiered(chars, syl, {}, None, tiers=[(6, 6), (8, 8)])
+    check("realign_column_tiered: chỉ số đã dịch về cột (14 match, đơn điệu, không xuyên tầng)",
+          len([o for o in ops_t if o["op"] == "match"]) == 14
+          and all(o["nom_idx"] == o["syl_idx"] for o in ops_t if o["op"] == "match")
+          and all((o["nom_idx"] < 6) == (o["syl_idx"] < 6) for o in ops_t if o["op"] == "match"))
+    check("tiers không hợp lệ -> rơi về realign_column cả cột (kết quả y hệt)",
+          aa.realign_column_tiered(chars, syl, {}, None, tiers=[(6, 6), (7, 8)])
+          == aa.realign_column(chars, syl, {}, None))
+    # cột thiếu 1 chữ ở tầng TRÊN: DP cả cột có thể đẩy khe xuống tầng dưới; rào tầng thì không
+    chars2 = [{"char": c} for c in "一二三四五"] + [{"char": c} for c in "六七八九十甲乙丙"]
+    ops_free = aa.realign_column(chars2, syl, {}, None)
+    ops_tier = aa.realign_column_tiered(chars2, syl, {}, None, tiers=[(5, 6), (8, 8)])
+    cross = [o for o in ops_tier if o["op"] == "match" and (o["nom_idx"] < 5) != (o["syl_idx"] < 6)]
+    check("rào tầng: 0 cặp ghép XUYÊN TẦNG khi tầng trên thiếu 1 chữ",
+          not cross and len([o for o in ops_tier if o["op"] == "ins"]) == 1,
+          f"cross={cross}")
+    check("posterior_matches_tiered: khoá nằm trong đúng tầng, Σ p mỗi hàng ≤ 1 + eps",
+          all((i < 5) == (j < 6) for (i, j) in aa.posterior_matches_tiered(
+              chars2, syl, {}, None, tiers=[(5, 6), (8, 8)])))
+    check("DP cả cột và DP theo tầng CÙNG kết quả khi không có khe (kiểm tương thích ngược)",
+          aa.realign_column_tiered(chars, syl, {}, None, tiers=[(6, 6), (8, 8)])
+          == aa.realign_column(chars, syl, {}, None))
+    src = (REPO / "pipeline" / "align_engine" / "align_production.py").read_text(encoding="utf-8")
+    check("align_production: column_tiers dùng group_tiers của pitch_decode (cùng ranh giới với hộp)",
+          "from pipeline.align_engine.char_detector.pitch_decode import group_tiers" in src
+          and "tier_dp=tier_dp" in src and "tier_rule=tier_rule" in src)
+    src_bd = (REPO / "pipeline" / "align_engine" / "build_dataset.py").read_text(encoding="utf-8")
+    check("build_dataset PASS 1b: realign + posterior CÙNG tiers (col_states['col_tiers'])",
+          "realign_column_tiered" in src_bd and "posterior_matches_tiered" in src_bd
+          and 'cs.get("col_tiers")' in src_bd)
+
+
 def main():
     for t in (test_book_layout, test_det_params, test_gate, test_get_qn_lines, test_detect,
-              test_signatures, test_prose, test_detector_ckpt):
+              test_signatures, test_prose, test_detector_ckpt, test_kim_and_tier_dp):
         try:
             t()
         except Exception as e:      # noqa: BLE001

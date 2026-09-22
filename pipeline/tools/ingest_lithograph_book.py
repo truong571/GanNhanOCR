@@ -286,17 +286,92 @@ def lithograph_syllables(text: str) -> list[str]:
     return [t for t in split_to_syllables(clean_line_text(text)) if any(ch.isalpha() for ch in t)]
 
 
-def make_column_texts(vpairs: list[tuple[int, int]], verses: dict[int, dict]) -> tuple[list[dict], list[str]]:
+# --- Sửa SỐ ĐẾM âm QN theo luật lục bát 6/8 TRƯỚC khi engine căn chỉnh (2026-09-23) -------
+# docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN_2026-09-23.md §5.2 bước 4 / §6 #2: số đếm QN (tesseract)
+# là khâu yếu (87 % ca M≠N ở LVT, 63 % ở KVK là lỗi QN), còn luật 6/8 là bất biến của bản in.
+# BA luật, tất cả GIỮ NGUYÊN VỊ TRÍ các âm đọc được (không luật nào dịch chuyển âm đúng):
+#   restore_unreadable : thiếu âm, nhưng token BỊ LOẠI vì không có chữ cái (mực mờ, tesseract ra
+#                        '1⁄25', '#7') lấp đúng chỗ trống -> giữ lại làm âm KHÔNG ĐỌC ĐƯỢC.
+#   drop_verse_number  : thừa 1 âm ở câu có SỐ CÂU IN (verse_no chia hết 5) mà bộ đọc số lề KHÔNG
+#                        tách được (num_read rỗng) -> số câu còn dính đầu dòng ('sọ', '14ø') -> bỏ.
+#   merge_unreadable   : thừa 1 âm do MỘT âm bị tách đôi thành 2 token đều không phải âm QN
+#                        ('P' + 'ø') -> gộp lại thành một âm không đọc được.
+# Không luật nào áp được -> giữ nguyên + cờ `qn_count_unfixed` (DP tự do như cũ).
+# Âm không đọc được ghi bằng QN_UNREADABLE (8 ký tự, không phải âm hợp lệ) nên ô ấy chỉ có thể
+# là REVIEW — KHÔNG tạo nhãn mới, chỉ trả lại ĐÚNG SỐ ĐẾM và đúng vị trí cho các âm còn lại.
+QN_UNREADABLE = "khongdoc"
+
+
+def _qn_valid_syllables() -> set:
+    """Tập âm QN hợp lệ (khoá của R(âm) — đã chuẩn hoá dấu, thường) để nhận token rác."""
+    return set(_qn_dicts()[0])
+
+
+def repair_tier_syllables(text: str, expect: int, row: dict | None = None,
+                          valid: set | None = None) -> tuple[list[str], str]:
+    """Âm tiết của MỘT câu (tầng) + tên luật đã dùng, theo luật 6/8 (xem chú thích trên).
+
+    expect = 6 (câu lục) | 8 (câu bát). row = dòng verses.tsv (cần `verse_no`, `num_read`).
+    Trả (âm tiết, "" nếu vốn đã đúng | tên luật | "count_unfixed:<n>!=<expect>")."""
+    from core.text.text_utils import clean_line_text, split_to_syllables, normalize_tone_marks
+    raw = split_to_syllables(clean_line_text(text))
+    has_alpha = [any(ch.isalpha() for ch in t) for t in raw]
+    alpha = [t for t, a in zip(raw, has_alpha) if a]
+    if not expect or len(alpha) == expect:
+        return alpha, ""
+    if len(alpha) < expect and len(raw) == expect:
+        return [t if a else QN_UNREADABLE for t, a in zip(raw, has_alpha)], "restore_unreadable"
+    if len(alpha) == expect + 1:
+        r = row or {}
+        try:
+            vn = int(r.get("verse_no") or 0)
+        except (TypeError, ValueError):
+            vn = 0
+        if vn and vn % 5 == 0 and not str(r.get("num_read") or "").strip():
+            return alpha[1:], "drop_verse_number"
+        V = valid if valid is not None else _qn_valid_syllables()
+        bad = [i for i, t in enumerate(alpha) if normalize_tone_marks(t.lower()) not in V]
+        adj = [i for i in bad if (i + 1) in bad]
+        if len(adj) == 1:
+            i = adj[0]
+            return alpha[:i] + [QN_UNREADABLE] + alpha[i + 2:], "merge_unreadable"
+    return alpha, f"count_unfixed:{len(alpha)}!={expect}"
+
+
+def resplit_couplet(syl_odd: list[str], syl_even: list[str],
+                    expect: tuple[int, int] = None) -> tuple[list[str], list[str], str]:
+    """Cột đủ 14 âm nhưng chia tầng ≠ 6/8 -> CẮT LẠI theo luật (nối rồi cắt ở 6).
+    Trả (câu lục, câu bát, cờ). Tổng ≠ 14 -> giữ nguyên."""
+    exp = expect or EXPECT_TIER
+    if (len(syl_odd), len(syl_even)) == tuple(exp):
+        return syl_odd, syl_even, ""
+    if len(syl_odd) + len(syl_even) != sum(exp):
+        return syl_odd, syl_even, ""
+    allsyl = list(syl_odd) + list(syl_even)
+    return allsyl[:exp[0]], allsyl[exp[0]:], "resplit_6_8"
+
+
+def make_column_texts(vpairs: list[tuple[int, int]], verses: dict[int, dict],
+                      qn_rule: bool = False, fix_stats: dict | None = None) -> tuple[list[dict], list[str]]:
     """Mỗi cột = câu lẻ ⧺ câu chẵn → dict như step1 (column, raw_text, cleaned_text, syllables, num_syllables)
-    + verse_odd/verse_even; cờ khi số âm tiết ≠ 6/8."""
+    + verse_odd/verse_even; cờ khi số âm tiết ≠ 6/8.
+
+    qn_rule (2026-09-23, --qn-count-rule): sửa số đếm âm theo luật 6/8 trước khi ghi
+    (repair_tier_syllables + resplit_couplet); False = hành vi cũ byte-identical.
+    fix_stats: đếm luật đã dùng (ghi vào manifest.gates.qn_count_fix)."""
     from core.text.text_utils import clean_line_text
+    valid = _qn_valid_syllables() if qn_rule else None
     cols, flags = [], []
     for k, (vo, ve) in enumerate(vpairs, start=1):
         parts = []
         for v, exp in ((vo, EXPECT_TIER[0]), (ve, EXPECT_TIER[1])):
             row = verses[v]
-            syl = lithograph_syllables(row["line_text"])
+            if qn_rule:
+                syl, qfix = repair_tier_syllables(row["line_text"], exp, row, valid=valid)
+            else:
+                syl, qfix = lithograph_syllables(row["line_text"]), ""
             info = dict(verse_no=v, text=row["line_text"], n_syll=len(syl), expect=exp,
+                        qn_fix=qfix,
                         n_syll_tsv=int(row.get("n_syll") or 0), page_qn=row.get("page", ""),
                         anchor_source=row.get("anchor_source", ""), page_flag=row.get("page_flag", ""),
                         line_flag=row.get("line_flag", ""),
@@ -306,12 +381,25 @@ def make_column_texts(vpairs: list[tuple[int, int]], verses: dict[int, dict]) ->
                         ref_sim=row.get("ref_sim") or "", line_text_ocr=row.get("line_text_ocr", ""))
             if len(syl) != exp:
                 flags.append(f"col{k}:verse{v}:n_syll={len(syl)}!={exp}")
-            parts.append((row["line_text"], syl, info))
+            parts.append([row["line_text"], syl, info])
         raw = " ".join(p[0] for p in parts)
-        syllables = parts[0][1] + parts[1][1]
+        s_odd, s_even = parts[0][1], parts[1][1]
+        if qn_rule:
+            s_odd, s_even, rflag = resplit_couplet(s_odd, s_even)
+            if rflag:
+                flags.append(f"col{k}:{rflag}")
+                parts[0][2]["qn_fix"] = (parts[0][2]["qn_fix"] + "+" + rflag).lstrip("+")
+                parts[1][2]["qn_fix"] = (parts[1][2]["qn_fix"] + "+" + rflag).lstrip("+")
+                parts[0][2]["n_syll"], parts[1][2]["n_syll"] = len(s_odd), len(s_even)
+            if fix_stats is not None:
+                for info in (parts[0][2], parts[1][2]):
+                    for f in (info["qn_fix"] or "").split("+"):
+                        if f:
+                            fix_stats[f.split(":")[0]] = fix_stats.get(f.split(":")[0], 0) + 1
+        syllables = s_odd + s_even
         cols.append(dict(column=k, raw_text=raw, cleaned_text=clean_line_text(raw), syllables=syllables,
                          num_syllables=len(syllables), verse_odd=parts[0][2], verse_even=parts[1][2],
-                         len_odd=len(parts[0][1])))
+                         len_odd=len(s_odd)))
     return cols, flags
 
 
@@ -529,12 +617,43 @@ def prepare_image(src: Path, dst: Path, contrast: str):
 # ---------------------------------------------------------------------------
 # 4. Kim
 # ---------------------------------------------------------------------------
-def kim_boxes(png: Path, raw_path: Path, image_hash: str, force: bool) -> list[dict] | None:
-    """upload_image + recognize của core.ocr.ocr_api (không tự viết client); cache hộp thô ở kim_raw/."""
+KIM_DEFAULT_PARAMS = {"ocr_id": 1, "lang_type": 1, "font_type": 1}   # bộ cũ (lang_type 1 = Hán)
+
+
+def kim_params_of(kim: dict | None) -> dict:
+    """Chuẩn hoá bộ tham số gọi kim; None/thiếu khoá -> bộ cũ (1, 1, 1)."""
+    out = dict(KIM_DEFAULT_PARAMS)
+    out.update({k: int(v) for k, v in (kim or {}).items() if k in KIM_DEFAULT_PARAMS and v is not None})
+    return out
+
+
+def kim_cache_suffix(kim: dict | None) -> str:
+    """Hậu tố tên tệp cache kim theo THAM SỐ GỌI: bộ cũ (1,1,1) -> "" (dùng lại kim_raw/ đã có),
+    khác -> '_lt2' / '_o5' / '_f2'… Nhờ vậy cache của lang_type 1 và 2 KHÔNG bao giờ lẫn nhau."""
+    k = kim_params_of(kim)
+    parts = []
+    if k["ocr_id"] != KIM_DEFAULT_PARAMS["ocr_id"]:
+        parts.append(f"o{k['ocr_id']}")
+    if k["lang_type"] != KIM_DEFAULT_PARAMS["lang_type"]:
+        parts.append(f"lt{k['lang_type']}")
+    if k["font_type"] != KIM_DEFAULT_PARAMS["font_type"]:
+        parts.append(f"f{k['font_type']}")
+    return ("_" + "".join(parts)) if parts else ""
+
+
+def kim_boxes(png: Path, raw_path: Path, image_hash: str, force: bool,
+              kim: dict | None = None) -> list[dict] | None:
+    """upload_image + recognize của core.ocr.ocr_api (không tự viết client); cache hộp thô ở kim_raw/.
+
+    kim = {'ocr_id', 'lang_type', 'font_type'} truyền thẳng vào ocr_api.recognize; None = bộ cũ
+    (1, 1, 1) -> body BYTE-IDENTICAL với trước 2026-09-23. Cache hợp lệ khi TRÙNG CẢ image_hash
+    LẪN tham số gọi: tệp cũ không ghi `kim_params` được coi là bộ cũ (tương thích ngược)."""
+    k = kim_params_of(kim)
     if raw_path.exists() and not force:
         try:
             d = json.loads(raw_path.read_text(encoding="utf-8"))
-            if d.get("image_hash") == image_hash and isinstance(d.get("boxes"), list):
+            if (d.get("image_hash") == image_hash and isinstance(d.get("boxes"), list)
+                    and kim_params_of(d.get("kim_params")) == k):
                 return d["boxes"]
         except Exception:
             pass
@@ -542,13 +661,32 @@ def kim_boxes(png: Path, raw_path: Path, image_hash: str, force: bool) -> list[d
     fname = ocr_api.upload_image(str(png))
     if not fname:
         return None
-    boxes = ocr_api.recognize(fname)
+    boxes = ocr_api.recognize(fname, **k)
     if boxes is None:
         return None
     raw_path.parent.mkdir(parents=True, exist_ok=True)
-    raw_path.write_text(json.dumps(dict(image=str(png), image_hash=image_hash, boxes=boxes),
+    raw_path.write_text(json.dumps(dict(image=str(png), image_hash=image_hash, kim_params=k, boxes=boxes),
                                    ensure_ascii=False, indent=1), encoding="utf-8")
     return boxes
+
+
+def book_kim_params(book: str, cli: dict | None = None, config: Path | None = None) -> dict:
+    """Bộ tham số kim của một sách: books[<book>].kim_lang_type/kim_ocr_id/kim_font_type trong
+    config/pipeline_<book>.yaml (nếu có), rồi CLI ghi đè. Thiếu config -> bộ cũ (1, 1, 1)."""
+    out = dict(KIM_DEFAULT_PARAMS)
+    cfg = config or (REPO / "config" / f"pipeline_{book}.yaml")
+    try:
+        import yaml
+        from pipeline.align_engine.book_layout import book_layout
+        data = yaml.safe_load(Path(cfg).read_text(encoding="utf-8")) or {}
+        b = next((x for x in (data.get("books") or [])
+                  if str(x.get("name", "")).lower() == book.lower()), None)
+        if b:
+            out.update(book_layout(b).kim_params)
+    except Exception as e:      # noqa: BLE001
+        print(f"[ingest] không đọc được {cfg} ({e}) -> kim mặc định {out}", file=sys.stderr)
+    out.update({k: int(v) for k, v in (cli or {}).items() if v is not None})
+    return kim_params_of(out)
 
 
 # ---------------------------------------------------------------------------
@@ -564,16 +702,22 @@ def _rel(p: Path) -> str:
 def ingest(book: str, pages: list[int] | None, limit: int | None, ocr: str, force: bool, out_root: Path,
            measure_dir: Path, contrast: str, skip_uncovered: bool, verbose: bool = True,
            verse_map: str = "formula", plan_only: bool = False, verses_tsv: Path | None = None,
-           dict_boost: bool = False) -> dict:
+           dict_boost: bool = False, kim: dict | None = None, qn_rule: bool = False) -> dict:
     """Chạy adapter cho các trang chọn; trả manifest (đã ghi ra out_root/<book>/manifest.json).
 
     verse_map: "formula" (mặc định, hành vi cũ: câu = first_seq + 2k theo verse_no) | "anchor" (đoạn neo, xem
     anchor_rows_for_page). plan_only: chỉ ghi verse_map_plan.json so sánh 2 cách, không ghi ảnh/cache.
     verses_tsv: tệp verses thay mặc định measure_out/<book>/qn_ocr/verses.tsv (B1': verses_b1.tsv).
-    dict_boost: xem apply_dict_boost (cần verses có cột ref_nom/qn_source; chỉ với --ocr kim)."""
+    dict_boost: xem apply_dict_boost (cần verses có cột ref_nom/qn_source; chỉ với --ocr kim).
+    kim: tham số gọi kênh kim {ocr_id, lang_type, font_type} (books[].kim_* / --kim-lang-type);
+         None = bộ cũ (1, 1, 1). Cache kim_raw/ tách theo tham số (kim_cache_suffix).
+    qn_rule: sửa số đếm âm QN theo luật lục bát 6/8 trước khi ghi (--qn-count-rule)."""
     from core.ocr.ocr_api import _file_md5, _pixel_hash, verify_cache_image
 
     cfg = BOOKS[book]
+    kim = kim_params_of(kim)
+    kim_sfx = kim_cache_suffix(kim)
+    qn_fix_stats: dict = {}
     layout = load_layout(book, measure_dir)
     verses_tsv = verses_tsv or (measure_dir / book / "qn_ocr" / "verses.tsv")
     verses, dups = load_verses(verses_tsv)
@@ -684,9 +828,9 @@ def ingest(book: str, pages: list[int] | None, limit: int | None, ocr: str, forc
         box_source = "projection"
         boxes_raw: list[dict] = []
         if ocr == "kim":
-            raw_path = dirs["kim_raw"] / f"{name}.json"
+            raw_path = dirs["kim_raw"] / f"{name}{kim_sfx}.json"
             had = raw_path.exists() and not force
-            boxes = kim_boxes(png, raw_path, img_hash, force)
+            boxes = kim_boxes(png, raw_path, img_hash, force, kim=kim)
             if not had:
                 g["ocr_calls"] += 1
             if boxes is None:
@@ -744,7 +888,8 @@ def ingest(book: str, pages: list[int] | None, limit: int | None, ocr: str, forc
                 boost_tot[kk] += vv
             if bstat["boosted"]:
                 flags.append(f"dict_boost:{bstat['boosted']}")
-        cols_txt, tflags = make_column_texts(vpairs, verses_page)
+        cols_txt, tflags = make_column_texts(vpairs, verses_page, qn_rule=qn_rule,
+                                             fix_stats=qn_fix_stats)
         flags += tflags
         for c in cols_txt:
             for v in (c["verse_odd"], c["verse_even"]):
@@ -809,8 +954,10 @@ def ingest(book: str, pages: list[int] | None, limit: int | None, ocr: str, forc
         g["dict_boost"] = boost_tot
     g["n_pages_verse_map_differs"] = sum(1 for r in results if r["verse_map"]["differs_from_formula"])
     g["pages_verse_map_differs"] = [r["book_page"] for r in results if r["verse_map"]["differs_from_formula"]]
+    g["qn_count_fix"] = qn_fix_stats or None
     manifest = dict(book=book, pdf=cfg["pdf"], source="images", layout="lithograph", n_columns=N_COLUMNS,
                     tiers=2, qn_per_column="couplet", contrast=contrast, ocr=ocr, verse_map=verse_map,
+                    kim_params=kim, kim_cache_suffix=kim_sfx, qn_count_rule=qn_rule,
                     measure_dir=_rel(measure_dir), verses_tsv=_rel(verses_tsv), dict_boost=dict_boost,
                     pages=results, total_pages=len(results),
                     total_syllables=sum(r["total_syllables"] for r in results),
@@ -853,15 +1000,35 @@ def main(argv=None) -> int:
     ap.add_argument("--verses", default=None,
                     help="tệp verses.tsv thay mặc định measure_out/<book>/qn_ocr/verses.tsv (B1': verses_b1.tsv của "
                          "scripts/measure/verses_ref_fix.py)")
+    ap.add_argument("--kim-lang-type", type=int, default=None, choices=[0, 1, 2],
+                    help="lang_type gửi kênh kim: 0 Tự động · 1 Hán · 2 Nôm. Vắng -> đọc "
+                         "books[].kim_lang_type của config/pipeline_<book>.yaml (vắng nữa -> 1 = bộ cũ). "
+                         "Cache kim_raw/ tách theo tham số (page_XXXX_lt2.json)")
+    ap.add_argument("--kim-ocr-id", type=int, default=None, choices=[-1, 1, 2, 3, 4, 5, 6],
+                    help="ocr_id gửi kênh kim (vắng -> config -> 1)")
+    ap.add_argument("--kim-font-type", type=int, default=None, choices=[0, 1, 2],
+                    help="font_type gửi kênh kim (vắng -> config -> 1 = in)")
+    ap.add_argument("--kim-config", default=None,
+                    help="config đọc books[].kim_* (mặc định config/pipeline_<book>.yaml)")
+    ap.add_argument("--qn-count-rule", action="store_true",
+                    help="sửa SỐ ĐẾM âm QN theo luật lục bát 6/8 trước khi ghi "
+                         "(repair_tier_syllables: restore_unreadable / drop_verse_number / "
+                         "merge_unreadable + resplit_6_8). Vắng = hành vi cũ")
     ap.add_argument("--dict-boost", action="store_true",
                     help="chữ Nôm dị bản (cột ref_nom) phân xử dị thể đồng âm gần hình với chữ kim (xem apply_dict_boost)")
     a = ap.parse_args(argv)
     os.chdir(REPO)
     if a.dict_boost and a.ocr != "kim":
         raise SystemExit("[ingest] --dict-boost cần --ocr kim")
+    kim = book_kim_params(a.book, dict(ocr_id=a.kim_ocr_id, lang_type=a.kim_lang_type,
+                                       font_type=a.kim_font_type),
+                          Path(a.kim_config) if a.kim_config else None)
+    if a.ocr == "kim":
+        print(f"[ingest] kim: {kim} · cache kim_raw/*{kim_cache_suffix(kim)}.json", file=sys.stderr)
     m = ingest(a.book, _parse_pages(a.pages), a.limit, a.ocr, a.force, Path(a.out), Path(a.measure_dir),
                a.contrast, a.skip_uncovered, verse_map=a.verse_map, plan_only=a.plan_only,
-               verses_tsv=Path(a.verses) if a.verses else None, dict_boost=a.dict_boost)
+               verses_tsv=Path(a.verses) if a.verses else None, dict_boost=a.dict_boost,
+               kim=kim, qn_rule=a.qn_count_rule)
     gates = {k: v for k, v in m["gates"].items() if k not in ("pages_flagged", "cols_per_page")}
     print(json.dumps(dict(out=str(Path(a.out) / a.book), gates=gates,
                           pages_flagged=list(m["gates"]["pages_flagged"])), ensure_ascii=False))

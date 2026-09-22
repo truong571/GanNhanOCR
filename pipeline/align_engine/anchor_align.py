@@ -194,6 +194,87 @@ def realign_column(nom_chars: list, syllables: list[str],
     return ops
 
 
+# ---------------------------------------------------------------------------
+# Rào tầng (2026-09-23) — DP RIÊNG trong từng tầng của cột lục bát
+# ---------------------------------------------------------------------------
+# Cột thạch bản = 1 cặp lục bát: tầng trên 6 chữ ⧺ tầng dưới 8 chữ. Chạy NW một lần
+# trên cả 14↔14 cho phép một khe ở câu lục "trôi" sang câu bát (đo được: ghép xuyên
+# tầng 18/1.044 cột LVT, 17/1.628 cột KVK — docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN
+# _2026-09-23.md §6 #3). Chạy 6↔6 rồi 8↔8 biến ranh giới tầng thành ràng buộc CỨNG.
+# Chi phí/băng/cost_fn giữ nguyên; chỉ phạm vi đổi -> cột có tầng khớp số lượng ra
+# ĐÚNG kết quả cũ trừ các đường đi xuyên tầng.
+
+
+def tier_spans(tiers):
+    """[(m_i, n_i)] -> [(i0, i1, j0, j1)] các lát cắt (chữ Nôm, âm QN) của từng tầng."""
+    out, i0, j0 = [], 0, 0
+    for m, n in tiers:
+        out.append((i0, i0 + int(m), j0, j0 + int(n)))
+        i0 += int(m); j0 += int(n)
+    return out
+
+
+def tiers_valid(tiers, m: int, n: int) -> bool:
+    """Rào tầng chỉ dùng được khi các tầng phủ ĐÚNG cột và tầng nào cũng có cả chữ lẫn âm."""
+    if not tiers or len(tiers) < 2:
+        return False
+    if any(int(a) <= 0 or int(b) <= 0 for a, b in tiers):
+        return False
+    return sum(int(a) for a, _ in tiers) == m and sum(int(b) for _, b in tiers) == n
+
+
+def _shift_cost_ij(cost_ij, di: int, dj: int):
+    if cost_ij is None:
+        return None
+    return lambda i, j, c, s: cost_ij(i + di, j + dj, c, s)
+
+
+def realign_column_tiered(nom_chars: list, syllables: list[str],
+                          qn_to_nom: dict[str, list[str]],
+                          similar_dict: dict[str, list[str]] | None = None,
+                          tiers=None, **kw) -> list[dict]:
+    """realign_column chạy RIÊNG trong từng tầng rồi nối ops (chỉ số đã dịch về cột).
+    tiers = [(m_tầng, n_tầng), ...]; không hợp lệ -> rơi về realign_column cả cột."""
+    m, n = len(nom_chars), len(syllables)
+    if not tiers_valid(tiers, m, n):
+        return realign_column(nom_chars, syllables, qn_to_nom, similar_dict, **kw)
+    ops: list[dict] = []
+    for i0, i1, j0, j1 in tier_spans(tiers):
+        kw_t = dict(kw)
+        if kw_t.get("cost_ij") is not None:
+            kw_t["cost_ij"] = _shift_cost_ij(kw_t["cost_ij"], i0, j0)
+        for o in realign_column(nom_chars[i0:i1], syllables[j0:j1], qn_to_nom,
+                                similar_dict, **kw_t):
+            o = dict(o)
+            if "nom_idx" in o:
+                o["nom_idx"] += i0
+            if "syl_idx" in o:
+                o["syl_idx"] += j0
+            ops.append(o)
+    return ops
+
+
+def posterior_matches_tiered(nom_chars: list, syllables: list[str],
+                             qn_to_nom: dict[str, list[str]],
+                             similar_dict: dict[str, list[str]] | None = None,
+                             tiers=None, **kw) -> dict:
+    """posterior_matches theo tầng (PHẢI cùng `tiers` với realign_column_tiered để
+    argmax theo hàng vẫn trùng cặp Viterbi)."""
+    m, n = len(nom_chars), len(syllables)
+    if not tiers_valid(tiers, m, n):
+        return posterior_matches(nom_chars, syllables, qn_to_nom, similar_dict, **kw)
+    out: dict[tuple[int, int], float] = {}
+    for i0, i1, j0, j1 in tier_spans(tiers):
+        kw_t = dict(kw)
+        if kw_t.get("cost_ij") is not None:
+            kw_t["cost_ij"] = _shift_cost_ij(kw_t["cost_ij"], i0, j0)
+        sub = posterior_matches(nom_chars[i0:i1], syllables[j0:j1], qn_to_nom,
+                                similar_dict, **kw_t)
+        for (i, j), v in sub.items():
+            out[(i + i0, j + j0)] = v
+    return out
+
+
 def matched_pairs(ops: list[dict]) -> list[dict]:
     """Extract only the 'match' ops (the emitted Nôm-crop ↔ syllable labels)."""
     return [o for o in ops if o["op"] == "match"]

@@ -151,7 +151,7 @@ def anchored_cost_fn(pair_pages, here, qn_to_nom, similar, anchor_cap=None,
 
 
 def realign_with_anchors(chars, syllables, qn_to_nom, similar, pair_pages, here,
-                         anchor_cap=None, vis=None):
+                         anchor_cap=None, vis=None, tiers=None):
     """DP lượt 2 + posterior cùng cost_fn (N4b, N4c). Trả (ops2, post, band_touched,
     n_anchored) với n_anchored = số cặp match lượt 2 mà neo THẬT SỰ hạ chi phí
     (cost_fn < substitution_cost, tức cặp ngoài từ điển được ngữ liệu neo — "ô được
@@ -166,8 +166,13 @@ def realign_with_anchors(chars, syllables, qn_to_nom, similar, pair_pages, here,
         emitter, logP = vis
         c_del, c_ins = emitter.gap_costs()
         kw = {"cost_ij": emitter.make_cost_ij(cost_fn, logP), "cost_del": c_del, "cost_ins": c_ins}
-    ops2 = aa.realign_column(chars, syllables, qn_to_nom, similar, cost_fn=cost_fn, **kw)
-    post = aa.posterior_matches(chars, syllables, qn_to_nom, similar, T=1.0, cost_fn=cost_fn, **kw)
+    # (2026-09-23) rào tầng: `tiers` = [(chữ, âm)] mỗi tầng của cột (col_states['col_tiers'],
+    # do align_production.column_tiers tính khi books[].tier_dp). None/không hợp lệ -> DP cả cột
+    # như cũ. DP và posterior PHẢI cùng `tiers` (argmax hàng == cặp Viterbi).
+    ops2 = aa.realign_column_tiered(chars, syllables, qn_to_nom, similar, tiers=tiers,
+                                    cost_fn=cost_fn, **kw)
+    post = aa.posterior_matches_tiered(chars, syllables, qn_to_nom, similar, tiers=tiers,
+                                       T=1.0, cost_fn=cost_fn, **kw)
     touched = aa.band_touched(ops2, len(chars), len(syllables))
     n_anch = 0
     for o in ops2:
@@ -1274,11 +1279,13 @@ def main():
                     vis = (vis_em, logP)
                     n_cols_vis += 1
                 # N4b + N4c: DP lại với cost_fn neo + posterior CÙNG cost_fn (+ ảnh nếu B-2)
+                _tiers = cs.get("col_tiers")
                 ops2, post, touched, n_anch = realign_with_anchors(
-                    chars, syllables, qn_to_nom, similar, pair_pages, here, anchor_cap, vis=vis)
+                    chars, syllables, qn_to_nom, similar, pair_pages, here, anchor_cap,
+                    vis=vis, tiers=_tiers)
                 if vis is not None:
                     _ops_txt = realign_with_anchors(chars, syllables, qn_to_nom, similar,
-                                                    pair_pages, here, anchor_cap)[0]
+                                                    pair_pages, here, anchor_cap, tiers=_tiers)[0]
                     _mt = {(o["nom_idx"], o["syl_idx"]) for o in _ops_txt if o["op"] == "match"}
                     _mv = {(o["nom_idx"], o["syl_idx"]) for o in ops2 if o["op"] == "match"}
                     n_pairs_vis_changed += len(_mt ^ _mv)

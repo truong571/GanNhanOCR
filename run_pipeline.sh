@@ -452,7 +452,7 @@ run_pipeline.sh — GanNhanOCR
     --skip-ingest                 bỏ bước ingest (dùng prepared*/<Book> đã có)
     --no-api                      ingest --ocr none (không gọi kim; --verse-map content -> formula)
     --no-auto-precision           bỏ auto_precision (mechanism_gates không --cross; không B6)
-    --suffix <s>                  hậu tố thư mục ra: dataset_out_<Book><s>, dataset_<Book><s>
+    --suffix <s>                  hậu tố thư mục ra: prepared/<Book>/dataset_out<s>, dataset/<Book><s>
 EOF
 }
 
@@ -525,8 +525,8 @@ emit("BK_LAYOUT", layout)
 emit("BK_INGEST", run.get("ingest") or layout)
 emit("BK_INGEST_ARGS", run.get("ingest_args") or "")
 emit("BK_DATA_DIR", paths.get("data_dir", "prepared"))
-emit("BK_OUT_DIR", paths.get("output_dir", f"dataset_{book}"))
-emit("BK_DS_OUT", run.get("dataset_out") or f"dataset_out_{book}")
+emit("BK_OUT_DIR", paths.get("output_dir") or f"dataset/{book}")
+emit("BK_DS_OUT", run.get("dataset_out") or f"prepared/{book}/dataset_out")
 emit("BK_NCOL", run.get("n_columns") or (10 if layout == "lithograph" else 7))
 emit("BK_CROSS", "1" if cross else "0")
 emit("BK_REF", rf.get("ref") or "")
@@ -606,13 +606,17 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
   else
     local ingest_args="$BK_INGEST_ARGS"
     if [[ "$BK_INGEST" == "prose" ]]; then
-      cmd=("$PY" -m pipeline.tools.ingest_prose_book --book "$book" --ocr "$ocr" --out "$BK_DATA_DIR")
+      cmd=("$PY" -m pipeline.tools.ingest_prose_book --book "$book" --ocr "$ocr" --out "$BK_DATA_DIR"
+           --kim-config "$BK_CONFIG")
     else
       if (( NO_API )) && [[ " $ingest_args " == *" content "* ]]; then
         warn "--no-api: --verse-map content cần kim -> thay bằng formula (kết quả KHÁC bản chốt)"
         ingest_args=$(printf '%s' "$ingest_args" | sed 's/--verse-map content/--verse-map formula/')
       fi
-      cmd=("$PY" -m pipeline.tools.ingest_lithograph_book --book "$book" --ocr "$ocr" --out "$BK_DATA_DIR")
+      # --kim-config: adapter đọc books[].kim_lang_type/kim_ocr_id/kim_font_type của ĐÚNG config
+      # đang chạy (KVK: pipeline_KimVanKieu1884_b1.yaml qua run_config:), không đoán theo tên sách.
+      cmd=("$PY" -m pipeline.tools.ingest_lithograph_book --book "$book" --ocr "$ocr" --out "$BK_DATA_DIR"
+           --kim-config "$BK_CONFIG")
       [[ -n "$verses_tsv" ]] && cmd+=(--verses "$verses_tsv")
     fi
     # shellcheck disable=SC2206  # ingest_args cố ý tách theo khoảng trắng (chuỗi cờ trong config run.ingest_args)

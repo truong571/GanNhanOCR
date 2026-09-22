@@ -1,0 +1,132 @@
+# Config RIÊNG KimVanKieu1884 (bản sao pipeline_LucVanTien1883.yaml 2026-09-21, chỉ đổi tên sách và paths.output_dir)
+# GanNhanOCR Pipeline Configuration
+
+  # Only Sach* — Cac* "Tuyển tập Các Thánh Truyện" books are curated subsets
+  # of the corresponding Sach* "Sách Các Thánh Truyện" full books (same scans,
+  # same text), so processing both would double-count training data.
+  # All books re-OCR'd with VietOCR (2-pass beam + greedy for text + confidence).
+  # 2026-07-20: các file PDF trên đĩa đã được đổi tên SachThanhTruyen{2,4,11}.pdf
+  # -> STT{2,4,11}.pdf. `name:` CỐ Ý GIỮ NGUYÊN SachThanhTruyen* vì tên sách đi vào
+  # tên crop (vd yen2_page_0012_c01_000.png) và cột `book` trong dataset_out/labels.csv;
+  # đổi `name` sẽ phá toàn bộ liên kết bằng chứng đã sinh.
+  #
+  # 2026-09-21: khoá TUỲ CHỌN theo sách (pipeline/align_engine/book_layout.py). Vắng
+  # khoá = hành vi STT cũ (9 cột, 1 tầng) — 3 sách STT dưới đây KHÔNG khai báo.
+  #   layout: stt | lithograph        # "lithograph" = thạch bản lục bát (LVT1883, KVK1884):
+  #                                   #   mỗi cột Nôm = 1 cặp 6⧺8 chữ, mỗi dòng .txt = 14 âm;
+  #                                   #   không cần khoá `pdf` (ingest từ ảnh, step1 bỏ qua);
+  #                                   #   page_ok đòi đủ n_columns cột Nôm/QN và mỗi cột QN
+  #                                   #   14 âm (hoặc num_syllables ghi trong transcriptions/*.json)
+  #                                   #   và phương pháp cột hybrid (không projection_fallback);
+  #                                   #   thống kê vào summary.json["layout_gate"][book]
+  #   n_columns: 9                    # số cột kỳ vọng/trang truyền vào detect_nom_columns_v3
+  #                                   #   và cổng qn_parse_ok (thạch bản: 10)
+  #   qn_syllables_per_column: 14     # chỉ với lithograph; 0 = không kiểm
+  # Sách mới dùng config RIÊNG (vd config/lucvantien1883.yaml), không thêm vào books: ở đây.
+books:
+  # 2026-09-21: config RIÊNG cho thạch bản Kim Vân Kiều 1884 (NHIỆM VỤ 5, thử 8 trang). Không đụng
+  # config/pipeline.yaml của STT. Ingest từ ảnh bằng pipeline/tools/ingest_lithograph_book.py
+  # (không cần khoá pdf: step0/step1 bỏ qua khi layout=lithograph).
+  - name: KimVanKieu1884
+    layout: lithograph
+    n_columns: 10
+    qn_syllables_per_column: 14
+    # 2026-09-22: biên x theo sách (mặc định lithograph 0,05, xem config LVT1883 để biết lý do).
+    # det_thr 0,15 (đo 22/09, docs/CHAY_KVK1884_2026-09-21.md §2): quét NATIVE 4 ngưỡng trên 1.630 cột/163 trang
+    # (biên x 0,05): n_det==N  0,3: 2,7 % | 0,2: 45,5 % | 0,15: 59,2 % | 0,1: 59,0 %. Ở 0,2 lỗi chủ yếu là
+    # MẤT hộp (−1: 332, −2: 162 cột/1.511 cột 14 âm — nét thạch bản KVK mảnh, điểm tin cậy thấp); 0,15 cân
+    # −1/+1 (188/242); 0,1 thừa hộp (+1: 415). Build 8 trang: n_det==N 47→53/80, midpoint 139→62, split 22→10,
+    # count_source conflict 392→294, tier KHÔNG đổi (GOLD 744/SYL 38/REVIEW 334), F1 cross-col 0 ở cả hai.
+    det_xmargin: 0.05
+    det_thr: 0.15
+    reocr: false
+
+paths:
+  data_dir: prepared
+  output_dir: dataset_KimVanKieu1884   # riêng cho KVK1884; dataset_out qua --out dataset_out_KimVanKieu1884
+  dict_dir: Dict
+  qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv
+  similar_dict: Dict/SinoNom_Similar.csv
+  font_path: font_diffusion/fonts/NomNaTong-Regular.ttf
+  # Production weights from HF root (dzungpham/font-diffusion-weights). The
+  # /FST/checkpoint_step_1500/ subfolder is an undertrained snapshot — never use it.
+  # Both keys point at the same dir; phase1 is unused while use_fst=False in
+  # core/ranking/fontdiffusion_gen.py but kept for forward compatibility.
+  fontdiffusion_ckpt: font_diffusion/ckpt/PROD
+  fontdiffusion_phase1_ckpt: font_diffusion/ckpt/PROD
+  # Universal FontDiffusion cache (~89k glyph U+*.png) — data ĐÃ SINH SẴN ở
+  # local gannhanocr-fd/ (thư mục hex). step3 nạp ĐỆ QUY (rglob "U+*.png"),
+  # TRA theo Unicode codepoint, KHÔNG sinh mới (skip_local_fd_gen: true).
+  fd_cache_universal: gannhanocr-fd
+
+step1:
+  dpi: 300
+  denoise: true
+  crop_size: 64
+  sauvola_k: 0.2
+  sauvola_window: 25
+  min_stroke: 2
+  use_ocr_api: true
+  # QN re-OCR line detector (replaces the old raw horizontal projection that
+  # broke on skewed scans). Options:
+  #   auto             - DBNet (PaddleOCR) if installed, else projection_deskew
+  #   dbnet            - PaddleOCR DB detector (handles skew, warps lines flat)
+  #   projection_deskew- estimate page skew, deskew, then projection (no extra dep)
+  #   projection       - original raw projection profile (legacy / A-B baseline)
+  # 2026-07-21: GHIM CỨNG, KHÔNG để `auto`.
+  # `auto` = dbnet nếu máy có paddleocr, ngược lại projection_deskew
+  # (core/ocr/line_detector.py:54). Môi trường sinh ra số liệu luận văn là
+  # py3.14 KHÔNG có paddleocr -> đã chạy projection_deskew. Nếu để `auto`,
+  # một máy khác có paddleocr sẽ tách dòng bằng backend KHÁC mà không báo gì,
+  # cho ra số liệu lệch âm thầm.
+  qn_line_detector: projection_deskew
+
+step2:
+  deletion_cost_small: 0.3
+  deletion_cost_medium: 0.6
+  deletion_cost_normal: 1.2
+  insertion_cost: 1.0
+  # --- HÌNH HỌC CẮT ẢNH ------------------------------------------------------
+  # CẢ HAI NÚM DƯỚI ĐÂY ĐỀU ĐƯỢC build_dataset.py ĐỌC THẬT (nối 2026-08-25).
+  # Trước đó `crop_pad_frac: 0.18` là DÒNG CHẾT: không mã nào đọc, `--pad` mặc định
+  # 0.12, và run_pipeline không truyền — nên 66k crop đã giao thực ra cắt ở 0,12
+  # trong khi cấu hình khai 0,18. Nay giá trị ở đây LÀ giá trị chạy.
+
+  # Nới mỗi cạnh hộp thêm phần này của (w, h) TRƯỚC khi cắt, để crop bắt trọn nét
+  # (đuôi chữ, dấu trên, bộ bên). Đo T4-B': ở 0 thì 51,7% crop bị cắt mất nét; ở
+  # 0,12 chỉ còn 0,4%; lên 0,45 chỉ bớt thêm 0,2 điểm mà đẩy dính-láng-giềng từ
+  # 51% lên 69% số crop. Nên 0,12 là điểm làm việc, đã đo chứ không phải mặc định.
+  crop_pad_frac: 0.12
+
+  # Biên nới DỌC của hộp ký tự, theo BƯỚC LẶP của cột: hộp cao = pitch × (1 + 2F).
+  # Xem align_production.BOX_OVERLAP_FRAC. Đổi giá trị này = CẮT LẠI TOÀN BỘ CROP.
+  #
+  # 🔴 ĐÃ THỬ 0 VÀ HOÀN NGUYÊN (2026-08-25). Lý do đầy đủ ở BOX_OVERLAP_FRAC.
+  box_overlap_frac: 0.10
+
+  # A-6 (flow N3f, 2026-09-16): hộp thô detector cho luật --box-rule syl_index.
+  # Ngưỡng tin cậy CenterNet và biên x lọc hộp theo cột (± phần của bề rộng cột).
+  # Đo trên cột OCR=QN: 0,2 / ±0,25w cho M==N 93,2% (cũ 0,3 / ±0,5w: 69,9%).
+  # `--box-rule legacy` KHÔNG đọc hai khoá này (trọn gói 0,3 / ±0,5w để tái lập bộ cũ).
+  det_thr: 0.2
+  det_xmargin: 0.25
+
+# Step 3 (legacy DINOv2 labeling path) — RETIRED: superseded by pipeline/align_engine Step 2
+# (build_dataset.py --use-s3, S3 = trained Nôm encoder). DINOv2 is DISABLED here
+# (proven non-discriminative on Nôm — pipeline/align_engine/README.md).
+# Code kept (core/ranking/dinov2_ranker.py), NOT deleted, for the thesis comparison.
+step3:
+  use_dinov2: false                 # DISABLED — replaced by trained Nôm embedder (S3)
+  dinov2_model: dinov2_vitb14_reg   # Base + registers — best for fine-grained chu-Nom
+  dinov2_threshold: 0.75            # cosine similarity threshold for matched=True
+  classical_threshold: 0.55         # classical CV fallback (Hu+IoU+projection)
+  use_fontdiffusion: true
+  require_fontdiffusion: true       # if true: tier 3 ONLY uses fd_cache (no font-rendered fallback)
+  # When true, step 3 will NOT try to generate missing FontDiffusion images
+  # locally (~7s/img on Mac CPU = bottleneck). Chars missing from fd_cache get
+  # no Tier-3 candidate — they fall through to Tier 2 or unmatched.
+  # Offload generation to Kaggle via kaggle_diffusion/diffusion_run.ipynb.
+  skip_local_fd_gen: true
+
+step4:
+  min_samples_per_class: 1

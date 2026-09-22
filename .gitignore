@@ -111,3 +111,14 @@ ArcFace/gannhanocr-fd/
 
 # Symlink đệ quy (BUG-5)
 dict/dict
+
+# Đầu ra bộ đo scripts/measure/ (tái sinh bằng measure.py --all, không commit)
+measure_out/
+
+# Bản dựng sách thạch bản (2026-09-21): tái sinh bằng ingest_lithograph_book + build_dataset --out, không commit
+/dataset_out_LucVanTien1883*/
+/dataset_out_KimVanKieu1884*/
+/dataset_LucVanTien1883*/
+/dataset_KimVanKieu1884*/
+# Kịch bản workflow đo tạm (bản thô có đường dẫn scratchpad); bản tái lập nằm ở scripts/measure/
+/scripts/measure_wf_*/

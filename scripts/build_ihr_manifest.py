@@ -24,6 +24,14 @@ BOOKS = {  # thư mục sách trong data/ -> (ấn bản, tiền tố nguồn tr
 
 def nfc(s): return unicodedata.normalize("NFC", s)
 
+def clean_qn(s):
+    """IHR dùng nhầm Ð/ð (Latin eth) thay Đ/đ; có dấu '\\' cuối câu và dấu câu tách rời."""
+    s = nfc(s).replace("Ð", "Đ").replace("ð", "đ").rstrip("\\ ").strip()
+    return re.sub(r"\s+", " ", s)
+
+def qn_syllables(s):
+    return [w for w in re.split(r"\s+", s) if re.search(r"[A-Za-zÀ-ỹ]", w)]
+
 def load_nna():
     m = {}
     if not NNA_ALL.exists(): return m
@@ -73,7 +81,7 @@ def build_book(book, edition, nna_prefix, nna):
             n_bbox_ok += bbox_ok
             for vi, v in enumerate(verses):
                 n_verse += 1
-                nom = nfc("".join(v["hn_text"])); qn = nfc(" ".join(v["translation"])).strip()
+                nom = nfc("".join(v["hn_text"])); qn = clean_qn(" ".join(v["translation"]))
                 key = keys[vi] if vi < len(keys) else None
                 pj = pats.get(key) if key else None
                 pj_nom = nfc("".join(json.load(open(pj))[0]["hn_text"])) if pj else ""
@@ -84,7 +92,7 @@ def build_book(book, edition, nna_prefix, nna):
                 cb = cols[col] if (bbox_ok and key) else None
                 nna_key = f"{nna_prefix}/{img[:-4]}_{vi}.jpg"
                 nna_txt = nna.get(nna_key, "")
-                qn_syl = [w for w in re.split(r"\s+", qn) if w]
+                qn_syl = qn_syllables(qn)
                 rows.append({
                     "book": book, "edition": edition, "page_id": img[:-4],
                     "page_image": f"data/{book}/pages/images/{img}",

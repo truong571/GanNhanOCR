@@ -38,3 +38,8 @@ data/LucVanTien1883/
 ├── luc_van_tien_quoc_ngu.tsv             # 2.088 câu Quốc ngữ chuẩn xác 100%
 └── SOURCE.md                             # Tài liệu này
 ```
+
+## Rà soát text QN trên mạng (20/09 05:00)
+- Gallica có lớp OCR ALTO (RequestDigitalElement?O=bpt6k54602432&E=ALTO&Deb=<folio>) nhưng OCR tiếng Pháp, dấu tiếng Việt hỏng nặng ("Bây lâu ra sire công thcr", "cliang gap") → KHÔNG dùng được làm text 1-1. Phải OCR lại `quocngu_pages/` bằng VietOCR trong pipeline (như bước QN của STT). Số câu in mỗi 5 câu ở lề trái là neo căn chỉnh.
+- (06:30) README tổng ghi TSV là "100% GT chuẩn 2.088 câu" là SAI: TSV chỉ có 2.059 câu và là bản 1916 (xem trên). GT 1-1 thật là `quocngu_pages/` sau OCR.
+- (21/09, đính chính theo docs/PIPELINE_SACH_MOI_2026-09-20.md) Bố cục đúng: **10 cột vật lý × 2 tầng, mỗi cột = 1 cặp lục bát** (tầng trên câu lẻ 6 chữ, tầng dưới câu chẵn 8 chữ; đọc cột k phải→trái: trên rồi dưới), không phải "20 cột mỗi cột 1 câu". Đo toàn bộ: 105/105 trang tách tầng, 103/105 đủ 10 cột; tổng 2.088 câu = 18 + 20×103 + 10.

@@ -1,28 +1,45 @@
-# data/ — mỗi thư mục = một cuốn sách (cập nhật 2026-09-20 04:55)
+# data/ — Danh mục tài liệu và Cấu trúc Ngữ liệu Luận văn (Cập nhật 2026-09-20 08:00; số liệu trong bảng là số ĐÃ ĐO, chi tiết phép đo ở `KIEM_TRA_KHOP_1-1_2026-09-20.md`)
 
-| Thư mục | Sách | Loại chữ | Trang Nôm | Ảnh scan Quốc ngữ căn cứ (`quocngu_pages/`) | Vai trò | Trạng thái Ground Truth |
-|---|---|---|---|---|---|---|
-| `SachThanhTruyen2/` | Sách Các Thánh Truyện tháng 2 | viết tay (thảo) | 160 Nôm | ✅ **160 trang scan QN gốc** (`quocngu_pages/`) + `INDEX.tsv` | **Kho chính** (yen2) | 100% Ground Truth đối chiếu trang |
-| `SachThanhTruyen4/` | — tháng 4 | viết tay | 147 Nôm | ✅ **147 trang scan QN gốc** (`quocngu_pages/`) + `INDEX.tsv` | Kho chính (yen4) | 100% Ground Truth đối chiếu trang |
-| `SachThanhTruyen11/` | — tháng 11 | viết tay | 145 Nôm | ✅ **145 trang scan QN gốc** (`quocngu_pages/`) + `INDEX.tsv` | Kho chính (yen11) | 100% Ground Truth đối chiếu trang |
-| `LucVanTien1883/` | Lục Vân Tiên, Abel des Michels 1883 (BnF) | in thạch bản chữ bút lông | 105 Nôm | ✅ **139 trang scan QN gốc** (`quocngu_pages/`) + `luc_van_tien_quoc_ngu.tsv` (2.088 câu) | **Dataset chuẩn viết tay xuất sắc** | **100% Ground Truth chuẩn xác của chính bản này** |
-| `TruyenKieuPhongTinhCoLuc/` | Truyện Kiều chép tay R.987 (NLV) | viết tay bút lông, chấm son | 120 Nôm | ❌ **Sách gốc KHÔNG CÓ trang QN** (bản cảo đơn ngữ Nôm thế kỷ 19) | Ứng viên viết tay cổ điển | Cần qua bước Căn chỉnh dị bản (so với bản phiên âm) |
-| `KimVanKieu1884/` *(Sẵn sàng tải BnF)* | Kim Vân Kiều tân truyện, Abel des Michels 1884 | in thạch bản chữ bút lông | 165 Nôm (171 canvas) | ✅ **Trọn bộ 2 tập scan QN đối chiếu** (631 canvas Gallica: `bpt6k5439461n` + `bpt6k54394659`) | **Bộ song ngữ Kiều hoàn hảo nhất** | 100% Khớp câu-với-câu (3.254 câu) y hệt LucVanTien1883 |
-| `TamTuKinhDienAm/` | Tam tự kinh diễn âm (NLV R.2042) | viết tay chữ to | 32 Nôm | ❌ **Sách gốc KHÔNG CÓ trang QN** (sách dạy chữ Nôm cổ) | Bộ thử nhỏ | Phải phiên âm thủ công từ ảnh scan Nôm |
-| `KimVanKieu1894/` | Kim Vân Kiều tân truyện (Liễu Văn Đường) | in mộc bản | 152 Nôm | ❌ **Sách gốc KHÔNG CÓ trang QN** | Dự trữ | Mộc bản |
-| `LucVanTien1916/` | Lục Vân Tiên nlvnpf-0059 (IHR-NomDB) | in mộc bản | 104 Nôm | ✅ Có GT chữ từng ký tự từ IHR-NomDB | Benchmark ngoài | 100% GT bản khắc ván 1916 |
-| `TruyenKieu1872/` | Truyện Kiều 1872 (IHR-NomDB) | in mộc bản | 162 Nôm | ✅ Có GT chữ từng ký tự từ IHR-NomDB | Benchmark ngoài | 100% GT bản khắc ván 1872 |
+Tài liệu trong kho được phân định chặt chẽ theo 3 nhóm dựa trên nguồn gốc văn tự và vai trò học thuật trong pipeline gán nhãn OCR:
 
 ---
 
-### Ghi chú quan trọng về Ground Truth Quốc ngữ & Ảnh scan làm căn cứ:
-1. **Đã lưu ảnh scan Quốc ngữ làm căn cứ (`quocngu_pages/`)**:
-   - `data/LucVanTien1883/quocngu_pages/`: **139 trang scan** bản in Quốc ngữ của Abel des Michels 1883 (đầy đủ 2.088 câu).
-   - `data/SachThanhTruyen2/quocngu_pages/`: **160 trang scan** bản Quốc ngữ đối chiếu gốc (1722x2715 px) kèm `INDEX.tsv`.
-   - `data/SachThanhTruyen4/quocngu_pages/`: **147 trang scan** bản Quốc ngữ đối chiếu gốc (1142x1815 px) kèm `INDEX.tsv`.
-   - `data/SachThanhTruyen11/quocngu_pages/`: **145 trang scan** bản Quốc ngữ đối chiếu gốc (1691x2704 px) kèm `INDEX.tsv`.
-   -> **Tổng cộng đã trích xuất và lưu trữ cục bộ 591 trang scan Quốc ngữ gốc** để làm căn cứ đối chiếu 1-1 với từng cột/trang Nôm!
-2. **Thực tế tài liệu lịch sử về các sách còn lại**:
-   - Các bản chép tay cổ điển của Nho sĩ Việt Nam như `TruyenKieuPhongTinhCoLuc` (R.987) hay `TamTuKinhDienAm` (R.2042) là **bản chép tay đơn ngữ Chữ Nôm thuần túy**, trong hiện vật gốc của Thư viện Quốc gia **hoàn toàn không có bất kỳ trang dịch chữ Quốc ngữ nào**.
-   - Do đó, để có bản **Truyện Kiều chữ viết tay có trang dịch Quốc ngữ scan 1-1 chuẩn xác tuyệt đối**, giải pháp hoàn hảo nhất là sử dụng bộ **`Kim Vân Kiều tân truyện` của Abel des Michels (BnF Gallica 1884)** gồm trọn vẹn bản Nôm viết tay in thạch bản (165 trang) và 2 tập scan Quốc ngữ đối chiếu từng câu (3.254 câu).
+## 1. BẢNG PHÂN LOẠI NGỮ LIỆU
 
+| Nhóm | Thư mục | Tác phẩm / Ấn bản | Công nghệ thể hiện | Dữ liệu Nôm | Nguồn Quốc ngữ đối chiếu | Vai trò học thuật |
+|---|---|---|---|---|---|---|
+| **Nhóm 1: Cặp Nôm–QN cùng nguồn (Đầu vào gán nhãn tự động)** | `SachThanhTruyen2/` | Sách Các Thánh Truyện (tháng 2) | **Viết tay thật** (chữ thảo Maiorica) | 160 trang Nôm (PDF 320 tr, xen kẽ Nôm/QN tuyệt đối; 1712×2708, ≈110 px/chữ) | 160 trang QN đối diện trong PDF (có text layer); pipeline đã tách 9 cột QN ↔ 9 cột Nôm trên 160/160 trang | Ngữ liệu chính (yen2). `quocngu_pages/` là bản trích lại từ PDF, tên trang KHÁC pipeline |
+| | `SachThanhTruyen4/` | — (tháng 4) | **Viết tay thật** (chữ thảo Maiorica) | 145 trang Nôm (PDF 294 tr; 2 cặp đầu sách là trang phụ) | 145 trang QN đối diện; 9 cột ↔ 9 cột trên 145/145 | Ngữ liệu chính (yen4) |
+| | `SachThanhTruyen11/` | — (tháng 11) | **Viết tay thật** (chữ thảo Maiorica) | 143 trang Nôm (PDF 290 tr) | 143 trang QN đối diện (2 trang không có text layer, pipeline tự OCR); 9 cột ↔ 9 cột trên 143/143 | Ngữ liệu chính (yen11) |
+| | `LucVanTien1883/` | Lục Vân Tiên ca diễn (Abel des Michels 1883, chữ Trần Nguyên Hanh; Gallica bpt6k54602432) | In thạch bản (phỏng bút lông) | 105 trang, ~1850×3210, ≈150 px/chữ; 10 cột vật lý × 2 tầng, **mỗi cột = 1 cặp lục bát** (tầng trên câu lẻ 6 chữ, tầng dưới câu chẵn 8 chữ; đọc cột k phải→trái: trên rồi dưới), số câu in sẵn; đo toàn bộ: 105/105 trang tách tầng, 103/105 đủ 10 cột, tổng 2.088 câu (18 + 20×103 + 10) | 139 trang QN in cùng sách, số câu mỗi 5 câu (đo: 120/139 trang nối chuỗi liên tục 5→2.085; 19 trang còn lại OCR không đọc được số). Cả 2 phía đánh số 1–2.088 → khớp câu↔câu. Gallica ALTO không dùng được (hỏng dấu), phải VietOCR/Tesseract lại | Thạch bản thơ, thiết lập giống STT nhất. TSV bản 1916 đã xoá |
+| | `KimVanKieu1884/` | Kim Vân Kiều tân truyện (Abel des Michels 1884–85; Gallica bpt6k5453029r / bpt6k5439461n / bpt6k54394659) | In thạch bản (phỏng bút lông) | 171 canvas (163 canvas chữ = 4–166), 1500×2744, ≈150 px/chữ; bố cục như LVT1883 (10 cột = 10 cặp lục bát, 2 tầng); **xếp ngược**, quy tắc `page = 167 − canvas` đúng 163/163; Nôm đếm được **3.256** câu vs QN số in cuối 3.253 (có bước nhảy 1581→1585) → lệch chưa định vị, phải giải quyết trước khi ghép | 631 canvas = Tome I 322 + Tome II/1 309; trang QN (số câu mỗi 5 câu) xen kẽ trang dịch Pháp ≈ một nửa. OCR thử câu 343–350: ≥3/8 câu khác bản 1871 → phải OCR trang QN thật, không thay bằng 1871 | Thạch bản thơ Kiều. TSV bản 1871 đã xoá |
+| | `Chrestomathie1872/` | Chrestomathie cochinchinoise (Abel des Michels 1872; Gallica bpt6k5812244p, 173 canvas) | In thạch bản (phỏng bút lông), có khuyên son ngắt câu | 66 canvas (104–170), 1500×2255 | QN chỉ canvas 29–56 (~28 trang, *Chuyện đời xưa* Trương Vĩnh Ký); canvas 57–101 là dịch Pháp. Văn xuôi theo truyện, KHÔNG có số câu/cột tương ứng → 1-1 ở mức truyện, pipeline cột↔cột chưa áp dụng thẳng | Văn xuôi thạch bản; cần căn chỉnh kiểu mới |
+| **Nhóm 2: Đối chứng ngoài có phiên âm học thuật (Mộc bản)** | `TruyenKieu1872/` | Truyện Kiều bản Duy Minh Thị 1872 (IHR-NomDB, cùng ảnh pageNNx của nomfoundation.org) | In mộc bản | 162 trang (404×579, ≈35 px/chữ); 3.239 câu, 3.059 patch cột, bbox mức CỘT | `manifest.tsv` câu↔câu; đối chiếu nguồn gốc nomfoundation.org (Nguyễn Tài Cẩn 2002): QN giống 3.238/3.239, Nôm giống 3.154/3.239 (khác mã PUA). IHR thiếu trang page79b (20 câu) — đủ trong `nomfoundation_1872_phienam.json` (3.259 câu) | Benchmark ngoài *(tắt NomNaOCR khi test)* |
+| | `LucVanTien1916/` | Vân Tiên cổ tích tân truyện, R.403 = nlvnpf-0059, Liễu Văn Đường khắc in 1916 (IHR-NomDB) | In mộc bản | 104 trang (≈494×763, ≈35 px/chữ); 2.064 câu, 1.995 patch cột, bbox mức CỘT | `manifest.tsv` câu↔câu; đối chiếu nomfoundation.org: QN giống 1.989/2.059 (sau sửa Ð→Đ), Nôm 1.962/2.059; 5 trang lệch ranh giới câu (010, 012, 090, 092, 093); 5 câu có `[?]`. Nguồn gốc lưu ở `nomfoundation_lvt_phienam.json` | Benchmark ngoài *(tắt NomNaOCR khi test)* |
+| **Nhóm 3: Bản chép tay chưa có phiên âm độc lập** | `TruyenKieuPhongTinhCoLuc/` | Truyện Kiều "Phong tình cổ lục", R.987 = NLVNPF-0221 (NLV) | Viết tay bút lông, chấm son | 120 ảnh = 116 tờ đôi văn bản + bảng màu + 3 bìa; 2000×1820, 7 cột/trang, ≈100 px/chữ; **2 tầng** (tầng trên = tựa/đề vịnh, phải bỏ) | Không có phiên âm R.987 (NLV, Nôm Foundation chỉ có ảnh). Tham chiếu: `thamchieu_kieu_1871_LieuVanDuong_phienam.json` (bản Hà Nội, gần ngữ âm miền Bắc của R.987 hơn 1872). Dị bản giữa 2 bản in 1872/1871 đã đo: 32,7% câu, 6,2% âm tiết | Đánh giá ngoài; ứng viên viết tay tốt nhất |
+| | `KimVanKieu1894/` | Kim Vân Kiều tân truyện, British Library **Or.14844** (1894, bìa lụa vàng rồng 5 móng, Pelliot 1929) — KHÔNG phải Liễu Văn Đường | Chép tay có tranh | 152 trang PDF = 145 trang chữ (5–149) + bìa; 733×1200, ≈50 px/chữ; mỗi trang: tóm tắt mực đỏ + chính văn ~22 câu + chú nhỏ + tranh (146 tranh) ⇒ đủ ~3.254 câu | Chưa có text mở; phiên âm 1-1 duy nhất xác minh được: *Truyện Kiều hội bản* (Thái Hà + NXB Hà Nội 2026, 3,8–5,2 triệu, không ebook) | Đánh giá ngoài; cần che tranh/chú khi tách chữ |
+| | `TamTuKinhDienAm/` | Tam tự kinh diễn âm, R.2042 = NLVNPF-0463 (NLV) | Chép tay chữ to, chấm đỏ | 32 ảnh = 29 tờ đôi văn bản (~58 trang) + thước/bảng màu + 2 bìa; 2000×1806, 5–6 cột/trang, ≈170 px/chữ; ước ~300 cặp lục bát (chưa đếm chính xác) | Không có phiên âm công bố (R.653, R.129 cùng đề tài cũng chỉ có ảnh). TSV 58 câu máy đọc đã xoá | Đánh giá ngoài; phiên thủ công 1–2 ngày, neo bằng nguyên văn Hán |
+| | `CacThanhTruyen1646/` | Các Thánh Truyện (Maiorica) — **Harvard College Library** (đã xác minh: dấu thư viện in ở tr.168; metadata PDF "Các thánh truyện V3", Print-to-PDF 03/2024) | Viết tay chữ thảo (cùng kiểu STT) | 78 tờ đôi = tr. **168–323**, PDF **đảo ngược đều** (OCR số trang); ~1650×2350/trang | Không có QN trong tệp. **Đã đo không trùng nội dung STT2/4/11**: OCR cục bộ (NomNaOCR finetuned) 5 trang (168, 246, 247, 322, 323) rồi so từng cột với 3.9k cột STT: max-ratio trung vị 0,23–0,26 = mức nền (0,20–0,25), khác hẳn mức "có trong STT" 0,51–0,56 ⇒ là tháng khác. "Tháng 12 / Phanxicô Xaviê" vẫn là máy đọc chưa kiểm chứng | Nhóm 3, cùng domain Maiorica; muốn ghép cặp phải tìm bản QN đúng tháng cùng bộ |
+| **Loại bỏ** | `LyHangCaDao/` | Lý hạng ca dao, NLVNPF-0026 (NLV) | Chép tay | 51 ảnh = 48 tờ đôi + bảng màu + 2 bìa; nguồn chỉ có 1000×885 cho cả tờ đôi (đã kiểm biến thể `large`), 14–16 cột/trang ⇒ ≈30 px/chữ; tờ 36, 46–48 rách | Không có QN | **Loại khỏi luận văn** |
+
+---
+
+## 2. QUY TẮC PHƯƠNG PHÁP LUẬN VÀ ĐẶC TẢ HỌC THUẬT
+
+### 1. Nhóm 1: Bản chất nhãn và Cảnh báo về Ground Truth
+- **Khái niệm chuẩn xác:** Đây là **"Cặp Nôm–Quốc ngữ cùng nguồn (đầu vào gán nhãn tự động)"**, tuyệt đối **KHÔNG gọi là Ground Truth (GT)** hay "GT vàng".
+- **Lý do khoa học:** Chữ Quốc ngữ in cùng sách chỉ đóng vai trò là văn bản đối chiếu song song đáng tin cậy nhất về mặt lịch sử. Tuy nhiên, nhãn từng ký tự Nôm trên từng tọa độ (bounding box) vẫn do hệ thống tự động sinh ra (thông qua OCR chữ Quốc ngữ + thuật toán căn chỉnh cột/chữ). Vì vậy, đây là **nhãn máy (machine-generated labels)**, không phải nhãn do chuyên gia nhân loại gắn thủ công từng chữ (human ground truth).
+- **Công nghệ in:** Cần phân biệt rõ: chỉ có `SachThanhTruyen2, 4, 11` là **viết tay thật** (chữ thảo của thừa sai Maiorica thế kỷ 17). Các cuốn `LucVanTien1883`, `KimVanKieu1884`, `Chrestomathie1872` là **in thạch bản (lithography)** thế kỷ 19 phỏng theo chữ bút lông chân thư.
+- **Lưu ý kỹ thuật trang scan:**
+  - `KimVanKieu1884`: 171 canvas Nôm trên Gallica được **đóng theo thứ tự truyền thống Á Đông (phải sang trái), nên ảnh scan hiển thị ngược chiều** so với cách lật sách phương Tây (canvas 5 là cuối truyện, canvas 165 là đầu truyện). Trong 631 canvas Quốc ngữ, khoảng một nửa là phần dịch nghĩa và chú thích tiếng Pháp.
+  - `Chrestomathie1872`: Phần chữ Quốc ngữ thực sự nằm ở các canvas 29–56 (~28 trang), phần còn lại là khảo cứu ngữ pháp và dịch nghĩa Pháp văn.
+
+### 2. Nhóm 2: Đối chứng ngoài và Cảnh báo rò rỉ dữ liệu (Data Leakage)
+- Nhãn IHR-NomDB ở mức **chuỗi chữ theo câu thơ** (không có bbox từng chữ), nguồn gốc là phiên âm trên nomfoundation.org (1872: Nguyễn Tài Cẩn 2002; LVT: trang dự án Lục Vân Tiên). Đã đối chiếu từng câu (xem bảng); `scripts/build_ihr_manifest.py` chuẩn hoá Ð→Đ và bỏ dấu câu rời (len_match LVT 2.012/2.064, Kiều 3.236/3.239).
+- **Quy tắc bắt buộc khi thực nghiệm:** Vì mô hình OCR đường cơ sở (như NomNaOCR) đã từng được huấn luyện trên chính các trang mộc bản này, khi thực hiện đánh giá độc lập (benchmark) trên Nhóm 2, **phải tắt hoàn toàn kênh NomNaOCR** để tránh rò rỉ dữ liệu thực nghiệm.
+
+### 3. Nhóm 3: Bản chép tay chưa có phiên âm và Nguyên tắc đánh giá
+- **Tuyệt đối không dùng TSV mượn danh:** Đã xoá 6 tệp TSV/TXT gán nhầm (bản 1916 cho LVT1883; bản 1871 cho KVK1884 và R.987; 58 câu máy đọc cho Tam tự kinh). Mức dị bản đo giữa hai bản in cùng thời 1872 vs 1871: **32,7% câu, 6,2% âm tiết khác** — đây là sàn sai số nếu gán text bản khác vào bản chép tay.
+- **Nguyên tắc báo cáo khoa học:**
+  - Chỉ báo cáo độ chính xác (Accuracy) trên **tập mẫu có người biết chữ Nôm thẩm định trực tiếp (tối thiểu ≥300 chữ mỗi cuốn)**.
+  - Đối với phần văn bản còn lại khi so sánh với trục tham chiếu 1871, chỉ được báo cáo chỉ số là **"Tỷ lệ bất đồng" (Disagreement Rate)**, tuyệt đối không được gọi là "lỗi OCR" vì không thể phân tách lỗi máy với dị bản chép tay thật của người xưa.

@@ -26,10 +26,18 @@
 ## 3. Cấu trúc thư mục
 ```
 data/TruyenKieuPhongTinhCoLuc/
-├── pages/                           # 120 trang ảnh quét thủ bút Nôm (p001.jpg - p120.jpg)
-├── TruyenKieu_PhongTinhCoLuc.pdf   # PDF 120 trang hoàn chỉnh (70.4 MB)
-├── reference_kieu_1872.tsv         # Khung tham chiếu 3.239 câu (để căn chỉnh dị bản)
-├── metadata.json                   # Metadata thư viện số NLVNPF
-├── README_tai_ve.md               # Hướng dẫn tải về
-└── SOURCE.md                        # Tài liệu này
+├── pages/                                        # 120 trang ảnh quét thủ bút Nôm (p001.jpg - p120.jpg)
+├── TruyenKieu_PhongTinhCoLuc.pdf                # PDF 120 trang hoàn chỉnh (70.4 MB)
+├── truyen_kieu_r987_aligned_reference.tsv       # Khung chuẩn 3.254 câu 1871 miền Bắc (đã hiệu chỉnh dị bản R.987)
+├── reference_kieu_1872.tsv                      # Khung tham chiếu phụ bản 1872
+├── thamchieu_kieu_1871_LieuVanDuong_phienam.json# Dữ liệu phiên âm chi tiết bản 1871
+├── metadata.json                                # Metadata thư viện số NLVNPF
+├── README_tai_ve.md                            # Hướng dẫn tải về
+└── SOURCE.md                                     # Tài liệu này
 ```
+
+## Tra cứu QN (20/09 04:40)
+- NLV (hannom.nlv.gov.vn) và Nôm Foundation (lib.nomfoundation.org/collection/1/volume/315) chỉ có ẢNH 117 trang + mô tả, KHÔNG có phiên âm. Không tìm thấy bản phiên âm xuất bản nào của R.987.
+- Mô tả NLV cho biết bố cục: sách chia 2 TẦNG — tầng trên là tựa + các bài đề vịnh của người khác; tầng giữa mới là chính văn Kiều → khi tách cột phải bỏ tầng trên. Bản chép theo ngữ âm miền Bắc ("giai" 佳 thay "trai"), có dị bản ("Sầu đong càng tắc càng đầy").
+- Rà soát text (05:00): không có phiên âm nào của R.987 trên mạng. Nếu chấp nhận QN "gần đúng": mô tả NLV nói bản này chép theo ngữ âm MIỀN BẮC → bản 1871 Liễu Văn Đường (Hà Nội) hoặc 1902 Kiều Oánh Mậu trên nomfoundation.org sẽ gần hơn bản 1872 Duy Minh Thị (Gia Định) đang có trong truyen_kieu_quoc_ngu.tsv.
+- (06:30) `truyen_kieu_r987_aligned_reference.tsv`: trùng 3.254/3.254 câu với bản 1871 nomfoundation.org (cả Nôm lẫn QN); 3 dòng `variant_note` ("R.987 chuẩn: …") là suy đoán, chưa ai đọc R.987. Đây là bản tham chiếu 1871 đổi tên, KHÔNG phải phiên âm R.987 → vẫn CHƯA ĐẠT.

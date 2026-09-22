@@ -397,9 +397,71 @@ def test_prose():
         AP.detect_nom_columns_v3 = orig
 
 
+def test_detector_ckpt():
+    print("[7] detector_ckpt / detector_resize theo sách (2026-09-22, lab/i5_detector_v2)")
+    d = BL.book_layout(None)
+    check("mặc định: detector_ckpt None, detector_resize 'linear'", d.detector_ckpt is None and d.detector_resize == "linear")
+    check("STT (name/pdf) vẫn DEFAULT_LAYOUT khi không khai ckpt/resize",
+          BL.book_layout({"name": "SachThanhTruyen4", "pdf": "x.pdf"}) is BL.DEFAULT_LAYOUT)
+    lv = BL.book_layout({"name": "L", "layout": "lithograph", "n_columns": 10,
+                         "detector_ckpt": " train_crop/detector_r34_v2_litho.pt ", "detector_resize": "area"})
+    check("khai detector_ckpt (strip) + detector_resize area -> đọc đúng",
+          lv.detector_ckpt == "train_crop/detector_r34_v2_litho.pt" and lv.detector_resize == "area")
+    st = BL.book_layout({"name": "s", "detector_resize": "area"})
+    check("STT khai detector_resize: area -> BookLayout riêng (không DEFAULT), 9 cột, ckpt None",
+          st is not BL.DEFAULT_LAYOUT and st.n_columns == 9 and st.detector_ckpt is None and st.detector_resize == "area")
+    for bad in ({"name": "x", "detector_ckpt": ""}, {"name": "x", "detector_ckpt": 5}, {"name": "x", "detector_ckpt": True},
+                {"name": "x", "detector_resize": "cubic"}, {"name": "x", "detector_resize": None}):
+        try:
+            BL.book_layout(bad)
+            check(f"giá trị sai {bad} -> ValueError", False)
+        except ValueError:
+            check(f"giá trị sai {bad} -> ValueError", True)
+    check("resolve_detector_ckpt(None) -> None", BL.resolve_detector_ckpt(None, REPO) is None)
+    v1 = REPO / "train_crop" / "detector_r34.best.pt"
+    if v1.exists():
+        r = BL.resolve_detector_ckpt("train_crop/detector_r34.best.pt", REPO)
+        check("resolve_detector_ckpt tương đối gốc repo -> tuyệt đối, tồn tại", r == str(v1.resolve()))
+        check("resolve_detector_ckpt tuyệt đối -> giữ nguyên", BL.resolve_detector_ckpt(str(v1), REPO) == str(v1.resolve()))
+    try:
+        BL.resolve_detector_ckpt("train_crop/khong_co_tep_nay.pt", REPO)
+        check("resolve_detector_ckpt tệp thiếu -> FileNotFoundError", False)
+    except FileNotFoundError:
+        check("resolve_detector_ckpt tệp thiếu -> FileNotFoundError", True)
+    check("engine mặc định: DETECTOR_CKPT None, DETECTOR_RESIZE 'linear'",
+          AP.DETECTOR_CKPT is None and AP.DETECTOR_RESIZE == "linear")
+    check("detector_backend_name() mặc định == 'detector_centernet_v1' (STT không đổi)",
+          AP.detector_backend_name() == "detector_centernet_v1")
+    check("detector_backend_name(ckpt v2, area) == 'detector_centernet_detector_r34_v2_litho+area'",
+          AP.detector_backend_name("/a/b/detector_r34_v2_litho.pt", "area") == "detector_centernet_detector_r34_v2_litho+area")
+    check("detector_backend_name(None, 'area') == 'detector_centernet_v1+area'",
+          AP.detector_backend_name(None, "area") == "detector_centernet_v1+area")
+    src_ap = (REPO / "pipeline" / "align_engine" / "align_production.py").read_text(encoding="utf-8")
+    check("_get_detector cache theo (ckpt, resize, thr)", 'key = (ckpt or "", resize, thr)' in src_ap
+          and "DetectorInfer(ckpt=ckpt, thr=thr, resize=resize)" in src_ap)
+    src_bd = (REPO / "pipeline" / "align_engine" / "build_dataset.py").read_text(encoding="utf-8")
+    check("build_dataset: resolve ckpt theo sách (fail fast) + gán/khôi phục DETECTOR_CKPT/RESIZE",
+          "resolve_detector_ckpt(_lay.detector_ckpt, REPO)" in src_bd and "det_ckpt_by_book" in src_bd
+          and 'ap_mod.DETECTOR_CKPT, ap_mod.DETECTOR_RESIZE = None, "linear"' in src_bd)
+    src_di = (REPO / "pipeline" / "align_engine" / "char_detector" / "detector_infer.py").read_text(encoding="utf-8")
+    src_ic = (REPO / "train_crop" / "infer_centernet.py").read_text(encoding="utf-8")
+    check("DetectorInfer/CenterNetDetector nhận resize, mặc định 'linear' (v1 byte-identical)",
+          'resize: str = "linear"' in src_di and 'resize: str = "linear"' in src_ic
+          and "interpolation=RESIZE_INTERP[self.resize]" in src_ic)
+    if v1.exists():
+        try:
+            a = AP._get_detector(strict=True, thr=0.15)
+            b = AP._get_detector(strict=True, thr=0.15, ckpt=str(v1), resize="area")
+            c = AP._get_detector(strict=True, thr=0.15, ckpt=str(v1), resize="area")
+            check("_get_detector: cùng (ckpt, resize, thr) -> cùng đối tượng cache; khác resize -> đối tượng khác",
+                  a is not b and b is c and getattr(b, "trained", False) and b.det.resize == "area" and a.det.resize == "linear")
+        except Exception as e:      # noqa: BLE001
+            check(f"_get_detector ckpt/resize chạy được ({type(e).__name__}: {e})", False)
+
+
 def main():
     for t in (test_book_layout, test_det_params, test_gate, test_get_qn_lines, test_detect,
-              test_signatures, test_prose):
+              test_signatures, test_prose, test_detector_ckpt):
         try:
             t()
         except Exception as e:      # noqa: BLE001

@@ -43,7 +43,9 @@ def _load_centernet():
 
 class DetectorInfer:
     def __init__(self, ckpt: str | None = None, img: int = 1024, thr: float = 0.2,
-                 device=None):
+                 device=None, resize: str = "linear"):
+        # resize: 'linear' (mặc định, v1/STT không đổi) | 'area' (khử răng cưa; books[].detector_resize)
+        self.resize = resize
         if not ckpt:
             c = _find_ckpt()
             ckpt = str(c) if c else None
@@ -56,7 +58,8 @@ class DetectorInfer:
         # (A-6) dùng _nms_vertical + enforce_count của CHÍNH nó, không nạp lại lần hai
         self._ic = sys.modules["infer_centernet"]
         self.thr = float(thr)
-        self.det = CenterNetDetector(ckpt, img=img, thr=thr, split_method="seam", device=device)
+        self.det = CenterNetDetector(ckpt, img=img, thr=thr, split_method="seam", device=device,
+                                     resize=resize)
         self.trained = self.det.trained
         self.img = self.det.img
         self.device = self.det.device

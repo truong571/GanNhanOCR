@@ -182,12 +182,22 @@ def enforce_count(boxes, n, gray_image=None, split_method: str = "seam"):
 # ===========================================================================
 #  DETECTOR
 # ===========================================================================
+RESIZE_INTERP = {"linear": 1, "area": 3}     # cv2.INTER_LINEAR (mặc định cũ) | cv2.INTER_AREA (khử răng cưa)
+
+
 class CenterNetDetector:
     def __init__(self, ckpt: str | None = None, img: int = 512, thr: float = 0.2,
-                 split_method: str = "seam", device=None):
+                 split_method: str = "seam", device=None, resize: str = "linear"):
+        # resize (2026-09-22, lab/i5_detector_v2): phép thu ảnh trang về img×img. 'linear' = cv2.resize
+        # mặc định (hành vi v1, STT giữ nguyên byte); 'area' = INTER_AREA — thu ~3× (3200 → 1024) có
+        # khử răng cưa nên nét mảnh không rụng: đo v1 trên 27 trang thạch bản val: tầng n==N 77,0 →
+        # 91,9 %, ok50 95,0 → 98,1 %, STT F1 45 trang 0,877 → 0,879. Bật theo sách qua
+        # books[].detector_resize: area (book_layout) — không đổi mặc định ở đây.
         import torch
         self.torch = torch
         self.split_method = split_method
+        assert resize in RESIZE_INTERP, f"resize={resize!r}; chỉ nhận {tuple(RESIZE_INTERP)}"
+        self.resize = resize
         self.device = device or ("cuda" if torch.cuda.is_available()
                                  else ("mps" if torch.backends.mps.is_available() else "cpu"))
         arch, use_dcn = "resnet34_fpn", False
@@ -216,7 +226,7 @@ class CenterNetDetector:
         s = self.img / max(H, W)
         nh, nw = max(1, int(H * s)), max(1, int(W * s))
         canvas = np.zeros((self.img, self.img, 3), np.uint8)
-        canvas[:nh, :nw] = cv2.resize(img_bgr, (nw, nh))
+        canvas[:nh, :nw] = cv2.resize(img_bgr, (nw, nh), interpolation=RESIZE_INTERP[self.resize])
         x = self.torch.from_numpy((canvas.astype(np.float32) / 255 - 0.5) / 0.5).permute(2, 0, 1)
         return x.unsqueeze(0), s
 

@@ -22,6 +22,17 @@ Khoá tuỳ chọn trong `books:` của config/pipeline.yaml (vắng = hành vi 
                                     # --reseg detector). n_det trong labels.csv VẪN là số hộp thô ở
                                     # det_thr (I5 không thành hằng đúng); box_source ghi
                                     # detector | detector_low | ink_cut; count_source = 'pitch'.
+    detector_ckpt: train_crop/detector_r34_v2_litho.pt
+                                    # (2026-09-22, tuỳ chọn) checkpoint CenterNet RIÊNG cho sách này
+                                    # (lab/i5_detector_v2: v2 fine-tune thạch bản). Vắng = None = ckpt
+                                    # toàn cục (env NOM_DETECTOR_CKPT > train_crop/detector_r34.best.pt)
+                                    # -> STT không đổi. Đường dẫn tuyệt đối hoặc tương đối gốc repo;
+                                    # build_dataset kiểm tệp tồn tại TRƯỚC khi align (fail fast).
+                                    # Engine cache detector theo (ckpt, resize, thr); chỉ luật syl_index đọc.
+    detector_resize: area           # (2026-09-22, tuỳ chọn) phép thu ảnh trang cho detector: "linear"
+                                    # (mặc định = cv2.resize cũ, STT không đổi) | "area" (INTER_AREA khử
+                                    # răng cưa khi thu ~3×; đo v1 27 trang thạch bản: tầng n==N 77,0 →
+                                    # 91,9 %, ok50 95,0 → 98,1 %, STT F1 không giảm). Độc lập với ckpt.
 
 Nguyên tắc: `book_layout({})` == `book_layout(None)` == BookLayout() == hành vi STT
 (n_columns 9, không cổng lithograph, det_xmargin/det_thr None = toàn cục). Không sách
@@ -59,6 +70,9 @@ PROSE_DET_XMARGIN = LITHO_DET_XMARGIN   # văn xuôi in đá: hộp kim cũng r�
 BOX_DECODER_LEGACY = "legacy"
 BOX_DECODER_PITCH = "pitch"
 BOX_DECODERS = (BOX_DECODER_LEGACY, BOX_DECODER_PITCH)
+DETECTOR_RESIZE_LINEAR = "linear"
+DETECTOR_RESIZE_AREA = "area"
+DETECTOR_RESIZES = (DETECTOR_RESIZE_LINEAR, DETECTOR_RESIZE_AREA)
 
 
 @dataclass(frozen=True)
@@ -70,6 +84,8 @@ class BookLayout:
     det_xmargin: float | None = None   # None = step2.det_xmargin toàn cục (STT: 0,25)
     det_thr: float | None = None       # None = step2.det_thr toàn cục (STT: 0,2)
     box_decoder: str = BOX_DECODER_LEGACY   # "legacy" | "pitch" (pitch_decode, tuỳ chọn)
+    detector_ckpt: str | None = None   # None = ckpt toàn cục (v1); chuỗi = ckpt riêng sách (v2)
+    detector_resize: str = DETECTOR_RESIZE_LINEAR   # "linear" (v1) | "area" (khử răng cưa)
 
     @property
     def is_lithograph(self) -> bool:
@@ -127,11 +143,37 @@ def book_layout(book_cfg: dict | None) -> BookLayout:
     box_decoder = book_cfg.get("box_decoder", BOX_DECODER_LEGACY)
     if box_decoder not in BOX_DECODERS:
         raise ValueError(f"books[{name}].box_decoder = {box_decoder!r}; chỉ nhận {BOX_DECODERS}")
+    detector_ckpt = book_cfg.get("detector_ckpt")
+    if detector_ckpt is not None and (not isinstance(detector_ckpt, str) or not detector_ckpt.strip()):
+        raise ValueError(f"books[{name}].detector_ckpt = {detector_ckpt!r}; cần chuỗi đường dẫn .pt (hoặc bỏ khoá)")
+    if isinstance(detector_ckpt, str):
+        detector_ckpt = detector_ckpt.strip()
+    detector_resize = book_cfg.get("detector_resize", DETECTOR_RESIZE_LINEAR)
+    if detector_resize not in DETECTOR_RESIZES:
+        raise ValueError(f"books[{name}].detector_resize = {detector_resize!r}; chỉ nhận {DETECTOR_RESIZES}")
     if (layout == LAYOUT_STT and n_columns == DEFAULT_N_COLUMNS and qpc == 0
-            and det_xmargin is None and det_thr is None and box_decoder == BOX_DECODER_LEGACY):
+            and det_xmargin is None and det_thr is None and box_decoder == BOX_DECODER_LEGACY
+            and detector_ckpt is None and detector_resize == DETECTOR_RESIZE_LINEAR):
         return DEFAULT_LAYOUT
     return BookLayout(layout=layout, n_columns=n_columns, qn_per_column=qpc,
-                      det_xmargin=det_xmargin, det_thr=det_thr, box_decoder=box_decoder)
+                      det_xmargin=det_xmargin, det_thr=det_thr, box_decoder=box_decoder,
+                      detector_ckpt=detector_ckpt, detector_resize=detector_resize)
+
+
+def resolve_detector_ckpt(detector_ckpt: str | None, repo_root) -> str | None:
+    """Đường dẫn ckpt theo sách -> tuyệt đối (thử nguyên văn, rồi tương đối gốc repo). None -> None.
+    Không tồn tại -> FileNotFoundError (build_dataset gọi TRƯỚC khi align: fail fast, không rơi ngầm về v1)."""
+    if detector_ckpt is None:
+        return None
+    from pathlib import Path
+    cands = [Path(detector_ckpt)]
+    if not cands[0].is_absolute():
+        cands.append(Path(repo_root) / detector_ckpt)
+    for c in cands:
+        if c.exists():
+            return str(c.resolve())
+    raise FileNotFoundError(f"books[].detector_ckpt = {detector_ckpt!r} không tồn tại (thử {[str(c) for c in cands]}); "
+                            "bỏ khoá để dùng ckpt toàn cục v1, hoặc chạy lab/i5_detector_v2/apply_v2.sh <best.pt>")
 
 
 def _float_key(book_cfg: dict, name: str, key: str, default: float | None,

@@ -238,6 +238,15 @@ BOX_OVERLAP_FRAC = 0.10
 # nó dùng trọn bộ LEGACY_* để tái lập bộ cũ (selftest: bbox khớp 100% trên 5 trang).
 DETECTOR_THR = 0.2
 DETECTOR_XMARGIN = 0.25
+# (2026-09-22, lab/i5_detector_v2) checkpoint CenterNet THEO SÁCH: build_dataset gán
+# books[].detector_ckpt (đã resolve, tồn tại) vào đây trước khi duyệt trang sách đó rồi khôi
+# phục None. None = ckpt toàn cục (DetectorInfer tự tìm: env NOM_DETECTOR_CKPT >
+# train_crop/detector_r34.best.pt) -> STT không đổi byte. _get_detector cache theo (ckpt, thr).
+DETECTOR_CKPT: str | None = None
+# (2026-09-22) phép thu ảnh trang cho detector: "linear" (cv2 mặc định, v1/STT không đổi byte) |
+# "area" (INTER_AREA khử răng cưa: v1 trên thạch bản tầng n==N 77,0 → 91,9 %). Theo sách qua
+# books[].detector_resize; build_dataset gán/khôi phục như DETECTOR_CKPT.
+DETECTOR_RESIZE = "linear"
 MONOTONE_GUARD = 0.35       # _monotone_assign: hộp xa tâm OCR quá guard×pitch -> midpoint
 # Bộ hằng luật CŨ, dùng TRỌN GÓI (thr + biên x + đường ép đếm _pick_reseg) cho
 # --box-rule legacy và cho cột có ô khoá QĐ-01 trong luật mới (không trộn hộp cũ của ô
@@ -279,8 +288,21 @@ def _reseg_column(cluster) -> list | None:
     return boxes
 
 
-_DETECTORS: dict = {}          # thr -> DetectorInfer | None — cache THEO thr (A-6)
+_DETECTORS: dict = {}          # (ckpt, resize, thr) -> DetectorInfer | None — cache THEO (ckpt, resize, thr) (A-6; 2026-09-22)
 _DETECTOR_TRIED: set = set()
+
+
+def detector_backend_name(ckpt: str | None = None, resize: str | None = None) -> str:
+    """Tên backend ghi vào seg_backend: 'detector_centernet_v1' (ckpt toàn cục, resize linear — STT không
+    đổi) ; ckpt riêng sách -> 'detector_centernet_<tên tệp ckpt>' ; resize area -> thêm hậu tố '+area'."""
+    ckpt = DETECTOR_CKPT if ckpt is None else ckpt
+    resize = DETECTOR_RESIZE if resize is None else resize
+    if not ckpt:
+        name = "detector_centernet_v1"
+    else:
+        from pathlib import Path as _P
+        name = "detector_centernet_" + _P(ckpt).stem
+    return name + ("+area" if resize == "area" else "")
 
 
 class DetectorUnavailableError(FileNotFoundError):
@@ -292,12 +314,16 @@ _HINT = ("tải: huggingface-cli download mdnt571/nom-char-det detector_r34.best
          "muốn dùng trung điểm (bộ crop sẽ KHÁC HẲN, phải đo lại).")
 
 
-def _get_detector(strict: bool = True, thr: float | None = None):
-    """Lazy, cached CenterNet detector (train_crop/detector_r34.best.pt), cache theo thr.
+def _get_detector(strict: bool = True, thr: float | None = None, ckpt: str | None = None,
+                  resize: str | None = None):
+    """Lazy, cached CenterNet detector, cache theo (ckpt, resize, thr).
 
     thr=None -> DETECTOR_THR (đọc lúc gọi, nên config ghi đè có hiệu lực); --box-rule
     legacy truyền LEGACY_DETECTOR_THR để tái lập đúng bộ cũ (0,3) — hai đối tượng
     detector sống song song, mỗi ngưỡng một cache.
+    ckpt=None -> DETECTOR_CKPT (build_dataset gán theo sách; None = ckpt toàn cục v1
+    train_crop/detector_r34.best.pt hoặc env NOM_DETECTOR_CKPT). Sách khai
+    books[].detector_ckpt (v2) có đối tượng detector riêng; sách STT không khai -> y hệt.
     strict=True (mặc định): thiếu checkpoint -> NÉM DetectorUnavailableError.
     Trước 2026-08-23 hàm này chỉ IN một dòng log rồi lặng lẽ rơi về midpoint: toàn bộ
     hộp ký tự bị tách bằng trung điểm thay vì CenterNet, cho ra bộ crop khác hẳn, mà
@@ -305,27 +331,32 @@ def _get_detector(strict: bool = True, thr: float | None = None):
     Chỉ dùng bởi reseg_mode='detector'.
     """
     thr = float(DETECTOR_THR if thr is None else thr)
-    if thr in _DETECTOR_TRIED:
-        d = _DETECTORS.get(thr)
+    ckpt = (DETECTOR_CKPT if ckpt is None else ckpt) or None
+    resize = DETECTOR_RESIZE if resize is None else resize
+    key = (ckpt or "", resize, thr)
+    if key in _DETECTOR_TRIED:
+        d = _DETECTORS.get(key)
         if strict and (d is None or not getattr(d, "trained", False)):
             raise DetectorUnavailableError(f"reseg=detector nhưng detector không dùng được. {_HINT}")
         return d
-    _DETECTOR_TRIED.add(thr)
+    _DETECTOR_TRIED.add(key)
     err = None
     d = None
     try:
         from pipeline.align_engine.char_detector.detector_infer import DetectorInfer
         # thr: trước A-6 ghim 0,3 (bớt detection tin cậy thấp lọt vào enforce_count);
         # nay DETECTOR_THR 0,2 vì hộp thô không còn bị ép đếm ở cột đếm đúng.
-        d = DetectorInfer(thr=thr)  # tự tìm ckpt v1 ở train_crop/detector_r34.best.pt
+        d = DetectorInfer(ckpt=ckpt, thr=thr, resize=resize)  # ckpt None -> tự tìm v1 ở train_crop/
         if not d.trained:
-            err = "không thấy train_crop/detector_r34.best.pt"
+            err = f"không nạp được checkpoint {ckpt or 'train_crop/detector_r34.best.pt'}"
         else:
-            print(f"  [reseg detector] CenterNet v1 (img {d.img}, seam, thr {thr}).", flush=True)
+            tag = "v1" if not ckpt else f"ckpt {ckpt}"
+            print(f"  [reseg detector] CenterNet {tag} (img {d.img}, seam, thr {thr}"
+                  + (f", resize {resize}" if resize != "linear" else "") + ").", flush=True)
     except Exception as e:
         err = f"{type(e).__name__}: {e}"
         d = None
-    _DETECTORS[thr] = d
+    _DETECTORS[key] = d
     if err:
         if strict:
             raise DetectorUnavailableError(f"reseg=detector nhưng {err}. {_HINT}")
@@ -355,7 +386,7 @@ def preflight_detector(reseg_mode: str, box_rule: str = "syl_index") -> str:
     if reseg_mode != "detector":
         return reseg_mode
     _get_detector(strict=True, thr=LEGACY_DETECTOR_THR if box_rule == "legacy" else None)
-    return "detector_centernet_v1"
+    return detector_backend_name()
 
 
 def _valley_boxes(cluster, binary, n):
@@ -803,7 +834,7 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
         elif locked_columns or legacy_also_columns:
             # cột có ô khoá QĐ-01: hộp ở ngưỡng cũ 0,3 (lọc lại từ lần chạy 0,2 — cùng tập)
             legacy_page_boxes = _legacy_page_boxes(page_boxes, thr, page_bgr)
-        seg_backend = "detector_centernet_v1" + seg_backend_suffix
+        seg_backend = detector_backend_name() + seg_backend_suffix   # v1: 'detector_centernet_v1' (không đổi)
 
     pairs: list[dict] = []
     # col_states (flow N3g): trạng thái từng cột sau lượt DP 1 — build_dataset PASS 1b

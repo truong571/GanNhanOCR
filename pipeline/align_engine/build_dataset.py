@@ -67,7 +67,7 @@ from pipeline.align_engine.align_production import (                    # noqa: 
 from pipeline.align_engine.consensus import (                         # noqa: E402
     AM_DA_QUYET, am_da_quyet, chuan_am, decide_label)
 from pipeline.align_engine.bbox_fix import tighten_box, carve_neighbor_ink  # noqa: E402
-from pipeline.align_engine.book_layout import book_layout, DEFAULT_LAYOUT  # noqa: E402  (n_columns/layout theo sách)
+from pipeline.align_engine.book_layout import book_layout, DEFAULT_LAYOUT, resolve_detector_ckpt  # noqa: E402  (n_columns/layout/ckpt theo sách)
 from pipeline.align_engine import recenter_f3g as rf3g                 # noqa: E402  (D-1, chỉ chạy khi --crops-v2)
 from pipeline.align_engine import tier_v3 as tv3                      # noqa: E402
 from pipeline.align_engine.visual_emission import load_page_gray as vis_load_gray  # noqa: E402  (B-2; torch nạp lười)
@@ -1117,6 +1117,21 @@ def main():
         # chạy tiếp = lặng lẽ tách chữ bằng trung điểm cho cả 445 trang.
         _backend = preflight_detector(args.reseg, box_rule=args.box_rule)
         print(f"  [reseg] backend thực dùng = {_backend}", flush=True)
+    # (2026-09-22) ckpt/resize detector THEO SÁCH (books[].detector_ckpt / detector_resize, lab/i5_detector_v2):
+    # resolve + kiểm tệp tồn tại + dựng thử detector NGAY (fail fast), trước khi tốn phút align. Sách không
+    # khai -> None/linear = ckpt toàn cục v1, STT không đổi byte. Chỉ luật syl_index + reseg detector dùng.
+    det_ckpt_by_book: dict = {}
+    for _b in config["books"]:
+        _lay = book_layout(_b)
+        if args.reseg == "detector" and args.box_rule == "syl_index" and (_lay.detector_ckpt or _lay.detector_resize != "linear"):
+            _ck = resolve_detector_ckpt(_lay.detector_ckpt, REPO)          # FileNotFoundError nếu thiếu
+            det_ckpt_by_book[_b["name"]] = (_ck, _lay.detector_resize)
+            _d = ap_mod._get_detector(strict=True, thr=(_lay.det_thr if _lay.det_thr is not None
+                                                        else float(_s2.get("det_thr", ap_mod.DETECTOR_THR))),
+                                      ckpt=_ck, resize=_lay.detector_resize)
+            print(f"  [reseg] {_b['name']}: detector riêng sách ckpt = {_ck or '(toàn cục v1)'} | resize = "
+                  f"{_lay.detector_resize} | img {_d.img} | backend = "
+                  f"{ap_mod.detector_backend_name(_ck, _lay.detector_resize)}", flush=True)
 
     # ---------- PASS 1: align all pages, collect records (no crop yet) ----------
     records = []
@@ -1145,6 +1160,13 @@ def main():
             det_params_by_book[book] = {"det_thr": ap_mod.DETECTOR_THR,
                                         "det_xmargin": ap_mod.DETECTOR_XMARGIN,
                                         "box_decoder": lay.box_decoder}
+            # ckpt/resize detector theo sách (2026-09-22): gán cho vòng trang của sách này, khôi phục sau PASS 1
+            ap_mod.DETECTOR_CKPT, ap_mod.DETECTOR_RESIZE = det_ckpt_by_book.get(book, (None, "linear"))
+            if book in det_ckpt_by_book:
+                det_params_by_book[book]["detector_ckpt"] = ap_mod.DETECTOR_CKPT
+                det_params_by_book[book]["detector_resize"] = ap_mod.DETECTOR_RESIZE
+                print(f"[align] {book}: detector ckpt = {ap_mod.DETECTOR_CKPT or '(toàn cục v1)'} | resize = "
+                      f"{ap_mod.DETECTOR_RESIZE} -> seg_backend {ap_mod.detector_backend_name()}", flush=True)
             if lay.box_decoder != "legacy":
                 print(f"[align] {book}: box_decoder = {lay.box_decoder} (pitch_decode: ứng viên ≥ 0,05 + ô ảo "
                       f"chiếu mực, DP theo bước cột; n_det vẫn = hộp thô ở det_thr)", flush=True)
@@ -1210,6 +1232,7 @@ def main():
 
     if args.box_rule == "syl_index":
         ap_mod.DETECTOR_THR, ap_mod.DETECTOR_XMARGIN = det_thr_global, det_xmargin_global
+        ap_mod.DETECTOR_CKPT, ap_mod.DETECTOR_RESIZE = None, "linear"
 
     # ---------- PASS 1b: đệ quy hai lượt (flow N4a–N4c) ----------
     n_anchor_pairs = 0          # số cặp lượt 2 được neo LOO hạ chi phí thật (N4a "ô được neo")

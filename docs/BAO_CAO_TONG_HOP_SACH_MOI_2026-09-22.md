@@ -1,6 +1,6 @@
 # BÁO CÁO TỔNG HỢP — gán nhãn tự động cho sách mới (LVT1883, KVK1884, Chrestomathie1872): vòng 1 + vòng 2 + I5 + run_pipeline
 
-Ngày 2026-09-22 (chiều, vòng 3) · đã commit trên main: 59fde272c4 (engine pitch), 6575d4d764 (run_pipeline --book + measure + train_crop), 10e6fa1b3f (docs) — kế hoạch: `docs/KE_HOACH_COMMIT_VONG3_2026-09-22.md`.
+Ngày 2026-09-22 (chiều, vòng 3; **cập nhật tối, vòng 4: răng cưa INTER_AREA §3.3/§6**) · đã commit trên main: 59fde272c4 (engine pitch), 6575d4d764 (run_pipeline --book + measure + train_crop), 10e6fa1b3f + 8c08591e9a (docs) — kế hoạch vòng 3: `docs/KE_HOACH_COMMIT_VONG3_2026-09-22.md`; **vòng 4 (chưa commit: khoá `detector_ckpt`/`detector_resize`, lab/i5_detector_v2): `docs/KE_HOACH_COMMIT_VONG4_2026-09-22.md`**.
 Báo cáo này **gộp và thay** `BAO_CAO_TONG_THE_SACH_MOI_2026-09-22.md` (vòng 1–2) và `PHUONG_AN_TU_DONG_2026-09-22.md` (hai tệp giữ làm lịch sử).
 Mọi con số sinh bởi script (0 token LLM), nguồn ghi ngay cạnh số; **không có người kiểm** (ràng buộc đề tài).
 
@@ -11,8 +11,8 @@ Mọi con số sinh bởi script (0 token LLM), nguồn ghi ngay cạnh số; **
 | Chạy được sách mới bằng pipeline STT không? | **Có, 1 lệnh**: `./run_pipeline.sh --book LucVanTien1883 \| KimVanKieu1884 \| Chrestomathie1872 \| all-new` (B0→B6, 0 API khi có cache kim; 169 / 236 / 137 s). Đường STT (`./run_pipeline.sh` không tham số) **không đổi byte** (§2). |
 | Kết quả chốt cuối (sau pitch + cổng a')? | LVT **8.650** GOLD ảnh + 130 text_only → **11.013 ảnh**; KVK (B1') **13.908** + 510 → **17.752 ảnh**; Chresto **5.359** + 126 → **6.645 ảnh** (§3). |
 | Nhãn đúng bao nhiêu (không người)? | Precision **văn bản** GOLD trên GT độc lập IHR-NomDB (mộc bản): **89,3 %** (LVT1916) / **84,6 %** (Kiều 1872); khớp dị bản trên chính thạch bản: KVK↔1871 **81,3 %** sau cổng (a)(b)(c), ↔1872 độc lập 78,5 % (B6), nền dị bản 1871↔1872 chỉ 82,9 % (§4). **Độ đúng hộp/ảnh không đo được** — chỉ có proxy ô tham chiếu tự động (§6). |
-| I5 (detector đếm lệch ±1) đã chữa chưa? | Chữa phần **hoà giải** bằng `box_decoder: pitch` (hộp IoU ≥ 0,5 với ô tham chiếu 97,4 → 98,1 % LVT, 94,1 → 97,0 % KVK) và cổng (a') theo ô; **gốc mô hình chưa chữa** (I5 thô 65,2 / 59,2 / 70,7 % giữ nguyên theo định nghĩa); phương án B (huấn luyện v2) có script, chưa chạy dài (§6). |
-| Quyết định pitch? | **PITCH = bản chốt** cho cả 3 sách (tier không giảm, khớp dị bản không giảm, ảnh lỗi ở mức crop giảm; §3.2). Bản legacy giữ ở `*_v3_legacy/`. |
+| I5 (detector đếm lệch ±1) đã chữa chưa? | Chữa phần **hoà giải** bằng `box_decoder: pitch` (hộp IoU ≥ 0,5 với ô tham chiếu 97,4 → 98,1 % LVT, 94,1 → 97,0 % KVK) và cổng (a') theo ô; **gốc mô hình chưa chữa trong bản chốt** (I5 thô 65,2 / 59,2 / 70,7 %). **Tối 22/09 tìm ra gốc**: phần lớn I5 là **răng cưa** khi thu ảnh 3.200 → 1.024 bằng INTER_LINEAR — chỉ đổi INTER_AREA (`detector_resize: area`, cùng ckpt v1) cho I5 thô **77,7 / 77,9** / 69,3 %, ok50 99,3 / 98,6 %, GOLD ảnh +83 / +257; nhưng LVT `bleed` ảnh export 18,0 → 21,7 % và Chresto không lợi → theo luật "không chỉ số nào giảm" **chưa lấy làm chốt** (§3.3). Phương án B (huấn luyện v2 trên Kaggle, mốc = v1+area) đã gói sẵn, chưa chạy (§6). |
+| Quyết định pitch? | **PITCH (linear) = bản chốt** cho cả 3 sách (tier không giảm, khớp dị bản không giảm, ảnh lỗi ở mức crop giảm; §3.2). Bản legacy giữ ở `*_v3_legacy/`; bản thử `area` giữ ở `*_area/` (§3.3), config ghi `detector_resize: linear` kèm số đo. |
 
 ## 1. Dữ liệu (`data/`, 13 thư mục, 3 nhóm — `data/README.md`, `data/*/SOURCE.md`, `data/KIEM_TRA_KHOP_1-1_2026-09-20.md`)
 
@@ -37,6 +37,7 @@ Mọi con số sinh bởi script (0 token LLM), nguồn ghi ngay cạnh số; **
 | **`run_pipeline.sh --book`** (khối SÁCH MỚI, bash 3.2): B0 setup+bộ đo+B1' → B1 ingest → B2 build+enrich → B3 remediation (`--out`) → B4 auto_precision cross + gates → B5 export+docs+xlsx → B6 cross gated; `--dry-run --skip-ingest --no-api --no-auto-precision --suffix`; hồ sơ từ khối `run:`/`run_config:` của `config/pipeline_<Book>.yaml`; log `logs/run_<Book>_*.log`, sha256 `CHECKSUMS.txt` | `run_pipeline.sh` (chỉ 2 hunk thêm; hàm STT/MAIN không đổi), `config/pipeline_{LucVanTien1883,KimVanKieu1884,KimVanKieu1884_b1,Chrestomathie1872}.yaml` | `--suffix _rp` tái lập md5 bản chốt 3/3 sách (HUONG_DAN §2.1); `./run_pipeline.sh --dry-run` in đúng 6 bước STT; lần chạy chốt cuối `_pitch` EXIT 0, 0 API |
 | Bộ đo offline 0 token: `measure.py --all` (layout, qn_ocr, chresto_map, detector_transfer, code_facts, **box_ref**) 118 invariants; `auto_precision.py` (IHR, cross, gates) | `scripts/measure/*`, `docs/PIPELINE_FACTS.json` | idempotent; FACTS 18/18 sau vòng 3 |
 | I5 phương án B — huấn luyện detector v2 trên nhãn yếu | `train_crop/build_lithograph_manifest.py`, `train_v2_lithograph.py`, `eval_boxes_ref.py`, `train_crop/data_lithograph/` (7,3 MB manifest) | manifest 31.776 ô / 793 vùng ignore; smoke 1 epoch 3+3 trang chạy được; **chưa chạy dài** (§6) |
+| **Vòng 4 (chưa commit)**: khoá theo sách `detector_ckpt` (ckpt riêng, fail fast) + `detector_resize` linear\|area (INTER_AREA khử răng cưa); gói Kaggle v2 | `book_layout.py` (`resolve_detector_ckpt`), `align_production.py` (cache `(ckpt, resize, thr)`, `detector_backend_name`), `build_dataset.py`, `char_detector/detector_infer.py`, `train_crop/infer_centernet.py` (`resize`), `scripts/measure/box_ref_eval.py` (`--ckpt --resize`), `lab/i5_detector_v2/` | book_layout **100/100** (+21); STT md5 59e436d7… hai bên (worktree 8c08591e9a); `_area` 3 sách EXIT 0 (§3.3); `measure_out/box_ref_area/` 24/24 |
 
 ## 3. Kết quả chạy 3 sách — bảng chốt cuối (pitch + cổng a'), `dataset_out_<Book>[_b1]/{summary,mechanism_gates_report,remediation_report}.json`, `dataset_<Book>/`
 
@@ -70,6 +71,34 @@ trên hộp cùng loại thì giảm: `detector → detector` 24,8 → 19,5 %, `
 
 Rủi ro còn lại (§6): ô GOLD-ảnh trong cột n_det≠N (2.910 / 5.430 / 1.502) có ≈ 4,7 % hộp lệch theo proxy (IoU < 0,5) ≈ 137 / 255 / ? ô; người muốn bộ chặt hơn lọc `n_det_mismatch = 1` trong `labels_trace.csv`.
 
+### 3.3 Thử INTER_AREA (`--suffix _area`, 22/09 tối) — không đổi chốt, giữ làm bản so sánh (`dataset_out_<Book>[_b1]_area/`, `dataset_<Book>_area/`)
+
+Gốc: `CenterNetDetector._preprocess` thu trang về 1.024 px bằng `cv2.resize` INTER_LINEAR; thạch bản 3.204 / 2.789 / 2.289 px bị thu 3,1× / 2,7× / 2,2× →
+răng cưa rụng nét mảnh. Khoá mới `books[].detector_resize: area` (INTER_AREA; mặc định `linear` = STT không đổi byte, md5 59e436d7… hai bên), cùng ckpt v1,
+chạy `./run_pipeline.sh --book all-new --suffix _area` (0 API, 174 / 237 / 138 s) và `box_ref_eval.py --resize area` (`measure_out/box_ref_area/`, 24/24 invariants):
+
+| Chỉ số (chốt pitch-linear → area) | LucVanTien1883 | KimVanKieu1884 (B1') | Chrestomathie1872 |
+|---|---|---|---|
+| **I5 thô** n_det==N (toàn sách) | 65,2 → **77,7 %** ✅ | 59,2 → **77,9 %** ✅ | 70,7 → 69,3 % (nhiễu, thu 2,2×) |
+| box_ref 27 trang: I5 cột / tầng n==N / pitch ok50 / miss legacy | 63,7 → 79,6 / 77,4 → 88,5 / 98,1 → 99,3 / 0,5 → 0,1 | 54,4 → 74,8 / 71,1 → 85,4 / 97,0 → 98,6 / 3,0 → 1,0 | — |
+| box_ref "cắt thân chữ" legacy · pitch | 11,0 → 10,8 · 9,5 → **10,6** | 3,8 → 3,1 · 2,6 → 2,5 | — |
+| hộp thô h/p trung vị · điểm tin cậy | 1,14 → 1,16 · 0,35 → 0,39 | 1,11 → 1,13 · 0,32 → 0,36 | — |
+| tier thô (GOLD/SYL/REVIEW) · labels_final GOLD / QUAR | y hệt · 9.667 → 9.665 / 14 → 18 | y hệt · 15.931 → 15.927 / 102 = 102 | y hệt · y hệt |
+| box_source detector_low / ink_cut | 64 / 172 → 22 / 75 | 449 / 430 → 175 / 175 | 4 / 209 → 3 / 220 |
+| cờ `n_det_mismatch` (dòng) | 4.978 → 3.156 | 9.238 → 4.988 | 2.408 → 2.559 |
+| **GOLD ảnh / text_only** · ảnh export | 8.650 / 130 → **8.733 / 43** · 11.013 → 11.097 | 13.908 / 510 → **14.165 / 201** · 17.752 → 17.999 | 5.359 / 126 → 5.344 / 134 · 6.645 → 6.636 |
+| F1 cross-col (census dòng) | 14 → 18 | 108 → 106 | 0 |
+| khớp dị bản GOLD-ảnh sau (a)(b)(c) → B6 | 73,4 → 73,4 (n 2.595 → 2.607) · 79,1 → 79,2 | 1871: 81,3 → 81,1 (n 11.461 → 11.661) · 85,8 → 85,7; 1872: 78,5 → 78,3 | — |
+| crop mọi ô: bleed · blank · truncated | 2.025 → **2.459** · 6 · 8 → 7 | 1.992 → 1.990 · 177 → 217 · 10 → 24 (124 ô mới đều → REVIEW bởi (c)) | 137 → 135 · 0 · 119 → 120 |
+| **bleed trên ảnh export** (GOLD + SYL) | 18,0 → **21,7 %** (+429) | 10,5 = 10,5 % | 2,0 = 2,0 % |
+
+Đọc: area chữa đúng thứ nó nhắm (I5 thô ≥ 75 % lần đầu ở 2 thạch bản, miss/extra giảm 3–5 lần, text_only còn 1/3, +340 ảnh GOLD), văn bản không đổi;
+nhưng hộp cao/rộng hơn ≈ 2 % (+3 px, dịch lên 2 px) nên crop LVT ngậm thêm mực hàng xóm: cờ `bleed` đổi dồn vào ô có crop cao thêm > 4 px (+607 / −204),
+GOLD-ảnh LVT bleed 18,0 → 21,6 %; "cắt thân chữ" pitch LVT +1,1 điểm (đổi cờ 179 / 142 ô, ≈ CI ±0,7). Chresto không lợi (thu 2,2×). **Theo luật đã đặt
+("không chỉ số then chốt nào giảm") `_area` chưa thay bản chốt**; KVK là sách duy nhất không có chỉ số nào giảm → nếu chấp nhận đổi bleed lấy I5 (hoặc chỉ bật
+cho KVK), đổi `detector_resize: linear → area` trong config sách đó và đổi tên `_area` thành chốt. Với detector v2 (Kaggle), mốc so sánh là **v1+area**
+(`docs/HUONG_DAN_HUAN_LUYEN_I5_2026-09-22.md` §0, `lab/i5_detector_v2/README.md`); v2 phải giảm cả bleed lẫn cắt (học lại kích thước hộp thạch bản).
+
 ## 4. Độ đúng tự động thay người kiểm (`scripts/measure/auto_precision.py --all` → `measure_out/auto_precision/`; chi tiết cũ: PHUONG_AN_TU_DONG §1–§3)
 
 | Phép đo | KVK1884 / Kiều | LVT1883 / Lục Vân Tiên | Ý nghĩa / caveat |
@@ -91,7 +120,14 @@ Rủi ro còn lại (§6): ô GOLD-ảnh trong cột n_det≠N (2.910 / 5.430 / 
 
 **Phương án A — đã làm, đã đo, đã chốt** (`pitch_decode.py`, `box_decoder: pitch`): bảng §3; miss 0,1 / 0,4 %, extra 0,1 / 0,4, |dy| p90 16,3 / 15,4 % bước; ô `ink_cut` trùng tham chiếu **theo cấu tạo** → số "honest" chỉ ô nguồn detector: 98,3 / 97,3 % (vẫn hơn legacy 0,9 / 3,2 điểm). Trường hợp I5 mù: `page_0008` cột 7 LVT n_det = 14 = N nhưng legacy lệch 5 hộp một chữ, pitch đúng.
 
-**Phương án B — kế hoạch + script, CHƯA chạy dài**: nhãn yếu `train_crop/data_lithograph/manifest_*.json` (268 trang thạch bản → **31.776 ô** ở 4.550/5.343 tầng + 793 vùng `ignore_boxes`; STT 445 trang + 14.172 bbox REVIEW làm ignore; chia page-disjoint theo sách, `--lobo`); trainer `train_v2_lithograph.py` (init v1, cân bằng miền 50/50, augment nền xám + kéo dọc ±10 %); eval mỗi epoch `eval_boxes_ref.py` (litho ok50, % tầng n == N của hộp **thô**, cắt thân chữ; STT F1 hồi quy — mốc v1: ok50 95,0 %, tầng n==N 77,0 %, STT F1 0,876). Thời gian: 20 epoch ≈ 5–8 h CPU Mac hoặc **≈ 1 h Kaggle T4** (đóng gói `pack_for_kaggle.py` + `data_lithograph/` + `prepared/{LVT,KVK}/pages`). Nghiệm thu: `detector_transfer.py` STT ≥ 90,1 % không giảm; `box_ref_eval.py` ok50 ≥ 98 %, cắt thân chữ giảm; build `--limit 10` `detector_low`/`ink_cut` giảm.
+**Phát hiện răng cưa (22/09 tối, §3.3; `HUONG_DAN_HUAN_LUYEN_I5` §0)**: cùng ckpt v1, chỉ đổi phép thu ảnh trang INTER_LINEAR → INTER_AREA
+(`books[].detector_resize: area`): 27 trang val ảnh gốc ok50 95,0 → 98,1 %, tầng n==N thô 77,0 → 91,9 %, cắt 7,1 → 6,4 %, STT F1 0,8767 → 0,8785;
+box_ref 27 trang/sách I5 cột 63,7 → 79,6 / 54,4 → 74,8 %; toàn sách I5 thô 77,7 / 77,9 %. Tức "điểm tin cậy thấp trên thạch bản" phần lớn là răng cưa,
+không phải model. Chưa chốt vì bleed LVT (§3.3). Engine: khoá `detector_ckpt` (ckpt riêng sách, fail fast) + `detector_resize`, cache `(ckpt, resize, thr)`,
+`seg_backend` ghi `+area`; STT không khai → byte-identical.
+
+**Phương án B — gói sẵn cho Kaggle, CHƯA chạy dài** (`lab/i5_detector_v2/README.md`: `make_bundle.py` → zip 243 MB → notebook T4 ≈ 1–1,5 h →
+`apply_v2.sh best.pt` đo v1 · v1+area · v2+area + build `_v2`; `best.pt` chỉ ghi khi vượt **v1+area** và qua guard STT; mốc `v1_baseline_val.json`): nhãn yếu `train_crop/data_lithograph/manifest_*.json` (268 trang thạch bản → **31.776 ô** ở 4.550/5.343 tầng + 793 vùng `ignore_boxes`; STT 445 trang + 14.172 bbox REVIEW làm ignore; chia page-disjoint theo sách, `--lobo`); trainer `train_v2_lithograph.py` (init v1, cân bằng miền 50/50, augment nền xám + kéo dọc ±10 %); eval mỗi epoch `eval_boxes_ref.py` (litho ok50, % tầng n == N của hộp **thô**, cắt thân chữ; STT F1 hồi quy — mốc v1: ok50 95,0 %, tầng n==N 77,0 %, STT F1 0,876). Thời gian: 20 epoch ≈ 5–8 h CPU Mac hoặc **≈ 1 h Kaggle T4** (đóng gói `pack_for_kaggle.py` + `data_lithograph/` + `prepared/{LVT,KVK}/pages`). Nghiệm thu: `detector_transfer.py` STT ≥ 90,1 % không giảm; `box_ref_eval.py` ok50 ≥ 98 %, cắt thân chữ giảm; build `--limit 10` `detector_low`/`ink_cut` giảm.
 
 **Cách đo trung thực**: (i) không dùng `n_det == N` khi ép N (hằng đúng) — `n_det` giữ hộp thô; (ii) tách `*_honest(det_src_only)`; (iii) chỉ số không phụ thuộc tham chiếu duy nhất = mực chạm mép hộp thô (và crop flag thật, đã bão hoà); (iv) tham chiếu là proxy (kim tầng cụt/rộng, khe trong chữ ⿱), tầng không verified 7–9 % bị loại; (v) CI 27 trang ≈ ±3,5 điểm cột, ±0,7 điểm ô. **Không có hộp GT người → không đo được precision crop.**
 
@@ -107,7 +143,7 @@ Sách thứ tư: `data/<BOOK>/pages/` + `SOURCE.md` → thêm vào `BOOKS` của
 ## 8. Giới hạn thật và việc chưa làm
 
 1. **Không có GT người** — mọi độ đúng là proxy: văn bản (mộc bản IHR, dị bản), hộp (ô tham chiếu tự động). Precision ảnh crop **không đo được**; GOLD-ảnh trong cột n_det≠N (2.910 / 5.430 / 1.502 ô) ước ≈ 4,7 % hộp lệch. Bộ mẫu mù `kiem_nguoi_*.py` để ngoài commit.
-2. **I5 gốc chưa chữa**: I5 thô 65,2 / 59,2 / 70,7 % < 75 %; phương án B chưa chạy dài; detector thích ảnh nhị phân hoàn toàn (KVK otsu 65,6 vs prepared 54,4 %) nhưng engine chưa tách "ảnh cho detector" khỏi "ảnh để crop".
+2. **I5 gốc chưa chữa trong bản chốt**: I5 thô 65,2 / 59,2 / 70,7 % < 75 %; gốc đã định vị là răng cưa (INTER_AREA cho 77,7 / 77,9 %, §3.3) nhưng chưa chốt vì bleed LVT +3,7 điểm; phương án B (Kaggle) chưa chạy; detector thích ảnh nhị phân hoàn toàn (KVK otsu 65,6 vs prepared 54,4 %) nhưng engine chưa tách "ảnh cho detector" khỏi "ảnh để crop".
 3. **Blank KVK** 219 → 177 ô (c) hạ REVIEW: ngưỡng `enrich_crop_quality` hiệu chuẩn trên STT; 40 ô đo có mực trên ảnh gốc → có thể hạ oan.
 4. **QN Chresto** tesseract lỗi âm ≈ 13 % + mất dòng → 1.239 ô `no_context` REVIEW; không phiên âm chuẩn để B1'; không dị bản → không (d)/B6; hộp không có tham chiếu (321 ô đổi hộp IoU < 0,3 chưa kiểm).
 5. **B1'**: chính tả Bắc 676 dòng chưa vào export/DATASHEET; luật theo từng âm với kim trọng tài chưa làm; KVK lệch 5 câu Nôm/QN chưa định vị (`KET_QUA_DO_CUOI` §4).
@@ -119,10 +155,11 @@ Sách thứ tư: `data/<BOOK>/pages/` + `SOURCE.md` → thêm vào `BOOKS` của
 | Nội dung | Tệp |
 |---|---|
 | Hướng dẫn chạy (lệnh, cổng nghiệm thu 3 sách, thêm sách) | `docs/HUONG_DAN_CHAY_SACH_MOI_2026-09-21.md` |
-| I5: chẩn đoán, pitch_decode, huấn luyện v2, cách đo | `docs/HUONG_DAN_HUAN_LUYEN_I5_2026-09-22.md`; `measure_out/box_ref/` |
+| I5: răng cưa INTER_AREA (§0), chẩn đoán, pitch_decode, huấn luyện v2 Kaggle, cách đo | `docs/HUONG_DAN_HUAN_LUYEN_I5_2026-09-22.md`; `lab/i5_detector_v2/README.md`; `measure_out/box_ref/`, `measure_out/box_ref_area/` |
 | Lần chạy từng sách (đầu tệp = chốt cuối pitch) | `docs/CHAY_LVT1883_2026-09-21.md`, `CHAY_KVK1884_B1_2026-09-22.md` (chính thức), `CHAY_KVK1884_2026-09-21.md`, `CHAY_CHRESTO1872_2026-09-22.md` |
 | Lịch sử vòng 1–2 và phương án tự động (đã gộp vào đây) | `docs/BAO_CAO_TONG_THE_SACH_MOI_2026-09-22.md`, `docs/PHUONG_AN_TU_DONG_2026-09-22.md` |
 | Số đo dữ liệu + đặc tả | `docs/KET_QUA_DO_CUOI_2026-09-21.md`, `docs/PIPELINE_SACH_MOI_2026-09-20.md`, `docs/PIPELINE_FACTS.json`, `measure_out/{SUMMARY.json,REPORT.md}` |
-| Kế hoạch commit | vòng 1 `KE_HOACH_COMMIT_2026-09-21.md` (đã commit fb345a29b1…853cadfd9c), vòng 2 `KE_HOACH_COMMIT_VONG2_2026-09-22.md` (đã commit 6b8e215576, e06f32dce7, 4e0a314bca), **vòng 3 `KE_HOACH_COMMIT_VONG3_2026-09-22.md` (chưa commit)** |
+| Kế hoạch commit | vòng 1 `KE_HOACH_COMMIT_2026-09-21.md` (đã commit fb345a29b1…853cadfd9c), vòng 2 `KE_HOACH_COMMIT_VONG2_2026-09-22.md` (đã commit 6b8e215576, e06f32dce7, 4e0a314bca), vòng 3 `KE_HOACH_COMMIT_VONG3_2026-09-22.md` (đã commit 59fde272c4, 6575d4d764, 10e6fa1b3f, 8c08591e9a), **vòng 4 `KE_HOACH_COMMIT_VONG4_2026-09-22.md` (chưa commit: detector_ckpt/detector_resize, lab/i5_detector_v2)** |
 
 Hồi quy/selftest lúc chốt (22/09 chiều): STT 3 trang md5 59e436d7… hai bên; `./run_pipeline.sh --dry-run` 6 bước; book_layout 79/79 · ingest_lithograph 61/61 · ingest_prose 33/33 · mechanism_gates 94/94 · pitch_decode 22/22 · verses_ref_fix 19/19 · phase1_engine 253/0 · tools 139/3 (có sẵn) · code_facts 18/18; `git status -- dataset_out data prepared/SachThanhTruyen*` trống.
+Vòng 4 (22/09 tối, worktree HEAD 8c08591e9a ↔ mã mới): STT 3 trang md5 **59e436d7641fa849bb6759868ac29259** hai bên (344/346 tệp giống byte, 2 tệp chỉ khác đường dẫn REPO); `--dry-run` 6 bước; book_layout **100/100** · phase1_engine 253/0 · pitch_decode 22/22 · mechanism_gates 94/94 · tools 139/3 · code_facts 18/18 (pin book_layout.py 50 → 61).

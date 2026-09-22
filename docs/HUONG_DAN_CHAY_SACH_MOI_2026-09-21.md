@@ -11,6 +11,8 @@ Tổng hợp NV1–NV5 (21/09), NV-B/NV-D (22/09 sáng) và **vòng 2** 22/09: (
 > (GOLD ảnh LVT 8.650 / KVK 13.908 / Chresto 5.359; ảnh export 11.013 / 17.752 / 6.645), so sánh với legacy, lý do và giới hạn: **`docs/BAO_CAO_TONG_HOP_SACH_MOI_2026-09-22.md`**
 > (báo cáo gộp duy nhất, §3/§6). Bản legacy vòng 2 (số trong §1/§3 dưới đây) giữ ở `dataset_<BOOK>_v3_legacy/`, `dataset_out_<BOOK>[_b1]_v3_legacy/`.
 > Kế hoạch commit vòng 3: `docs/KE_HOACH_COMMIT_VONG3_2026-09-22.md`. Selftest mechanism_gates nay **94/94**; pitch_decode 22/22.
+>
+> **Vòng 4 (22/09 tối, chưa commit)**: khoá theo sách `detector_ckpt` / `detector_resize` (linear|area) + `lab/i5_detector_v2/` (gói Kaggle v2). Thử INTER_AREA trên 3 sách (`_area`): I5 thô 77,7 / 77,9 / 69,3 % nhưng LVT bleed +3,7 điểm → **chốt vẫn pitch-linear** (§6.1, BAO_CAO_TONG_HOP §3.3). STT md5 59e436d7… (worktree 8c08591e9a); book_layout 100/100. Kế hoạch commit: `docs/KE_HOACH_COMMIT_VONG4_2026-09-22.md`.
 
 ## 1. Trạng thái — cái gì đã chạy được
 
@@ -164,6 +166,9 @@ selftest như §2, hồi quy STT md5 59e436d7…, `scripts/measure/code_facts.py
 1. **I5 chưa đạt cả ba sách** (§3, 65,2 / 59,2 / 70,7 % — n_det giữ nghĩa hộp thô nên số này KHÔNG đổi khi bật pitch) — gốc detector ±1 chưa chữa ở mức mô hình;
    vòng 3 chữa phần hoà giải bằng `box_decoder: pitch` (hộp IoU ≥ 0,5 với ô tham chiếu 98,1 / 97,0 %, trong cột n_det≠N 95,3 / 95,3 %) và cổng (a') theo ô →
    text_only chỉ còn 130 / 510 / 126; phương án B (huấn luyện v2) chưa chạy: `docs/HUONG_DAN_HUAN_LUYEN_I5_2026-09-22.md` §3.
+   **22/09 tối**: gốc I5 = răng cưa khi thu ảnh 3.200 → 1.024 (INTER_LINEAR); khoá `books[].detector_resize: area` (INTER_AREA, cùng ckpt v1) cho I5 thô
+   **77,7 / 77,9** / 69,3 % và GOLD ảnh +83 / +257 (`--suffix _area`, 0 API) nhưng LVT bleed ảnh export 18,0 → 21,7 % → **chưa đổi chốt**, config ghi `linear` kèm số
+   (BAO_CAO_TONG_HOP §3.3, HUONG_DAN_HUAN_LUYEN_I5 §0); v2 trên Kaggle: `lab/i5_detector_v2/README.md`, mốc so sánh = v1+area.
 2. **B1' KVK**: thay cả dòng theo 1871 làm cột `syllable` mang chính tả Bắc ở 676 dòng (sanh→sinh, nhơn→nhân…; `qn_source` có trong `transcriptions/*.json`, CHƯA vào labels/export);
    50 âm (2,0 %) nghi xoá dị bản QN thật của 1884; 125 dòng lệch số âm không sửa được ở 0,9 (0,8 thêm 240 âm nghi xoá → không hạ ngưỡng). `--dict-boost` LOẠI (tự khẳng định 100 % trên 1871).
 3. **Blank KVK 230 ô** hạ REVIEW bởi (c): ngưỡng `enrich_crop_quality` hiệu chuẩn trên STT, 40 ô đo có mực trên ảnh gốc → có thể hạ oan.

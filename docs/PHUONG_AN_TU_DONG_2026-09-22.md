@@ -1,5 +1,7 @@
 # Phương án gán nhãn HOÀN TOÀN tự động cho sách thạch bản mới — đo độ đúng không cần người kiểm (2026-09-22)
 
+> **Đã gộp vào `docs/BAO_CAO_TONG_HOP_SACH_MOI_2026-09-22.md` (vòng 3, 22/09 chiều: + I5/pitch_decode, cổng (a'), run_pipeline --book); bản này giữ làm lịch sử** — số chốt hiện hành đọc ở báo cáo gộp §3.
+
 Ràng buộc đề tài: không có người kiểm. Mọi con số về độ đúng dưới đây đến từ **đối chứng độc lập có sẵn trên máy**, do
 `scripts/measure/auto_precision.py` sinh (tái lập, 0 token; kim cache theo md5 patch → chạy lại 0 lần gọi API):
 `measure_out/auto_precision/{SUMMARY.json,REPORT.md, ihr/, cross/, gates/, kim_cache/, kim_calls.json}`.

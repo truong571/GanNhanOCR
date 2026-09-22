@@ -1,5 +1,7 @@
 # BÁO CÁO TỔNG THỂ — Pipeline gán nhãn tự động cho dữ liệu mới (ngoài Sách Thánh Truyện)
 
+> **Đã gộp vào `docs/BAO_CAO_TONG_HOP_SACH_MOI_2026-09-22.md` (vòng 3, 22/09 chiều: + I5/pitch_decode, cổng (a'), run_pipeline --book); bản này giữ làm lịch sử** — số chốt hiện hành đọc ở báo cáo gộp §3.
+
 Ngày 2026-09-22 · Trạng thái: **hoàn tất vòng 1 và vòng 2** cho 2 sách thạch bản (LucVanTien1883, KimVanKieu1884) và
 sách văn xuôi Chrestomathie1872 (vòng 2, §9); 5 sách chép tay chưa có phiên âm cùng nguồn không chạy được.
 Mọi con số dưới đây đều tái lập được bằng script (0 token LLM), nguồn ghi ở cột cuối. Không có người kiểm (ràng buộc đề tài).

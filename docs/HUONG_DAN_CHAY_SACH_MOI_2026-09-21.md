@@ -6,6 +6,12 @@ Tổng hợp NV1–NV5 (21/09), NV-B/NV-D (22/09 sáng) và **vòng 2** 22/09: (
 `docs/CHAY_CHRESTO1872_2026-09-22.md`; hợp đồng dữ liệu/cổng: `docs/PIPELINE_SACH_MOI_2026-09-20.md` §2–§7; tổng thể:
 `docs/BAO_CAO_TONG_THE_SACH_MOI_2026-09-22.md` §9; kế hoạch commit vòng 2: `docs/KE_HOACH_COMMIT_VONG2_2026-09-22.md`. **Chưa commit.**
 
+> **Vòng 3 (22/09 chiều) — chốt cuối = `box_decoder: pitch` + cổng (a')** trong cả 3 config sách mới (`pipeline/align_engine/char_detector/pitch_decode.py`,
+> `mechanism_gates.py` luật (a'): hạ `GOLD_text_only` theo Ô `box_source ∈ {ink_cut, detector_low}`, cột `n_det ≠ n_qn` chỉ ghi cờ `n_det_mismatch`). Số chốt mới
+> (GOLD ảnh LVT 8.650 / KVK 13.908 / Chresto 5.359; ảnh export 11.013 / 17.752 / 6.645), so sánh với legacy, lý do và giới hạn: **`docs/BAO_CAO_TONG_HOP_SACH_MOI_2026-09-22.md`**
+> (báo cáo gộp duy nhất, §3/§6). Bản legacy vòng 2 (số trong §1/§3 dưới đây) giữ ở `dataset_<BOOK>_v3_legacy/`, `dataset_out_<BOOK>[_b1]_v3_legacy/`.
+> Kế hoạch commit vòng 3: `docs/KE_HOACH_COMMIT_VONG3_2026-09-22.md`. Selftest mechanism_gates nay **94/94**; pitch_decode 22/22.
+
 ## 1. Trạng thái — cái gì đã chạy được
 
 | Thành phần | Trạng thái | Bằng chứng |
@@ -30,6 +36,30 @@ Tổng hợp NV1–NV5 (21/09), NV-B/NV-D (22/09 sáng) và **vòng 2** 22/09: (
   REVIEW 1.413 / QUAR 0; sau B4' **GOLD ảnh 3.922 / GOLD_text_only 1.557** / SYL 1.287 / REVIEW 1.537 → export **5.209 ảnh** (6.766 dòng); không có dị bản → không cổng (d).
 
 ## 2. Lệnh chạy từng bước cho một sách `<BOOK>`
+
+### 2.0 Đường tắt `run_pipeline.sh --book …` (22/09 chiều — gói trọn B0→B6 dưới đây, 1 lệnh)
+
+```bash
+./run_pipeline.sh --book LucVanTien1883          # thạch bản, formula; kim_raw/ có sẵn -> 0 gọi API; ~6 phút
+./run_pipeline.sh --book KimVanKieu1884          # config chính có `run_config:` -> pipeline_KimVanKieu1884_b1.yaml (B1' chính thức)
+./run_pipeline.sh --book Chrestomathie1872       # văn xuôi -> ingest_prose_book
+./run_pipeline.sh --book all-new                 # cả 3 sách, lần lượt
+./run_pipeline.sh --book LucVanTien1883 --dry-run            # chỉ in đủ lệnh B0→B6, không chạy, không ghi gì
+./run_pipeline.sh --book KimVanKieu1884 --suffix _rp         # ra dataset_out_KimVanKieu1884_b1_rp + dataset_KimVanKieu1884_rp (so với bản chốt, không ghi đè)
+# cờ khác: --skip-ingest (dùng prepared*/<BOOK> sẵn có) · --no-api (ingest --ocr none; content -> formula, KHÁC bản chốt)
+#          --no-auto-precision (bỏ auto_precision -> mechanism_gates KHÔNG --cross, cổng (d) tắt, không B6)
+./run_pipeline.sh            # KHÔNG tham số = đường STT cũ, không đổi; ./run_pipeline.sh --dry-run = in chuỗi 6 bước STT
+```
+Chuỗi thật (mỗi lệnh + toàn bộ output ghi `logs/run_<BOOK>_<thời điểm>.log`; sha256 + thời gian vào `dataset_out_<BOOK>/CHECKSUMS.txt`):
+0 `step0_setup` → (`scripts/measure/measure.py --book <BOOK> --steps layout,qn_ocr | chresto_map` **chỉ khi thiếu** `measure_out/<BOOK>`) → (B1' `verses_ref_fix` nếu config khai)
+→ 1 ingest (`--ocr kim`) → 2 build (`--use-s3 --two-pass --box-rule syl_index`, `--out dataset_out_<BOOK>`) + `enrich_crop_quality`
+→ 3 `remediation census` / `apply --tau 0.62 --out dataset_out_<BOOK>` / `confusion_fix` → 4 `auto_precision --steps cross,gates` trên `labels_final`
+(`dataset_out_<BOOK>/auto_precision/`, chỉ sách trong `CROSS_BOOKS`) → `mechanism_gates [--cross …/cross/<BOOK>/cells.csv]` → 5 `export_final_dataset --n-columns N`
++ `make_dataset_docs` + `make_xlsx` → 6 `auto_precision --steps cross` trên `labels_gated` (`dataset_out_<BOOK>/auto_precision_gated/` = B6).
+Hồ sơ mỗi sách đọc từ `config/pipeline_<BOOK>.yaml`: khoá `run_config:` (chuyển sang config chính thức) và khối `run:` {`ingest` lithograph|prose,
+`ingest_args` chuỗi cờ adapter, `verses_ref_fix{ref,ref_name,fuzzy_min}`, `dataset_out`, `n_columns`, `cross`, `measure_steps`} — chỉ `run_pipeline.sh` đọc,
+engine/adapter/step0/mechanism_gates không đọc; vắng khối → mặc định theo `books[].layout`. Sách thứ tư: thêm config có `run:` (§7) là chạy được.
+Kiểm tái lập 22/09 (`--suffix _rp` rồi so với bản chốt): xem §2.1 cuối mục này. Lệnh chi tiết từng bước (để chạy tay/khảo sát) giữ nguyên dưới đây.
 
 Tiền đề: `data/<BOOK>/pages/`, `measure_out/<BOOK>/layout/layout_pages.csv` (+ `qn_ocr/verses.tsv` thạch bản; văn xuôi: `chresto/{qn_lines,qn_stories,bang_truyen_trang}.csv`)
 sinh bởi `scripts/measure/measure.py`; `.env` có SN_OCR_USERNAME/PASSWORD.
@@ -63,6 +93,8 @@ $PY -m pipeline.remediation.confusion_fix --in dataset_out_<BOOK>/labels_remedia
 git status --short -- dataset_out            # PHẢI trống
 # B4'. Cổng theo CƠ CHẾ (PHUONG_AN_TU_DONG §4). Tự bật khi books[].layout == lithograph; prose PHẢI khai books[].mechanism_gates: true;
 #      STT không khai → TẮT, --out = sao BYTE của --in. (a) n_det≠n_qn | box_source midpoint/split → GOLD_text_only (giữ nhãn, KHÔNG export ảnh);
+#      (a') khi books[].box_decoder: pitch (tự nhận: --box-decoder auto = config > summary.json cạnh --in > labels): box_source ink_cut|detector_low → GOLD_text_only,
+#      midpoint/split vẫn hạ, n_det≠n_qn CHỈ ghi cờ n_det_mismatch=1 (labels_gated + labels_trace) — muốn bộ chặt hơn thì lọc cờ này;
 #      (b) s1_inter_s2_similar (CHAR_B) | direct_am_sua_dau → SYLLABLE; (c) blank/truncated → REVIEW; (d) chỉ khi có --cross (cells.csv của
 #      auto_precision bước cross chạy TRƯỚC trên labels_final): GOLD bất đồng dị bản gần hình → REVIEW, không gần hình → cờ di_ban_khac.
 #      Ưu tiên (c)>(d)>(b)>(a); gate_reason ghi cổng quyết; báo cáo JSON. Số đo SAU (d) là tự khẳng định (đọc `after_abc_only` để so công bằng).
@@ -80,6 +112,19 @@ $PY -m pipeline.remediation.mechanism_gates_selftest ; $PY scripts/measure/verse
 ```
 Lệnh đúng như đã chạy cho KVK B1': `docs/CHAY_KVK1884_B1_2026-09-22.md` §1 (config `config/pipeline_KimVanKieu1884_b1.yaml`, `data_dir: prepared_b1`);
 Chrestomathie: `docs/CHAY_CHRESTO1872_2026-09-22.md` §3. Tham chiếu CLI thật: `docs/PIPELINE_FACTS.json`. Không chạm `data/`, `prepared/SachThanhTruyen*`, `dataset_out`.
+
+### 2.1 Kiểm tái lập đường tắt (22/09 chiều, HEAD 4e0a314bca + mã chưa commit, `--suffix _rp`, so với bản chốt §1)
+
+| Sách | Lệnh | Thời gian | API kim | `labels.csv` / `labels_trace.csv` / `columns.csv` export | `dataset_out` labels / labels_final / labels_gated | ảnh crop (`diff -rq`) |
+|---|---|---|---|---|---|---|
+| LucVanTien1883 | `--book LucVanTien1883 --suffix _rp` | 161 s (build 147) | 0 | md5 **993a9950…** khớp / khớp / khớp | khớp / khớp / khớp | 0 tệp khác (chỉ `labels.xlsx` — dấu thời gian) |
+| KimVanKieu1884 (B1') | `--book KimVanKieu1884 --suffix _rp` | 227 s (build 193) | 0 | md5 **6c703f9d…** khớp / khớp / khớp | khớp / khớp / khớp; `verses_b1.tsv` sinh lại md5 97c96d08… = cũ | 0 tệp khác |
+| Chrestomathie1872 | `--book Chrestomathie1872 --suffix _rp` | 135 s (ingest 57, build 74) | 0 | md5 **01ebaf99…** khớp / khớp / khớp | khớp / khớp / khớp | 0 tệp khác; README/DATASHEET khác vì bản chốt sinh docs với `--n-columns` 9 (mặc định), đường tắt truyền 7 (đúng §2 B5) |
+
+`prepared/LucVanTien1883`, `prepared_b1/KimVanKieu1884`, `prepared/Chrestomathie1872` ingest lại: `.txt` + `detected/` cache byte-identical (LVT: `transcriptions/*.json` đổi md5 vì mã 22/09 ghi thêm
+`qn_source/ref_*`, không đổi nội dung cột). `mechanism_gates_report.json` chỉ khác đường dẫn `in/out/cross`. STT: `./run_pipeline.sh --dry-run` in đúng 6 bước cũ; `git status -- dataset_out` trống;
+diff `run_pipeline.sh` cũ↔mới chỉ 2 hunk **thêm** (5 dòng ghi chú đầu tệp + khối SÁCH MỚI/THAM SỐ trước MAIN), mọi hàm STT và khối MAIN không đổi byte. Log: `logs/run_<BOOK>_20260922_*.log`.
+Thư mục `_rp` giữ lại để đối chiếu (giống bản chốt) — xoá hoặc chạy lại không `--suffix` để bản chốt là sản phẩm trực tiếp của `run_pipeline.sh` (có `CHECKSUMS.txt` + log).
 
 ## 3. Cổng nghiệm thu từng bước — 3 sách sau vòng 2
 
@@ -116,11 +161,15 @@ selftest như §2, hồi quy STT md5 59e436d7…, `scripts/measure/code_facts.py
 
 ## 6. Việc còn mở (sau vòng 2)
 
-1. **I5 chưa đạt cả ba sách** (§3) — gốc detector ±1 chưa chữa; B4'(a) chỉ chặn ở export (LVT 2.985, KVK 5.784, Chresto 1.557 ô text_only).
+1. **I5 chưa đạt cả ba sách** (§3, 65,2 / 59,2 / 70,7 % — n_det giữ nghĩa hộp thô nên số này KHÔNG đổi khi bật pitch) — gốc detector ±1 chưa chữa ở mức mô hình;
+   vòng 3 chữa phần hoà giải bằng `box_decoder: pitch` (hộp IoU ≥ 0,5 với ô tham chiếu 98,1 / 97,0 %, trong cột n_det≠N 95,3 / 95,3 %) và cổng (a') theo ô →
+   text_only chỉ còn 130 / 510 / 126; phương án B (huấn luyện v2) chưa chạy: `docs/HUONG_DAN_HUAN_LUYEN_I5_2026-09-22.md` §3.
 2. **B1' KVK**: thay cả dòng theo 1871 làm cột `syllable` mang chính tả Bắc ở 676 dòng (sanh→sinh, nhơn→nhân…; `qn_source` có trong `transcriptions/*.json`, CHƯA vào labels/export);
    50 âm (2,0 %) nghi xoá dị bản QN thật của 1884; 125 dòng lệch số âm không sửa được ở 0,9 (0,8 thêm 240 âm nghi xoá → không hạ ngưỡng). `--dict-boost` LOẠI (tự khẳng định 100 % trên 1871).
 3. **Blank KVK 230 ô** hạ REVIEW bởi (c): ngưỡng `enrich_crop_quality` hiệu chuẩn trên STT, 40 ô đo có mực trên ảnh gốc → có thể hạ oan.
-4. **`run_pipeline.sh` (STT) chưa gọi B4'**; sách mới chạy tay §2. `pipeline.remediation apply` chưa chặn trong mã việc ghi `dataset_out/` khi thiếu `--out` (chỉ cảnh báo ở §2).
+4. **`run_pipeline.sh` (STT) chưa gọi B4'** (đường STT giữ nguyên có chủ đích); sách mới đã có đường tắt `--book` (§2.0, luôn truyền `--out dataset_out_<BOOK>`).
+   `pipeline.remediation apply` chưa chặn trong mã việc ghi `dataset_out/` khi thiếu `--out` (chỉ cảnh báo ở §2). `--no-api` với KVK đổi `content` → `formula` (khác bản chốt);
+   `book_profile` nhập `auto_precision.CROSS_BOOKS` để biết sách có dị bản (sách thứ tư có dị bản phải thêm vào đó mới có cổng (d)/B6).
 5. **Chrestomathie**: QN tesseract lỗi âm ≈ 13 % + mất dòng → 1.239 ô `no_context` REVIEW, 12 cột giữ chỗ; chưa quét `det_thr` riêng; kim 8.500 vs ước 8.692 chữ (−2,2 %); 2 ô trang 65 không có chữ kim.
 6. `--verse-map content`/prose DP: hằng `CONTENT_WINDOW 60 / SKIP_PEN 2 / MIN_COL 4`, `n_match < 3 | ratio < 0,25` cứng; cổng (b) hạ SYLLABLE nhưng ảnh vẫn nằm `gold/…` (đường `image` là khoá bền).
 7. `docs/KVK1884_TRANG_CAN_XAC_NHAN.csv` lỗi thời (27 trang formula≠anchor) — `content` quyết từng cột; `CHAY_KVK1884_THU_2026-09-21.md` chỉ còn giá trị lịch sử.
@@ -135,5 +184,7 @@ selftest như §2, hồi quy STT md5 59e436d7…, `scripts/measure/code_facts.py
    Cột số chữ biến thiên, QN theo truyện/đoạn không đánh số → `prose` + `ingest_prose_book` (cần bảng truyện↔trang như `bang_truyen_trang.csv`, `n_columns: auto`).
    Đánh số trang khác (KVK page = 167 − canvas; Chresto page = canvas − 105) → thêm map vào adapter + phép kiểm selftest.
 4. Config `config/pipeline_<BOOK>.yaml` (§2 B0): quét `det_thr` trên toàn sách trước khi khoá; `det_xmargin` mặc định 0,05; STT `config/pipeline.yaml` KHÔNG khai layout.
-5. Chạy B0→B6, điền bảng §3, viết `docs/CHAY_<BOOK>_<ngày>.md`; nếu sách có dị bản số hoá thì thêm vào `CROSS_BOOKS` của `auto_precision.py` để có B6 và cổng (d).
+   Thêm khối `run:` (§2.0: `ingest`, `ingest_args`, `verses_ref_fix`, `n_columns`, `cross`; mẫu: 3 config hiện có) để `./run_pipeline.sh --book <BOOK>` chạy được; sách có
+   dị bản số hoá → thêm vào `CROSS_BOOKS` của `scripts/measure/auto_precision.py` (đường tắt tự phát hiện); thêm tên vào `NEW_BOOKS_ALL` trong `run_pipeline.sh` nếu muốn `all-new` gồm sách này.
+5. Chạy B0→B6 (`./run_pipeline.sh --book <BOOK>` hoặc tay §2), điền bảng §3, viết `docs/CHAY_<BOOK>_<ngày>.md`; nếu sách có dị bản số hoá thì thêm vào `CROSS_BOOKS` của `auto_precision.py` để có B6 và cổng (d).
    Hồi quy STT 3 trang chỉ cần chạy lại khi sửa `pipeline/`, `core/` hoặc `config/pipeline.yaml`.

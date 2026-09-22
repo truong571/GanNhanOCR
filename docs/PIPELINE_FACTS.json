@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-22T04:20:53Z",
+ "generated_at": "2026-09-22T06:23:12Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "853cadfd9c",
+ "git_head": "4e0a314bca",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 58,
@@ -10,14 +10,14 @@
   "identifier_refs": 72,
   "known_pins_found": "9/9",
   "cli_steps": 11,
-  "cli_arguments": 75,
+  "cli_arguments": 77,
   "json_keys": 24,
   "json_keys_never_read": 8,
   "config_books": 3,
   "pdf_readers": 2,
   "checkpoint_paths": 8,
   "checkpoint_exists": 5,
-  "git_dirty_pipeline_core": 15,
+  "git_dirty_pipeline_core": 9,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
  },
@@ -192,10 +192,10 @@
     "pipeline/tools/update_bang_so_lieu.py": 1
    },
    "discarded": {
-    "call_arg_no_column_context": 6,
+    "call_arg_no_column_context": 7,
     "call_kwarg_no_column_context": 5,
     "compare_no_column_context": 1,
-    "other_no_column_context": 21
+    "other_no_column_context": 22
    },
    "discarded_examples": [
     "core/image/image_processing.py:14 cv2.bilateralFilter(d=9)",
@@ -207,14 +207,15 @@
     "pipeline/phase1_engine_selftest.py:565 range(… arg#0=9)",
     "pipeline/publish/selftest.py:55 hashing.hamming(… arg#1=9)",
     "pipeline/publish/selftest.py:103 split_mod.assign_page_disjoint(seed=9)",
-    "pipeline/remediation/mechanism_gates_selftest.py:61 _row(… arg#0=9)",
+    "pipeline/remediation/mechanism_gates_selftest.py:62 _row(… arg#0=9)",
+    "pipeline/remediation/mechanism_gates_selftest.py:218 _row(… arg#0=9)",
     "pipeline/tools/ingest_prose_selftest.py:43 ing.sino_number(… arg#0=9)",
     "pipeline/tools/selftest.py:673 bbox(… arg#0=9)"
    ],
    "known_pins_check": [
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 43,
+     "line": 50,
      "hint": "DEFAULT_N_COLUMNS = 9",
      "found": true,
      "code": "DEFAULT_N_COLUMNS = 9",
@@ -405,7 +406,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 43,
+     "line": 50,
      "category": "assign",
      "context": "line",
      "detail": "DEFAULT_N_COLUMNS = 9",
@@ -630,7 +631,7 @@
     },
     {
      "file": "pipeline/export_final_dataset.py",
-     "line": 58,
+     "line": 59,
      "category": "default_param",
      "context": "line",
      "detail": "export_dataset(n_columns=9)",
@@ -639,7 +640,7 @@
     },
     {
      "file": "pipeline/export_final_dataset.py",
-     "line": 231,
+     "line": 232,
      "category": "call_kwarg",
      "context": "line",
      "detail": "ap.add_argument(default=9)",
@@ -1088,43 +1089,43 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 58,
+     "line": 68,
      "ident": "n_columns",
      "code": "n_columns: int | str = DEFAULT_N_COLUMNS   # số nguyên, hoặc \"auto\" (chỉ layout=prose)"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 95,
+     "line": 106,
      "ident": "n_columns",
      "code": "n_columns = book_cfg.get(\"n_columns\", N_COLUMNS_AUTO if layout == LAYOUT_PROSE else DEFAULT_N_COLUMNS)"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 96,
+     "line": 107,
      "ident": "n_columns",
      "code": "if n_columns == N_COLUMNS_AUTO:"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 99,
+     "line": 110,
      "ident": "n_columns",
      "code": "elif isinstance(n_columns, bool) or not isinstance(n_columns, int) or n_columns < 1:"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 100,
+     "line": 111,
      "ident": "n_columns",
      "code": "raise ValueError(f\"books[{name}].n_columns = {n_columns!r}; cần số nguyên >= 1\""
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 116,
+     "line": 130,
      "ident": "n_columns",
      "code": "if (layout == LAYOUT_STT and n_columns == DEFAULT_N_COLUMNS and qpc == 0"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 119,
+     "line": 133,
      "ident": "n_columns",
      "code": "return BookLayout(layout=layout, n_columns=n_columns, qn_per_column=qpc,"
     },
@@ -1178,19 +1179,19 @@
     },
     {
      "file": "pipeline/export_final_dataset.py",
-     "line": 58,
+     "line": 59,
      "ident": "n_columns",
      "code": "def export_dataset(labels_path: Path, src_root: Path, out_root: Path, n_columns: int = 9) -> int:"
     },
     {
      "file": "pipeline/export_final_dataset.py",
-     "line": 141,
+     "line": 142,
      "ident": "n_columns",
      "code": "_trang_lech = {k for k, v in _cot_theo_trang.items() if len(v) != n_columns}"
     },
     {
      "file": "pipeline/export_final_dataset.py",
-     "line": 202,
+     "line": 203,
      "ident": "n_columns",
      "code": "print(f\"[export] 🔴 trang KHÔNG đủ {n_columns} cột: {_n_lech:,} ô trên {len(_trang_lech)} trang \""
     },
@@ -1260,7 +1261,7 @@
   "cli": {
    "how": "AST: ast.Call .add_argument trong từng tệp CLI; cờ = literal vị trí; keyword default/action/type/choices/dest/help lấy literal, ước lượng tĩnh (REPO / 'x' -> '<REPO>/x', hằng module, import alias) hoặc giữ mã nguồn `src`. Subparser: gán biến từ .add_parser(name). Dòng gọi thật: regex `-m <module>` hoặc `<file.py>` trong run_pipeline.sh (nối dòng \\).",
    "n_steps": 11,
-   "n_arguments_total": 75,
+   "n_arguments_total": 77,
    "run_pipeline_sh_exists": true,
    "steps": [
     {
@@ -1284,8 +1285,12 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 232,
+       "line": 237,
        "cmd": "X \"$PY\" -m pipeline.step0_setup \"$CONFIG\""
+      },
+      {
+       "line": 579,
+       "cmd": "R \"$PY\" -m pipeline.step0_setup \"$BK_CONFIG\""
       }
      ]
     },
@@ -1329,7 +1334,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 246,
+       "line": 251,
        "cmd": "X \"$PY\" -m pipeline.step1_extract \"$CONFIG\" \"$b\""
       }
      ]
@@ -1643,8 +1648,12 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 259,
+       "line": 264,
        "cmd": "X \"$PY\" -m pipeline.align_engine.build_dataset --config \"$CONFIG\" --reseg \"$RESEG\" --qd01-cells none --force --out \"$DS_OUT\""
+      },
+      {
+       "line": 627,
+       "cmd": "R \"$PY\" -m pipeline.align_engine.build_dataset --config \"$BK_CONFIG\" --reseg detector --qd01-cells none --decisions none --use-s3 --two-pass --box-rule syl_index --force --out \"$ds_out\""
       }
      ]
     },
@@ -1706,12 +1715,20 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 300,
+       "line": 305,
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" census"
       },
       {
-       "line": 301,
+       "line": 306,
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" apply --tau \"$TAU_REMEDIATE\""
+      },
+      {
+       "line": 636,
+       "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" census"
+      },
+      {
+       "line": 637,
+       "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" apply --tau \"$TAU_REMEDIATE\""
       }
      ],
      "main_module": "pipeline/remediation/__main__.py"
@@ -1768,8 +1785,12 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 305,
+       "line": 310,
        "cmd": "X \"$PY\" -m pipeline.remediation.confusion_fix --in \"$LABELS_REMED\" --out \"$LABELS_FINAL\" --fixes \"$CONFUSION_FIXES\" --measure"
+      },
+      {
+       "line": 640,
+       "cmd": "R \"$PY\" -m pipeline.remediation.confusion_fix --in \"$labels_remed\" --out \"$labels_final\" --fixes \"$CONFUSION_FIXES\" --measure"
       }
      ]
     },
@@ -1781,7 +1802,7 @@
      "prog": "pipeline.remediation.mechanism_gates",
      "description": "B4' cổng theo cơ chế (lithograph): labels_final.csv -> labels_gated.csv",
      "subcommands": [],
-     "n_arguments": 7,
+     "n_arguments": 9,
      "arguments": [
       {
        "flags": [
@@ -1790,7 +1811,7 @@
        "dest": "in_csv",
        "required": true,
        "help": "labels_final.csv (sau confusion_fix)",
-       "line": 323
+       "line": 404
       },
       {
        "flags": [
@@ -1798,7 +1819,7 @@
        ],
        "required": true,
        "help": "labels_gated.csv (đầu vào export_final_dataset)",
-       "line": 324
+       "line": 405
       },
       {
        "flags": [
@@ -1809,7 +1830,7 @@
         "resolved": null
        },
        "help": "config/pipeline_<BOOK>.yaml (đọc books[].layout / mechanism_gates)",
-       "line": 325
+       "line": 406
       },
       {
        "flags": [
@@ -1820,7 +1841,7 @@
         "resolved": null
        },
        "help": "tên sách trong books[] (không phân biệt hoa/thường)",
-       "line": 326
+       "line": 407
       },
       {
        "flags": [
@@ -1831,7 +1852,7 @@
         "resolved": null
        },
        "help": "measure_out/auto_precision/cross/<BOOK>/cells.csv (cổng (d) bất đồng dị bản gần hình)",
-       "line": 327
+       "line": 408
       },
       {
        "flags": [
@@ -1847,7 +1868,7 @@
         "resolved": "auto"
        },
        "help": "auto (mặc định: theo config) | on | off (ghi đè, thí nghiệm)",
-       "line": 329
+       "line": 410
       },
       {
        "flags": [
@@ -1858,10 +1879,42 @@
         "resolved": null
        },
        "help": "JSON báo cáo (mặc định <out dir>/mechanism_gates_report.json)",
-       "line": 331
+       "line": 412
+      },
+      {
+       "flags": [
+        "--box-decoder"
+       ],
+       "choices": [
+        "auto",
+        "legacy",
+        "pitch"
+       ],
+       "default": {
+        "src": "'auto'",
+        "resolved": "auto"
+       },
+       "help": "auto (mặc định: config books[].box_decoder > summary.json > labels) | legacy | pitch — pitch = luật (a') theo ô box_source ink_cut/detector_",
+       "line": 413
+      },
+      {
+       "flags": [
+        "--summary"
+       ],
+       "default": {
+        "src": "None",
+        "resolved": null
+       },
+       "help": "summary.json của build_dataset (mặc định cạnh --in) — đọc detector_params_by_book[book].box_decoder",
+       "line": 416
       }
      ],
-     "run_pipeline_sh": []
+     "run_pipeline_sh": [
+      {
+       "line": 648,
+       "cmd": "cmd=(\"$PY\" -m pipeline.remediation.mechanism_gates --in \"$labels_final\" --out \"$labels_gated\""
+      }
+     ]
     },
     {
      "module": "pipeline.remediation.self_training_rescue",
@@ -1976,7 +2029,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 347,
+       "line": 352,
        "cmd": "X \"$PY\" -m pipeline.remediation.self_training_rescue \"${_args[@]}\""
       }
      ]
@@ -1999,7 +2052,7 @@
         "src": "'dataset_out/labels_remediated.csv'",
         "resolved": "dataset_out/labels_remediated.csv"
        },
-       "line": 228
+       "line": 229
       },
       {
        "flags": [
@@ -2009,7 +2062,7 @@
         "src": "'dataset_out'",
         "resolved": "dataset_out"
        },
-       "line": 229
+       "line": 230
       },
       {
        "flags": [
@@ -2019,7 +2072,7 @@
         "src": "'dataset'",
         "resolved": "dataset"
        },
-       "line": 230
+       "line": 231
       },
       {
        "flags": [
@@ -2031,7 +2084,7 @@
         "resolved": 9
        },
        "help": "số cột kỳ vọng mỗi trang cho LOG trang thiếu cột (STT 9 mặc định; thạch bản 10)",
-       "line": 231
+       "line": 232
       }
      ],
      "run_pipeline_sh": [
@@ -2040,8 +2093,12 @@
        "cmd": "#   6 export      pipeline/export_final_dataset.py -> dataset/ (usable: GOLD+SYLLABLE)"
       },
       {
-       "line": 355,
+       "line": 360,
        "cmd": "X \"$PY\" pipeline/export_final_dataset.py --labels \"$LABELS_FINAL\" --src-root \"$DS_OUT\" --out \"$FINAL_DIR\""
+      },
+      {
+       "line": 669,
+       "cmd": "R \"$PY\" pipeline/export_final_dataset.py --labels \"$labels_gated\" --src-root \"$ds_out\" --out \"$final_dir\" --n-columns \"$BK_NCOL\""
       }
      ]
     },
@@ -2086,8 +2143,12 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 263,
+       "line": 268,
        "cmd": "X \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$LABELS_RAW\" --src-root \"$DS_OUT\""
+      },
+      {
+       "line": 630,
+       "cmd": "R \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$labels_raw\" --src-root \"$ds_out\""
       }
      ]
     },
@@ -2241,7 +2302,12 @@
        "line": 856
       }
      ],
-     "run_pipeline_sh": []
+     "run_pipeline_sh": [
+      {
+       "line": 615,
+       "cmd": "cmd=(\"$PY\" -m pipeline.tools.ingest_lithograph_book --book \"$book\" --ocr \"$ocr\" --out \"$BK_DATA_DIR\")"
+      }
+     ]
     }
    ]
   },
@@ -2249,7 +2315,7 @@
    "json_load_sites": [
     {
      "file": "pipeline/align_engine/align_production.py",
-     "line": 69,
+     "line": 70,
      "schema": "ocr_cache",
      "code": "ocr_data = json.load(open(ocr_path, encoding=\"utf-8\"))"
     },
@@ -2398,37 +2464,31 @@
      "reads": [
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 647,
+       "line": 702,
        "recv": "nom_chars[i]",
        "access": "get"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 149,
+       "line": 150,
        "recv": "c",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 157,
+       "line": 158,
        "recv": "cluster",
        "access": "get"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 174,
+       "line": 175,
        "recv": "chars_used[k]",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 169,
-       "recv": "c",
-       "access": "subscript"
-      },
-      {
-       "file": "pipeline/align_engine/align_production.py",
-       "line": 262,
+       "line": 170,
        "recv": "c",
        "access": "subscript"
       },
@@ -2446,25 +2506,31 @@
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 372,
+       "line": 265,
        "recv": "c",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 513,
+       "line": 373,
        "recv": "c",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 159,
+       "line": 514,
+       "recv": "c",
+       "access": "subscript"
+      },
+      {
+       "file": "pipeline/align_engine/align_production.py",
+       "line": 160,
        "recv": "cluster",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 166,
+       "line": 167,
        "recv": "c",
        "access": "subscript"
       }
@@ -2503,31 +2569,31 @@
      "reads": [
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 149,
+       "line": 150,
        "recv": "c",
        "access": "get"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 169,
+       "line": 170,
        "recv": "c",
        "access": "get"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 166,
+       "line": 167,
        "recv": "c",
        "access": "get"
       },
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 156,
+       "line": 157,
        "recv": "r",
        "access": "get"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1341,
+       "line": 1352,
        "recv": "c",
        "access": "get"
       },
@@ -2638,13 +2704,13 @@
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1617,
+       "line": 1628,
        "recv": "r",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1650,
+       "line": 1661,
        "recv": "r",
        "access": "subscript"
       },
@@ -2670,7 +2736,7 @@
      "reads": [
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 70,
+       "line": 71,
        "recv": "ocr_data",
        "access": "get(default=[])"
       },
@@ -2713,7 +2779,7 @@
      "reads": [
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 74,
+       "line": 75,
        "recv": "ocr_data",
        "access": "get"
       },
@@ -2738,7 +2804,7 @@
      "reads": [
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 76,
+       "line": 77,
        "recv": "ocr_data",
        "access": "get(default=12)"
       },
@@ -2763,7 +2829,7 @@
      "reads": [
       {
        "file": "pipeline/align_engine/align_production.py",
-       "line": 75,
+       "line": 76,
        "recv": "ocr_data",
        "access": "get"
       },
@@ -2788,13 +2854,13 @@
      "reads": [
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1668,
+       "line": 1679,
        "recv": "row",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1711,
+       "line": 1722,
        "recv": "r",
        "access": "subscript"
       },
@@ -2849,7 +2915,7 @@
      "reads": [
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1719,
+       "line": 1730,
        "recv": "r",
        "access": "subscript"
       },
@@ -2943,13 +3009,13 @@
      "reads": [
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1242,
+       "line": 1246,
        "recv": "cs",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1342,
+       "line": 1353,
        "recv": "cs",
        "access": "subscript"
       },
@@ -3066,22 +3132,22 @@
    "file_open_sites": [
     {
      "file": "pipeline/align_engine/align_production.py",
-     "line": 66,
+     "line": 67,
      "code": "ocr_path = data_dir / \"detected\" / f\"{page_name}_ocr_cache.json\""
     },
     {
      "file": "pipeline/align_engine/align_production.py",
-     "line": 114,
+     "line": 115,
      "code": "# đúng num_syllables ghi trong transcriptions/<page>.json. Không partial_recovery."
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 1147,
+     "line": 1151,
      "code": "trans = sorted(glob.glob(str(data_dir / \"transcriptions\" / \"page_*.json\")))"
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 1148,
+     "line": 1152,
      "code": "trans = [t for t in trans if not t.endswith(\"_qn_ocr_cache.json\")]"
     },
     {
@@ -3399,6 +3465,7 @@
     "pdf"
    ],
    "optional_keys": [
+    "box_decoder",
     "layout",
     "mechanism_gates",
     "n_columns",
@@ -3426,7 +3493,7 @@
    "all_key_readers": [
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 91,
+     "line": 102,
      "key": "name",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3434,7 +3501,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 92,
+     "line": 103,
      "key": "layout",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3442,7 +3509,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 95,
+     "line": 106,
      "key": "n_columns",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3450,7 +3517,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 103,
+     "line": 114,
      "key": "qn_syllables_per_column",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3458,11 +3525,19 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 105,
+     "line": 116,
      "key": "qn_syllables_per_column",
      "access": "get",
      "keyerror_if_missing": false,
      "code": "qpc = book_cfg.get(\"qn_syllables_per_column\", 0)"
+    },
+    {
+     "file": "pipeline/align_engine/book_layout.py",
+     "line": 127,
+     "key": "box_decoder",
+     "access": "get",
+     "keyerror_if_missing": false,
+     "code": "box_decoder = book_cfg.get(\"box_decoder\", BOX_DECODER_LEGACY)"
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
@@ -3474,7 +3549,7 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 76,
+     "line": 100,
      "key": "name",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3482,7 +3557,7 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 91,
+     "line": 115,
      "key": "mechanism_gates",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3490,7 +3565,7 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 93,
+     "line": 117,
      "key": "name",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3498,11 +3573,27 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 95,
+     "line": 119,
      "key": "layout",
      "access": "get",
      "keyerror_if_missing": false,
      "code": "return book_cfg.get(\"layout\") == LAYOUT_LITHOGRAPH"
+    },
+    {
+     "file": "pipeline/remediation/mechanism_gates.py",
+     "line": 133,
+     "key": "box_decoder",
+     "access": "get",
+     "keyerror_if_missing": false,
+     "code": "v = book_cfg.get(\"box_decoder\")"
+    },
+    {
+     "file": "pipeline/remediation/mechanism_gates.py",
+     "line": 135,
+     "key": "name",
+     "access": "get",
+     "keyerror_if_missing": false,
+     "code": "raise ValueError(f\"books[{book_cfg.get('name')}].box_decoder = {v!r}; chỉ nhận legacy|pitch\")"
     },
     {
      "file": "pipeline/step0_setup.py",
@@ -3778,78 +3869,48 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "853cadfd9c",
+   "head": "4e0a314bca",
    "branch": "main",
-   "n_dirty_pipeline_core": 15,
+   "n_dirty_pipeline_core": 9,
    "dirty_pipeline_core": [
     {
      "file": "pipeline/align_engine/align_production.py",
      "status": "M",
-     "ins": 25,
-     "del": 6
+     "ins": 84,
+     "del": 12
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
      "status": "M",
-     "ins": 57,
-     "del": 8
+     "ins": 45,
+     "del": 2
     },
     {
-     "file": "pipeline/align_engine/book_layout_selftest.py",
+     "file": "pipeline/align_engine/build_dataset.py",
      "status": "M",
-     "ins": 102,
-     "del": 9
+     "ins": 12,
+     "del": 1
     },
     {
      "file": "pipeline/export_final_dataset.py",
      "status": "M",
-     "ins": 25,
-     "del": 5
-    },
-    {
-     "file": "pipeline/step0_setup.py",
-     "status": "M",
      "ins": 3,
-     "del": 3
-    },
-    {
-     "file": "pipeline/step1_extract.py",
-     "status": "M",
-     "ins": 3,
-     "del": 3
-    },
-    {
-     "file": "pipeline/tools/ingest_lithograph_book.py",
-     "status": "M",
-     "ins": 124,
-     "del": 9
-    },
-    {
-     "file": "pipeline/tools/ingest_lithograph_selftest.py",
-     "status": "M",
-     "ins": 149,
-     "del": 0
-    },
-    {
-     "file": "pipeline/tools/make_dataset_docs.py",
-     "status": "M",
-     "ins": 62,
-     "del": 9
+     "del": 2
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "status": "??"
+     "status": "M",
+     "ins": 102,
+     "del": 15
     },
     {
      "file": "pipeline/remediation/mechanism_gates_selftest.py",
-     "status": "??"
+     "status": "M",
+     "ins": 127,
+     "del": 1
     },
     {
-     "file": "pipeline/tools/ingest_prose_book.py",
-     "status": "??"
-    },
-    {
-     "file": "pipeline/tools/ingest_prose_selftest.py",
+     "file": "pipeline/align_engine/char_detector/pitch_decode.py",
      "status": "??"
     },
     {
@@ -3862,10 +3923,7 @@
     }
    ],
    "untracked_pipeline_core": [
-    "pipeline/remediation/mechanism_gates.py",
-    "pipeline/remediation/mechanism_gates_selftest.py",
-    "pipeline/tools/ingest_prose_book.py",
-    "pipeline/tools/ingest_prose_selftest.py",
+    "pipeline/align_engine/char_detector/pitch_decode.py",
     "pipeline/tools/kiem_nguoi_grid.py",
     "pipeline/tools/kiem_nguoi_score.py"
    ],

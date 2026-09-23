@@ -21,12 +21,19 @@ books:
     det_xmargin: 0.05
     det_thr: 0.15
     box_decoder: pitch
+    # 2026-09-23 (vòng 10, ƯU TIÊN PRECISION): detector v2 (+ resize `area`). Vòng 9 TỪ CHỐI v2 ở sách
+    # này vì chỉ số hộp I5 sụp 21,5 → 1,5 % (v2 sinh 390 hộp NGOÀI hai tầng). I5 là CHỈ SỐ THAY THẾ;
+    # bộ này có NHÃN NGƯỜI nên đo thẳng: precision GOLD-ảnh 97,96 % (n 8.629) → 98,04 % (n 11.496),
+    # ô GOLD có ảnh 8.633 → 11.498. So CÙNG TẬP Ô (ô mà cả v1 và v2 đều GOLD, n 8.271): nhãn GIỐNG
+    # HỆT 8.271/8.271, McNemar 0↔0 (p = 1) — detector KHÔNG hề đổi nhãn, chỉ đổi ô nào có ảnh dùng
+    # được. 3.225 ô v2 thêm vào GOLD-ảnh đúng 98,23 %, CAO HƠN tập chung. Xem docs/CHOT_CUOI_2026-09-23.md §1.
+    detector_ckpt: train_crop/detector_r34_v2_litho.pt
     # kim `lang_type = 2` (Nôm). ĐO TRÊN CHÍNH BỘ NÀY, có nhãn người nên là độ đúng THẬT, không
     # phải chỉ số thay thế: kim ∈ R(âm) 98,8 %, kim == chữ NGƯỜI GÁN 97,2 % ở ×1 (×3: 97,3 %) (10 trang, 97 cột).
     kim_lang_type: 2
     # DP chữ↔âm riêng từng tầng 6/8 (ranh giới câu lục/câu bát thành ràng buộc cứng).
     tier_dp: true
-    detector_resize: linear
+    detector_resize: area
     # 2026-09-23 (vòng 7): NGUỒN ĐIỂM ẢNH của crop GIAO NỘP. `processed` (mặc định, STT không đổi byte)
     # cắt từ prepared/<Book>/pages/*.png — ảnh adapter đã xám hoá + kéo nền (stretch/otsu) nên crop mất
     # nền giấy của bản quét. `original` cắt ĐÚNG CÙNG khung hình đó từ ảnh quét gốc trong data/<Book>/:

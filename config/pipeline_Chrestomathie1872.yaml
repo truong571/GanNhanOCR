@@ -41,6 +41,16 @@ books:
     # chỉ bật với layout=lithograph -> bật tường minh cho văn xuôi (cùng detector CenterNet học STT, cùng lớp
     # lỗi hộp ±1 / midpoint). Chỉ mô-đun ấy đọc khoá này.
     mechanism_gates: true
+    # 2026-09-23 (vòng 10, ƯU TIÊN PRECISION): cổng (e) `qn_count_unfixed`. Với văn xuôi cờ này =
+    # cột có `dp_ratio < 0,75` (book_layout.PROSE_DP_RATIO_MIN) = phép ghép DP chữ kim ↔ âm QN của cột
+    # khớp được dưới 75 %. Vòng 8 để `off` vì Chrestomathie KHÔNG có chuẩn độc lập nào. Vòng 10 bật
+    # `review` theo HIỆU CHUẨN trên 2 bộ IHR có NHÃN NGƯỜI: ô nằm trong cột "đếm âm QN hỏng" mà VẪN
+    # thoả đúng luật GOLD `s1_inter_s2_direct` (kim ∈ R(âm)) chỉ ĐÚNG 50,9 % (n 216, LVT1916) và
+    # 49,1 % (n 53, TK1872) — tức sự đồng thuận từ điển TỪNG Ô KHÔNG bảo vệ được khi cột lệch;
+    # phần còn lại 97,96 % / 98,61 %. Giá phải trả ở đây: GOLD ảnh 5.998 → 4.229, ảnh export
+    # 6.854 → 4.978. Giới hạn thành thật: cờ của văn xuôi tính theo dp_ratio, KHÁC cơ chế cờ của
+    # thạch bản (n_qn ≠ 14) — hiệu chuẩn là SUY RỘNG, không phải đo trực tiếp trên sách này.
+    qn_count_gate: review
     reocr: false
 
 # 2026-09-22: khối `run:` CHỈ run_pipeline.sh --book đọc; engine/adapter/step0/mechanism_gates KHÔNG đọc.

@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-23T07:49:42Z",
+ "generated_at": "2026-09-23T08:39:34Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "1c44d200a9",
+ "git_head": "e1a7d6a572",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 60,
@@ -17,7 +17,7 @@
   "pdf_readers": 2,
   "checkpoint_paths": 11,
   "checkpoint_exists": 6,
-  "git_dirty_pipeline_core": 2,
+  "git_dirty_pipeline_core": 0,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
  },
@@ -4033,23 +4033,10 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "1c44d200a9",
+   "head": "e1a7d6a572",
    "branch": "main",
-   "n_dirty_pipeline_core": 2,
-   "dirty_pipeline_core": [
-    {
-     "file": "pipeline/tools/ingest_ihr_book.py",
-     "status": "M",
-     "ins": 3,
-     "del": 3
-    },
-    {
-     "file": "pipeline/tools/ingest_ihr_selftest.py",
-     "status": "M",
-     "ins": 1,
-     "del": 1
-    }
-   ],
+   "n_dirty_pipeline_core": 0,
+   "dirty_pipeline_core": [],
    "untracked_pipeline_core": [],
    "ocr_api_guest_mode": {
     "file": "core/ocr/ocr_api.py",

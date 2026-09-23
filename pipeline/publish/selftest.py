@@ -125,6 +125,66 @@ def test_splits():
           split_mod.cross_split_exact(df2, s2) >= 1)
 
 
+def test_eval_only_gate():
+    """Cổng rò rỉ TẬP ĐÁNH GIÁ (2026-09-23) — bộ đóng dấu không được vào train/val/test."""
+    print("[eval-only gate]")
+    from pipeline.tools import mark_eval_dataset as mark
+    df = _synthetic_labels()
+
+    # 1) qua tham số eval_books
+    split, rep = split_mod.assign_page_disjoint(df, seed=1, eval_books={"yen4"})
+    ev = df["book"] == "yen4"
+    check("eval book -> split 'eval_only'",
+          (split[ev] == split_mod.EVAL_SPLIT).all(), set(split[ev]))
+    check("0 dòng eval lọt vào train/val/test",
+          not split[ev].isin(("train", "val", "test")).any())
+    check("report đếm đúng số dòng eval giữ ngoài", rep.eval_only_rows == int(ev.sum()),
+          rep.eval_only_rows)
+    check("report vẫn ok() khi cổng hoạt động", rep.ok(), rep.summary())
+    check("sách khác KHÔNG bị ảnh hưởng",
+          set(split[df["tier"].isin(split_mod.USABLE_TIERS) & ~ev]) <= {"train", "val", "test"})
+    base, _ = split_mod.assign_page_disjoint(df, seed=1)
+    check("dòng ngoài bộ eval giữ NGUYÊN split như khi chưa bật cổng",
+          (base[~ev & df["tier"].isin(split_mod.USABLE_TIERS)]
+           == split[~ev & df["tier"].isin(split_mod.USABLE_TIERS)]).all())
+
+    # 2) qua cột evaluation_only (bộ gộp dataset/_ALL/)
+    d2 = df.copy()
+    d2["evaluation_only"] = (d2["book"] == "yen11").map({True: "1", False: "0"})
+    s2, r2 = split_mod.assign_page_disjoint(d2, seed=1)
+    check("cột evaluation_only=1 -> 'eval_only' (không cần thư mục đóng dấu)",
+          (s2[d2["book"] == "yen11"] == split_mod.EVAL_SPLIT).all())
+    check("report r2 đếm đúng", r2.eval_only_rows == int((d2["book"] == "yen11").sum()))
+
+    # 3) LOBO không kéo bộ eval vào train
+    lo = split_mod.lobo_split(df, "yen2", eval_books={"yen4"})
+    check("lobo: eval book không vào train", "yen4" not in set(df.loc[lo == "train", "book"]))
+    check("lobo: eval book mang nhãn eval_only",
+          (lo[df["book"] == "yen4"] == split_mod.EVAL_SPLIT).all())
+
+    # 4) _verify bắt được rò rỉ do người cố ý nhét vào
+    bad = split.copy()
+    bad[df.index[ev][0]] = "train"
+    rep_bad = split_mod._verify(df, bad, set(), set(), ev)
+    check("_verify FAIL khi có dòng eval nằm trong train",
+          not rep_bad.ok() and any("leaked" in v for v in rep_bad.violations),
+          rep_bad.violations)
+
+    # 5) eval_only_books đọc đúng thư mục đã đóng dấu
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td) / "dataset"
+        (root / "LucVanTien1916").mkdir(parents=True)
+        (root / "LucVanTien1883").mkdir(parents=True)
+        mark.mark(root / "LucVanTien1916", "LucVanTien1916", "data/x/manifest.tsv")
+        got = split_mod.eval_only_books(root)
+        check("eval_only_books tìm ra bộ đã đóng dấu (chữ thường)",
+              "lucvantien1916" in got and "lucvantien1883" not in got, got)
+
+    # 6) parquet chỉ nhận train/val/test -> dòng eval tự rơi ra
+    check("PARQUET chỉ xuất 3 split -> eval_only không thể lọt",
+          split_mod.EVAL_SPLIT not in ("train", "val", "test"))
+
+
 def test_perceptual():
     print("[perceptual duplicates]")
     with tempfile.TemporaryDirectory() as td:
@@ -284,6 +344,7 @@ def main() -> int:
     print("=" * 64)
     test_hashing()
     test_splits()
+    test_eval_only_gate()
     test_perceptual()
     test_metadata()
     test_datasheet()

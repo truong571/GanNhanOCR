@@ -130,3 +130,7 @@ measure_out/
 /dataset_Chrestomathie1872*/
 # Kịch bản workflow đo tạm (bản thô có đường dẫn scratchpad); bản tái lập nằm ở scripts/measure/
 /scripts/measure_wf_*/
+
+# Bản dựng CŨ do `./run_pipeline.sh --prune` chuyển vào (xoá hẳn bằng `--clean`);
+# mọi thứ trong đây dựng lại được, không commit.
+/archive/

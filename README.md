@@ -245,10 +245,15 @@ GanNhanOCR/
 │   │   ├── labeled/              # labels.csv tung sach
 │   │   └── fd_cache/             # (optional) per-book FD cache override
 │   └── ...
-├── dataset/                      # Output cuoi cung (S4)
-│   ├── SachThanhTruyen2/
-│   ├── ...
-│   └── all/                      # Gop tat ca sach
+├── dataset/                      # Output cuoi cung (S4) — CHI chua thu muc, moi BO mot thu muc
+│   ├── SachThanhTruyen/          # bo STT (3 quyen stt2+stt4+stt11, mot lan chay = mot bo)
+│   ├── LucVanTien1883/           # 5 sach con lai, moi sach mot bo
+│   ├── KimVanKieu1884/
+│   ├── Chrestomathie1872/
+│   ├── LucVanTien1916/           # TAP DANH GIA (evaluation_only.json)
+│   ├── TruyenKieu1872/           # TAP DANH GIA (evaluation_only.json)
+│   └── _ALL/                     # BO GOP CHUNG 6 bo (pipeline/tools/merge_datasets.py)
+├── archive/                      # ban dung CU (`./run_pipeline.sh --prune`), gitignore
 │
 ├── requirements.txt
 ├── run_pipeline.sh               # Orchestrator chinh

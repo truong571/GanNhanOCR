@@ -79,7 +79,7 @@ def build(labels: Path) -> tuple[list[dict], dict]:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="pipeline.tools.variant_table")
-    ap.add_argument("--labels", default=str(REPO / "dataset" / "labels.csv"))
+    ap.add_argument("--labels", default=str(REPO / "dataset" / "SachThanhTruyen" / "labels.csv"))
     ap.add_argument("--out", default=str(REPO / "docs" / "UNG_VIEN_CHUAN_HOA_DI_THE.csv"))
     args = ap.parse_args(argv)
     rows, st = build(Path(args.labels))

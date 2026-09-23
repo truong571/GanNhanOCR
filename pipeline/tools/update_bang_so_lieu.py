@@ -45,8 +45,9 @@ FILES = [
      "python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62"),
     (f"{DS_OUT}/labels_final.csv",
      "python -m pipeline.remediation.confusion_fix … rồi python -m pipeline.remediation.s3_unwind … --apply"),
-    (f"{DS_OUT + '/' if THU_NGHIEM else ''}dataset/labels.csv",
-     "python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset"),
+    (f"{DS_OUT + '/' if THU_NGHIEM else ''}dataset/SachThanhTruyen/labels.csv",
+     "python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv "
+     "--src-root dataset_out --out dataset/SachThanhTruyen"),
 ]
 USABLE = ("GOLD", "SYLLABLE")
 BLOCKS = ("HEADER", "NGUON_GOC", "PHAN_HANG", "LUAT", "PHAM_VI", "VA_LOI", "DO_KHAC")
@@ -74,12 +75,17 @@ def build_blocks() -> dict[str, str]:
     # ĐẦU RA CÓ HAI CHỖ (từ 2026-08-25): dataset/ khi đã nạp phán quyết người,
     # re-dataset/ khi chưa. Ghim cứng "dataset" làm công cụ CHẾT ngay sau lần chạy đầu,
     # vì lúc đó chỉ có re-dataset/. Ưu tiên bộ CUỐI, không có thì lấy bộ ĐEM CHẤM.
-    _final = _PUB_ROOT / "dataset" / "labels.csv"
-    _redat = _PUB_ROOT / "re-dataset" / "labels.csv"
-    _src = _final if _final.exists() else _redat
-    if not _src.exists():
-        raise SystemExit("[bảng số liệu] chưa có dataset/labels.csv lẫn re-dataset/labels.csv "
-                         "— chạy pipeline trước")
+    # 23/09: bộ STT dời từ `dataset/` xuống `dataset/SachThanhTruyen/` (bố cục đầu ra —
+    # docs/BO_CUC_DAU_RA_2026-09-23.md). Vẫn nhận bản đời cũ ở `dataset/` để công cụ không
+    # chết khi ai đó chạy trên cây thư mục cũ.
+    _ung_vien = [_PUB_ROOT / "dataset" / "SachThanhTruyen" / "labels.csv",
+                 _PUB_ROOT / "dataset" / "labels.csv",
+                 _PUB_ROOT / "re-dataset" / "labels.csv"]
+    _final = next((p for p in _ung_vien[:2] if p.exists()), _ung_vien[0])
+    _src = next((p for p in _ung_vien if p.exists()), None)
+    if _src is None:
+        raise SystemExit("[bảng số liệu] chưa có dataset/SachThanhTruyen/labels.csv, "
+                         "dataset/labels.csv lẫn re-dataset/labels.csv — chạy pipeline trước")
     pub = _rows(_src)
     _nhan_bo = ("bộ CUỐI CÙNG (đã nạp phán quyết người)" if _src == _final
                 else "bộ ĐEM CHẤM (CHƯA kiểm chứng)")

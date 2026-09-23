@@ -434,7 +434,7 @@ def test_two_outputs_and_verdicts() -> None:
     import csv as _csv, os as _os
     _root = REPO / _os.environ.get("DS_OUT", "dataset_out")
     _root = _root if _root != REPO / "dataset_out" else REPO
-    for _d in ("dataset", "re-dataset"):
+    for _d in ("dataset/SachThanhTruyen", "dataset", "re-dataset"):
         f = _root / _d / "labels.csv"
         if not f.exists():
             continue
@@ -506,7 +506,7 @@ def test_co_khong_bi_ep_kieu() -> None:
               all(f'"{c}": str' in src for c in
                   ("qd01_locked", "qd01_excluded", "nom_idx", "syl_idx", "band_touched",
                    "l1_support", "flank_gold", "n_ocr")))
-    for d in ("dataset", "re-dataset"):
+    for d in ("dataset/SachThanhTruyen", "dataset", "re-dataset"):
         p2 = REPO / d / "labels.csv"
         if not p2.exists():
             continue

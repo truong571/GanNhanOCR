@@ -5,7 +5,7 @@ lớn, dễ treo Excel) — lấy mẫu ngẫu nhiên có seed cố định đ�
 
 Usage:
     python3 pipeline/export_review_excel.py \
-        --labels dataset/labels.csv --src-root dataset \
+        --labels dataset/SachThanhTruyen/labels.csv --src-root dataset/SachThanhTruyen \
         --out dataset_out/review_sample_n846.xlsx --n 846 --seed 42
 """
 from __future__ import annotations
@@ -86,8 +86,8 @@ def build_excel(labels_path: Path, src_root: Path, out_path: Path, n: int, seed:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument("--labels", default="dataset/labels.csv")
-    ap.add_argument("--src-root", default="dataset")
+    ap.add_argument("--labels", default="dataset/SachThanhTruyen/labels.csv")
+    ap.add_argument("--src-root", default="dataset/SachThanhTruyen")
     ap.add_argument("--out", default="dataset_out/review_sample.xlsx")
     ap.add_argument("--n", type=int, default=846)
     ap.add_argument("--seed", type=int, default=42)

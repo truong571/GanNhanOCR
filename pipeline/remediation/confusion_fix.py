@@ -64,6 +64,10 @@ def normalize_image_key(path: str) -> str:
 
 
 # Đội chấm ngoài trả verdict về đây, kèm khai xuất xứ. Cùng giao ước với apply_verdicts.py.
+# 23/09: bộ STT dời xuống `dataset/SachThanhTruyen/`. CỐ Ý KHÔNG thêm đường mới vào đây:
+# chưa từng có `verdicts.csv` ở bất kỳ thư mục nào trong danh sách (đội chấm ngoài chưa giao),
+# nên thêm vào là 0 chức năng mà lại làm `confusion_fix_report.json` (có trong git) đổi nội dung.
+# Khi nào có verdict thật thì thêm "dataset/SachThanhTruyen" vào tuple này.
 NGUON_VERDICT = ("re-dataset", "dataset")
 PROV_FILE = "NGUOI_CHAM.md"
 

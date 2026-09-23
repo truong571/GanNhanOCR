@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-23T10:18:32Z",
+ "generated_at": "2026-09-23T12:50:12Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "7a8146433f",
+ "git_head": "11001b7225",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 60,
@@ -17,7 +17,7 @@
   "pdf_readers": 2,
   "checkpoint_paths": 11,
   "checkpoint_exists": 6,
-  "git_dirty_pipeline_core": 0,
+  "git_dirty_pipeline_core": 10,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
  },
@@ -192,10 +192,10 @@
     "pipeline/tools/update_bang_so_lieu.py": 1
    },
    "discarded": {
-    "call_arg_no_column_context": 7,
+    "call_arg_no_column_context": 8,
     "call_kwarg_no_column_context": 5,
     "compare_no_column_context": 1,
-    "other_no_column_context": 26
+    "other_no_column_context": 27
    },
    "discarded_examples": [
     "core/image/image_processing.py:14 cv2.bilateralFilter(d=9)",
@@ -210,7 +210,8 @@
     "pipeline/remediation/mechanism_gates_selftest.py:62 _row(… arg#0=9)",
     "pipeline/remediation/mechanism_gates_selftest.py:218 _row(… arg#0=9)",
     "pipeline/tools/ingest_prose_selftest.py:43 ing.sino_number(… arg#0=9)",
-    "pipeline/tools/selftest.py:673 bbox(… arg#0=9)"
+    "pipeline/tools/merge_datasets.py:512 _bo_gia(… arg#2=9)",
+    "pipeline/tools/selftest.py:674 bbox(… arg#0=9)"
    ],
    "known_pins_check": [
     {
@@ -775,7 +776,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 467,
+     "line": 468,
      "category": "compare",
      "context": "line",
      "detail": "len(v) != 9",
@@ -784,7 +785,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 484,
+     "line": 485,
      "category": "compare",
      "context": "line",
      "detail": "len(v) != 9",
@@ -793,7 +794,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 496,
+     "line": 497,
      "category": "call_arg",
      "context": "line",
      "detail": "range(… arg#1=9)",
@@ -802,7 +803,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 499,
+     "line": 500,
      "category": "compare",
      "context": "line",
      "detail": "len({r['column'] for r in all_rows}) != 9",
@@ -811,7 +812,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 500,
+     "line": 501,
      "category": "compare",
      "context": "line",
      "detail": "len({r['column'] for r in loc}) != 9",
@@ -820,7 +821,7 @@
     },
     {
      "file": "pipeline/tools/update_bang_so_lieu.py",
-     "line": 148,
+     "line": 154,
      "category": "compare",
      "context": "line",
      "detail": "len(v) == 9",
@@ -1303,11 +1304,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 252,
+       "line": 266,
        "cmd": "X \"$PY\" -m pipeline.step0_setup \"$CONFIG\""
       },
       {
-       "line": 610,
+       "line": 639,
        "cmd": "R \"$PY\" -m pipeline.step0_setup \"$BK_CONFIG\""
       }
      ]
@@ -1352,7 +1353,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 266,
+       "line": 280,
        "cmd": "X \"$PY\" -m pipeline.step1_extract \"$CONFIG\" \"$b\""
       }
      ]
@@ -1666,11 +1667,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 279,
+       "line": 293,
        "cmd": "X \"$PY\" -m pipeline.align_engine.build_dataset --config \"$CONFIG\" --reseg \"$RESEG\" --qd01-cells none --force --out \"$DS_OUT\""
       },
       {
-       "line": 676,
+       "line": 705,
        "cmd": "R \"$PY\" -m pipeline.align_engine.build_dataset --config \"$BK_CONFIG\" --reseg detector --qd01-cells none --decisions none --use-s3 --two-pass --box-rule syl_index --force --out \"$ds_out\""
       }
      ]
@@ -1733,19 +1734,19 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 320,
+       "line": 334,
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" census"
       },
       {
-       "line": 321,
+       "line": 335,
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" apply --tau \"$TAU_REMEDIATE\""
       },
       {
-       "line": 685,
+       "line": 714,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" census"
       },
       {
-       "line": 686,
+       "line": 715,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" apply --tau \"$TAU_REMEDIATE\""
       }
      ],
@@ -1770,7 +1771,7 @@
         "src": "str(DEFAULT_IN)",
         "resolved": "<REPO>/dataset_out/labels_remediated.csv"
        },
-       "line": 180
+       "line": 184
       },
       {
        "flags": [
@@ -1780,7 +1781,7 @@
         "src": "str(DEFAULT_OUT)",
         "resolved": "<REPO>/dataset_out/labels_final.csv"
        },
-       "line": 181
+       "line": 185
       },
       {
        "flags": [
@@ -1790,7 +1791,7 @@
         "src": "str(DEFAULT_FIXES)",
         "resolved": "<REPO>/config/confusion_fixes.yaml"
        },
-       "line": 182
+       "line": 186
       },
       {
        "flags": [
@@ -1798,16 +1799,16 @@
        ],
        "action": "store_true",
        "help": "đo lại precision GOLD trước/sau",
-       "line": 183
+       "line": 187
       }
      ],
      "run_pipeline_sh": [
       {
-       "line": 325,
+       "line": 339,
        "cmd": "X \"$PY\" -m pipeline.remediation.confusion_fix --in \"$LABELS_REMED\" --out \"$LABELS_FINAL\" --fixes \"$CONFUSION_FIXES\" --measure"
       },
       {
-       "line": 689,
+       "line": 718,
        "cmd": "R \"$PY\" -m pipeline.remediation.confusion_fix --in \"$labels_remed\" --out \"$labels_final\" --fixes \"$CONFUSION_FIXES\" --measure"
       }
      ]
@@ -1945,7 +1946,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 697,
+       "line": 726,
        "cmd": "cmd=(\"$PY\" -m pipeline.remediation.mechanism_gates --in \"$labels_final\" --out \"$labels_gated\""
       }
      ]
@@ -2063,7 +2064,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 367,
+       "line": 381,
        "cmd": "X \"$PY\" -m pipeline.remediation.self_training_rescue \"${_args[@]}\""
       }
      ]
@@ -2123,15 +2124,15 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 17,
+       "line": 23,
        "cmd": "#   6 export      pipeline/export_final_dataset.py -> dataset/ (usable: GOLD+SYLLABLE)"
       },
       {
-       "line": 375,
+       "line": 390,
        "cmd": "X \"$PY\" pipeline/export_final_dataset.py --labels \"$LABELS_FINAL\" --src-root \"$DS_OUT\" --out \"$FINAL_DIR\""
       },
       {
-       "line": 718,
+       "line": 748,
        "cmd": "R \"$PY\" pipeline/export_final_dataset.py --labels \"$labels_gated\" --src-root \"$ds_out\" --out \"$final_dir\" --n-columns \"$BK_NCOL\""
       }
      ]
@@ -2188,11 +2189,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 283,
+       "line": 297,
        "cmd": "X \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$LABELS_RAW\" --src-root \"$DS_OUT\""
       },
       {
-       "line": 679,
+       "line": 708,
        "cmd": "R \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$labels_raw\" --src-root \"$ds_out\""
       }
      ]
@@ -2423,7 +2424,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 663,
+       "line": 692,
        "cmd": "cmd=(\"$PY\" -m pipeline.tools.ingest_lithograph_book --book \"$book\" --ocr \"$ocr\" --out \"$BK_DATA_DIR\""
       }
      ]
@@ -4033,11 +4034,72 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "7a8146433f",
+   "head": "11001b7225",
    "branch": "main",
-   "n_dirty_pipeline_core": 0,
-   "dirty_pipeline_core": [],
-   "untracked_pipeline_core": [],
+   "n_dirty_pipeline_core": 10,
+   "dirty_pipeline_core": [
+    {
+     "file": "pipeline/export_review_excel.py",
+     "status": "M",
+     "ins": 3,
+     "del": 3
+    },
+    {
+     "file": "pipeline/publish/cli.py",
+     "status": "M",
+     "ins": 17,
+     "del": 4
+    },
+    {
+     "file": "pipeline/publish/selftest.py",
+     "status": "M",
+     "ins": 61,
+     "del": 0
+    },
+    {
+     "file": "pipeline/publish/splits.py",
+     "status": "M",
+     "ins": 90,
+     "del": 12
+    },
+    {
+     "file": "pipeline/remediation/confusion_fix.py",
+     "status": "M",
+     "ins": 4,
+     "del": 0
+    },
+    {
+     "file": "pipeline/remediation/selftest.py",
+     "status": "M",
+     "ins": 2,
+     "del": 2
+    },
+    {
+     "file": "pipeline/tools/selftest.py",
+     "status": "M",
+     "ins": 2,
+     "del": 1
+    },
+    {
+     "file": "pipeline/tools/update_bang_so_lieu.py",
+     "status": "M",
+     "ins": 14,
+     "del": 8
+    },
+    {
+     "file": "pipeline/tools/variant_table.py",
+     "status": "M",
+     "ins": 1,
+     "del": 1
+    },
+    {
+     "file": "pipeline/tools/merge_datasets.py",
+     "status": "??"
+    }
+   ],
+   "untracked_pipeline_core": [
+    "pipeline/tools/merge_datasets.py"
+   ],
    "ocr_api_guest_mode": {
     "file": "core/ocr/ocr_api.py",
     "has_uncommitted_diff": false,

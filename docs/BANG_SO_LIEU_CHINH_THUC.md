@@ -41,7 +41,7 @@ labels.csv --[4 remediate]--> labels_remediated.csv --[5 confusion_fix]--> label
 | `dataset_out/labels.csv` | 83.239 | `7f4572bf8e1ee848` | `python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --reseg detector  (S3 tắt từ 16/09)` |
 | `dataset_out/labels_remediated.csv` | 83.239 | `3f0cad5d5835226c` | `python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62` |
 | `dataset_out/labels_final.csv` | 83.239 | `d89fa96fb2d30bef` | `python -m pipeline.remediation.confusion_fix … rồi python -m pipeline.remediation.s3_unwind … --apply` |
-| `dataset/labels.csv` (**bộ giao nộp**) | **71.610** | `e153e8187987cce8` | `python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset` |
+| `dataset/SachThanhTruyen/labels.csv` (**bộ giao nộp**) | **71.610** | `e153e8187987cce8` | `python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset/SachThanhTruyen` |
 <!-- AUTO:NGUON_GOC:END -->
 
 **Đối chiếu**: `bash scripts/check_evidence.sh` → khớp 4 · lệch 0 · thiếu 0.
@@ -63,7 +63,7 @@ Vân tay từng bước: `dataset_out/CHECKSUMS.txt`.
 
 **Bộ giao nộp = 52.707 nhãn CẤP KÝ TỰ + 18.903 chú giải CẤP ÂM TIẾT** = 71.610 dòng · 71.610 ảnh đã copy, **0 thiếu**.
 
-> Nguồn: `dataset/labels.csv` — **bộ CUỐI CÙNG (đã nạp phán quyết người)**.
+> Nguồn: `dataset/SachThanhTruyen/labels.csv` — **bộ CUỐI CÙNG (đã nạp phán quyết người)**.
 
 > ⚠️ **KHÔNG phát biểu là “71.610 nhãn”.** 18.903/18.903 dòng tầng SYLLABLE có cột `label` **rỗng** — chúng chỉ ghi ÂM Quốc ngữ, không gán chữ Nôm. Con số dùng khi so với các bộ dữ liệu Hán Nôm khác là **52.707**.
 <!-- AUTO:PHAN_HANG:END -->
@@ -102,7 +102,7 @@ Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('datase
 | **Trang cho đủ 9 cột có nhãn** | **445/448** |
 | Lớp ký tự phân biệt (mọi tier có nhãn) | 1.332 |
 | **Lớp trong bộ giao nộp** | **1.331** |
-| **Selftest** | **1162 passed, 9 failed** |
+| **Selftest** | **1176 passed, 9 failed** |
 <!-- AUTO:PHAM_VI:END -->
 
 ### 2.4 Vá lỗi (bước 4–6)

@@ -5,8 +5,14 @@
 #   ./run_pipeline.sh
 #     -> hỏi 1) chọn sách   2) chạy cache cũ hay xoá-cache-chạy-mới
 #     -> chạy: setup -> extract -> build -> remediate -> rescue -> export
-#     -> ra:   dataset/labels.csv (+ ảnh crop copy hẳn) = BẢN CUỐI CÙNG, TỰ CHỨA
-#              dataset/ bị XOÁ SẠCH và ghi lại mỗi lần chạy — luôn là bản MỚI NHẤT.
+#     -> ra:   dataset/SachThanhTruyen/labels.csv (+ ảnh crop copy hẳn) = BẢN CUỐI, TỰ CHỨA
+#              thư mục đó bị XOÁ SẠCH và ghi lại mỗi lần chạy — luôn là bản MỚI NHẤT.
+#
+# BỐ CỤC ĐẦU RA (23/09, docs/BO_CUC_DAU_RA_2026-09-23.md) — `dataset/` CHỈ chứa thư mục:
+#   dataset/SachThanhTruyen/   bộ STT (3 quyển stt2+stt4+stt11, một lần chạy = một bộ)
+#   dataset/<Sách>/            5 sách còn lại, mỗi sách một bộ
+#   dataset/_ALL/              BỘ GỘP CHUNG 6 bộ (pipeline/tools/merge_datasets.py)
+#   archive/dataset/…          bản dựng CŨ (--prune dọn vào đây; --clean xoá hẳn)
 #
 # 6 BƯỚC CỐT LÕI (Tự động hoàn toàn, tích hợp Self-Training In-domain Rescue):
 #   1 setup       pipeline.step0_setup — kiểm cấu hình, từ điển, detector
@@ -49,7 +55,15 @@ LABELS_RAW="$DS_OUT/labels.csv"
 LABELS_REMED="$DS_OUT/labels_remediated.csv"
 LABELS_FINAL="$DS_OUT/labels_final.csv"
 CONFUSION_FIXES="${CONFUSION_FIXES:-config/confusion_fixes.yaml}"
-FINAL_DIR="dataset"
+# BỐ CỤC ĐẦU RA (docs/BO_CUC_DAU_RA_2026-09-23.md): `dataset/` CHỈ chứa thư mục —
+# một thư mục mỗi BỘ giao nộp + `dataset/_ALL/` (bộ gộp). Trước 23/09 bộ STT đổ thẳng
+# vào `dataset/{labels.csv,gold/,syllable/}` nên nó nằm lẫn với `dataset/<Sách>/` của 5
+# sách kia; nay nó có thư mục riêng như mọi bộ khác.
+DATASET_ROOT="${DATASET_ROOT:-dataset}"
+STT_SET="${STT_SET:-SachThanhTruyen}"
+MERGED_SET="${MERGED_SET:-_ALL}"
+ARCHIVE_DIR="${ARCHIVE_DIR:-archive}"
+FINAL_DIR="$DATASET_ROOT/$STT_SET"
 REDATASET_DIR="re-dataset"
 FINAL_OUT="${FINAL_DIR}"
 # Kiến trúc 2 đầu ra (bước 7 tự chọn theo verdicts*.jsonl -> gọi pipeline.remediation.apply_verdicts khi có)
@@ -371,6 +385,7 @@ step_rescue() {
 step_export() {
   banner 6 export "xuất bộ dữ liệu CUỐI CÙNG (100% tự động) -> $FINAL_DIR/ (tự chứa)"
   assert_qd01 "$LABELS_FINAL" "trước export"
+  archive_prev "$FINAL_DIR"
 
   X "$PY" pipeline/export_final_dataset.py \
       --labels "$LABELS_FINAL" --src-root "$DS_OUT" --out "$FINAL_DIR"
@@ -451,6 +466,12 @@ NEW_BOOKS_ALL="LucVanTien1883 KimVanKieu1884 Chrestomathie1872"
 EVAL_BOOKS_IHR="LucVanTien1916 TruyenKieu1872"
 NEW_BOOKS=""
 RUN_ALL=0
+DO_MERGE=1            # B7 gộp bộ chung (tắt bằng --no-merge)
+MERGE_ONLY=0
+MERGE_MODE="copy"     # copy (bàn giao độc lập) | link | symlink | none
+DO_PRUNE=0
+DO_CLEAN=0
+KEEP_OLD=0
 DO_VERIFY=-1          # -1 = tự chọn (BẬT khi --book all) · 0 = --no-verify · 1 = --verify
 SUMMARY_ONLY=0
 DRY_RUN=0
@@ -483,7 +504,15 @@ run_pipeline.sh — GanNhanOCR
   --summary-only                  chỉ IN LẠI bảng 8 bộ (ô · GOLD ảnh · text_only · SYLLABLE · REVIEW · ảnh
                                   export) từ bản dựng trên đĩa — không chạy gì
   --verify                        chỉ chạy nghiệm thu: align_audit · ihr_endtoend_eval · auto_precision
-                                  cross · measure.py --all --report-only  (0 token, 0 gọi API)
+                                  cross · measure.py --all --report-only · bộ gộp --check  (0 token, 0 API)
+  --merge                         chỉ dựng lại BỘ GỘP dataset/_ALL/ từ các bộ đang có trên đĩa
+    --merge-mode copy|link|symlink|none   cách đem ảnh sang bộ gộp (mặc định copy = bàn giao độc lập)
+  --no-merge                      (đi với --book all) bỏ bước B7 gộp bộ chung
+  --prune [--keep-old N]          CHUYỂN bản dựng cũ (dataset/<Bộ>_v*, *probe, prepared/*/dataset_out_*)
+                                  vào archive/ — in danh sách + dung lượng rồi hỏi (--yes bỏ hỏi);
+                                  N = số bản mới nhất được giữ lại (mặc định 0 = dọn hết)
+  --clean                         XOÁ HẲN archive/ + measure_out/ + logs/ (đều dựng lại được, đều
+                                  gitignore) — in danh sách + dung lượng rồi hỏi (--yes bỏ hỏi)
 EOF
 }
 
@@ -715,6 +744,7 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
 
   # ---- 5/6 export -----------------------------------------------------------
   banner_bk 5 export "export_final_dataset --n-columns $BK_NCOL -> $final_dir/ + README/DATASHEET + xlsx"
+  (( DRY_RUN )) || archive_prev "$final_dir"
   R "$PY" pipeline/export_final_dataset.py \
       --labels "$labels_gated" --src-root "$ds_out" --out "$final_dir" --n-columns "$BK_NCOL"
   need_file "$final_dir/labels.csv" "export"
@@ -759,6 +789,138 @@ stt_dry_run() {   # STT --dry-run: in đúng chuỗi 6 bước cũ; X/die/assert
   )
 }
 
+# ===================== B7: BỘ GỘP CHUNG dataset/_ALL =========================
+# Hợp nhất 6 thư mục bộ (`dataset/<Bộ>/`) thành MỘT bộ để bàn giao: labels.csv duy nhất
+# (khoá `cell_uid`, cột `book_set`/`evaluation_only`/`split_hint`), crops/ COPY hẳn,
+# labels.xlsx, README, DATASHEET, CHECKSUMS. Chỉ ĐỌC các bộ nguồn.
+# 2 bộ IHR-NomDB đã đóng dấu `evaluation_only.json` -> mọi dòng của chúng mang
+# evaluation_only=1 + split_hint=eval để hạ nguồn không trộn vào tập huấn luyện.
+ALL_SETS="$STT_SET $NEW_BOOKS_ALL $EVAL_BOOKS_IHR"
+
+run_merge() {   # run_merge [chế-độ-ảnh]  (copy mặc định)
+  local mode="${1:-copy}" out="$DATASET_ROOT/$MERGED_SET" rc=0 lf=/dev/null
+  log ""
+  log "${BLD}================================================================${RST}"
+  printf '%s>>> [bộ gộp] %s — hợp nhất %s bộ%s\n' "$BLD" "$out" "$(printf '%s' "$ALL_SETS" | wc -w | tr -d ' ')" "$RST"
+  log "${BLD}================================================================${RST}"
+  if (( DRY_RUN )); then
+    printf '    %s$%s %s\n' "$CYA" "$RST" \
+      "$PY -m pipeline.tools.merge_datasets --root $DATASET_ROOT --books $ALL_SETS --out $out --mode $mode"
+    return 0
+  fi
+  mkdir -p logs "$out"
+  lf="logs/run_MERGE_$(date +%Y%m%d_%H%M%S).log"
+  CHECKSUMS="$out/THOI_GIAN.txt"    # tick() ghi vào đây, KHÔNG đụng dataset_out/CHECKSUMS.txt (có trong git)
+  info "log: $lf"
+  # shellcheck disable=SC2086  # ALL_SETS cố ý tách theo khoảng trắng
+  if "$PY" -m pipeline.tools.merge_datasets --root "$DATASET_ROOT" --books $ALL_SETS \
+        --out "$out" --mode "$mode" 2>&1 | tee -a "$lf"; then rc=0; else rc=$?; fi
+  if (( rc == 0 )); then ALL_OK="$ALL_OK _ALL"; else ALL_FAILED="$ALL_FAILED _ALL"; fi
+  bk_tick "merge"
+  return 0
+}
+
+# ======================= DỌN RÁC: --prune / --clean ==========================
+# QUY TẮC "bản cũ" (chỉ 3 mẫu, không đoán thêm):
+#   dataset/<Bộ>_v<số>*        vd LucVanTien1883_v7, Chrestomathie1872_v5_lang1
+#   dataset/<Bộ>*probe         vd TruyenKieu1872_v1probe, LucVanTien1916_v2probe
+#   prepared/<Sách>/dataset_out_*   (mọi thứ KHÁC `dataset_out` chốt)
+# KHÔNG BAO GIỜ đụng: dataset/<Bộ> chốt, dataset/_ALL, dataset_out/ (bộ STT có trong git),
+# prepared/<Sách>/{pages,detected,kim_raw,transcriptions,...} — detected/*_ocr_cache.json
+# là PRIMARY DATA, xoá là mất tiền và mất tái lập.
+_mtime() {   # mtime epoch của <đường dẫn>, 0 nếu không đọc được. GÁN RỒI MỚI chữa mã thoát —
+             # chữa TRONG câu lệnh thay `$( )` sẽ in ra số 0 THỨ HAI khi lệnh vừa in vừa lỗi
+             # (đúng lỗi preflight 25/08 mà test_run_pipeline_grep_dem canh giữ).
+  local m=""
+  m=$(stat -f %m "$1" 2>/dev/null) || m=0
+  [[ -n "$m" ]] || m=0
+  printf '%s' "$m"
+}
+
+_old_builds() {   # in ra từng dòng: <mtime epoch> <đường dẫn>
+  local d b
+  for d in "$DATASET_ROOT"/*; do
+    [[ -d "$d" ]] || continue
+    b=$(basename "$d")
+    [[ "$b" == "$MERGED_SET" ]] && continue
+    case "$b" in
+      *probe|*_v[0-9]|*_v[0-9][0-9]|*_v[0-9]_*|*_v[0-9][0-9]_*)
+        printf '%s %s\n' "$(_mtime "$d")" "$d" ;;
+    esac
+  done
+  for d in prepared/*/dataset_out_*; do
+    [[ -d "$d" ]] || continue
+    printf '%s %s\n' "$(_mtime "$d")" "$d"
+  done
+}
+
+_keep_newest() {   # _keep_newest <n> < danh sách "<mtime> <đường dẫn>"  -> in phần SẼ DỌN
+  local n="$1"
+  sort -rn | awk -v n="$n" '{ if (NR > n) print $2 }'
+}
+
+archive_prev() {   # archive_prev <thư mục bộ>: --keep-old N>0 -> dời bản dựng TRƯỚC vào archive/
+                   # thay vì để bước export xoá đè. N=0 (mặc định) -> không làm gì, hành vi như cũ.
+  local d="$1" dest
+  (( DRY_RUN )) && { printf '    %s(dry-run)%s archive_prev %s\n' "$CYA" "$RST" "$d"; return 0; }
+  (( KEEP_OLD > 0 )) || return 0
+  [[ -d "$d" ]] || return 0
+  dest="$ARCHIVE_DIR/$d.$(date +%Y%m%d_%H%M%S)"
+  mkdir -p "$(dirname "$dest")"
+  mv "$d" "$dest"
+  info "--keep-old $KEEP_OLD: bản dựng trước -> $dest"
+  # giữ đúng N bản cũ nhất định của bộ này, xoá phần dư (cũ nhất đi trước)
+  local extra
+  extra=$(ls -dt "$ARCHIVE_DIR/$d".* 2>/dev/null | awk -v n="$KEEP_OLD" 'NR > n')
+  [[ -z "$extra" ]] || while IFS= read -r e; do rm -rf "$e"; info "  quá $KEEP_OLD bản, xoá $e"; done <<< "$extra"
+}
+
+prune_old() {
+  local n="${KEEP_OLD:-0}" list sz total=0 p
+  list=$(_old_builds | _keep_newest "$n" | sort)
+  log ""
+  log "${BLD}--- DỌN BẢN CŨ -> $ARCHIVE_DIR/ (giữ $n bản mới nhất) ------------------${RST}"
+  if [[ -z "$list" ]]; then ok "không còn bản dựng cũ nào để dọn"; return 0; fi
+  while IFS= read -r p; do
+    sz=$(du -sm "$p" 2>/dev/null | awk '{print $1}'); total=$((total + sz))
+    printf '    %6s MB  %s\n' "$sz" "$p"
+  done <<< "$list"
+  log "    ${BLD}tổng: ${total} MB${RST} — sẽ CHUYỂN (không xoá) vào $ARCHIVE_DIR/"
+  if [[ "$NONINTERACTIVE" != "1" ]]; then
+    local typed=""; read -r -p "Gõ CHUYEN để xác nhận (Enter/khác = huỷ): " typed || true
+    [[ "$typed" == "CHUYEN" ]] || { warn "đã huỷ — không chuyển gì"; return 0; }
+  fi
+  while IFS= read -r p; do
+    mkdir -p "$ARCHIVE_DIR/$(dirname "$p")"
+    mv "$p" "$ARCHIVE_DIR/$p"
+    printf '    %s-> %s%s\n' "$CYA" "$ARCHIVE_DIR/$p" "$RST"
+  done <<< "$list"
+  ok "đã chuyển $(printf '%s\n' "$list" | wc -l | tr -d ' ') bản cũ (${total} MB) vào $ARCHIVE_DIR/"
+}
+
+clean_junk() {
+  # CHỈ 3 nhóm, tất cả đều DỰNG LẠI ĐƯỢC và đều nằm trong .gitignore.
+  local targets=("$ARCHIVE_DIR" "measure_out" "logs") p sz total=0 present=()
+  log ""
+  log "${BLD}--- SẼ XOÁ HẲN (dựng lại được, đều gitignore) --------------------${RST}"
+  for p in "${targets[@]}"; do
+    [[ -e "$p" ]] || continue
+    sz=$(du -sm "$p" 2>/dev/null | awk '{print $1}'); total=$((total + sz))
+    present+=("$p")
+    printf '    %6s MB  %s/\n' "$sz" "$p"
+  done
+  log "    ${YEL}KHÔNG đụng: $DATASET_ROOT/ · dataset_out/ · prepared/ · data/${RST}"
+  if (( ${#present[@]} == 0 )); then ok "không có gì để xoá"; return 0; fi
+  log "    ${BLD}tổng: ${total} MB${RST}"
+  log "    ${YEL}measure_out/ dựng lại: .venv/bin/python scripts/measure/measure.py --all (~10 phút CPU)${RST}"
+  if [[ "$NONINTERACTIVE" != "1" ]]; then
+    local typed=""; read -r -p "Gõ XOA để xác nhận (Enter/khác = huỷ): " typed || true
+    [[ "$typed" == "XOA" ]] || { warn "đã huỷ — không xoá gì"; return 0; }
+  fi
+  for p in "${present[@]}"; do rm -rf "${REPO_ROOT:?}/$p"; printf '    %sđã xoá %s/%s\n' "$CYA" "$p" "$RST"; done
+  ok "đã xoá ${total} MB"
+}
+
 # ===================== TÓM TẮT 8 BỘ (bảng cuối / --summary-only) =============
 # Đọc thẳng từ bản dựng trên đĩa, KHÔNG chạy lại gì:
 #   · 3 bộ STT : dataset_out/labels_final.csv (cột book = stt2|stt4|stt11) + dataset/labels.csv
@@ -767,14 +929,14 @@ stt_dry_run() {   # STT --dry-run: in đúng chuỗi 6 bước cũ; X/die/assert
 print_summary() {   # print_summary [Book…]  (rỗng = 8 bộ của --book all)
   local books="$*"
   [[ -n "$books" ]] || books="$NEW_BOOKS_ALL $EVAL_BOOKS_IHR"
-  "$PY" - "$DS_OUT" "$FINAL_DIR" "$OUT_SUFFIX" $books <<'PYSUM'
+  "$PY" - "$DS_OUT" "$FINAL_DIR" "$OUT_SUFFIX" "$DATASET_ROOT/$MERGED_SET" $books <<'PYSUM'
 import csv, sys
 from collections import Counter
 from pathlib import Path
 import yaml
 
-ds_out_stt, final_stt, suffix = sys.argv[1], sys.argv[2], sys.argv[3]
-books = sys.argv[4:]
+ds_out_stt, final_stt, suffix, merged = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+books = sys.argv[5:]
 TIERS = ("GOLD", "GOLD_text_only", "SYLLABLE", "REVIEW")
 
 
@@ -865,6 +1027,23 @@ for k, r in enumerate(tbl):
                             for i in range(7)) + " |")
     if k == 0:
         print("|" + "|".join("-" * (w[i] + 2) for i in range(7)) + "|")
+
+# --- BỘ GỘP CHUNG dataset/_ALL (đọc SOURCES.json do merge_datasets ghi) ---
+import json
+sp = Path(merged) / "SOURCES.json"
+print()
+if not sp.exists():
+    print(f"BỘ GỘP {merged}/: (chưa dựng — chạy `./run_pipeline.sh --merge`)")
+else:
+    m = json.loads(sp.read_text(encoding="utf-8"))
+    print(f"BỘ GỘP {merged}/: {fmt(m['n_dong'])} dòng · {fmt(m['n_anh_dong'])} dòng có ảnh · "
+          f"{fmt(m['n_tep_crop'])} tệp crop · {fmt(m['eval_only_dong'])} dòng evaluation_only "
+          f"({m['n_bo']} bộ: {', '.join(m['bo'])})")
+    _tong_bo = sum(v["n_dong"] for v in m["nguon"].values())
+    print(f"           tổng dòng các bộ nguồn = {fmt(_tong_bo)} -> "
+          f"{'KHỚP' if _tong_bo == m['n_dong'] else 'LỆCH ' + fmt(m['n_dong'] - _tong_bo)}"
+          f" · bất biến khi gộp: {sum(1 for v in m['bat_bien'].values() if v is True)}"
+          f"/{len(m['bat_bien'])} PASS")
 sys.exit(1 if miss else 0)
 PYSUM
 }
@@ -928,6 +1107,15 @@ verify_all() {
 
   V "measure.py --all --report-only" 1 "$PY" scripts/measure/measure.py --all --report-only
 
+  # 5 BỘ GỘP: khoá duy nhất · ảnh đủ 100 % · cờ evaluation_only còn nguyên (FAIL CỨNG —
+  # rò rỉ tập đánh giá vào bộ bàn giao là lỗi không được phép đi tiếp).
+  if [[ -f "$DATASET_ROOT/$MERGED_SET/labels.csv" ]]; then
+    V "bộ gộp $DATASET_ROOT/$MERGED_SET --check" 1 \
+        "$PY" -m pipeline.tools.merge_datasets --out "$DATASET_ROOT/$MERGED_SET" --check
+  else
+    warn "chưa có $DATASET_ROOT/$MERGED_SET/labels.csv — bỏ phép kiểm bộ gộp (chạy ./run_pipeline.sh --merge)"
+  fi
+
   if (( DRY_RUN )); then return 0; fi
 
   log ""
@@ -948,6 +1136,12 @@ for b in ("LucVanTien1916", "TruyenKieu1872"):
     n_fail = sum(1 for iv in s["invariants"] if iv["pass"] is False)
     print(f"    {b:16s} GOLD ảnh n {g['with_gt']:6d} · ĐÚNG {g['precision']} CI{g['ci95']} · "
           f"bất biến FAIL {n_fail}/{len(s['invariants'])}")
+
+f = Path("dataset/_ALL/SOURCES.json")
+if f.exists():
+    m = json.loads(f.read_text(encoding="utf-8"))
+    print(f"\n  bộ gộp dataset/_ALL: {m['n_dong']:,} dòng · {m['n_tep_crop']:,} tệp crop · "
+          f"{m['eval_only_dong']:,} dòng evaluation_only ({m['n_bo']} bộ)")
 
 f = Path("measure_out/align_audit/SUMMARY.json")
 if f.exists():
@@ -1097,6 +1291,12 @@ run_all() {
     i=$((i + 1))
   done
 
+  if (( DO_MERGE )); then
+    run_merge "$MERGE_MODE"
+  else
+    info "--no-merge: bỏ bước gộp bộ chung"
+  fi
+
   log ""
   log "${BLD}================================================================${RST}"
   log "${BLD}  BẢNG TÓM TẮT 8 BỘ${RST}"
@@ -1148,6 +1348,13 @@ while (( $# )); do
     --skip-ingest) SKIP_INGEST=1; shift ;;
     --no-api)     NO_API=1; shift ;;
     --no-auto-precision) NO_AUTO_PRECISION=1; shift ;;
+    --merge)      MERGE_ONLY=1; shift ;;
+    --no-merge)   DO_MERGE=0; shift ;;
+    --merge-mode) [[ $# -ge 2 ]] || die "--merge-mode cần copy|link|symlink|none"; MERGE_MODE="$2"; shift 2 ;;
+    --prune)      DO_PRUNE=1; shift ;;
+    --clean)      DO_CLEAN=1; shift ;;
+    --keep-old)   [[ $# -ge 2 ]] || die "--keep-old cần một số"; KEEP_OLD="$2"; shift 2 ;;
+    --keep-old=*) KEEP_OLD="${1#--keep-old=}"; shift ;;
     --suffix)     [[ $# -ge 2 ]] || die "--suffix cần giá trị"; OUT_SUFFIX="$2"; shift 2 ;;
     --suffix=*)   OUT_SUFFIX="${1#--suffix=}"; shift ;;
     -h|--help)    usage; exit 0 ;;
@@ -1161,6 +1368,18 @@ for _b in $NEW_BOOKS; do
   if [[ "$_b" == "all" ]]; then RUN_ALL=1; else _rest="$_rest $_b"; fi
 done
 NEW_BOOKS="$_rest"
+
+# --clean / --prune: dọn rác, không chạy pipeline. In danh sách rồi HỎI (--yes bỏ hỏi).
+if (( DO_CLEAN )); then clean_junk; exit 0; fi
+if (( DO_PRUNE )); then prune_old; exit 0; fi
+
+# --merge đứng một mình: chỉ dựng lại bộ gộp từ các bộ đang có trên đĩa
+if (( MERGE_ONLY )); then
+  run_merge "$MERGE_MODE"
+  [[ -z "$ALL_FAILED" ]] || exit 1
+  if (( DO_VERIFY == 1 )); then verify_all; exit $(( VERIFY_FAIL ? 1 : 0 )); fi
+  exit 0
+fi
 
 # --summary-only: chỉ in lại bảng, không chạy gì
 if (( SUMMARY_ONLY )); then

@@ -41,7 +41,8 @@ def _ds_dir() -> Path:
     (run_pipeline.sh:78-81), để kiểm schema 12 cột trước khi bộ v3 thay bộ thật.
     """
     root = _ds_out() if _ds_out() != REPO / "dataset_out" else REPO
-    for d in ("dataset", "re-dataset"):
+    # 23/09: bộ STT nay ở dataset/SachThanhTruyen/ (bố cục đầu ra); giữ "dataset" cho cây cũ.
+    for d in ("dataset/SachThanhTruyen", "dataset", "re-dataset"):
         if (root / d / "labels.csv").exists():
             return root / d
     return root / "re-dataset"

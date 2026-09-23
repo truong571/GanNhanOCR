@@ -59,10 +59,21 @@ def _stats(df: pd.DataFrame) -> dict:
 
 
 def _published_frame(df: pd.DataFrame) -> pd.DataFrame:
-    """Assign page-disjoint splits and return (full_df_with_split, crops_csv_frame)."""
-    split, rep = split_mod.assign_page_disjoint(df)
+    """Assign page-disjoint splits and return (full_df_with_split, crops_csv_frame).
+
+    CỔNG RÒ RỈ (2026-09-23): dòng thuộc bộ export đã đóng dấu TẬP ĐÁNH GIÁ
+    (`dataset/<Bộ>/evaluation_only.json`) nhận split `eval_only` và KHÔNG vào
+    train/val/test — `build_hf_dataset` chỉ xuất 3 split kia nên chúng tự rơi khỏi parquet.
+    """
+    ev_books = split_mod.eval_only_books()
+    if ev_books:
+        print(f"[split] TẬP ĐÁNH GIÁ bị giữ ngoài train/val/test: {sorted(ev_books)}")
+    split, rep = split_mod.assign_page_disjoint(df, eval_books=ev_books)
     df = df.copy()
     df["split"] = split
+    n_ev = int((split == split_mod.EVAL_SPLIT).sum())
+    if n_ev:
+        print(f"[split] {n_ev:,} dòng -> '{split_mod.EVAL_SPLIT}' (không huấn luyện)")
     return df, rep
 
 
@@ -80,10 +91,12 @@ def cmd_split(args) -> None:
     RELEASE.mkdir(parents=True, exist_ok=True)
     df.to_csv(RELEASE / "labels_published.csv", index=False)
     print(f"[split] {rep.summary()}")
+    ev_books = split_mod.eval_only_books()
     for book in sorted(df["book"].unique()):
-        lo = split_mod.lobo_split(df, book)
+        lo = split_mod.lobo_split(df, book, eval_books=ev_books)
         n_test = int((lo == "test").sum())
-        print(f"[lobo]  holdout {book}: test={n_test}")
+        print(f"[lobo]  holdout {book}: test={n_test} "
+              f"(eval_only giữ ngoài train: {int((lo == split_mod.EVAL_SPLIT).sum())})")
     print(f"[split] -> {RELEASE / 'labels_published.csv'}")
 
 

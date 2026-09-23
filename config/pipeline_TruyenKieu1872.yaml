@@ -12,6 +12,14 @@
 #   (162/162 trang); px/chữ 40,0 (nhỏ hơn thạch bản ~4×) ⇒ cùng khuôn `layout: lithograph` của LVT1883/KVK1884.
 books:
   - name: TruyenKieu1872
+    # 2026-09-24 (PA3 tầng L3, docs/CHUA_QN_2026-09-24.md §4): sửa LỖI KÝ TỰ của tesseract trên âm
+    # quốc ngữ NGOÀI từ điển, NGAY TRƯỚC align (pipeline/align_engine/qn_charfix.py; bảng ở
+    # config/lexicon/qn_charfix.json: e→c, ð→đ, ñ→n, œ→c, ‹/›/¿→∅). Ba chốt: chỉ đụng âm ngoài từ
+    # điển · chỉ nhận khi có ĐÚNG MỘT ứng viên là khoá từ điển · quyết định hoàn toàn ở phía quốc
+    # ngữ (KHÔNG nhìn chữ kim) nên hai kênh vẫn độc lập. Chạy TRƯỚC tầng dời dấu có sẵn: đo được
+    # ca `eó` (hỏng của `có`) bị tầng dấu dời thành `éo` — 要 ∈ R(éo) nhưng ∉ R(có) — tức một âm SAI
+    # hợp thức hoá đúng chữ kim mà âm ĐÚNG sẽ loại. Mặc định TẮT (STT không đổi một byte).
+    qn_charfix: true
     layout: lithograph
     n_columns: 10
     qn_syllables_per_column: 14

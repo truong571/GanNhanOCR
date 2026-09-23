@@ -28,6 +28,14 @@ books:
   # config/pipeline.yaml của STT. Ingest từ ảnh bằng pipeline/tools/ingest_lithograph_book.py
   # (không cần khoá pdf: step0/step1 bỏ qua khi layout=lithograph).
   - name: LucVanTien1883
+    # 2026-09-24 (PA3 tầng L3, docs/CHUA_QN_2026-09-24.md §4): sửa LỖI KÝ TỰ của tesseract trên âm
+    # quốc ngữ NGOÀI từ điển, NGAY TRƯỚC align (pipeline/align_engine/qn_charfix.py; bảng ở
+    # config/lexicon/qn_charfix.json: e→c, ð→đ, ñ→n, œ→c, ‹/›/¿→∅). Ba chốt: chỉ đụng âm ngoài từ
+    # điển · chỉ nhận khi có ĐÚNG MỘT ứng viên là khoá từ điển · quyết định hoàn toàn ở phía quốc
+    # ngữ (KHÔNG nhìn chữ kim) nên hai kênh vẫn độc lập. Chạy TRƯỚC tầng dời dấu có sẵn: đo được
+    # ca `eó` (hỏng của `có`) bị tầng dấu dời thành `éo` — 要 ∈ R(éo) nhưng ∉ R(có) — tức một âm SAI
+    # hợp thức hoá đúng chữ kim mà âm ĐÚNG sẽ loại. Mặc định TẮT (STT không đổi một byte).
+    qn_charfix: true
     layout: lithograph
     n_columns: 10
     qn_syllables_per_column: 14
@@ -89,6 +97,24 @@ run:
   # docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN_2026-09-23.md §3). Giữ khoá mặc định để pages/*.png không đổi md5;
   # KHÔNG dùng `otsu` (đo: kém hơn stretch — eq_label 88,1 vs 93,2). --qn-count-rule: luật 6/8 (§6 #2).
   ingest_args: "--qn-count-rule"   # LVT: --verse-map formula (mặc định), --contrast stretch (mặc định, ánh xạ đồng nhất); KHÔNG --dict-boost
+  # 2026-09-24 (PA2 CÓ HẠN CHẾ, docs/CHUA_QN_2026-09-24.md §3): thay dòng QN OCR bằng phiên âm chuẩn
+  # của bản LucVanTien1916 (Nôm Foundation, 2.061 câu) khi khớp được — NHƯNG chỉ ghi đè ở vị trí âm
+  # OCR VỠ (không phải khoá từ điển) hoặc chỉ khác DẤU THANH (--only-invalid-or-tone).
+  # Đo trực tiếp ở mức Ô trên bản chốt 23/09 (chữ kim ∈ tập đọc từ điển của âm mới, đúng điều kiện
+  # cần của luật GOLD s1_inter_s2_direct):
+  #   KHÔNG hạn chế : +344 nhãn mới / −37 ô đang GOLD, và 0/37 ô mất có kim trùng chữ Nôm 1916
+  #                   ⇒ 37 ô ấy là DỊ BẢN THẬT của bản 1883 mà tesseract đã đọc ĐÚNG. KHÔNG nhận.
+  #   CÓ hạn chế    : +198 nhãn mới / −1 ô GOLD (198:1). Nhận.
+  # Ngưỡng giữ 0,90: nới xuống 0,75 được thêm ô nhưng 697/1.043 dòng fuzzy bị nghi xoá dị bản thật,
+  # tức là viết bản 1916 đè lên bản 1883 — hỏng chính dữ liệu đang muốn số hoá.
+  # CẢNH BÁO tự khẳng định: 1883 ↔ 1916 là hai bản KHÁC nhau và LVT1883 KHÔNG có tham chiếu độc lập
+  # thứ hai (nhãn người IHR trùng nomfoundation 97,63 % ký tự ⇒ cùng nguồn). Mọi con số ở trên là
+  # CHẶN TRÊN; căn cứ tin cậy đến từ phép chuyển di của KimVanKieu1884 (bẻ được vòng tròn bằng 1872).
+  verses_ref_fix:
+    ref: data/LucVanTien1916/nomfoundation_lvt_phienam.json
+    ref_name: nf1916
+    fuzzy_min: 0.9
+    only_invalid_or_tone: true    # KVK1884 KHÔNG bật (ở đó lớp "âm hợp lệ khác hẳn" vẫn LỢI 7:1)
   n_columns: 10                 # export_final_dataset / make_dataset_docs --n-columns (STT 9, thạch bản 10, văn xuôi 7)
   cross: true                   # auto_precision --steps cross (LVT1916 NF) -> mechanism_gates --cross (cổng d) + B6
 

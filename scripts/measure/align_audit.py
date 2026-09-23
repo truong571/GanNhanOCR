@@ -11,7 +11,12 @@ Hai nhóm phép đo:
  A. BẤT BIẾN CĂN CHỈNH (mục 1) — mỗi bất biến trả (số vi phạm, mẫu số n):
     A1 o_duy_nhat        mỗi ô âm QN (page, column, syl_idx) có tối đa 1 ô ảnh
     A2 syl_idx_trong_cot syl_idx ∈ [0, số âm QN của cột)
-    A3 am_dung_vi_tri    labels.syllable == âm QN ở ĐÚNG vị trí syl_idx (mọi tier)
+    A3 am_dung_vi_tri    labels.syllable == âm QN ở ĐÚNG vị trí syl_idx (mọi tier).
+                         Hai phép CHUẨN HOÁ CÓ CHỦ Ý của pipeline được đếm RIÊNG, không tính vi phạm:
+                         (i) chỉ khác DẤU (tầng dời dấu / rule `*_am_sua_dau`); (ii) `qn_fix_kind ==
+                         "charfix"` VÀ `qn_charfix.fix_syllable(âm thô, khoá từ điển)` cho ĐÚNG
+                         `labels.syllable` (tầng L3, 2026-09-24). Ô khai `charfix` mà KHÔNG tái lập
+                         được bằng đúng luật L3 vẫn là VI PHẠM (`A3_charfix_khong_tai_lap`).
     A4 gold_am_dung      A3 giới hạn trong GOLD / GOLD_text_only
     A5 khong_muon_am     ô có âm KHÁC vị trí của mình nhưng TRÙNG âm ở vị trí khác của cột
                          (dấu hiệu lấy âm của câu/chữ khác) — tách riêng "xuyên tầng"
@@ -89,6 +94,24 @@ def canon(t: str) -> str:
     """Chuẩn hoá âm GIỐNG pipeline (NFC + tone canon + lower)."""
     from core.text.text_utils import normalize_tone_marks
     return normalize_tone_marks(unicodedata.normalize("NFC", (t or "").strip().lower()))
+
+
+_QN_KEYS_CACHE: set[str] = set()
+
+
+def _qn_keys() -> set[str]:
+    """Khoá từ điển QN, chuẩn hoá y hệt pipeline — nạp MỘT lần cho cả lần chạy."""
+    global _QN_KEYS_CACHE
+    if not _QN_KEYS_CACHE:
+        from core.text.dictionary import load_qn_to_nom
+        _QN_KEYS_CACHE = {canon(k) for k in load_qn_to_nom(str(REPO / "Dict" / "QuocNgu_SinoNom.csv"))}
+    return _QN_KEYS_CACHE
+
+
+def _charfix_apply(raw: str) -> str:
+    """Chạy lại ĐÚNG luật L3 (`pipeline.align_engine.qn_charfix`) trên âm thô; không sửa được -> trả nguyên."""
+    from pipeline.align_engine.qn_charfix import fix_syllable
+    return fix_syllable(raw, _qn_keys()) or raw
 
 
 def wilson(k: int, n: int, z: float = 1.96) -> tuple[float, float]:
@@ -225,6 +248,7 @@ def check_invariants(book: str, cfg: dict, rows: list[dict],
     k_a2 = k_a3 = k_a4 = 0
     n_a5 = k_a5 = k_a5x = 0
     k_a3d = k_a4d = 0          # chỉ khác DẤU (pipeline sửa dấu — thiết kế, không phải lệch ô)
+    k_a3c = k_a4c = 0          # (2026-09-24) L3 qn_charfix tái lập được — thiết kế, không phải lệch ô
     for r in rows:
         ql = qn.get(r["page"], {}).get(r["_col"])
         if ql is None or r["_syl"] is None:
@@ -239,22 +263,34 @@ def check_invariants(book: str, cfg: dict, rows: list[dict],
         n_a3 += 1
         ok = (got == want)
         only_tone = (not ok) and base_syl(got) == base_syl(want)
+        # (2026-09-24) L3 `qn_charfix`: ô khai `qn_fix_kind == charfix` được CHẤP NHẬN chỉ khi
+        # chạy lại ĐÚNG luật L3 trên âm thô của transcriptions cho ra ĐÚNG `labels.syllable`.
+        # Khai charfix mà không tái lập được thì vẫn tính vi phạm, với tên riêng để thấy ngay.
+        charfix_ok = False
+        if (not ok) and not only_tone and (r.get("qn_fix_kind") or "") == "charfix":
+            charfix_ok = (_charfix_apply(want) == got)
         if not ok:
             if only_tone:
                 k_a3d += 1
+            elif charfix_ok:
+                k_a3c += 1
             else:
                 k_a3 += 1
-                flag(r, "A3_am_dung_vi_tri", f"am_o={got!r} vs QN[{r['_syl']}]={want!r}")
+                name = ("A3_charfix_khong_tai_lap"
+                        if (r.get("qn_fix_kind") or "") == "charfix" else "A3_am_dung_vi_tri")
+                flag(r, name, f"am_o={got!r} vs QN[{r['_syl']}]={want!r}")
         if r.get("tier") in GOLDISH:
             n_a4 += 1
             if not ok:
                 if only_tone:
                     k_a4d += 1
+                elif charfix_ok:
+                    k_a4c += 1
                 else:
                     k_a4 += 1
                     flag(r, "A4_gold_am_dung", f"am_o={got!r} vs QN[{r['_syl']}]={want!r}")
-        # A5 — âm sai vị trí NHƯNG trùng một vị trí khác của cùng cột (bỏ ca chỉ khác dấu)
-        if not ok and got and not only_tone:
+        # A5 — âm sai vị trí NHƯNG trùng một vị trí khác của cùng cột (bỏ ca chỉ khác dấu / L3)
+        if not ok and got and not only_tone and not charfix_ok:
             n_a5 += 1
             other = [i for i, s in enumerate(ql) if canon(s) == got and i != r["_syl"]]
             if other:
@@ -266,8 +302,9 @@ def check_invariants(book: str, cfg: dict, rows: list[dict],
                 flag(r, "A5_khong_muon_am",
                      f"am {got!r} thuoc vi tri {other}" + (" [XUYEN TANG]" if cross else ""))
     add("A2_syl_idx_trong_cot", k_a2, n_a2)
-    add("A3_am_dung_vi_tri", k_a3, n_a3, f"them {k_a3d} o chi khac DAU (rule *_am_sua_dau)")
-    add("A4_gold_am_dung", k_a4, n_a4, f"them {k_a4d} o chi khac DAU")
+    add("A3_am_dung_vi_tri", k_a3, n_a3,
+        f"them {k_a3d} o chi khac DAU (rule *_am_sua_dau) + {k_a3c} o L3 qn_charfix tai lap duoc")
+    add("A4_gold_am_dung", k_a4, n_a4, f"them {k_a4d} o chi khac DAU + {k_a4c} o L3 qn_charfix")
     add("A5_khong_muon_am", k_a5, n_a5,
         f"trong do xuyen tang {k_a5x}" if litho else "")
 

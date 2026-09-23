@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-23T12:50:12Z",
+ "generated_at": "2026-09-23T15:00:29Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "11001b7225",
+ "git_head": "8b6b59f112",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 60,
@@ -17,7 +17,7 @@
   "pdf_readers": 2,
   "checkpoint_paths": 11,
   "checkpoint_exists": 6,
-  "git_dirty_pipeline_core": 10,
+  "git_dirty_pipeline_core": 9,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
  },
@@ -211,12 +211,12 @@
     "pipeline/remediation/mechanism_gates_selftest.py:218 _row(… arg#0=9)",
     "pipeline/tools/ingest_prose_selftest.py:43 ing.sino_number(… arg#0=9)",
     "pipeline/tools/merge_datasets.py:512 _bo_gia(… arg#2=9)",
-    "pipeline/tools/selftest.py:674 bbox(… arg#0=9)"
+    "pipeline/tools/selftest.py:717 bbox(… arg#0=9)"
    ],
    "known_pins_check": [
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 98,
+     "line": 105,
      "hint": "DEFAULT_N_COLUMNS = 9",
      "found": true,
      "code": "DEFAULT_N_COLUMNS = 9",
@@ -407,7 +407,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 98,
+     "line": 105,
      "category": "assign",
      "context": "line",
      "detail": "DEFAULT_N_COLUMNS = 9",
@@ -749,7 +749,7 @@
     },
     {
      "file": "pipeline/tools/make_dataset_docs.py",
-     "line": 160,
+     "line": 164,
      "category": "call_arg",
      "context": "line",
      "detail": "s.get(… arg#1=9)",
@@ -758,7 +758,7 @@
     },
     {
      "file": "pipeline/tools/make_dataset_docs.py",
-     "line": 161,
+     "line": 165,
      "category": "compare",
      "context": "window8",
      "detail": "_nc != 9",
@@ -767,7 +767,7 @@
     },
     {
      "file": "pipeline/tools/make_dataset_docs.py",
-     "line": 374,
+     "line": 378,
      "category": "call_kwarg",
      "context": "line",
      "detail": "ap.add_argument(default=9)",
@@ -776,7 +776,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 468,
+     "line": 511,
      "category": "compare",
      "context": "line",
      "detail": "len(v) != 9",
@@ -785,7 +785,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 485,
+     "line": 528,
      "category": "compare",
      "context": "line",
      "detail": "len(v) != 9",
@@ -794,7 +794,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 497,
+     "line": 540,
      "category": "call_arg",
      "context": "line",
      "detail": "range(… arg#1=9)",
@@ -803,7 +803,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 500,
+     "line": 543,
      "category": "compare",
      "context": "line",
      "detail": "len({r['column'] for r in all_rows}) != 9",
@@ -812,7 +812,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 501,
+     "line": 544,
      "category": "compare",
      "context": "line",
      "detail": "len({r['column'] for r in loc}) != 9",
@@ -1108,43 +1108,43 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 128,
+     "line": 135,
      "ident": "n_columns",
      "code": "n_columns: int | str = DEFAULT_N_COLUMNS   # số nguyên, hoặc \"auto\" (chỉ layout=prose)"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 191,
+     "line": 199,
      "ident": "n_columns",
      "code": "n_columns = book_cfg.get(\"n_columns\", N_COLUMNS_AUTO if layout == LAYOUT_PROSE else DEFAULT_N_COLUMNS)"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 192,
+     "line": 200,
      "ident": "n_columns",
      "code": "if n_columns == N_COLUMNS_AUTO:"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 195,
+     "line": 203,
      "ident": "n_columns",
      "code": "elif isinstance(n_columns, bool) or not isinstance(n_columns, int) or n_columns < 1:"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 196,
+     "line": 204,
      "ident": "n_columns",
      "code": "raise ValueError(f\"books[{name}].n_columns = {n_columns!r}; cần số nguyên >= 1\""
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 234,
+     "line": 245,
      "ident": "n_columns",
      "code": "if (layout == LAYOUT_STT and n_columns == DEFAULT_N_COLUMNS and qpc == 0"
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 241,
+     "line": 252,
      "ident": "n_columns",
      "code": "return BookLayout(layout=layout, n_columns=n_columns, qn_per_column=qpc,"
     },
@@ -1308,7 +1308,7 @@
        "cmd": "X \"$PY\" -m pipeline.step0_setup \"$CONFIG\""
       },
       {
-       "line": 639,
+       "line": 641,
        "cmd": "R \"$PY\" -m pipeline.step0_setup \"$BK_CONFIG\""
       }
      ]
@@ -1405,7 +1405,7 @@
         "src": "str(REPO / 'config' / 'pipeline.yaml')",
         "resolved": "<REPO>/config/pipeline.yaml"
        },
-       "line": 1023
+       "line": 1031
       },
       {
        "flags": [
@@ -1415,14 +1415,14 @@
         "src": "str(REPO / 'dataset_out')",
         "resolved": "<REPO>/dataset_out"
        },
-       "line": 1024
+       "line": 1032
       },
       {
        "flags": [
         "--use-s3"
        ],
        "action": "store_true",
-       "line": 1025
+       "line": 1033
       },
       {
        "flags": [
@@ -1430,7 +1430,7 @@
        ],
        "action": "store_true",
        "help": "fail loud if S3 can't load (else SILVER silently -> REVIEW)",
-       "line": 1026
+       "line": 1034
       },
       {
        "flags": [
@@ -1441,21 +1441,21 @@
         "src": "0",
         "resolved": 0
        },
-       "line": 1028
+       "line": 1036
       },
       {
        "flags": [
         "--no-crops"
        ],
        "action": "store_true",
-       "line": 1029
+       "line": 1037
       },
       {
        "flags": [
         "--no-tighten"
        ],
        "action": "store_true",
-       "line": 1030
+       "line": 1038
       },
       {
        "flags": [
@@ -1463,7 +1463,7 @@
        ],
        "action": "store_true",
        "help": "skip seam-carve neighbour-ink erasure (debug/compare only; carving is ON by default — it's what fixes crops bleeding into the char above/bel",
-       "line": 1031
+       "line": 1039
       },
       {
        "flags": [
@@ -1471,7 +1471,7 @@
        ],
        "action": "store_true",
        "help": "also materialize REVIEW crops (kept in labels.csv either way)",
-       "line": 1035
+       "line": 1043
       },
       {
        "flags": [
@@ -1479,7 +1479,7 @@
        ],
        "action": "store_true",
        "help": "D-1: thêm crops_v2/ (F3g, pipeline.align_engine.recenter_f3g) + labels_crops_v2.csv sidecar; crop giao nộp và labels.csv giữ nguyên byte",
-       "line": 1039
+       "line": 1047
       },
       {
        "flags": [
@@ -1491,7 +1491,7 @@
         "resolved": true
        },
        "help": "PASS 1b: pair_pages LOO + DP lại với ANCHOR_CAP + posterior (mặc định bật; --no-two-pass = đường cũ)",
-       "line": 1044
+       "line": 1052
       },
       {
        "flags": [
@@ -1502,7 +1502,7 @@
         "src": "None",
         "resolved": null
        },
-       "line": 1050
+       "line": 1058
       },
       {
        "flags": [
@@ -1517,7 +1517,7 @@
         "legacy"
        ],
        "help": "luật gán hộp ảnh (A-6): syl_index (mặc định) | legacy (trọn gói cũ)",
-       "line": 1054
+       "line": 1062
       },
       {
        "flags": [
@@ -1528,7 +1528,7 @@
         "resolved": "none"
        },
        "help": "khoá QĐ-01: 'none' (mặc định: tự động 100%%, không áp đặt người) | đường dẫn tệp CSV khoá (ví dụ config/qd01_cells.csv để thí nghiệm/tái lập",
-       "line": 1056
+       "line": 1064
       },
       {
        "flags": [
@@ -1544,7 +1544,7 @@
         "cell_fallback"
        ],
        "help": "B-5: col (mặc định, trọn cột legacy) | cell (khoá từng ô + dời hàng xóm) | cell_fallback (cell + lùi cả cột về legacy khi ô khoá lộ hộp lệch",
-       "line": 1063
+       "line": 1071
       },
       {
        "flags": [
@@ -1555,7 +1555,7 @@
         "resolved": ""
        },
        "help": "thí nghiệm: CSV có cột book,page (mã sách stt*) — chỉ build các trang này",
-       "line": 1066
+       "line": 1074
       },
       {
        "flags": [
@@ -1566,7 +1566,7 @@
         "resolved": "<REPO>/config/qd01a_decisions.csv"
        },
        "help": "phán quyết người cho ô QĐ-01 trôi + 12 ô A-3 (N5g); thiếu tệp = rỗng",
-       "line": 1068
+       "line": 1076
       },
       {
        "flags": [
@@ -1577,7 +1577,7 @@
         "resolved": "<REPO>/config/decisions.yaml"
        },
        "help": "A-8: quyết định theo lớp (corpus_readings/di_the/lop_nham); chỉ mục da_ky có xuat_xu được áp; 'none' = không áp gì (CHỈ để thí nghiệm)",
-       "line": 1070
+       "line": 1078
       },
       {
        "flags": [
@@ -1594,7 +1594,7 @@
         "detector"
        ],
        "help": "column re-segmentation for crop boxes (default midpoint; valley_* are opt-in experiments — see seg_valley_n_ab.py / seg_smart_ab.py). valley",
-       "line": 1073
+       "line": 1081
       },
       {
        "flags": [
@@ -1606,7 +1606,7 @@
         "resolved": false
        },
        "help": "B-2: cộng λ·min(−logP, cap) (CNN âm tiết OOF, hộp OCR thô) vào chi phí DP PASS 1b + posterior cùng chi phí; ghi p_visual_syl (mặc định TẮT)",
-       "line": 1082
+       "line": 1090
       },
       {
        "flags": [
@@ -1617,7 +1617,7 @@
         "resolved": null
        },
        "help": "thư mục fold0..4.pt (mặc định: KhoiB/v3/p_visual_oof_v3_results/models rồi KhoiB/v3/models)",
-       "line": 1085
+       "line": 1093
       },
       {
        "flags": [
@@ -1629,7 +1629,7 @@
         "resolved": null
        },
        "help": "λ (mặc định config, 0,25)",
-       "line": 1087
+       "line": 1095
       },
       {
        "flags": [
@@ -1641,7 +1641,7 @@
         "resolved": null
        },
        "help": "khe ảnh cộng vào COST_DEL/INS ×λ (mặc định 8)",
-       "line": 1088
+       "line": 1096
       },
       {
        "flags": [
@@ -1653,7 +1653,7 @@
         "resolved": null
        },
        "help": "trần −logP (mặc định 12)",
-       "line": 1089
+       "line": 1097
       },
       {
        "flags": [
@@ -1662,7 +1662,7 @@
        ],
        "action": "store_true",
        "help": "bỏ qua khóa .FROZEN, ép buộc ghi đè",
-       "line": 1090
+       "line": 1098
       }
      ],
      "run_pipeline_sh": [
@@ -1671,7 +1671,7 @@
        "cmd": "X \"$PY\" -m pipeline.align_engine.build_dataset --config \"$CONFIG\" --reseg \"$RESEG\" --qd01-cells none --force --out \"$DS_OUT\""
       },
       {
-       "line": 705,
+       "line": 710,
        "cmd": "R \"$PY\" -m pipeline.align_engine.build_dataset --config \"$BK_CONFIG\" --reseg detector --qd01-cells none --decisions none --use-s3 --two-pass --box-rule syl_index --force --out \"$ds_out\""
       }
      ]
@@ -1742,11 +1742,11 @@
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" apply --tau \"$TAU_REMEDIATE\""
       },
       {
-       "line": 714,
+       "line": 719,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" census"
       },
       {
-       "line": 715,
+       "line": 720,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" apply --tau \"$TAU_REMEDIATE\""
       }
      ],
@@ -1808,7 +1808,7 @@
        "cmd": "X \"$PY\" -m pipeline.remediation.confusion_fix --in \"$LABELS_REMED\" --out \"$LABELS_FINAL\" --fixes \"$CONFUSION_FIXES\" --measure"
       },
       {
-       "line": 718,
+       "line": 723,
        "cmd": "R \"$PY\" -m pipeline.remediation.confusion_fix --in \"$labels_remed\" --out \"$labels_final\" --fixes \"$CONFUSION_FIXES\" --measure"
       }
      ]
@@ -1946,7 +1946,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 726,
+       "line": 731,
        "cmd": "cmd=(\"$PY\" -m pipeline.remediation.mechanism_gates --in \"$labels_final\" --out \"$labels_gated\""
       }
      ]
@@ -2132,7 +2132,7 @@
        "cmd": "X \"$PY\" pipeline/export_final_dataset.py --labels \"$LABELS_FINAL\" --src-root \"$DS_OUT\" --out \"$FINAL_DIR\""
       },
       {
-       "line": 748,
+       "line": 753,
        "cmd": "R \"$PY\" pipeline/export_final_dataset.py --labels \"$labels_gated\" --src-root \"$ds_out\" --out \"$final_dir\" --n-columns \"$BK_NCOL\""
       }
      ]
@@ -2193,7 +2193,7 @@
        "cmd": "X \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$LABELS_RAW\" --src-root \"$DS_OUT\""
       },
       {
-       "line": 708,
+       "line": 713,
        "cmd": "R \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$labels_raw\" --src-root \"$ds_out\""
       }
      ]
@@ -2424,7 +2424,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 692,
+       "line": 697,
        "cmd": "cmd=(\"$PY\" -m pipeline.tools.ingest_lithograph_book --book \"$book\" --ocr \"$ocr\" --out \"$BK_DATA_DIR\""
       }
      ]
@@ -2441,13 +2441,13 @@
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 446,
+     "line": 451,
      "schema": "other",
      "code": "return [int(v) for v in json.loads(s)]"
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 892,
+     "line": 900,
      "schema": "other",
      "code": "man = json.loads(mf.read_text(encoding=\"utf-8\"))"
     },
@@ -2719,7 +2719,7 @@
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1509,
+       "line": 1520,
        "recv": "c",
        "access": "get"
       },
@@ -2776,73 +2776,73 @@
      "reads": [
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 832,
+       "line": 837,
        "recv": "p",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 450,
+       "line": 455,
        "recv": "row",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 527,
+       "line": 532,
        "recv": "r",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 556,
+       "line": 561,
        "recv": "r",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 696,
+       "line": 701,
        "recv": "L",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 805,
+       "line": 810,
        "recv": "r",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 811,
+       "line": 816,
        "recv": "r",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 198,
+       "line": 203,
        "recv": "row",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 483,
+       "line": 488,
        "recv": "r",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1808,
+       "line": 1819,
        "recv": "r",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1843,
+       "line": 1855,
        "recv": "r",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 282,
+       "line": 287,
        "recv": "r",
        "access": "subscript"
       }
@@ -2980,13 +2980,13 @@
      "reads": [
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1861,
+       "line": 1873,
        "recv": "row",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1904,
+       "line": 1916,
        "recv": "r",
        "access": "subscript"
       },
@@ -3041,7 +3041,7 @@
      "reads": [
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1912,
+       "line": 1924,
        "recv": "r",
        "access": "subscript"
       },
@@ -3135,13 +3135,13 @@
      "reads": [
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1399,
+       "line": 1407,
        "recv": "cs",
        "access": "subscript"
       },
       {
        "file": "pipeline/align_engine/build_dataset.py",
-       "line": 1510,
+       "line": 1521,
        "recv": "cs",
        "access": "subscript"
       },
@@ -3268,12 +3268,12 @@
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 1303,
+     "line": 1311,
      "code": "trans = sorted(glob.glob(str(data_dir / \"transcriptions\" / \"page_*.json\")))"
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 1304,
+     "line": 1312,
      "code": "trans = [t for t in trans if not t.endswith(\"_qn_ocr_cache.json\")]"
     },
     {
@@ -3515,6 +3515,7 @@
     "layout",
     "mechanism_gates",
     "n_columns",
+    "qn_charfix",
     "qn_count_gate",
     "qn_syllables_per_column",
     "reocr",
@@ -3541,7 +3542,7 @@
    "all_key_readers": [
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 187,
+     "line": 195,
      "key": "name",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3549,7 +3550,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 188,
+     "line": 196,
      "key": "layout",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3557,7 +3558,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 191,
+     "line": 199,
      "key": "n_columns",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3565,7 +3566,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 199,
+     "line": 207,
      "key": "qn_syllables_per_column",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3573,7 +3574,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 201,
+     "line": 209,
      "key": "qn_syllables_per_column",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3581,7 +3582,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 212,
+     "line": 220,
      "key": "box_decoder",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3589,7 +3590,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 215,
+     "line": 223,
      "key": "detector_ckpt",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3597,7 +3598,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 220,
+     "line": 228,
      "key": "detector_resize",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3605,7 +3606,7 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 223,
+     "line": 231,
      "key": "crop_source",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3613,15 +3614,23 @@
     },
     {
      "file": "pipeline/align_engine/book_layout.py",
-     "line": 226,
+     "line": 234,
      "key": "tier_dp",
      "access": "get",
      "keyerror_if_missing": false,
      "code": "tier_dp = book_cfg.get(\"tier_dp\", False)"
     },
     {
+     "file": "pipeline/align_engine/book_layout.py",
+     "line": 237,
+     "key": "qn_charfix",
+     "access": "get",
+     "keyerror_if_missing": false,
+     "code": "qn_charfix = book_cfg.get(\"qn_charfix\", False)"
+    },
+    {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 1247,
+     "line": 1255,
      "key": "name",
      "access": "subscript",
      "keyerror_if_missing": true,
@@ -3629,7 +3638,7 @@
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 1251,
+     "line": 1259,
      "key": "name",
      "access": "subscript",
      "keyerror_if_missing": true,
@@ -3637,7 +3646,7 @@
     },
     {
      "file": "pipeline/align_engine/build_dataset.py",
-     "line": 1261,
+     "line": 1269,
      "key": "name",
      "access": "subscript",
      "keyerror_if_missing": true,
@@ -4034,71 +4043,65 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "11001b7225",
+   "head": "8b6b59f112",
    "branch": "main",
-   "n_dirty_pipeline_core": 10,
+   "n_dirty_pipeline_core": 9,
    "dirty_pipeline_core": [
     {
-     "file": "pipeline/export_review_excel.py",
+     "file": "pipeline/align_engine/align_production.py",
      "status": "M",
-     "ins": 3,
-     "del": 3
-    },
-    {
-     "file": "pipeline/publish/cli.py",
-     "status": "M",
-     "ins": 17,
-     "del": 4
-    },
-    {
-     "file": "pipeline/publish/selftest.py",
-     "status": "M",
-     "ins": 61,
-     "del": 0
-    },
-    {
-     "file": "pipeline/publish/splits.py",
-     "status": "M",
-     "ins": 90,
-     "del": 12
-    },
-    {
-     "file": "pipeline/remediation/confusion_fix.py",
-     "status": "M",
-     "ins": 4,
-     "del": 0
-    },
-    {
-     "file": "pipeline/remediation/selftest.py",
-     "status": "M",
-     "ins": 2,
-     "del": 2
-    },
-    {
-     "file": "pipeline/tools/selftest.py",
-     "status": "M",
-     "ins": 2,
+     "ins": 13,
      "del": 1
     },
     {
-     "file": "pipeline/tools/update_bang_so_lieu.py",
+     "file": "pipeline/align_engine/book_layout.py",
      "status": "M",
      "ins": 14,
-     "del": 8
+     "del": 2
     },
     {
-     "file": "pipeline/tools/variant_table.py",
+     "file": "pipeline/align_engine/build_dataset.py",
+     "status": "M",
+     "ins": 15,
+     "del": 0
+    },
+    {
+     "file": "pipeline/align_engine/syllable_normalize.py",
+     "status": "M",
+     "ins": 26,
+     "del": 4
+    },
+    {
+     "file": "pipeline/export_final_dataset.py",
      "status": "M",
      "ins": 1,
      "del": 1
     },
     {
-     "file": "pipeline/tools/merge_datasets.py",
+     "file": "pipeline/publish/export.py",
+     "status": "M",
+     "ins": 7,
+     "del": 1
+    },
+    {
+     "file": "pipeline/tools/make_dataset_docs.py",
+     "status": "M",
+     "ins": 5,
+     "del": 1
+    },
+    {
+     "file": "pipeline/tools/selftest.py",
+     "status": "M",
+     "ins": 44,
+     "del": 0
+    },
+    {
+     "file": "pipeline/align_engine/qn_charfix.py",
      "status": "??"
     }
    ],
    "untracked_pipeline_core": [
-    "pipeline/tools/merge_datasets.py"
+    "pipeline/align_engine/qn_charfix.py"
    ],
    "ocr_api_guest_mode": {
     "file": "core/ocr/ocr_api.py",

@@ -43,7 +43,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(REPO))
 
-from core.text.text_utils import clean_line_text, fold_text, normalize_tone_marks, split_to_syllables  # noqa: E402
+from core.text.text_utils import (clean_line_text, fold_text, normalize_tone_marks,  # noqa: E402
+                                   split_to_syllables, strip_tone)
 
 FUZZY_MIN = 0.9
 MARGIN = 0.1          # ứng viên nhất phải hơn ứng viên nhì ít nhất bấy nhiêu
@@ -228,9 +229,49 @@ def match_lines(rows: list[dict], refs: list[dict], fuzzy_min: float = FUZZY_MIN
     return res
 
 
-def build(rows: list[dict], refs: list[dict], matches: list[dict]) -> list[dict]:
-    """verses_b1: dòng OCR với line_text/n_syll thay bằng tham chiếu khi khớp; giữ bản gốc ở *_ocr."""
+def restrict_tokens(ocr: list[str], ref: list[str], qn_dict: set[str]) -> tuple[list[str], int]:
+    """HẠN CHẾ MỨC ÂM (--only-invalid-or-tone, 2026-09-24) — trả (âm của dòng sau khi trộn, số vị trí GIỮ OCR).
+
+    Căn chỉnh đơn điệu OCR↔ref (token_diff). Tại vị trí 1-1 mà hai bên KHÁC nhau:
+      * âm OCR KHÔNG phải khoá từ điển (âm vỡ)            -> lấy âm tham chiếu;
+      * âm OCR là khoá từ điển nhưng chỉ khác DẤU THANH    -> lấy âm tham chiếu (lỗi dấu của tesseract);
+      * âm OCR là khoá từ điển và khác HẲN âm tham chiếu   -> GIỮ ÂM OCR (nghi là dị bản THẬT của bản in).
+    ins (OCR thừa âm) -> bỏ; del (OCR thiếu âm) -> lấy âm tham chiếu. Hai loại này là lỗi ĐẾM của OCR,
+    và giữ chúng sẽ phá số âm 6/8 mà phép khớp dòng vừa bảo đảm.
+
+    Căn cứ (docs/CHUA_QN_2026-09-24.md §3): không hạn chế thì trên LucVanTien1883 @0,90 có 37 ô đang GOLD
+    bị đánh rớt, và 0/37 ô ấy có chữ kim trùng chữ Nôm tham chiếu — tức đó là DỊ BẢN THẬT của bản 1883 mà
+    OCR đã đọc ĐÚNG. Hạn chế này loại sạch lớp đó (còn 1 ô).
+    """
+    dp = _nw(ocr, ref)
+    i, j = len(ocr), len(ref)
+    out: list[str] = []
+    kept = 0
+    while i > 0 or j > 0:
+        if i > 0 and j > 0 and abs(dp[i][j] - (dp[i - 1][j - 1] + tok_sim(ocr[i - 1], ref[j - 1]))) < 1e-9:
+            o, r = ocr[i - 1], ref[j - 1]
+            if o == r or (o not in qn_dict) or strip_tone(o) == strip_tone(r):
+                out.append(r)
+            else:
+                out.append(o)                 # âm hợp lệ khác HẲN -> GIỮ OCR (nghi dị bản thật)
+                kept += 1
+            i, j = i - 1, j - 1
+        elif i > 0 and abs(dp[i][j] - dp[i - 1][j]) < 1e-9:
+            i -= 1                            # ins: OCR thừa âm -> bỏ (ref quyết số âm)
+        else:
+            out.append(ref[j - 1])            # del: OCR thiếu âm -> lấy của ref
+            j -= 1
+    return out[::-1], kept
+
+
+def build(rows: list[dict], refs: list[dict], matches: list[dict],
+          only_invalid_or_tone: bool = False, qn_dict: set[str] | None = None) -> list[dict]:
+    """verses_b1: dòng OCR với line_text/n_syll thay bằng tham chiếu khi khớp; giữ bản gốc ở *_ocr.
+
+    only_invalid_or_tone (2026-09-24): dòng FUZZY chỉ ghi đè âm ở vị trí âm OCR vỡ hoặc chỉ khác dấu thanh
+    (xem restrict_tokens); dòng EXACT không đổi (hai bên vốn bằng nhau). Mặc định False = hành vi cũ."""
     ref_by = {r["idx"]: r for r in refs}
+    qn_dict = qn_dict if qn_dict is not None else set()
     out = []
     for r, m in zip(rows, matches):
         o = dict(r)
@@ -240,10 +281,18 @@ def build(rows: list[dict], refs: list[dict], matches: list[dict]) -> list[dict]
         o["ref_idx"] = m["ref_idx"] if m["ref_idx"] is not None else ""
         o["ref_sim"] = m["ref_sim"] if m["ref_sim"] is not None else ""
         o["ref_nom"] = ""
+        o["qn_kept_ocr"] = 0
         if m["ref_idx"] is not None:
             ref = ref_by[m["ref_idx"]]
             o["line_text"] = ref["qn"]
             o["n_syll"] = str(len(ref["tokens"]))
+            if only_invalid_or_tone and m["qn_source"].endswith("_fuzzy"):
+                toks, kept = restrict_tokens(m["tokens"], ref["tokens"], qn_dict)
+                o["qn_kept_ocr"] = kept
+                if kept:                       # có âm GIỮ của OCR -> ghi chuỗi âm đã trộn (adapter tự tách)
+                    o["line_text"] = " ".join(toks)
+                    o["qn_source"] = m["qn_source"] + "_restricted"
+                o["n_syll"] = str(len(toks))
             # ref_nom chỉ ghi khi số chữ Nôm == số âm (để adapter dùng làm ứng viên đồng âm theo vị trí)
             if len(ref["nom"]) == len(ref["tokens"]):
                 o["ref_nom"] = ref["nom"]
@@ -295,7 +344,8 @@ def summarize(rows: list[dict], matches: list[dict], fixed: list[dict], refs: li
     )
 
 
-def run(book: str, ref: Path, ref_name: str, out_dir: Path, fuzzy_min: float, verses: Path | None) -> dict:
+def run(book: str, ref: Path, ref_name: str, out_dir: Path, fuzzy_min: float, verses: Path | None,
+        only_invalid_or_tone: bool = False) -> dict:
     tsv = verses or (REPO / "measure_out" / book / "qn_ocr" / "verses.tsv")
     rows = load_ocr_rows(tsv)
     refs = load_ref_lines(ref)
@@ -304,9 +354,10 @@ def run(book: str, ref: Path, ref_name: str, out_dir: Path, fuzzy_min: float, ve
     for m in matches:
         if m["qn_source"].endswith("_fuzzy"):
             m["diff"] = token_diff(m["tokens"], refs[m["ref_idx"] - 1]["tokens"], qd)
-    fixed = build(rows, refs, matches)
+    fixed = build(rows, refs, matches, only_invalid_or_tone=only_invalid_or_tone, qn_dict=qd)
     out_dir.mkdir(parents=True, exist_ok=True)
-    fields = list(rows[0].keys()) + ["qn_source", "ref_idx", "ref_sim", "ref_nom", "line_text_ocr", "n_syll_ocr"]
+    fields = list(rows[0].keys()) + ["qn_source", "ref_idx", "ref_sim", "ref_nom", "line_text_ocr", "n_syll_ocr",
+                                     "qn_kept_ocr"]
     with open(out_dir / "verses_b1.tsv", "w", encoding="utf-8", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields, delimiter="\t", extrasaction="ignore")
         w.writeheader()
@@ -320,6 +371,9 @@ def run(book: str, ref: Path, ref_name: str, out_dir: Path, fuzzy_min: float, ve
             dtxt = ";".join(f"{x['kind']}:{x['ocr']}>{x['ref']}{'*' if x['in_dict'] else ''}" for x in (m.get("diff") or []))
             w.writerow({**m, "diff": dtxt, "line_text_ocr": r["line_text"], "line_text_ref": o["line_text"] if m["ref_idx"] else ""})
     s = summarize(rows, matches, fixed, refs, ref_name, fuzzy_min)
+    s["only_invalid_or_tone"] = bool(only_invalid_or_tone)
+    s["n_fuzzy_lines_kept_some_ocr"] = sum(1 for o in fixed if int(o.get("qn_kept_ocr") or 0) > 0)
+    s["n_syllables_kept_ocr"] = sum(int(o.get("qn_kept_ocr") or 0) for o in fixed)
     s["inputs"] = dict(verses=str(tsv), ref=str(ref))
     s["outputs"] = dict(verses_b1=str(out_dir / "verses_b1.tsv"), matches=str(out_dir / "matches.csv"))
     (out_dir / "summary.json").write_text(json.dumps(s, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -440,6 +494,40 @@ def selftest() -> int:
     ok(len(d) == 1 and d[0]["kind"] == "del" and d[0]["ref"] == "c", f"token_diff thiếu âm = del {d}")
     d = token_diff(["a", "x", "b"], ["a", "b"])
     ok(len(d) == 1 and d[0]["kind"] == "ins" and d[0]["ocr"] == "x", f"token_diff thừa âm = ins {d}")
+    # --- HẠN CHẾ MỨC ÂM (--only-invalid-or-tone, 2026-09-24) -------------------
+    D = {"trăm", "năm", "trong", "cõi", "người", "ta", "tài", "mệnh", "khéo", "là", "ghét", "nhau", "lạ", "gì"}
+    t, kept = restrict_tokens(["trăm", "năm", "trong", "cỗi", "người", "ta"],
+                              ["trăm", "năm", "trong", "cõi", "người", "ta"], D)
+    ok(t == ["trăm", "năm", "trong", "cõi", "người", "ta"] and kept == 0, f"âm VỠ (cỗi ∉ dict) -> lấy ref {t}")
+    t, kept = restrict_tokens(["trăm", "năm", "trong", "cõi", "nguời", "ta"],
+                              ["trăm", "năm", "trong", "cõi", "người", "ta"], D)
+    ok(t[4] == "người" and kept == 0, f"âm vỡ nguời -> người {t}")
+    t, kept = restrict_tokens(["trăm", "năm", "trong", "cõi", "người", "tà"],
+                              ["trăm", "năm", "trong", "cõi", "người", "ta"], D | {"tà"})
+    ok(t[5] == "ta" and kept == 0, f"âm hợp lệ chỉ khác DẤU THANH -> lấy ref {t}")
+    t, kept = restrict_tokens(["chữ", "tài", "chữ", "mệnh", "khéo", "là", "ghét", "nhau"],
+                              ["chữ", "tài", "chữ", "mệnh", "khéo", "mà", "ghét", "nhau"], D | {"chữ", "mà"})
+    ok(t[5] == "là" and kept == 1, f"âm hợp lệ khác HẲN -> GIỮ OCR (dị bản thật) {t}")
+    t, kept = restrict_tokens(["trăm", "năm", "cõi", "người", "ta"],
+                              ["trăm", "năm", "trong", "cõi", "người", "ta"], D)
+    ok(t == ["trăm", "năm", "trong", "cõi", "người", "ta"] and kept == 0, f"OCR thiếu âm (del) -> lấy ref {t}")
+    t, kept = restrict_tokens(["trăm", "năm", "xx", "trong", "cõi", "người", "ta"],
+                              ["trăm", "năm", "trong", "cõi", "người", "ta"], D)
+    ok(t == ["trăm", "năm", "trong", "cõi", "người", "ta"] and kept == 0, f"OCR thừa âm (ins) -> bỏ {t}")
+    t, _ = restrict_tokens(["a", "b"], ["a", "b"], D)
+    ok(t == ["a", "b"], "hai bên giống hệt -> không đổi")
+    for o_, r_ in (( ["trăm", "năm", "trong", "cỗi", "người", "ta"], ["trăm", "năm", "trong", "cõi", "người", "ta"]),
+                   (["chữ", "tài", "chữ", "mệnh", "khéo", "là", "ghét", "nhau"],
+                    ["chữ", "tài", "chữ", "mệnh", "khéo", "mà", "ghét", "nhau"])):
+        tt, _ = restrict_tokens(o_, r_, D | {"chữ", "mà", "tà"})
+        ok(len(tt) == len(r_), f"số âm sau hạn chế == số âm tham chiếu (giữ parity 6/8) {tt}")
+    rows_r = [dict(seq_no="1", line_text="Lạ gì bỉ sắc tư fong,", n_syll="")]
+    refs_r = [dict(idx=1, qn="Lạ gì bỉ sắc tư phong,", nom="", tokens=qn_tokens("Lạ gì bỉ sắc tư phong,"),
+                   page="p", verse_no=1)]
+    m_r = match_lines(rows_r, refs_r, ref_name="nf")
+    b_r = build(rows_r, refs_r, m_r, only_invalid_or_tone=True, qn_dict={"lạ", "gì", "bỉ", "sắc", "tư", "phong"})
+    ok(b_r[0]["line_text"] == refs_r[0]["qn"] and int(b_r[0]["qn_kept_ocr"]) == 0,
+       f"build hạn chế: mọi âm đổi đều là âm vỡ -> giữ nguyên văn bản ref {b_r[0]['line_text']!r}")
     print(f"verses_ref_fix selftest: {n}/{n} PASS")
     return 0
 
@@ -455,6 +543,10 @@ def main(argv=None) -> int:
     ap.add_argument("--verses", default=None, help="verses.tsv đầu vào (mặc định measure_out/<book>/qn_ocr/verses.tsv)")
     ap.add_argument("--out", default=None, help="thư mục ra (mặc định measure_out/<book>/qn_ref_fix)")
     ap.add_argument("--fuzzy-min", type=float, default=FUZZY_MIN)
+    ap.add_argument("--only-invalid-or-tone", action="store_true",
+                    help="HẠN CHẾ MỨC ÂM (2026-09-24): dòng fuzzy chỉ ghi đè âm ở vị trí âm OCR VỠ (không "
+                         "phải khoá từ điển) hoặc chỉ khác DẤU THANH; âm hợp lệ khác hẳn -> GIỮ OCR (dị bản "
+                         "thật của bản in). Mặc định TẮT = hành vi cũ.")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--check-labels", default=None, help="sau build: labels.csv để kiểm cơ chế (mechanism_check)")
     ap.add_argument("--check-trans", default=None, help="thư mục transcriptions của lần ingest dùng verses_b1")
@@ -475,8 +567,11 @@ def main(argv=None) -> int:
                  "`git checkout -- data/TruyenKieuPhongTinhCoLuc/thamchieu_kieu_1871_LieuVanDuong_phienam.json` "
                  "hoặc khai một json phiên âm khác.")
     out = Path(a.out) if a.out else REPO / "measure_out" / a.book / "qn_ref_fix"
-    s = run(a.book, Path(a.ref), a.ref_name, out, a.fuzzy_min, Path(a.verses) if a.verses else None)
-    print(json.dumps({k: s[k] for k in ("by_source", "n_rows_syll_not_6_8_before", "n_rows_syll_not_6_8_after",
+    s = run(a.book, Path(a.ref), a.ref_name, out, a.fuzzy_min, Path(a.verses) if a.verses else None,
+            only_invalid_or_tone=a.only_invalid_or_tone)
+    print(json.dumps({k: s[k] for k in ("by_source", "only_invalid_or_tone", "n_fuzzy_lines_kept_some_ocr",
+                                        "n_syllables_kept_ocr",
+                                        "n_rows_syll_not_6_8_before", "n_rows_syll_not_6_8_after",
                                         "n_rows_syll_not_6_8_still_ocr", "n_fuzzy_len_changed", "fuzzy_token_diff_kinds",
                                         "n_fuzzy_lines_possible_variant_erased", "reject_reasons",
                                         "sensitivity_best_sim_ge", "offsets_distinct")}, ensure_ascii=False))

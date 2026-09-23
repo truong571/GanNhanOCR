@@ -592,6 +592,7 @@ emit("BK_CROSS", "1" if cross else "0")
 emit("BK_REF", rf.get("ref") or "")
 emit("BK_REF_NAME", rf.get("ref_name") or "nf1871")
 emit("BK_REF_FUZZY", rf.get("fuzzy_min") or "")
+emit("BK_REF_RESTRICT", "1" if rf.get("only_invalid_or_tone") else "")
 emit("BK_MEASURE_STEPS", run.get("measure_steps") or ("layout,qn_ocr" if layout == "lithograph" else "chresto_map"))
 PYEOF
 }
@@ -599,7 +600,8 @@ PYEOF
 run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
   local book="$1" prof
   local BK_ERR="" BK_CONFIG="" BK_LAYOUT="" BK_INGEST="" BK_INGEST_ARGS="" BK_DATA_DIR="" BK_OUT_DIR=""
-  local BK_DS_OUT="" BK_NCOL="" BK_CROSS="" BK_REF="" BK_REF_NAME="" BK_REF_FUZZY="" BK_MEASURE_STEPS=""
+  local BK_DS_OUT="" BK_NCOL="" BK_CROSS="" BK_REF="" BK_REF_NAME="" BK_REF_FUZZY="" BK_REF_RESTRICT=""
+  local BK_MEASURE_STEPS=""
   prof=$(book_profile "$book") || die "book_profile($book) lỗi"
   eval "$prof"
   [[ -z "$BK_ERR" ]] || die "$BK_ERR"
@@ -632,7 +634,7 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
   log "${BLD}[$book] config=$BK_CONFIG layout=$BK_LAYOUT ingest=$BK_INGEST data_dir=$BK_DATA_DIR${RST}"
   log "  dataset_out=$ds_out  export=$final_dir  n_columns=$BK_NCOL  cross=$BK_CROSS  log=$BK_LOG"
   [[ -n "$BK_INGEST_ARGS" ]] && log "  ingest_args: $BK_INGEST_ARGS"
-  [[ -n "$BK_REF" ]] && log "  B1' verses_ref_fix: ref=$BK_REF ($BK_REF_NAME)"
+  [[ -n "$BK_REF" ]] && log "  B1' verses_ref_fix: ref=$BK_REF ($BK_REF_NAME) fuzzy_min=${BK_REF_FUZZY:-0.9} hạn_chế=${BK_REF_RESTRICT:-0}"
 
   # ---- 0/6 setup ------------------------------------------------------------
   banner_bk 0 setup "step0_setup + bộ đo (nếu thiếu measure_out/$book) + B1' verses_ref_fix"
@@ -661,6 +663,9 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
   if [[ -n "$BK_REF" && "$BK_INGEST" != "prose" ]]; then
     cmd=("$PY" scripts/measure/verses_ref_fix.py --book "$book" --ref "$BK_REF" --ref-name "$BK_REF_NAME")
     [[ -n "$BK_REF_FUZZY" ]] && cmd+=(--fuzzy-min "$BK_REF_FUZZY")
+    # 2026-09-24: hạn chế mức âm (chỉ ghi đè âm VỠ hoặc chỉ khác DẤU) — bật bằng
+    # run.verses_ref_fix.only_invalid_or_tone trong config của sách.
+    [[ -n "$BK_REF_RESTRICT" ]] && cmd+=(--only-invalid-or-tone)
     R "${cmd[@]}"
     verses_tsv="measure_out/$book/qn_ref_fix/verses_b1.tsv"
     need_file "$verses_tsv" "verses_ref_fix"

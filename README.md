@@ -130,10 +130,22 @@ Lam theo [`kaggle_diffusion/README.md`](kaggle_diffusion/README.md):
      --local-dir prepared/_universal_fd_cache/
    ```
 
-### Buoc B — Chay pipeline 3 cuon
+### Buoc B — Chay pipeline
+
+**Mot lenh chay TAT CA 8 bo** (23/09/2026): `./run_pipeline.sh --book all --yes` chay lien tiep 3 bo
+SachThanhTruyen (duong STT 6 buoc, `config/pipeline.yaml`), 3 sach giao nop moi (`all-new`:
+LucVanTien1883 / KimVanKieu1884 / Chrestomathie1872) va 2 bo IHR-NomDB dung de danh gia
+(`all-ihr`: LucVanTien1916 / TruyenKieu1872), roi chay **nghiem thu tu dong** (align_audit,
+ihr_endtoend_eval, auto_precision cross, measure.py --report-only) va in **bang 8 bo**. Co `--yes`
+la bat buoc khi chay that: no bo moi cau hoi cua duong STT va chot "dung cache OCR cu" nen **khong goi
+API** (script chan cung neu thieu cache). Moi bo co log rieng trong `logs/`; ma thoat khac 0 neu bat ky
+bo nao loi hoac nghiem thu FAIL cung. Them: `--book all --dry-run` (chi in chuoi lenh), `--summary-only`
+(in lai bang 8 bo), `--verify` (chi nghiem thu). Bang so lieu + moi quyet dinh chot:
+`docs/CHOT_CUOI_2026-09-23.md`; huong dan chi tiet: `docs/HUONG_DAN_CHAY_SACH_MOI_2026-09-21.md` §2.0.
 
 ```bash
-./run_pipeline.sh                    # tat ca 3 cuon, 3 buoc: 0 (setup) -> 1 (extract) -> 2 (build dataset)
+./run_pipeline.sh --book all --yes   # 8 bo + nghiem thu (1 lenh duy nhat)
+./run_pipeline.sh                    # tat ca 3 cuon STT, 6 buoc (hoi sach/cache nhu cu)
 ```
 
 Sach moi (thach ban LucVanTien1883 / KimVanKieu1884, van xuoi Chrestomathie1872; 2026-09-22) — mot lenh chay tron

@@ -14,3 +14,13 @@
 - **Báo cáo gộp duy nhất** cho sách mới (dữ liệu, mã đã xây, kết quả 3 sách sau `box_decoder: pitch` + cổng (a'), độ đúng tự động, I5, cách chạy, giới hạn):
   `docs/BAO_CAO_TONG_HOP_SACH_MOI_2026-09-22.md` (thay `BAO_CAO_TONG_THE_*` và `PHUONG_AN_TU_DONG_*`, hai tệp đó chỉ còn lịch sử). Chạy 1 lệnh:
   `./run_pipeline.sh --book <Book>|all-new` (không `--no-api` cho KVK). Kế hoạch commit vòng 3: `docs/KE_HOACH_COMMIT_VONG3_2026-09-22.md`.
+
+## Chạy lại toàn bộ (2026-09-23)
+- **Một lệnh duy nhất cho cả 8 bộ**: `./run_pipeline.sh --book all --yes`
+  (3 STT theo `config/pipeline.yaml` + `all-new` 3 sách giao nộp + `all-ihr` 2 bộ đánh giá, rồi **nghiệm thu tự động**).
+  `--yes` bắt buộc khi chạy thật (bỏ prompt STT, dùng cache OCR → **0 gọi API**); script chặn cứng nếu thiếu cache.
+- `--book all --dry-run` in đủ chuỗi lệnh 8 bộ · `--summary-only` in lại bảng 8 bộ · `--verify` chỉ chạy nghiệm thu
+  (`align_audit --book all`, `ihr_endtoend_eval --book all`, `auto_precision --steps cross`, `measure.py --all --report-only`).
+- Log riêng mỗi bộ trong `logs/`; mã thoát ≠ 0 nếu bất kỳ bộ nào lỗi hoặc có FAIL cứng khi nghiệm thu.
+- **Tài liệu chốt cuối** (mọi quyết định + bảng 8 bộ + giới hạn): `docs/CHOT_CUOI_2026-09-23.md`;
+  cách chạy chi tiết: `docs/HUONG_DAN_CHAY_SACH_MOI_2026-09-21.md` §2.0.

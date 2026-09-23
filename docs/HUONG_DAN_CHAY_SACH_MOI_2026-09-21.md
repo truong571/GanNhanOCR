@@ -53,6 +53,34 @@ Tổng hợp NV1–NV5 (21/09), NV-B/NV-D (22/09 sáng) và **vòng 2** 22/09: (
 
 ### 2.0 Đường tắt `run_pipeline.sh --book …` (22/09 chiều — gói trọn B0→B6 dưới đây, 1 lệnh)
 
+> **23/09 — MỘT LỆNH CHẠY TẤT CẢ 8 BỘ.** Không còn phải gõ 3 lệnh (STT tương tác + `all-new` + `all-ihr`):
+>
+> ```bash
+> ./run_pipeline.sh --book all --yes        # = --all --yes · 3 STT + all-new (3) + all-ihr (2) + nghiệm thu
+> ```
+>
+> · `--yes` (hoặc `ASSUME_YES=1` / `NONINTERACTIVE=1`) **bắt buộc** khi chạy thật: bỏ mọi prompt của đường STT
+>   (chọn **cả 3** sách STT, **dùng cache OCR cũ** → **0 gọi API**). Chạy tay không cờ thì đường STT vẫn hỏi như cũ.
+> · Trước khi chạy, script **chặn cứng** nếu thiếu `prepared/SachThanhTruyen*/detected/*_ocr_cache.json`
+>   (thiếu cache ⇒ extract sẽ gọi API ngoài, tốn tiền, không tái lập).
+> · Thứ tự an toàn: **STT trước** (export STT chỉ dọn `dataset/*.csv|*.md|*.xlsx` ở gốc, **giữ** mọi `dataset/<Book>/`),
+>   rồi 3 sách giao nộp, rồi 2 bộ IHR (tập ĐÁNH GIÁ, đóng dấu `evaluation_only`).
+> · Một bộ lỗi **không dừng** các bộ sau; **mã thoát ≠ 0** nếu có bất kỳ bộ nào lỗi hoặc nghiệm thu FAIL cứng.
+> · Log riêng mỗi bộ: `logs/run_STT_<t>.log`, `logs/run_<Book>_<t>.log`, nghiệm thu `logs/verify_<t>.log`.
+> · Cuối cùng in **bảng 8 bộ** (bộ · ô · GOLD ảnh · text_only · SYLLABLE · REVIEW · ảnh export) đọc từ
+>   `dataset_out/labels_final.csv` + `dataset/labels.csv` (STT) và `<dataset_out sách>/labels_gated.csv` +
+>   `dataset/<Book>/labels.csv` (5 sách mới) — phải trùng bảng `docs/CHOT_CUOI_2026-09-23.md` §4.
+>
+> Cờ đi kèm:
+> ```bash
+> ./run_pipeline.sh --book all --dry-run    # in đủ chuỗi lệnh của cả 8 bộ + chuỗi nghiệm thu, không chạy
+> ./run_pipeline.sh --summary-only          # chỉ IN LẠI bảng 8 bộ từ bản dựng trên đĩa
+> ./run_pipeline.sh --verify                # chỉ nghiệm thu: align_audit --book all · ihr_endtoend_eval --book all
+> #                                         #   · auto_precision --steps cross (LVT1883/KVK1884, labels_gated)
+> #                                         #   · measure.py --all --report-only   (0 token, 0 gọi API)
+> ./run_pipeline.sh --book all --yes --no-verify   # 8 bộ, bỏ nghiệm thu (mặc định --verify BẬT với --book all)
+> ```
+
 ```bash
 ./run_pipeline.sh --book LucVanTien1883          # thạch bản, formula; kim_raw/ có sẵn -> 0 gọi API; ~6 phút
 ./run_pipeline.sh --book KimVanKieu1884          # config chính có `run_config:` -> pipeline_KimVanKieu1884_b1.yaml (B1' chính thức)

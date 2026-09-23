@@ -22,6 +22,14 @@
 #       [--dry-run] [--skip-ingest] [--no-api] [--no-auto-precision] [--suffix _rp]
 #   ./run_pipeline.sh --dry-run        # STT: chỉ in chuỗi lệnh 6 bước, không chạy
 #
+# MỘT LỆNH CHẠY TẤT CẢ (2026-09-23, bản chốt docs/CHOT_CUOI_2026-09-23.md):
+#   ./run_pipeline.sh --book all --yes     # = --all --yes: 8 bộ (3 STT + all-new + all-ihr), KHÔNG hỏi,
+#                                          #   log riêng mỗi bộ trong logs/, bảng tóm tắt, rồi --verify
+#   ./run_pipeline.sh --book all --dry-run # in đủ chuỗi lệnh của cả 8 bộ + chuỗi nghiệm thu, không chạy
+#   ./run_pipeline.sh --summary-only       # chỉ in lại bảng 8 bộ từ bản dựng đang có trên đĩa
+#   ./run_pipeline.sh --verify             # chỉ chạy nghiệm thu (align_audit · ihr_endtoend · auto_precision
+#                                          #   cross · measure --all --report-only) trên bản dựng đang có
+#
 # Viết cho bash 3.2 (bash mặc định của macOS).
 # =============================================================================
 set -euo pipefail
@@ -53,6 +61,12 @@ fi
 EVIDENCE="docs/EVIDENCE_INDEX.md"
 CHECKSUMS="$DS_OUT/CHECKSUMS.txt"
 NONINTERACTIVE="${NONINTERACTIVE:-0}"
+# --yes / ASSUME_YES=1: bỏ mọi prompt của đường STT (chọn sách = cả 3, cache OCR = dùng cache cũ).
+# Mặc định (chạy tay, không cờ) GIỮ NGUYÊN hành vi hỏi.
+ASSUME_YES="${ASSUME_YES:-0}"
+[[ "$ASSUME_YES" == "1" ]] && NONINTERACTIVE=1
+STT_BOOKS_ALL="SachThanhTruyen2 SachThanhTruyen4 SachThanhTruyen11"
+STT_BOOKS_LABEL="STT2+STT4+STT11"
 
 BOOKS=""
 BOOKS_LABEL=""
@@ -88,8 +102,8 @@ X() {
 ask_book_choice() {
   local choice
   if [[ "$NONINTERACTIVE" == "1" ]]; then
-    BOOKS="SachThanhTruyen2 SachThanhTruyen4 SachThanhTruyen11"
-    BOOKS_LABEL="STT2+STT4+STT11"
+    BOOKS="$STT_BOOKS_ALL"
+    BOOKS_LABEL="$STT_BOOKS_LABEL"
     info "NONINTERACTIVE=1 -> chọn sách: cả 3 ($BOOKS_LABEL)"
     return 0
   fi
@@ -105,8 +119,8 @@ ask_book_choice() {
       1) BOOKS="SachThanhTruyen2";  BOOKS_LABEL="STT2";  return 0 ;;
       2) BOOKS="SachThanhTruyen4";  BOOKS_LABEL="STT4";  return 0 ;;
       3) BOOKS="SachThanhTruyen11"; BOOKS_LABEL="STT11"; return 0 ;;
-      4) BOOKS="SachThanhTruyen2 SachThanhTruyen4 SachThanhTruyen11"
-         BOOKS_LABEL="STT2+STT4+STT11"; return 0 ;;
+      4) BOOKS="$STT_BOOKS_ALL"
+         BOOKS_LABEL="$STT_BOOKS_LABEL"; return 0 ;;
       *) warn "Lựa chọn không hợp lệ: '$choice' — nhập 1, 2, 3 hoặc 4." ;;
     esac
   done
@@ -436,6 +450,9 @@ NEW_BOOKS_ALL="LucVanTien1883 KimVanKieu1884 Chrestomathie1872"
 # để không lẫn vào bộ giao nộp: ./run_pipeline.sh --book LucVanTien1916|TruyenKieu1872
 EVAL_BOOKS_IHR="LucVanTien1916 TruyenKieu1872"
 NEW_BOOKS=""
+RUN_ALL=0
+DO_VERIFY=-1          # -1 = tự chọn (BẬT khi --book all) · 0 = --no-verify · 1 = --verify
+SUMMARY_ONLY=0
 DRY_RUN=0
 SKIP_INGEST=0
 NO_API=0
@@ -450,6 +467,11 @@ usage() {
 run_pipeline.sh — GanNhanOCR
   (không tham số)                 đường STT 6 bước (hỏi sách/cache), ra dataset/
   --dry-run                       STT: chỉ in chuỗi lệnh, không chạy
+  --book all | --all              ★ CHẠY TẤT CẢ 8 BỘ: 3 STT + all-new (3) + all-ihr (2), rồi --verify
+      --yes / -y                  bắt buộc khi --book all chạy thật: bỏ MỌI prompt của đường STT
+                                  (= NONINTERACTIVE=1 / ASSUME_YES=1; chọn cả 3 STT + DÙNG CACHE OCR)
+      --dry-run                   in đủ chuỗi lệnh của cả 8 bộ + chuỗi nghiệm thu, không chạy
+      --no-verify                 bỏ bước nghiệm thu cuối
   --book <Book> [--book <Book>…]  sách mới (config/pipeline_<Book>.yaml): LucVanTien1883 | KimVanKieu1884 | Chrestomathie1872
   --book all-new                  cả 3 sách mới (bộ giao nộp)
   --book all-ihr                  2 bộ IHR-NomDB có nhãn người (TẬP ĐÁNH GIÁ, không giao nộp)
@@ -458,6 +480,10 @@ run_pipeline.sh — GanNhanOCR
     --no-api                      ingest --ocr none (không gọi kim; --verse-map content -> formula)
     --no-auto-precision           bỏ auto_precision (mechanism_gates không --cross; không B6)
     --suffix <s>                  hậu tố thư mục ra: prepared/<Book>/dataset_out<s>, dataset/<Book><s>
+  --summary-only                  chỉ IN LẠI bảng 8 bộ (ô · GOLD ảnh · text_only · SYLLABLE · REVIEW · ảnh
+                                  export) từ bản dựng trên đĩa — không chạy gì
+  --verify                        chỉ chạy nghiệm thu: align_audit · ihr_endtoend_eval · auto_precision
+                                  cross · measure.py --all --report-only  (0 token, 0 gọi API)
 EOF
 }
 
@@ -719,7 +745,7 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
 }
 
 stt_dry_run() {   # STT --dry-run: in đúng chuỗi 6 bước cũ; X/die/assert_qd01 chỉ in trong subshell, không ghi gì
-  BOOKS="SachThanhTruyen2 SachThanhTruyen4 SachThanhTruyen11"; BOOKS_LABEL="STT2+STT4+STT11"; FRESH_OCR=0
+  BOOKS="$STT_BOOKS_ALL"; BOOKS_LABEL="$STT_BOOKS_LABEL"; FRESH_OCR=0
   log ""
   log "${BLD}[DRY-RUN STT] sách: $BOOKS_LABEL · cache OCR: dùng cache cũ · DS_OUT=$DS_OUT · không chạy gì${RST}"
   log "${BLD}Sẽ chạy 6 bước:${RST} setup -> extract($BOOKS_LABEL) -> build(100% tự động) -> remediate & confusion -> rescue (Self-Training) -> export"
@@ -733,11 +759,391 @@ stt_dry_run() {   # STT --dry-run: in đúng chuỗi 6 bước cũ; X/die/assert
   )
 }
 
+# ===================== TÓM TẮT 8 BỘ (bảng cuối / --summary-only) =============
+# Đọc thẳng từ bản dựng trên đĩa, KHÔNG chạy lại gì:
+#   · 3 bộ STT : dataset_out/labels_final.csv (cột book = stt2|stt4|stt11) + dataset/labels.csv
+#   · 5 sách mới: <dataset_out của sách>/labels_gated.csv + <thư mục export>/labels.csv
+# "ảnh export" = số dòng labels.csv đã xuất có ảnh kèm (tier GOLD_text_only giao NHÃN, không giao ảnh).
+print_summary() {   # print_summary [Book…]  (rỗng = 8 bộ của --book all)
+  local books="$*"
+  [[ -n "$books" ]] || books="$NEW_BOOKS_ALL $EVAL_BOOKS_IHR"
+  "$PY" - "$DS_OUT" "$FINAL_DIR" "$OUT_SUFFIX" $books <<'PYSUM'
+import csv, sys
+from collections import Counter
+from pathlib import Path
+import yaml
+
+ds_out_stt, final_stt, suffix = sys.argv[1], sys.argv[2], sys.argv[3]
+books = sys.argv[4:]
+TIERS = ("GOLD", "GOLD_text_only", "SYLLABLE", "REVIEW")
+
+
+def tiers_of(path):
+    if not Path(path).exists():
+        return None
+    c = Counter()
+    with open(path, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            c[r.get("tier", "")] += 1
+    return c
+
+
+def export_counts(path):
+    """(số dòng, số dòng CÓ ảnh) của labels.csv đã xuất."""
+    if not Path(path).exists():
+        return None, None
+    n = n_img = 0
+    with open(path, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            n += 1
+            if r.get("tier") != "GOLD_text_only":
+                n_img += 1
+    return n, n_img
+
+
+def profile(book):
+    cfg_p = Path("config") / f"pipeline_{book}.yaml"
+    if not cfg_p.exists():
+        return None
+    cfg = yaml.safe_load(cfg_p.read_text(encoding="utf-8")) or {}
+    if cfg.get("run_config"):
+        cfg_p = Path(str(cfg["run_config"]))
+        cfg = yaml.safe_load(cfg_p.read_text(encoding="utf-8")) or {}
+    run, paths = cfg.get("run") or {}, cfg.get("paths") or {}
+    return (str(run.get("dataset_out") or f"prepared/{book}/dataset_out") + suffix,
+            str(paths.get("output_dir") or f"dataset/{book}") + suffix)
+
+
+def fmt(n):
+    return "—" if n is None else f"{n:,}".replace(",", ".")
+
+
+rows, miss = [], 0
+# --- 3 bộ STT (một dataset_out/dataset chung, tách theo cột book) ---
+per = {}
+lf = Path(ds_out_stt) / "labels_final.csv"
+if lf.exists():
+    with open(lf, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            per.setdefault(r["book"], Counter())[r.get("tier", "")] += 1
+exp = {}
+le = Path(final_stt) / "labels.csv"
+if le.exists():
+    with open(le, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            if r.get("tier") != "GOLD_text_only":
+                exp[r["book"]] = exp.get(r["book"], 0) + 1
+for b, nice in (("stt2", "STT2"), ("stt4", "STT4"), ("stt11", "STT11")):
+    c = per.get(b)
+    if c is None:
+        rows.append((nice, None, None, None, None, None, None)); miss += 1
+        continue
+    rows.append((nice, sum(c.values()), c["GOLD"], c["GOLD_text_only"],
+                 c["SYLLABLE"], c["REVIEW"], exp.get(b)))
+# --- 5 sách mới ---
+for book in books:
+    pr = profile(book)
+    if pr is None:
+        rows.append((book, None, None, None, None, None, None)); miss += 1
+        continue
+    ds, out = pr
+    c = tiers_of(Path(ds) / "labels_gated.csv") or tiers_of(Path(ds) / "labels_final.csv")
+    _, n_img = export_counts(Path(out) / "labels.csv")
+    if c is None:
+        rows.append((book, None, None, None, None, None, None)); miss += 1
+        continue
+    rows.append((book, sum(c.values()), c["GOLD"], c["GOLD_text_only"],
+                 c["SYLLABLE"], c["REVIEW"], n_img))
+
+hdr = ("bộ", "ô", "GOLD ảnh", "text_only", "SYLLABLE", "REVIEW", "ảnh export")
+tot = [sum(r[i] for r in rows if r[i] is not None) for i in range(1, 7)]
+tbl = [hdr] + [(r[0],) + tuple(fmt(x) for x in r[1:]) for r in rows] \
+    + [("TỔNG 8 bộ",) + tuple(fmt(x) for x in tot)]
+w = [max(len(r[i]) for r in tbl) for i in range(7)]
+for k, r in enumerate(tbl):
+    print("| " + " | ".join(r[i].ljust(w[i]) if i == 0 else r[i].rjust(w[i])
+                            for i in range(7)) + " |")
+    if k == 0:
+        print("|" + "|".join("-" * (w[i] + 2) for i in range(7)) + "|")
+sys.exit(1 if miss else 0)
+PYSUM
+}
+
+# ============================ NGHIỆM THU (--verify) ==========================
+# 4 phép đo tái lập, 0 token, 0 gọi API — đọc bản dựng vừa sinh:
+#   1 align_audit --book all        (căn chỉnh/quy hoạch gán 8 bộ; FAIL = hồ sơ đã biết, chỉ BÁO)
+#   2 ihr_endtoend_eval --book all  (precision trên NHÃN NGƯỜI, 2 bộ IHR)        -> FAIL CỨNG
+#   3 auto_precision --steps cross  (khớp dị bản LVT1883/KVK1884 trên labels_gated) -> FAIL CỨNG
+#   4 measure.py --all --report-only (gom invariants của bộ đo)                  -> FAIL CỨNG
+VERIFY_LOG=""
+VERIFY_FAIL=0
+VERIFY_LINES=""
+
+V() {   # V <nhãn> <cứng:0|1> <lệnh…>
+  local name="$1" hard="$2"; shift 2
+  local rc=0
+  printf '\n    %s$%s %s\n' "$CYA" "$RST" "$*"
+  if (( DRY_RUN )); then return 0; fi
+  printf '\n%s  $ %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "$*" >> "$VERIFY_LOG"
+  if "$@" >>"$VERIFY_LOG" 2>&1; then rc=0; else rc=$?; fi
+  if (( rc == 0 )); then
+    ok "$name: PASS"
+    VERIFY_LINES="${VERIFY_LINES}PASS  $name"$'\n'
+  elif (( hard )); then
+    VERIFY_FAIL=$((VERIFY_FAIL + 1))
+    printf '%s[FAIL]%s %s (mã thoát %s) — xem %s\n' "$RED" "$RST" "$name" "$rc" "$VERIFY_LOG" >&2
+    VERIFY_LINES="${VERIFY_LINES}FAIL  $name (mã thoát $rc)"$'\n'
+  else
+    warn "$name: mã thoát $rc (KHÔNG chặn) — xem $VERIFY_LOG"
+    VERIFY_LINES="${VERIFY_LINES}WARN  $name (mã thoát $rc, không chặn)"$'\n'
+  fi
+  return 0
+}
+
+verify_all() {
+  log ""
+  log "${BLD}================================================================${RST}"
+  log "${BLD}  NGHIỆM THU TỰ ĐỘNG (--verify) — 0 token, 0 gọi API${RST}"
+  log "${BLD}================================================================${RST}"
+  if (( DRY_RUN )); then
+    VERIFY_LOG=/dev/null
+  else
+    mkdir -p logs
+    VERIFY_LOG="logs/verify_$(date +%Y%m%d_%H%M%S).log"
+    info "log nghiệm thu: $VERIFY_LOG"
+  fi
+
+  V "align_audit --book all"        0 "$PY" scripts/measure/align_audit.py --book all
+  V "ihr_endtoend_eval --book all"  1 "$PY" scripts/measure/ihr_endtoend_eval.py --book all
+
+  # auto_precision cross: CROSS_BOOKS khai đường dẫn labels CŨ (dataset_out_<Book>/) nên phải
+  # trỏ thẳng labels_gated.csv của bản dựng hiện tại — đúng bộ số "dị bản" của bảng chốt.
+  local b ds
+  for b in LucVanTien1883 KimVanKieu1884; do
+    ds=$(book_ds_out "$b") || { warn "auto_precision cross: bỏ $b (không đọc được hồ sơ)"; continue; }
+    V "auto_precision cross · $b" 1 "$PY" scripts/measure/auto_precision.py --steps cross \
+        --books "$b" --labels "$ds/labels_gated.csv" --trans "prepared/$b/transcriptions" \
+        --out "$ds/auto_precision_verify"
+  done
+
+  V "measure.py --all --report-only" 1 "$PY" scripts/measure/measure.py --all --report-only
+
+  if (( DRY_RUN )); then return 0; fi
+
+  log ""
+  log "${BLD}--- KẾT QUẢ NGHIỆM THU ------------------------------------------${RST}"
+  printf '%s' "$VERIFY_LINES" | sed 's/^/  /'
+  "$PY" - <<'PYVER'
+import json
+from pathlib import Path
+
+print("\n  precision trên NHÃN NGƯỜI (ihr_endtoend_eval):")
+for b in ("LucVanTien1916", "TruyenKieu1872"):
+    f = Path("measure_out") / b / "ihr_endtoend" / "summary.json"
+    if not f.exists():
+        print(f"    {b:16s} (chưa có {f})")
+        continue
+    s = json.loads(f.read_text(encoding="utf-8"))
+    g = s["precision"]["gold_anh"]
+    n_fail = sum(1 for iv in s["invariants"] if iv["pass"] is False)
+    print(f"    {b:16s} GOLD ảnh n {g['with_gt']:6d} · ĐÚNG {g['precision']} CI{g['ci95']} · "
+          f"bất biến FAIL {n_fail}/{len(s['invariants'])}")
+
+f = Path("measure_out/align_audit/SUMMARY.json")
+if f.exists():
+    s = json.loads(f.read_text(encoding="utf-8"))
+    print("\n  align_audit (FAIL / bất biến, hồ sơ đã biết ở docs/CHOT_CUOI_2026-09-23.md §4):")
+    for b, r in s.get("books", {}).items():
+        if "bat_bien" in r:
+            print(f"    {b:22s} {r['n_FAIL']}/{r['n_bat_bien']}  ({r['n_o']} ô)")
+PYVER
+  log ""
+  if (( VERIFY_FAIL )); then
+    printf '%s[NGHIỆM THU: %s PHÉP FAIL CỨNG]%s\n' "$RED$BLD" "$VERIFY_FAIL" "$RST" >&2
+  else
+    ok "NGHIỆM THU: 0 FAIL cứng"
+  fi
+  return 0
+}
+
+book_ds_out() {   # book_ds_out <Book> -> thư mục dataset_out của sách (đã cộng --suffix)
+  local prof BK_ERR="" BK_DS_OUT=""
+  prof=$(book_profile "$1") || return 1
+  eval "$prof"
+  [[ -z "$BK_ERR" && -n "$BK_DS_OUT" ]] || return 1
+  printf '%s%s' "$BK_DS_OUT" "$OUT_SUFFIX"
+}
+
+# ========================= ĐƯỜNG STT (6 bước) ================================
+# Thân của khối MAIN cũ, đưa vào hàm để --book all gọi lại được. preflight() do NGƯỜI GỌI chạy.
+stt_pipeline() {
+  CHECKSUMS="$DS_OUT/CHECKSUMS.txt"
+  ask_book_choice
+  ask_cache_choice
+
+  if [[ -f "$DS_OUT/.FROZEN" ]]; then
+    confirm_frozen_override
+  fi
+
+  log ""
+  log "${BLD}Sẽ chạy 6 bước:${RST} setup -> extract($BOOKS_LABEL) -> build(100% tự động) -> remediate & confusion -> rescue (Self-Training) -> export"
+  log "  cache OCR : $([[ $FRESH_OCR == 1 ]] && echo 'XOÁ & OCR lại mới' || echo 'dùng cache cũ')"
+  log "  ${YEL}export sẽ xuất bộ dữ liệu tự động hoàn toàn -> $FINAL_DIR/${RST}"
+  if [[ "$NONINTERACTIVE" == "1" ]]; then
+    info "NONINTERACTIVE=1 -> bắt đầu ngay (DS_OUT=$DS_OUT)"
+  else
+    read -r -p "Enter để bắt đầu, Ctrl-C để huỷ... " _
+  fi
+
+  T_STEP=$SECONDS
+  step_setup;   tick setup
+  step_extract; tick extract
+  step_build
+  checkpoint build "$LABELS_RAW"; tick build
+  step_remediate
+  checkpoint remediate "$LABELS_FINAL"; tick remediate
+  assert_qd01 "$LABELS_FINAL" remediate
+  step_rescue
+  checkpoint rescue "$LABELS_FINAL"; tick rescue
+  assert_qd01 "$LABELS_FINAL" rescue
+  step_export
+  checkpoint export "${FINAL_OUT:-$FINAL_DIR}/labels.csv"; tick export
+
+  if [[ "$DS_OUT" == "dataset_out" ]]; then
+    evidence
+  else
+    info "bỏ qua evidence (DS_OUT thử nghiệm: $DS_OUT)"
+  fi
+
+  log ""
+  log "${BLD}================================================================${RST}"
+  log "${GRN}${BLD}  Hoàn tất Pipeline Tự Động 100% (Đã giải cứu REVIEW bằng Self-Training):${RST}"
+  log "  $FINAL_DIR/labels.csv  (kèm ảnh crop copy, labels.xlsx, README, DATASHEET)"
+  log "${BLD}================================================================${RST}"
+}
+
+# ======================= --book all: CHẠY CẢ 8 BỘ ============================
+# Thứ tự an toàn: STT TRƯỚC (export_final_dataset của STT dọn dataset/*.csv|*.md|*.xlsx ở gốc và
+# GIỮ mọi thư mục con -> dataset/<Book>/ của 5 sách mới không bị đụng), rồi all-new, rồi all-ihr
+# (2 bộ ĐÁNH GIÁ, đóng dấu evaluation_only, chạy sau cùng để không lẫn vào bộ giao nộp).
+# Một bộ lỗi KHÔNG dừng các bộ sau; mã thoát cuối ≠ 0 nếu có bất kỳ bộ nào lỗi.
+ALL_FAILED=""
+ALL_OK=""
+
+run_unit_stt() {
+  local lf rc=0
+  log ""
+  log "${BLD}[bộ 1-3/8] STT2+STT4+STT11 — đường STT 6 bước (config/pipeline.yaml)${RST}"
+  if (( DRY_RUN )); then
+    stt_dry_run
+    return 0
+  fi
+  mkdir -p logs
+  lf="logs/run_STT_$(date +%Y%m%d_%H%M%S).log"
+  info "log: $lf"
+  {
+    printf '# run_pipeline.sh (STT 6 bước)  %s\n' "$(date +%Y-%m-%dT%H:%M:%S)"
+    printf '# git HEAD %s · config %s · DS_OUT %s\n' \
+        "$(git rev-parse --short HEAD 2>/dev/null || echo '?')" "$CONFIG" "$DS_OUT"
+  } >> "$lf"
+  if stt_pipeline 2>&1 | tee -a "$lf"; then rc=0; else rc=$?; fi
+  if (( rc == 0 )); then ALL_OK="$ALL_OK STT"; else ALL_FAILED="$ALL_FAILED STT"; fi
+  return 0
+}
+
+run_unit_book() {   # run_unit_book <Book> <i> <n>
+  local b="$1" rc=0
+  log ""
+  log "${BLD}[bộ $2/$3] $b${RST}"
+  if (( DRY_RUN )); then
+    run_new_book "$b"
+    return 0
+  fi
+  if ( run_new_book "$b" ); then rc=0; else rc=$?; fi
+  if (( rc == 0 )); then ALL_OK="$ALL_OK $b"; else ALL_FAILED="$ALL_FAILED $b"; fi
+  return 0
+}
+
+run_all() {
+  local books="$NEW_BOOKS_ALL $EVAL_BOOKS_IHR" b i=1 n=8
+  log "${BLD}================================================================${RST}"
+  log "${BLD}  GanNhanOCR — CHẠY TẤT CẢ 8 BỘ (bản chốt docs/CHOT_CUOI_2026-09-23.md)${RST}"
+  log "${BLD}  1 STT (3 bộ, config/pipeline.yaml) + all-new (3) + all-ihr (2)${RST}"
+  log "${BLD}================================================================${RST}"
+  for b in $books; do
+    [[ -f "config/pipeline_${b}.yaml" ]] || die "không thấy config/pipeline_${b}.yaml (sách: $b)"
+  done
+  if [[ "$NONINTERACTIVE" != "1" ]] && ! (( DRY_RUN )); then
+    die "--book all cần chạy KHÔNG TƯƠNG TÁC: thêm --yes (hoặc ASSUME_YES=1 / NONINTERACTIVE=1)."
+  fi
+  (( DRY_RUN )) && info "--dry-run: chỉ in lệnh của cả 8 bộ + chuỗi nghiệm thu, không chạy, không ghi gì"
+  # Cache OCR của STT là PRIMARY DATA: thiếu cache -> extract sẽ GỌI API NGOÀI (tốn tiền, không tái
+  # lập). --book all chạy không người trông nên chặn ngay ở đây thay vì để phát hiện giữa chừng.
+  if ! (( DRY_RUN )); then
+    for b in $STT_BOOKS_ALL; do
+      [[ -n "$(find "prepared/$b/detected" -name '*_ocr_cache.json' -print -quit 2>/dev/null)" ]] \
+        || die "--book all: thiếu cache OCR prepared/$b/detected/*_ocr_cache.json — chạy đường STT riêng có xác nhận trước khi gọi API."
+    done
+  fi
+  export PYTHONUNBUFFERED=1
+  (( DRY_RUN )) && SKIP_DEPS=1
+  preflight
+  T_STEP=$SECONDS
+
+  run_unit_stt
+  i=4                                   # 3 bộ STT chạy chung 1 lần -> sách mới bắt đầu từ bộ thứ 4
+  for b in $books; do
+    run_unit_book "$b" "$i" "$n"
+    i=$((i + 1))
+  done
+
+  log ""
+  log "${BLD}================================================================${RST}"
+  log "${BLD}  BẢNG TÓM TẮT 8 BỘ${RST}"
+  log "${BLD}================================================================${RST}"
+  if (( DRY_RUN )); then
+    info "(dry-run) sẽ đọc dataset_out/labels_final.csv + <dataset_out sách>/labels_gated.csv và in bảng"
+  else
+    print_summary $books || warn "bảng tóm tắt: có bộ chưa dựng xong (xem dòng '—')"
+  fi
+
+  if (( DO_VERIFY != 0 )); then
+    verify_all
+  else
+    info "--no-verify: bỏ bước nghiệm thu"
+  fi
+
+  log ""
+  log "${BLD}================================================================${RST}"
+  if (( DRY_RUN )); then
+    log "${GRN}${BLD}  (dry-run) đã in chuỗi lệnh đủ 8 bộ + nghiệm thu — KHÔNG chạy gì${RST}"
+    log "${BLD}================================================================${RST}"
+    return 0
+  fi
+  if [[ -n "$ALL_FAILED" ]]; then
+    printf '%s[LỖI]%s bộ chạy hỏng:%s · bộ xong:%s · tổng %ss\n' "$RED$BLD" "$RST" "$ALL_FAILED" "$ALL_OK" "$SECONDS" >&2
+    return 1
+  fi
+  if (( VERIFY_FAIL )); then
+    printf '%s[LỖI]%s 8/8 bộ chạy xong nhưng NGHIỆM THU có %s phép FAIL cứng · tổng %ss\n' \
+        "$RED$BLD" "$RST" "$VERIFY_FAIL" "$SECONDS" >&2
+    return 1
+  fi
+  log "${GRN}${BLD}  XONG 8/8 bộ + nghiệm thu 0 FAIL cứng · tổng ${SECONDS}s${RST}"
+  log "${BLD}================================================================${RST}"
+  return 0
+}
+
 # ============================== THAM SỐ ======================================
 while (( $# )); do
   case "$1" in
     --book)       [[ $# -ge 2 ]] || die "--book cần tên sách"; NEW_BOOKS="$NEW_BOOKS $2"; shift 2 ;;
     --book=*)     NEW_BOOKS="$NEW_BOOKS ${1#--book=}"; shift ;;
+    --all)        RUN_ALL=1; shift ;;
+    -y|--yes)     ASSUME_YES=1; NONINTERACTIVE=1; shift ;;
+    --verify)     DO_VERIFY=1; shift ;;
+    --no-verify)  DO_VERIFY=0; shift ;;
+    --summary-only) SUMMARY_ONLY=1; shift ;;
     --dry-run)    DRY_RUN=1; shift ;;
     --skip-ingest) SKIP_INGEST=1; shift ;;
     --no-api)     NO_API=1; shift ;;
@@ -748,6 +1154,38 @@ while (( $# )); do
     *)            usage >&2; die "tham số không hiểu: $1" ;;
   esac
 done
+
+# --book all  ==  --all
+_rest=""
+for _b in $NEW_BOOKS; do
+  if [[ "$_b" == "all" ]]; then RUN_ALL=1; else _rest="$_rest $_b"; fi
+done
+NEW_BOOKS="$_rest"
+
+# --summary-only: chỉ in lại bảng, không chạy gì
+if (( SUMMARY_ONLY )); then
+  _sum_books="$NEW_BOOKS"
+  [[ -n "$_sum_books" ]] || _sum_books="$NEW_BOOKS_ALL $EVAL_BOOKS_IHR"
+  log "${BLD}BẢNG TÓM TẮT (đọc bản dựng trên đĩa, không chạy gì)${RST}"
+  if print_summary $_sum_books; then exit 0; fi
+  exit 1
+fi
+
+# --verify đứng một mình: chỉ nghiệm thu bản dựng đang có
+if (( DO_VERIFY == 1 )) && (( ! RUN_ALL )) && [[ -z "$NEW_BOOKS" ]]; then
+  verify_all
+  exit $(( VERIFY_FAIL ? 1 : 0 ))
+fi
+
+# --book all / --all: 8 bộ
+if (( RUN_ALL )); then
+  if [[ -n "$NEW_BOOKS" ]]; then
+    die "--book all không đi kèm --book <sách> khác (nhận thêm:$NEW_BOOKS)"
+  fi
+  (( DO_VERIFY == -1 )) && DO_VERIFY=1     # --verify MẶC ĐỊNH BẬT khi chạy cả 8 bộ
+  run_all
+  exit $?
+fi
 
 if [[ -n "$NEW_BOOKS" ]]; then
   _books=""
@@ -774,6 +1212,10 @@ if [[ -n "$NEW_BOOKS" ]]; then
   log "${BLD}================================================================${RST}"
   log "${GRN}${BLD}  Hoàn tất sách mới:${_books} · tổng ${SECONDS}s${RST}"
   log "${BLD}================================================================${RST}"
+  if (( DO_VERIFY == 1 )); then
+    verify_all
+    exit $(( VERIFY_FAIL ? 1 : 0 ))
+  fi
   exit 0
 fi
 
@@ -788,46 +1230,5 @@ log "${BLD}  GanNhanOCR — Pipeline Tự Động 100% (Tích Hợp Self-Trainin
 log "${BLD}================================================================${RST}"
 
 preflight
-ask_book_choice
-ask_cache_choice
-
-if [[ -f "$DS_OUT/.FROZEN" ]]; then
-  confirm_frozen_override
-fi
-
-log ""
-log "${BLD}Sẽ chạy 6 bước:${RST} setup -> extract($BOOKS_LABEL) -> build(100% tự động) -> remediate & confusion -> rescue (Self-Training) -> export"
-log "  cache OCR : $([[ $FRESH_OCR == 1 ]] && echo 'XOÁ & OCR lại mới' || echo 'dùng cache cũ')"
-log "  ${YEL}export sẽ xuất bộ dữ liệu tự động hoàn toàn -> $FINAL_DIR/${RST}"
-if [[ "$NONINTERACTIVE" == "1" ]]; then
-  info "NONINTERACTIVE=1 -> bắt đầu ngay (DS_OUT=$DS_OUT)"
-else
-  read -r -p "Enter để bắt đầu, Ctrl-C để huỷ... " _
-fi
-
-T_STEP=$SECONDS
-step_setup;   tick setup
-step_extract; tick extract
-step_build
-checkpoint build "$LABELS_RAW"; tick build
-step_remediate
-checkpoint remediate "$LABELS_FINAL"; tick remediate
-assert_qd01 "$LABELS_FINAL" remediate
-step_rescue
-checkpoint rescue "$LABELS_FINAL"; tick rescue
-assert_qd01 "$LABELS_FINAL" rescue
-step_export
-checkpoint export "${FINAL_OUT:-$FINAL_DIR}/labels.csv"; tick export
-
-if [[ "$DS_OUT" == "dataset_out" ]]; then
-  evidence
-else
-  info "bỏ qua evidence (DS_OUT thử nghiệm: $DS_OUT)"
-fi
-
-log ""
-log "${BLD}================================================================${RST}"
-log "${GRN}${BLD}  Hoàn tất Pipeline Tự Động 100% (Đã giải cứu REVIEW bằng Self-Training):${RST}"
-log "  $FINAL_DIR/labels.csv  (kèm ảnh crop copy, labels.xlsx, README, DATASHEET)"
+stt_pipeline
 log "  Tổng thời gian: ${SECONDS}s"
-log "${BLD}================================================================${RST}"

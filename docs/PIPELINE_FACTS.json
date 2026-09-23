@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-23T15:00:29Z",
+ "generated_at": "2026-09-23T15:06:28Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "8b6b59f112",
+ "git_head": "7107d25d72",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 60,
@@ -17,7 +17,7 @@
   "pdf_readers": 2,
   "checkpoint_paths": 11,
   "checkpoint_exists": 6,
-  "git_dirty_pipeline_core": 9,
+  "git_dirty_pipeline_core": 0,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
  },
@@ -4043,66 +4043,11 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "8b6b59f112",
+   "head": "7107d25d72",
    "branch": "main",
-   "n_dirty_pipeline_core": 9,
-   "dirty_pipeline_core": [
-    {
-     "file": "pipeline/align_engine/align_production.py",
-     "status": "M",
-     "ins": 13,
-     "del": 1
-    },
-    {
-     "file": "pipeline/align_engine/book_layout.py",
-     "status": "M",
-     "ins": 14,
-     "del": 2
-    },
-    {
-     "file": "pipeline/align_engine/build_dataset.py",
-     "status": "M",
-     "ins": 15,
-     "del": 0
-    },
-    {
-     "file": "pipeline/align_engine/syllable_normalize.py",
-     "status": "M",
-     "ins": 26,
-     "del": 4
-    },
-    {
-     "file": "pipeline/export_final_dataset.py",
-     "status": "M",
-     "ins": 1,
-     "del": 1
-    },
-    {
-     "file": "pipeline/publish/export.py",
-     "status": "M",
-     "ins": 7,
-     "del": 1
-    },
-    {
-     "file": "pipeline/tools/make_dataset_docs.py",
-     "status": "M",
-     "ins": 5,
-     "del": 1
-    },
-    {
-     "file": "pipeline/tools/selftest.py",
-     "status": "M",
-     "ins": 44,
-     "del": 0
-    },
-    {
-     "file": "pipeline/align_engine/qn_charfix.py",
-     "status": "??"
-    }
-   ],
-   "untracked_pipeline_core": [
-    "pipeline/align_engine/qn_charfix.py"
-   ],
+   "n_dirty_pipeline_core": 0,
+   "dirty_pipeline_core": [],
+   "untracked_pipeline_core": [],
    "ocr_api_guest_mode": {
     "file": "core/ocr/ocr_api.py",
     "has_uncommitted_diff": false,

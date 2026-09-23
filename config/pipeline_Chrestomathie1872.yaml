@@ -29,6 +29,14 @@ books:
     # GOLD ảnh 5.359 → 5.344, ảnh export 6.645 → 6.636, bleed 2,0 = 2,0 % (tất cả trong nhiễu; không có ô tham chiếu
     # cho văn xuôi). Không có lợi → giữ `linear`.
     detector_resize: linear
+    # 2026-09-23 (vòng 7): NGUỒN ĐIỂM ẢNH của crop GIAO NỘP. `processed` (mặc định, STT không đổi byte)
+    # cắt từ prepared/<Book>/pages/*.png — ảnh adapter đã xám hoá + kéo nền (stretch/otsu) nên crop mất
+    # nền giấy của bản quét. `original` cắt ĐÚNG CÙNG khung hình đó từ ảnh quét gốc trong data/<Book>/:
+    # hình học (pad, seam carve, tighten_box) VẪN tính trên ảnh đã xử lý rồi áp nguyên xi, nên
+    # crop_w/crop_h/ink_pct/seg_flag không đổi một chữ số; chỉ điểm ảnh (và image_md5) đổi. Bản đã xử lý
+    # vẫn được ghi song song ở $out/crops_bin/ cho mã đọc crop nhị phân (enrich_crop_quality tự ưu tiên
+    # thư mục này nên crop_quality_flag/stray_ink/border_ink giữ nguyên). crops_bin/ KHÔNG giao nộp.
+    crop_source: original
     # Bước B4' cổng theo cơ chế (pipeline/remediation/mechanism_gates.py, agent cổng cơ chế 22/09): vắng khoá
     # chỉ bật với layout=lithograph -> bật tường minh cho văn xuôi (cùng detector CenterNet học STT, cùng lớp
     # lỗi hộp ±1 / midpoint). Chỉ mô-đun ấy đọc khoá này.

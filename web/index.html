@@ -17,9 +17,8 @@
       <div class="brand">
         <div class="brand-seal" title="Hán Nôm">喃</div>
         <div class="brand-text">
-          <div class="brand-eyebrow">LUẬN VĂN THẠC SĨ CÔNG NGHỆ THÔNG TIN</div>
           <h1 class="brand-title">Hệ thống hỗ trợ gán nhãn tự động văn bản Hán Nôm cổ</h1>
-          <p class="brand-subtitle">Trực quan hóa quy trình xử lý và bộ dữ liệu thực nghiệm (111.525 ký tự)</p>
+          <p class="brand-subtitle">Trực quan hóa quy trình xử lý và bộ dữ liệu thực nghiệm (140.733 ký tự)</p>
         </div>
       </div>
       <div class="nav-actions">
@@ -40,28 +39,28 @@
     <div class="summary-container">
       <div class="summary-header">
         <span class="summary-label">TỔNG HỢP KẾT QUẢ THỰC NGHIỆM</span>
-        <span class="summary-tag">4 tài liệu Hán Nôm · Xử lý tự động theo quy tắc</span>
+        <span class="summary-tag">Ngữ liệu Hán Nôm · Xử lý tự động theo quy tắc</span>
       </div>
       <div class="summary-grid">
         <div class="summary-item">
-          <div class="summary-num" id="kpiTotalChars">111,525</div>
+          <div class="summary-num" id="kpiTotalChars">140,733</div>
           <div class="summary-title">Ký tự đã gán nhãn</div>
           <div class="summary-desc">Tổng số vị trí ký tự được định vị và trích xuất</div>
         </div>
         <div class="summary-item">
-          <div class="summary-num highlight-gold" id="kpiGoldRate">80.6%</div>
+          <div class="summary-num highlight-gold" id="kpiGoldRate">84.3%</div>
           <div class="summary-title">Nhãn mức 1 (GOLD)</div>
-          <div class="summary-desc">88.839 ký tự khớp chính xác cả tự dạng và âm đọc</div>
+          <div class="summary-desc">Khớp chính xác cả tự dạng chữ Nôm và âm đọc</div>
         </div>
         <div class="summary-item">
-          <div class="summary-num highlight-syl">21,584</div>
+          <div class="summary-num highlight-syl" id="kpiSylChars">21,606</div>
           <div class="summary-title">Nhãn mức 2 (SYLLABLE)</div>
-          <div class="summary-desc">19.4% nhãn định vị chắc chắn âm tiết trong câu</div>
+          <div class="summary-desc">Định vị chắc chắn âm tiết đối ứng trong câu</div>
         </div>
         <div class="summary-item">
-          <div class="summary-num">4 Bộ</div>
+          <div class="summary-num" id="kpiBooksCount">8 Cuốn</div>
           <div class="summary-title">Tài liệu thực nghiệm</div>
-          <div class="summary-desc">Lục Vân Tiên, Kim Vân Kiều, Chrestomathie, Sách Thánh Truyện</div>
+          <div class="summary-desc">Lục Vân Tiên (1883, 1916), Kiều (1872, 1884), Chrestomathie, STT 2, 4, 11</div>
         </div>
         <div class="summary-item">
           <div class="summary-num highlight-status">18 / 18</div>
@@ -107,7 +106,6 @@
         <div class="panel-card col-span-8">
           <div class="card-header">
             <h2>Bối cảnh nghiên cứu và mục tiêu đề tài</h2>
-            <span class="badge badge-neutral">Đề tài Luận văn Thạc sĩ</span>
           </div>
           <div class="card-body">
             <p class="lead-text">
@@ -135,7 +133,7 @@
 
             <div class="academic-note mt-16">
               <p>
-                <strong>Nguyên tắc thực nghiệm:</strong> Toàn bộ 111.525 vị trí ký tự trên 4 tài liệu được xử lý hoàn toàn theo quy tắc thuật toán, không can thiệp thủ công (<code>quyet_dinh_nguoi = 0</code>), đảm bảo tính khách quan và khả năng tái lập kết quả trên các tài liệu mới.
+                <strong>Nguyên tắc thực nghiệm:</strong> Toàn bộ các vị trí ký tự trên 8 tập tài liệu được xử lý hoàn toàn theo quy tắc thuật toán, không can thiệp thủ công (<code>quyet_dinh_nguoi = 0</code>), đảm bảo tính khách quan và khả năng tái lập kết quả trên các tài liệu mới.
               </p>
             </div>
           </div>
@@ -144,7 +142,7 @@
         <div class="panel-card col-span-4">
           <div class="card-header">
             <h2>Danh mục tài liệu thực nghiệm</h2>
-            <span class="badge badge-neutral">4 Tài liệu</span>
+            <span class="badge badge-neutral" id="overviewBooksBadge">8 Tài liệu</span>
           </div>
           <div class="card-body book-distribution-list" id="overviewBooksList">
             <!-- Nạp động qua app.js -->
@@ -163,7 +161,7 @@
               <div class="tier-card tier-gold">
                 <div class="tier-header">
                   <span class="tier-badge badge-gold">Mức 1 · GOLD</span>
-                  <span class="tier-count">88,839 nhãn (80.6%)</span>
+                  <span class="tier-count">118,646 nhãn (84.3%)</span>
                 </div>
                 <h4>Nhãn xác thực đầy đủ (Chữ Nôm & Âm đọc)</h4>
                 <p>Khớp chính xác cả tự dạng chữ Nôm và âm Quốc ngữ qua từ điển chuẩn, đồng thời hộp bao ký tự được định vị chính xác. Dùng làm tập dữ liệu huấn luyện (train) và kiểm thử (test) cho các mô hình nhận dạng OCR.</p>
@@ -172,7 +170,7 @@
               <div class="tier-card tier-syllable">
                 <div class="tier-header">
                   <span class="tier-badge badge-syl">Mức 2 · SYLLABLE</span>
-                  <span class="tier-count">21,584 nhãn (19.4%)</span>
+                  <span class="tier-count">21,606 nhãn (15.4%)</span>
                 </div>
                 <h4>Nhãn xác định vị trí âm tiết (Anchor Syllable)</h4>
                 <p>Xác định chắc chắn vị trí âm Quốc ngữ theo chuỗi nhịp câu, nhưng chữ Nôm có tự dạng biến thể hoặc chưa có mã Unicode độc nhất trong bảng chuẩn. Phục vụ bài toán nhận dạng âm tiết và gióng hàng câu.</p>
@@ -181,7 +179,7 @@
               <div class="tier-card tier-textonly">
                 <div class="tier-header">
                   <span class="tier-badge badge-txt">Mức 3 · Text-only</span>
-                  <span class="tier-count">1,102 nhãn (1.0%)</span>
+                  <span class="tier-count">481 nhãn (0.3%)</span>
                 </div>
                 <h4>Nhãn đối soát văn bản qua dị bản</h4>
                 <p>Nhãn văn bản được đối soát chính xác qua các bản in độc lập cùng thời kỳ (1871, 1916). Dành cho các vị trí nét mực trên ảnh quét bị dính hoặc nhạt, không trích xuất ảnh crop để tránh làm nhiễu tập huấn luyện thị giác.</p>
@@ -271,9 +269,13 @@
             <label for="inspectorBookSelect">Chọn tài liệu:</label>
             <select id="inspectorBookSelect" class="form-select">
               <option value="LucVanTien1883">Lục Vân Tiên (1883) — Thạch bản</option>
+              <option value="LucVanTien1916">Lục Vân Tiên (1916) — Bản in Phổ Thông</option>
               <option value="KimVanKieu1884">Kim Vân Kiều (1884) — Thạch bản B1'</option>
+              <option value="TruyenKieu1872">Truyện Kiều (1872) — Mộc bản Duy Minh Thị</option>
               <option value="Chrestomathie1872">Chrestomathie Annamite (1872) — Văn xuôi</option>
-              <option value="SachThanhTruyen">Sách Thánh Truyện (STT 11) — Mộc bản cổ</option>
+              <option value="SachThanhTruyen2">Sách Thánh Truyện (Quyển 2) — Mộc bản cổ</option>
+              <option value="SachThanhTruyen4">Sách Thánh Truyện (Quyển 4) — Mộc bản cổ</option>
+              <option value="SachThanhTruyen11">Sách Thánh Truyện (Quyển 11) — Mộc bản cổ</option>
             </select>
           </div>
 
@@ -324,7 +326,6 @@
                 <div class="detail-row"><span class="dk">Mã Unicode:</span> <code id="previewUnicode">U+0000</code></div>
                 <div class="detail-row"><span class="dk">Nhận dạng sơ bộ:</span> <span id="previewOcrChar">-</span></div>
                 <div class="detail-row"><span class="dk">Vị trí cột:</span> <span id="previewColOrder">Cột 1</span></div>
-                <div class="detail-row"><span class="dk">Quy tắc gióng:</span> <span id="previewRule" class="code-sm">-</span></div>
                 <div class="detail-row"><span class="dk">Tọa độ hộp:</span> <span id="previewBbox" class="code-sm">[0,0,0,0]</span></div>
               </div>
             </div>
@@ -364,9 +365,13 @@
             <select id="galleryBookFilter" class="form-select form-select-sm">
               <option value="all">Tất cả tài liệu</option>
               <option value="LucVanTien1883">Lục Vân Tiên (1883)</option>
+              <option value="LucVanTien1916">Lục Vân Tiên (1916)</option>
               <option value="KimVanKieu1884">Kim Vân Kiều (1884)</option>
+              <option value="TruyenKieu1872">Truyện Kiều (1872)</option>
               <option value="Chrestomathie1872">Chrestomathie (1872)</option>
-              <option value="SachThanhTruyen">Sách Thánh Truyện (STT)</option>
+              <option value="SachThanhTruyen2">Sách Thánh Truyện (Quyển 2)</option>
+              <option value="SachThanhTruyen4">Sách Thánh Truyện (Quyển 4)</option>
+              <option value="SachThanhTruyen11">Sách Thánh Truyện (Quyển 11)</option>
             </select>
             <select id="galleryTierFilter" class="form-select form-select-sm">
               <option value="all">Tất cả mức nhãn</option>
@@ -436,11 +441,16 @@
               <p>Mỗi thư mục tài liệu trong <code>dataset/</code> được tổ chức hoàn toàn độc lập, sẵn sàng sử dụng trong các nghiên cứu học máy tiếp theo:</p>
               <div class="code-block-display mt-8">
                 <code>dataset/
-├── LucVanTien1883/        # 12,187 nhãn + ảnh trích xuất
-├── KimVanKieu1884/        # 20,648 nhãn + ảnh trích xuất
-├── Chrestomathie1872/     # 7,080 nhãn + ảnh trích xuất
-├── gold/                  # Ảnh cắt ký tự đạt chuẩn GOLD
-├── syllable/              # Ảnh cắt ký tự định vị âm tiết
+├── LucVanTien1883/        # 11,938 nhãn + ảnh trích xuất
+├── LucVanTien1916/        # 11,769 nhãn + ảnh trích xuất
+├── KimVanKieu1884/        # 20,546 nhãn + ảnh trích xuất
+├── TruyenKieu1872/        # 19,740 nhãn + ảnh trích xuất
+├── Chrestomathie1872/     #  5,130 nhãn + ảnh trích xuất
+├── SachThanhTruyen2/      # 24,023 nhãn + ảnh trích xuất
+├── SachThanhTruyen4/      # 23,829 nhãn + ảnh trích xuất
+├── SachThanhTruyen11/     # 23,758 nhãn + ảnh trích xuất
+├── gold/                  # Ảnh cắt ký tự đạt chuẩn GOLD (118,646 ảnh)
+├── syllable/              # Ảnh cắt ký tự định vị âm tiết (21,606 ảnh)
 └── labels.csv             # Bản ghi chỉ mục chuẩn 12 trường thông tin</code>
               </div>
             </div>
@@ -450,14 +460,6 @@
     </section>
 
   </main>
-
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="footer-container">
-      <p>Hệ thống hỗ trợ gán nhãn tự động văn bản Hán Nôm cổ (GanNhanOCR) · Luận văn Thạc sĩ Công nghệ Thông tin</p>
-      <p class="footer-sub">Bộ dữ liệu lưu trữ tại <code>dataset/</code> · Mã nguồn giao diện tại <code>web/</code></p>
-    </div>
-  </footer>
 
   <script src="app.js"></script>
 </body>

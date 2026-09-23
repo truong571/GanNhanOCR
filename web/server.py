@@ -37,6 +37,21 @@ BOOKS_CONFIG = {
         "sample_pages": ["page_0001", "page_0002", "page_0003", "page_0004", "page_0005"],
         "default_page": "page_0002",
     },
+    "LucVanTien1916": {
+        "id": "LucVanTien1916",
+        "title": "Lục Vân Tiên (1916)",
+        "subtitle": "Bản in Phổ Thông (Bính Thìn 1916) — Đối soát dị bản",
+        "author": "Nguyễn Đình Chiểu",
+        "layout": "lithograph",
+        "layout_desc": "Thơ Lục Bát (10 cột/trang, 14 âm/cột - Chốt B1)",
+        "n_columns": 10,
+        "n_pages": 99,
+        "labels_path": REPO_ROOT / "dataset" / "LucVanTien1916" / "labels.csv",
+        "pages_dir": REPO_ROOT / "prepared" / "LucVanTien1916" / "pages",
+        "crops_root": REPO_ROOT / "dataset" / "LucVanTien1916",
+        "sample_pages": ["page_0001", "page_0002", "page_0003", "page_0004", "page_0005"],
+        "default_page": "page_0002",
+    },
     "KimVanKieu1884": {
         "id": "KimVanKieu1884",
         "title": "Kim Vân Kiều (1884)",
@@ -49,6 +64,21 @@ BOOKS_CONFIG = {
         "labels_path": REPO_ROOT / "dataset" / "KimVanKieu1884" / "labels.csv",
         "pages_dir": REPO_ROOT / "prepared" / "KimVanKieu1884" / "pages",
         "crops_root": REPO_ROOT / "dataset" / "KimVanKieu1884",
+        "sample_pages": ["page_0001", "page_0002", "page_0003", "page_0004", "page_0005"],
+        "default_page": "page_0002",
+    },
+    "TruyenKieu1872": {
+        "id": "TruyenKieu1872",
+        "title": "Truyện Kiều (1872)",
+        "subtitle": "Bản khắc gỗ Kim Vân Kiều Truyện — Duy Minh Thị (1872)",
+        "author": "Nguyễn Du",
+        "layout": "woodblock",
+        "layout_desc": "Thơ Lục Bát (10 cột/trang, 14 âm/cột - Mộc bản cổ)",
+        "n_columns": 10,
+        "n_pages": 161,
+        "labels_path": REPO_ROOT / "dataset" / "TruyenKieu1872" / "labels.csv",
+        "pages_dir": REPO_ROOT / "prepared" / "TruyenKieu1872" / "pages",
+        "crops_root": REPO_ROOT / "dataset" / "TruyenKieu1872",
         "sample_pages": ["page_0001", "page_0002", "page_0003", "page_0004", "page_0005"],
         "default_page": "page_0002",
     },
@@ -67,23 +97,87 @@ BOOKS_CONFIG = {
         "sample_pages": ["page_0001", "page_0002", "page_0003", "page_0004", "page_0005"],
         "default_page": "page_0002",
     },
-    "SachThanhTruyen": {
-        "id": "SachThanhTruyen",
-        "title": "Sách Thánh Truyện (STT 2, 4, 11)",
-        "subtitle": "Bản khắc gỗ Nôm tôn giáo cổ (TK XVII-XIX)",
+    "SachThanhTruyen2": {
+        "id": "SachThanhTruyen2",
+        "title": "Sách Thánh Truyện (Quyển 2)",
+        "subtitle": "Bản khắc gỗ Nôm tôn giáo cổ (160 trang, 9 cột/trang)",
         "author": "Khuyết danh / Dòng Tên",
         "layout": "woodblock",
-        "layout_desc": "Bản khắc gỗ cổ (9 cột/trang, nét chữ đao khắc sâu)",
+        "layout_desc": "Mộc bản cổ (9 cột/trang, nét chữ đao khắc sâu)",
         "n_columns": 9,
-        "n_pages": 300,
-        "labels_path": REPO_ROOT / "dataset" / "labels.csv",
+        "n_pages": 160,
+        "labels_path": REPO_ROOT / "dataset" / "SachThanhTruyen2" / "labels.csv",
+        "pages_dir": REPO_ROOT / "prepared" / "SachThanhTruyen2" / "pages",
+        "crops_root": REPO_ROOT / "dataset" / "SachThanhTruyen2",
+        "sample_pages": ["page_0012", "page_0014", "page_0016", "page_0018", "page_0020"],
+        "default_page": "page_0012",
+    },
+    "SachThanhTruyen4": {
+        "id": "SachThanhTruyen4",
+        "title": "Sách Thánh Truyện (Quyển 4)",
+        "subtitle": "Bản khắc gỗ Nôm tôn giáo cổ (144 trang, 9 cột/trang)",
+        "author": "Khuyết danh / Dòng Tên",
+        "layout": "woodblock",
+        "layout_desc": "Mộc bản cổ (9 cột/trang, nét chữ đao khắc sâu)",
+        "n_columns": 9,
+        "n_pages": 144,
+        "labels_path": REPO_ROOT / "dataset" / "SachThanhTruyen4" / "labels.csv",
+        "pages_dir": REPO_ROOT / "prepared" / "SachThanhTruyen4" / "pages",
+        "crops_root": REPO_ROOT / "dataset" / "SachThanhTruyen4",
+        "sample_pages": ["page_0012", "page_0014", "page_0016", "page_0018", "page_0020"],
+        "default_page": "page_0012",
+    },
+    "SachThanhTruyen11": {
+        "id": "SachThanhTruyen11",
+        "title": "Sách Thánh Truyện (Quyển 11)",
+        "subtitle": "Bản khắc gỗ Nôm tôn giáo cổ (143 trang, 9 cột/trang)",
+        "author": "Khuyết danh / Dòng Tên",
+        "layout": "woodblock",
+        "layout_desc": "Mộc bản cổ (9 cột/trang, nét chữ đao khắc sâu)",
+        "n_columns": 9,
+        "n_pages": 143,
+        "labels_path": REPO_ROOT / "dataset" / "SachThanhTruyen11" / "labels.csv",
         "pages_dir": REPO_ROOT / "prepared" / "SachThanhTruyen11" / "pages",
-        "crops_root": REPO_ROOT / "dataset",
-        "sample_pages": ["page_0010", "page_0012", "page_0014", "page_0016"],
+        "crops_root": REPO_ROOT / "dataset" / "SachThanhTruyen11",
+        "sample_pages": ["page_0010", "page_0012", "page_0014", "page_0016", "page_0018"],
         "default_page": "page_0010",
     },
 }
-
+ 
+def resolve_book_id(bid: str) -> str:
+    """Chuẩn hóa mã định danh sách và hỗ trợ bí danh viết tắt."""
+    if not bid:
+        return "LucVanTien1883"
+    b_lower = bid.strip().lower()
+    mapping = {
+        "lucvantien1883": "LucVanTien1883",
+        "lvt1883": "LucVanTien1883",
+        "lucvantien1916": "LucVanTien1916",
+        "lvt1916": "LucVanTien1916",
+        "kimvankieu1884": "KimVanKieu1884",
+        "kieu1884": "KimVanKieu1884",
+        "truyenkieu1872": "TruyenKieu1872",
+        "kieu1872": "TruyenKieu1872",
+        "chrestomathie1872": "Chrestomathie1872",
+        "chresto1872": "Chrestomathie1872",
+        "sachthanhtruyen2": "SachThanhTruyen2",
+        "stt2": "SachThanhTruyen2",
+        "sachthanhtruyen4": "SachThanhTruyen4",
+        "stt4": "SachThanhTruyen4",
+        "sachthanhtruyen11": "SachThanhTruyen11",
+        "stt11": "SachThanhTruyen11",
+        "sachthanhtruyen": "SachThanhTruyen11",
+    }
+    return mapping.get(b_lower, bid)
+ 
+def strip_accents(s: str) -> str:
+    """Loại bỏ dấu thanh tiếng Việt để hỗ trợ tìm kiếm không dấu linh hoạt."""
+    import unicodedata
+    if not s:
+        return ""
+    s_norm = s.replace("đ", "d").replace("Đ", "D")
+    return "".join(c for c in unicodedata.normalize("NFD", s_norm) if unicodedata.category(c) != "Mn").lower()
+ 
 # Cache bộ nhãn trong RAM để tìm kiếm và render trang phản hồi < 5ms
 LABELS_CACHE: dict[str, list[dict]] = {}
 PAGE_INDEX: dict[str, dict[str, list[dict]]] = {}
@@ -216,7 +310,7 @@ class GanNhanHandler(SimpleHTTPRequestHandler):
                 "total_syllable": total_syl,
                 "total_gold_text_only": total_text_only,
                 "gold_rate_overall": round((total_gold + total_text_only) / total_chars * 100, 1) if total_chars else 0,
-                "books_count": 4,
+                "books_count": len(books_summary),
                 "human_intervention": 0,
                 "automation_rate": "Tự động theo quy tắc",
                 "code_invariants": "18/18 Đạt chuẩn",
@@ -249,13 +343,14 @@ class GanNhanHandler(SimpleHTTPRequestHandler):
 
     def get_page(self, query: dict):
         """Trả về ảnh scan và danh sách toàn bộ bounding box của một trang sách."""
-        book_id = query.get("book", ["LucVanTien1883"])[0]
-        page_id = query.get("page", ["page_0002"])[0]
-
+        book_id = resolve_book_id(query.get("book", ["LucVanTien1883"])[0])
         cfg = BOOKS_CONFIG.get(book_id)
         if not cfg:
             self.send_json({"error": f"Không tìm thấy sách: {book_id}"}, status=HTTPStatus.NOT_FOUND)
             return
+
+        default_pg = cfg.get("default_page", "page_0002")
+        page_id = query.get("page", [default_pg])[0]
 
         pages_data = PAGE_INDEX.get(book_id, {})
         rows = pages_data.get(page_id, [])
@@ -334,7 +429,7 @@ class GanNhanHandler(SimpleHTTPRequestHandler):
     def search_characters(self, query: dict):
         """Tìm kiếm mẫu chữ theo âm Quốc ngữ, chữ Nôm, Unicode hoặc bậc chất lượng."""
         q = query.get("q", [""])[0].strip().lower()
-        book_filter = query.get("book", ["all"])[0]
+        book_filter = resolve_book_id(query.get("book", ["all"])[0])
         tier_filter = query.get("tier", ["all"])[0].upper()
         limit = min(int(query.get("limit", [60])[0]), 200)
 
@@ -351,10 +446,17 @@ class GanNhanHandler(SimpleHTTPRequestHandler):
                 syl = r.get("syllable", "").lower()
                 ocr = r.get("ocr_char", "").lower()
                 uni = r.get("unicode", "").lower()
-
-                # So khớp từ khóa
+                # So khớp từ khóa (hỗ trợ cả gõ có dấu lẫn không dấu)
                 if q:
-                    matched = (q in syl) or (q in nom) or (q in ocr) or (q in uni)
+                    syl_norm = strip_accents(syl)
+                    q_norm = strip_accents(q)
+                    matched = (
+                        (q in syl)
+                        or (q_norm and q_norm in syl_norm)
+                        or (q in nom)
+                        or (q in ocr)
+                        or (q in uni)
+                    )
                     if not matched:
                         continue
 
@@ -509,13 +611,17 @@ class GanNhanHandler(SimpleHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND, "Đường dẫn crop không hợp lệ")
             return
 
-        book_id, rel_crop = parts[1], parts[2]
+        book_id, rel_crop = resolve_book_id(parts[1]), parts[2]
         cfg = BOOKS_CONFIG.get(book_id)
         if not cfg:
             self.send_error(HTTPStatus.NOT_FOUND, f"Không tìm thấy sách: {book_id}")
             return
 
         crop_path = (cfg["crops_root"] / rel_crop).resolve()
+        # Fallback sang thư mục SachThanhTruyen gốc nếu chưa có ở nhánh riêng
+        if not crop_path.exists() and "SachThanhTruyen" in book_id:
+            crop_path = (REPO_ROOT / "dataset" / "SachThanhTruyen" / rel_crop).resolve()
+
         # Bảo mật: không cho thoát khỏi thư mục REPO_ROOT
         if not str(crop_path).startswith(str(REPO_ROOT)) or not crop_path.exists():
             self.send_error(HTTPStatus.NOT_FOUND, f"Không tìm thấy file ảnh crop: {rel_crop}")
@@ -531,7 +637,7 @@ class GanNhanHandler(SimpleHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND, "Đường dẫn trang scan không hợp lệ")
             return
 
-        book_id, filename = parts[1], parts[2]
+        book_id, filename = resolve_book_id(parts[1]), parts[2]
         cfg = BOOKS_CONFIG.get(book_id)
         if not cfg:
             self.send_error(HTTPStatus.NOT_FOUND, f"Không tìm thấy sách: {book_id}")

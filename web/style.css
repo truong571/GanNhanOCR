@@ -1216,33 +1216,68 @@ body {
   pointer-events: none;
 }
 
-.char-bbox {
+.char-bbox,
+.bbox-rect {
   position: absolute;
   pointer-events: auto;
   cursor: pointer;
   box-sizing: border-box;
-  transition: all 0.1s ease;
+  transition: all 0.12s ease;
+  z-index: 2;
 }
 
-.bbox-gold {
+.bbox-gold,
+.tier-gold {
   border: 1.5px solid var(--gold);
-  background: rgba(21, 128, 61, 0.08);
+  background: rgba(21, 128, 61, 0.12);
 }
 
-.bbox-syl {
+.bbox-syl,
+.tier-syllable {
   border: 1.5px solid var(--syl);
-  background: rgba(3, 105, 161, 0.08);
+  background: rgba(3, 105, 161, 0.12);
 }
 
-.bbox-txt {
+.bbox-txt,
+.tier-gold_text_only {
   border: 1.5px solid var(--txtonly);
-  background: rgba(180, 83, 9, 0.08);
+  background: rgba(180, 83, 9, 0.12);
 }
 
-.char-bbox:hover, .char-bbox.selected {
-  background: rgba(255, 255, 255, 0.35);
-  box-shadow: 0 0 0 1.5px #ffffff, 0 0 6px rgba(0, 0, 0, 0.3);
+.char-bbox:hover,
+.char-bbox.selected,
+.bbox-rect:hover,
+.bbox-rect.selected {
+  background: rgba(255, 255, 255, 0.45);
+  border-color: #ffffff !important;
+  box-shadow: 0 0 0 2px var(--primary), 0 2px 8px rgba(0, 0, 0, 0.35);
   z-index: 10;
+}
+
+.bbox-tooltip {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.92);
+  color: #ffffff;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease;
+  z-index: 20;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
+
+.char-bbox:hover .bbox-tooltip,
+.bbox-rect:hover .bbox-tooltip {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* ==========================================================================

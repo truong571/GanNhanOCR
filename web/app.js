@@ -95,8 +95,11 @@ async function loadData() {
   const badgeText = badge.querySelector(".status-text");
 
   try {
-    // Thử gọi API server nội bộ
-    const testResp = await fetch("/api/stats", { signal: AbortSignal.timeout(2000) });
+    // Thử gọi API server nội bộ (hỗ trợ tương thích an toàn nếu trình duyệt chưa có AbortSignal.timeout)
+    const signal = (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function")
+      ? AbortSignal.timeout(2500)
+      : undefined;
+    const testResp = await fetch("/api/stats", signal ? { signal } : {});
     if (testResp.ok) {
       AppState.isLiveServer = true;
       AppState.stats = await testResp.json();
@@ -143,11 +146,11 @@ function adaptSampleData() {
   const s = AppState.sampleData;
 
   AppState.stats = {
-    impact_metrics: s.stats,
-    books: s.books,
+    impact_metrics: s.stats || {},
+    books: s.books || {},
   };
 
-  AppState.books = Object.values(s.books).map((b) => ({
+  AppState.books = s.books ? Object.values(s.books).map((b) => ({
     id: b.id,
     title: b.title,
     subtitle: b.subtitle,
@@ -155,7 +158,7 @@ function adaptSampleData() {
     total_chars: b.total,
     sample_pages: [b.sample_page],
     default_page: b.sample_page,
-  }));
+  })) : [];
 
   AppState.pipelineFlow = [
     {
@@ -269,16 +272,33 @@ function renderAllComponents() {
    ========================================================================== */
 function renderOverview() {
   if (!AppState.stats) return;
-  const im = AppState.stats.impact_metrics;
+  const im = AppState.stats.impact_metrics || {};
 
-  document.getElementById("kpiTotalChars").textContent = (im.total_characters || 111525).toLocaleString();
-  document.getElementById("kpiGoldRate").textContent = `${im.gold_rate_overall || 80.6}%`;
+  document.getElementById("kpiTotalChars").textContent = (im.total_characters || 109224).toLocaleString();
+  document.getElementById("kpiGoldRate").textContent = `${im.gold_rate_overall || 80.3}%`;
 
-  // Render danh sách 4 sách
+  const kpiSylEl = document.getElementById("kpiSylChars");
+  if (kpiSylEl && im.total_syllable) {
+    kpiSylEl.textContent = im.total_syllable.toLocaleString();
+  }
+
+  const books = AppState.stats.books || {};
+  const bookCount = Object.keys(books).length;
+
+  const kpiBooksEl = document.getElementById("kpiBooksCount");
+  if (kpiBooksEl && bookCount) {
+    kpiBooksEl.textContent = `${bookCount} Cuốn`;
+  }
+
+  const badgeEl = document.getElementById("overviewBooksBadge");
+  if (badgeEl && bookCount) {
+    badgeEl.textContent = `${bookCount} Tài liệu`;
+  }
+
+  // Render danh sách sách
   const listEl = document.getElementById("overviewBooksList");
   listEl.innerHTML = "";
 
-  const books = AppState.stats.books || {};
   for (const [key, b] of Object.entries(books)) {
     const item = document.createElement("div");
     item.className = "book-stat-item";
@@ -371,18 +391,36 @@ function renderStepDetail(s) {
    ========================================================================== */
 function populateBookSelects() {
   const bookSelect = document.getElementById("inspectorBookSelect");
-  if (!bookSelect) return;
+  if (bookSelect && AppState.books.length > 0) {
+    bookSelect.innerHTML = "";
+    AppState.books.forEach((b) => {
+      const opt = document.createElement("option");
+      opt.value = b.id;
+      opt.textContent = `${b.title} (${b.layout === "prose" ? "Văn xuôi" : "Thơ"})`;
+      bookSelect.appendChild(opt);
+    });
 
-  bookSelect.innerHTML = "";
-  AppState.books.forEach((b) => {
-    const opt = document.createElement("option");
-    opt.value = b.id;
-    opt.textContent = `${b.title} (${b.layout === "prose" ? "Văn xuôi" : "Thơ"})`;
-    bookSelect.appendChild(opt);
-  });
+    if (AppState.books.some((b) => b.id === AppState.inspector.book)) {
+      bookSelect.value = AppState.inspector.book;
+    } else if (AppState.books.length > 0) {
+      AppState.inspector.book = AppState.books[0].id;
+      bookSelect.value = AppState.books[0].id;
+    }
+    updatePageSelectOptions();
+  }
 
-  bookSelect.value = AppState.inspector.book;
-  updatePageSelectOptions();
+  const galleryBookFilter = document.getElementById("galleryBookFilter");
+  if (galleryBookFilter && AppState.books.length > 0) {
+    const curVal = galleryBookFilter.value || "all";
+    galleryBookFilter.innerHTML = '<option value="all">Tất cả tài liệu</option>';
+    AppState.books.forEach((b) => {
+      const opt = document.createElement("option");
+      opt.value = b.id;
+      opt.textContent = b.title;
+      galleryBookFilter.appendChild(opt);
+    });
+    galleryBookFilter.value = curVal;
+  }
 }
 
 function updatePageSelectOptions() {
@@ -461,9 +499,12 @@ async function loadInspectorPage() {
   const { book, page } = AppState.inspector;
   const overlay = document.getElementById("bboxOverlay");
   const scanImg = document.getElementById("pageScanImage");
+  const titleEl = document.getElementById("viewerTitle");
   const bookCfg = AppState.books?.find((b) => b.id === book);
   const bookTitle = bookCfg?.title || book;
-  titleEl.textContent = `${bookTitle} — Trang ${page.replace("page_", "")}`;
+  if (titleEl) {
+    titleEl.textContent = `${bookTitle} — Trang ${page.replace("page_", "")}`;
+  }
   overlay.innerHTML = "";
 
   let pageData = null;
@@ -512,7 +553,12 @@ async function loadInspectorPage() {
   document.getElementById("pgGoldChars").textContent = tc.GOLD || 0;
   document.getElementById("pgSylChars").textContent = tc.SYLLABLE || 0;
 
-  // Cập nhật ảnh scan
+  // Cập nhật ảnh scan với cơ chế dự phòng an toàn
+  scanImg.onerror = () => {
+    console.warn(`Không tải được ảnh scan tại ${scanImg.src}, tạo placeholder canvas...`);
+    scanImg.src = createPageCanvasPlaceholder(pageData.dimensions?.width || 1896, pageData.dimensions?.height || 3212);
+  };
+
   if (pageData.scan_url) {
     scanImg.src = pageData.scan_url;
   } else {
@@ -552,8 +598,9 @@ function renderBoundingBoxes(chars) {
 
   chars.forEach((c) => {
     const box = document.createElement("div");
-    const tClass = c.tier.toLowerCase();
-    box.className = `bbox-rect tier-${tClass}`;
+    const tClass = (c.tier || "other").toLowerCase();
+    const shortTier = tClass === "gold" ? "gold" : tClass === "syllable" ? "syl" : "txt";
+    box.className = `char-bbox bbox-rect tier-${tClass} bbox-${shortTier}`;
     box.id = `bbox-${c.index}`;
     box.setAttribute("data-tier", c.tier);
 
@@ -590,7 +637,7 @@ function renderBoundingBoxes(chars) {
 
 function filterBboxes() {
   const { filterGold, filterSyl, filterTxt } = AppState.inspector;
-  document.querySelectorAll(".bbox-rect").forEach((el) => {
+  document.querySelectorAll(".char-bbox, .bbox-rect").forEach((el) => {
     const tier = el.getAttribute("data-tier");
     let show = true;
     if (tier === "GOLD" && !filterGold) show = false;
@@ -604,7 +651,7 @@ function selectCharacter(c, boxEl) {
   AppState.inspector.selectedChar = c;
 
   // Cập nhật selected trên overlay
-  document.querySelectorAll(".bbox-rect").forEach((b) => b.classList.remove("selected"));
+  document.querySelectorAll(".char-bbox, .bbox-rect").forEach((b) => b.classList.remove("selected"));
   if (boxEl) boxEl.classList.add("selected");
 
   // Cập nhật sidebar chi tiết
@@ -616,7 +663,6 @@ function selectCharacter(c, boxEl) {
   document.getElementById("previewUnicode").textContent = c.unicode || "—";
   document.getElementById("previewOcrChar").textContent = c.ocr_char || "—";
   document.getElementById("previewColOrder").textContent = `Cột ${c.column} · Ô thứ ${c.index}`;
-  document.getElementById("previewRule").textContent = c.rule || "s1_inter_s2_direct";
   document.getElementById("previewBbox").textContent = JSON.stringify(c.bbox);
 
   const badge = document.getElementById("previewTierBadge");
@@ -738,10 +784,12 @@ async function executeSearch() {
     card.addEventListener("click", () => {
       AppState.inspector.book = item.book;
       AppState.inspector.page = item.page || "page_0002";
-      switchTab("inspector");
-      document.getElementById("inspectorBookSelect").value = item.book;
+      const bookSel = document.getElementById("inspectorBookSelect");
+      const pageSel = document.getElementById("inspectorPageSelect");
+      if (bookSel) bookSel.value = item.book;
       updatePageSelectOptions();
-      document.getElementById("inspectorPageSelect").value = item.page;
+      if (pageSel) pageSel.value = item.page || "page_0002";
+      switchTab("inspector");
     });
 
     gridEl.appendChild(card);

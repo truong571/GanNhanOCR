@@ -869,6 +869,8 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
     tier_dp = bool(getattr(layout, "tier_dp", False)) if layout is not None else False
     seg_backend_suffix = ""
     box_decoder = getattr(layout, "box_decoder", "legacy") if layout is not None else "legacy"
+    # (2026-09-24) L3 sửa lỗi ký tự OCR quốc ngữ trước align — books[].qn_charfix, mặc định TẮT
+    qn_charfix_on = bool(getattr(layout, "qn_charfix", False)) if layout is not None else False
     locked_columns = set(locked_columns or ())
     legacy_also_columns = set(legacy_also_columns or ())
     if reseg_mode in ("valley_guarded", "detector"):
@@ -919,8 +921,15 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
         # chính các chữ trong cột này. Đặt SAU build thì +0 ô vào bộ giao nộp; đặt ở
         # đây thì các ô được vá đủ điều kiện s1_inter_s2_direct = GOLD.
         syllables, _norm_log = normalize_column(cluster.get("chars"), syllables,
-                                                qn_dict_set, _readings)
+                                                qn_dict_set, _readings,
+                                                charfix=qn_charfix_on)
         n_norm_total += sum(1 for e in _norm_log if e.get("action") == "fixed")
+        # qn_fix_kind theo VỊ TRÍ ÂM: "" | charfix (L3) | tone_place (tầng dấu cũ) — cột truy vết
+        # trong labels.csv, KHÔNG dùng để gán nhãn. `syllable_ocr` giữ âm OCR nguyên văn.
+        fix_kind = [""] * len(syllables)
+        for _e in _norm_log:
+            if _e.get("action") == "fixed" and 0 <= _e.get("idx", -1) < len(fix_kind):
+                fix_kind[_e["idx"]] = _e.get("kind") or "tone_place"
         matched = (len(cluster["chars"]) == len(syllables))
         if mode == "old":
             col_pairs = _pair_old(cluster, syllables, binary)
@@ -948,6 +957,8 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                 j = p["syl_idx"]
                 p["syllable_raw"] = syllables[j]
                 p["syllable_ocr"] = syllable_ocr[j] if len(syllable_ocr) == len(syllables) else ""
+                if qn_charfix_on:      # cột chỉ xuất hiện khi sách bật L3 -> STT không đổi byte
+                    p["qn_fix_kind"] = fix_kind[j] if 0 <= j < len(fix_kind) else ""
             legacy_boxes = None
             if (line_id in legacy_also_columns and col_rule == "syl_index"
                     and reseg_mode == "detector" and legacy_page_boxes is not None):
@@ -958,6 +969,7 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
             col_states.append({
                 "line_id": line_id, "cluster": cluster, "syllables": syllables,
                 "syllable_ocr": syllable_ocr, "matched": matched,
+                **({"qn_fix_kind": fix_kind} if qn_charfix_on else {}),
                 **({COL_QN_COUNT_UNFIXED: int(line_id in qn_unfixed)} if qn_flag_on else {}),
                 "reseg_boxes": reseg_boxes, "ops1": ops1,
                 "legacy_boxes": legacy_boxes,     # B-5: chỉ khác None ở cột legacy_also_columns

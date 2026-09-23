@@ -183,6 +183,49 @@ def test_syllable_normalize() -> None:
           SN.build_readings(qn) is R)
 
 
+def test_qn_charfix() -> None:
+    """L3 — sửa lỗi ký tự OCR quốc ngữ trên âm NGOÀI từ điển (2026-09-24, mặc định TẮT)."""
+    print("[align_engine.qn_charfix]")
+    from pipeline.align_engine import qn_charfix as CF
+    from pipeline.align_engine import syllable_normalize as SN
+
+    K = {"cho", "chi", "con", "lạc", "khúc", "đã", "có", "éo", "eo", "cũng", "việc", "nó", "ô"}
+    check("eho -> cho (e→c)", CF.fix_syllable("eho", K) == "cho")
+    check("lạe -> lạc (e→c ở cuối)", CF.fix_syllable("lạe", K) == "lạc")
+    check("ðã -> đã (ð→đ)", CF.fix_syllable("ðã", K) == "đã")
+    check("‹ -> ∅ (xoá ký tự rác)", CF.fix_syllable("‹có", K) == "có")
+    check("CHỐT 1 — âm ĐÃ trong từ điển thì KHÔNG đụng", CF.fix_syllable("cho", K) is None)
+    check("CHỐT 2 — không có ứng viên -> None", CF.fix_syllable("zzz", K) is None)
+    check("CHỐT 2 — nhiều ứng viên -> None (để nguyên)",
+          CF.fix_syllable("ee", {"ce", "ec"}) is None, str(sorted(CF.char_variants("ee"))))
+    check("bảng ký tự nạp được từ config/lexicon/qn_charfix.json",
+          CF.CHAR_FIX.get("e") == "c" and CF.CHAR_FIX.get("ð") == "đ" and CF.CHAR_FIX.get("‹") == "",
+          str(CF.CHAR_FIX))
+    check("chỉ MỘT phép thay mỗi biến thể (không ghép)",
+          "cho" in CF.char_variants("eho") and "chc" not in CF.char_variants("eho"),
+          str(sorted(CF.char_variants("eho"))))
+
+    qn = {"có": ["要"], "éo": ["要"], "cho": ["朱"]}
+    R = SN.build_readings(qn)
+    keys = set(qn)
+    ch = lambda *cs: [{"ocr_char": c} for c in cs]
+    out, log = SN.normalize_column(ch("要"), ["eó"], keys, R)
+    check("MẶC ĐỊNH TẮT: charfix=False không đụng gì (hành vi cũ)", out == ["eó"], str(out))
+    out, log = SN.normalize_column(ch("要"), ["eó"], keys, R, charfix=True)
+    check("L3 CHẠY TRƯỚC tầng dời dấu: 'eó' -> 'có' (KHÔNG phải 'éo')", out == ["có"], str(out))
+    check("nhật ký ghi kind=charfix", any(e.get("kind") == "charfix" for e in log), str(log))
+    out, _ = SN.normalize_column(ch("朱"), ["cho"], keys, R, charfix=True)
+    check("charfix không đụng âm hợp lệ", out == ["cho"], str(out))
+    out, _ = SN.normalize_column(ch("朱"), ["3"], keys, R, charfix=True)
+    check("charfix không đụng rác marker", out == ["3"], str(out))
+    o1, _ = SN.normalize_column(ch("要"), ["eó"], keys, R, charfix=True)
+    o2, l2 = SN.normalize_column(ch("要"), o1, keys, R, charfix=True)
+    check("luỹ đẳng (chạy lại không sửa thêm)",
+          o2 == o1 and not [e for e in l2 if e["action"] == "fixed"], str(l2))
+    out, _ = SN.normalize_column([], ["eó"], keys, R, charfix=True)
+    check("cột không có chữ: L3 vẫn chạy (quyết định ở phía QN, không cần kim)", out == ["có"], str(out))
+
+
 def test_check_deps() -> None:
     """Kiểm thư viện chạy MỖI LẦN, và tôn trọng ba cạm bẫy của môi trường 3.14."""
     from pathlib import Path as _P
@@ -701,6 +744,7 @@ def main() -> int:
     test_fix_tone()
     test_sem_score()
     test_syllable_normalize()
+    test_qn_charfix()
     test_check_deps()
     test_dict_candidates()
     test_variant_table()

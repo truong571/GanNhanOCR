@@ -36,6 +36,7 @@ import collections
 import re
 
 from core.text.text_utils import strip_all, strip_tone
+from pipeline.align_engine.qn_charfix import fix_syllable
 
 __all__ = ["build_readings", "normalize_column"]
 
@@ -62,14 +63,35 @@ def build_readings(qn_to_nom: dict[str, list[str]]) -> dict[str, set[str]]:
     return readings
 
 
-def normalize_column(chars, syllables: list[str], qn_keys, readings) -> tuple[list[str], list[dict]]:
+def normalize_column(chars, syllables: list[str], qn_keys, readings,
+                     charfix: bool = False) -> tuple[list[str], list[dict]]:
     """Trả (âm đã chuẩn hoá, nhật ký sửa). KHÔNG sửa gì thì trả về chính danh sách cũ.
 
     `chars`   — cluster["chars"] (dict có 'ocr_char'/'char') hoặc chuỗi.
     `qn_keys` — set khoá từ điển, để nhận ra "âm là từ có thật".
+    `charfix` — (2026-09-24, khoá config `qn_charfix`) bật tầng L3 `qn_charfix.fix_syllable`
+      CHẠY TRƯỚC tầng dời dấu dưới đây. Mặc định False = hành vi cũ, byte-identical.
+      L3 quyết định hoàn toàn ở phía quốc ngữ (chỉ âm OOV + ứng viên DUY NHẤT trong từ
+      điển), KHÔNG nhìn chữ kim — xem docstring của `pipeline.align_engine.qn_charfix`.
     """
     if not syllables:
         return syllables, []
+
+    # --- L3: sửa lỗi ký tự OCR, TRƯỚC mọi thứ khác (không cần đọc âm của chữ trong cột) ---
+    fixlog: list[dict] = []
+    if charfix:
+        out3 = list(syllables)
+        for i, s in enumerate(out3):
+            low = str(s).lower()
+            if not low or _GARBAGE.match(low):
+                continue
+            f = fix_syllable(low, qn_keys)
+            if f:
+                out3[i] = f
+                fixlog.append({"idx": i, "raw": low, "fixed": f,
+                               "rule": "charfix_unique", "action": "fixed", "kind": "charfix"})
+        if fixlog:
+            syllables = out3
 
     pool: set[str] = set()
     for c in chars or ():
@@ -77,10 +99,10 @@ def normalize_column(chars, syllables: list[str], qn_keys, readings) -> tuple[li
         if ch:
             pool |= readings.get(ch, set())
     if not pool:
-        return syllables, []
+        return syllables, fixlog
 
     out = list(syllables)
-    log: list[dict] = []
+    log: list[dict] = list(fixlog)
     for i, s in enumerate(out):
         low = str(s).lower()
         if not low or _GARBAGE.match(low):
@@ -99,5 +121,5 @@ def normalize_column(chars, syllables: list[str], qn_keys, readings) -> tuple[li
             continue
         out[i] = cand[0]
         log.append({"idx": i, "raw": low, "fixed": cand[0],
-                    "rule": f"{level}_unique", "action": "fixed"})
+                    "rule": f"{level}_unique", "action": "fixed", "kind": "tone_place"})
     return out, log

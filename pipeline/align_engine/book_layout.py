@@ -38,6 +38,13 @@ Khoá tuỳ chọn trong `books:` của config/pipeline.yaml (vắng = hành vi 
                                     # cái giá: tỉ lệ cột kim đếm đúng N giảm (LVT 84 -> 74, KVK 90 -> 78,
                                     # CHR 83 -> 51 %). CHỈ adapter ingest đọc (cache kim_raw/ tách theo
                                     # tham số); engine/step2 không đọc. STT không khai -> gửi lang_type 1.
+    qn_charfix: true                # (2026-09-24, tuỳ chọn) bật tầng L3 sửa LỖI KÝ TỰ của OCR quốc ngữ
+                                    # (e→c, ð→đ, ñ→n, œ→c, ø→o, ö→ô, ‹/›/¿→∅) NGAY TRƯỚC align, chỉ trên âm
+                                    # NGOÀI từ điển và chỉ khi có ĐÚNG MỘT ứng viên là khoá từ điển
+                                    # (pipeline/align_engine/qn_charfix.py; bảng ở config/lexicon/qn_charfix.json).
+                                    # Mặc định false = hành vi cũ (STT không đổi một byte). Quyết định hoàn toàn
+                                    # ở phía quốc ngữ, KHÔNG nhìn chữ kim ⇒ hai kênh vẫn độc lập. Đo 2026-09-24:
+                                    # 0 ô GOLD nào của ba sách có âm ngoài từ điển ⇒ không thể phá ô GOLD nào.
     tier_dp: true                   # (2026-09-23, tuỳ chọn, CHỈ layout=lithograph) chạy DP chữ↔âm
                                     # RIÊNG trong từng tầng (6↔6 rồi 8↔8) thay vì cả cột 14↔14
                                     # (anchor_align.realign_column_tiered). Ranh giới câu lục/câu bát
@@ -134,6 +141,7 @@ class BookLayout:
     detector_resize: str = DETECTOR_RESIZE_LINEAR   # "linear" (v1) | "area" (khử răng cưa)
     crop_source: str = CROP_SOURCE_PROCESSED        # "processed" (cũ) | "original" (ảnh quét gốc)
     tier_dp: bool = False           # True = DP riêng từng tầng 6/8 (chỉ lithograph)
+    qn_charfix: bool = False        # True = bật L3 sửa lỗi ký tự OCR quốc ngữ trước align
     kim_lang_type: int = KIM_LANG_TYPE_DEFAULT      # body lang_type của kênh kim (1 = Hán = bộ cũ)
     kim_ocr_id: int = KIM_OCR_ID_DEFAULT            # body ocr_id (1 = văn bản thông thường)
     kim_font_type: int = KIM_FONT_TYPE_DEFAULT      # body font_type (1 = in)
@@ -226,6 +234,9 @@ def book_layout(book_cfg: dict | None) -> BookLayout:
     tier_dp = book_cfg.get("tier_dp", False)
     if not isinstance(tier_dp, bool):
         raise ValueError(f"books[{name}].tier_dp = {tier_dp!r}; cần true/false")
+    qn_charfix = book_cfg.get("qn_charfix", False)
+    if not isinstance(qn_charfix, bool):
+        raise ValueError(f"books[{name}].qn_charfix = {qn_charfix!r}; cần true/false")
     if tier_dp and layout != LAYOUT_LITHOGRAPH:
         raise ValueError(f"books[{name}].tier_dp = true chỉ hợp lệ với layout=lithograph (đang {layout!r})")
     kim_lang_type = _enum_key(book_cfg, name, "kim_lang_type", KIM_LANG_TYPE_DEFAULT, KIM_LANG_TYPES)
@@ -236,12 +247,13 @@ def book_layout(book_cfg: dict | None) -> BookLayout:
             and detector_ckpt is None and detector_resize == DETECTOR_RESIZE_LINEAR
             and crop_source == CROP_SOURCE_PROCESSED
             and kim_lang_type == KIM_LANG_TYPE_DEFAULT and kim_ocr_id == KIM_OCR_ID_DEFAULT
-            and kim_font_type == KIM_FONT_TYPE_DEFAULT and not tier_dp):
+            and kim_font_type == KIM_FONT_TYPE_DEFAULT and not tier_dp and not qn_charfix):
         return DEFAULT_LAYOUT
     return BookLayout(layout=layout, n_columns=n_columns, qn_per_column=qpc,
                       det_xmargin=det_xmargin, det_thr=det_thr, box_decoder=box_decoder,
                       detector_ckpt=detector_ckpt, detector_resize=detector_resize,
-                      crop_source=crop_source, tier_dp=tier_dp, kim_lang_type=kim_lang_type, kim_ocr_id=kim_ocr_id,
+                      crop_source=crop_source, tier_dp=tier_dp, qn_charfix=qn_charfix,
+                      kim_lang_type=kim_lang_type, kim_ocr_id=kim_ocr_id,
                       kim_font_type=kim_font_type)
 
 

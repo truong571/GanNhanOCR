@@ -4,7 +4,7 @@ The third independent signal. For a Nôm crop it ranks candidate characters by
 cosine of a NÔM-TRAINED embedding (pipeline/align_engine/nom_classifier, ResNet
 + ArcFace) against the FontDiffusion reference glyph of each candidate. NB the FD
 glyph is a FontDiffusion *handwritten-style* render conditioned on the woodblock
-style (gannhanocr-fd, see kaggle_diffusion/README.md) — NOT a clean print font. This
+style (gannhanocr-fd, see lab/kaggle_diffusion/README.md) — NOT a clean print font. This
 REPLACES DINOv2, which was proven non-discriminative on chữ-Nôm
 (REPORT_dinov2_unsuitable.md: cosine 0.91 between different chars, retrieval 0%).
 The trained encoder: T2 separation +0.29, T3 retrieval 76.5% (DINOv2: +0.01, 0%).

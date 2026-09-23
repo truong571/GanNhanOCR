@@ -4,7 +4,7 @@
 `kaggle_diffusion/`, `lab/`, `scripts/`, `re-dataset/check/`, cấu hình, tài liệu), đọc theo
 chiều rộng; **đi sâu vào quy trình gán chữ Nôm ↔ Quốc ngữ** (`pipeline/align_engine/` + các bước
 hậu xử lý `pipeline/remediation/`). Mọi con số trong tệp này tái sinh bằng
-`.venv/bin/python docs/ra_soat_2026-09-13_do_lai.py` trên commit `3e062b1fa3` + cây làm việc hiện
+`.venv/bin/python scripts/_oneoff/ra_soat_2026-09-13_do_lai.py` trên commit `3e062b1fa3` + cây làm việc hiện
 tại (chỉ hai tệp bẩn không liên quan: `docs/nghien_cuu_dang_do/README.md`,
 `re-dataset/check/hannom_recheck.py`). Selftest: 105 · 146 · 56 · 171 · 62 · 81 · 44 — **665 passed,
 0 failed** trước khi rà.
@@ -361,4 +361,4 @@ hai câu hỏi tách bạch: (a) crop có đúng một glyph và là glyph của
 
 *Hình dùng khi rà (không commit): `col_stt11_page_0106_c1.png`, `col_stt11_page_0136_c9.png`,
 `mismatch_cols.png`, `gold_mism_neg2.png`, `gold_eq.png` trong scratchpad phiên; dựng lại bằng các
-đoạn mã tương ứng trong `docs/ra_soat_2026-09-13_do_lai.py` (phần A–G) và `_pick_reseg` cho hình.*
+đoạn mã tương ứng trong `scripts/_oneoff/ra_soat_2026-09-13_do_lai.py` (phần A–G) và `_pick_reseg` cho hình.*

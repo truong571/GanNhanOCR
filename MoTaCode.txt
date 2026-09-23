@@ -87,7 +87,7 @@ nom-embed/best.pt      Checkpoint encoder Nôm (S3) đang dùng.
 ArcFace/               Bộ retrain S3 trên Kaggle (Sub-center ArcFace K=3 + SAM,
                        split page-disjoint/LOBO) + eval_human_verdicts.py.
 train_crop/            Detector ký tự CenterNet (dùng cho reseg=detector).
-font_diffusion/, kaggle_diffusion/   Sinh glyph tham chiếu.
+font_diffusion/, lab/kaggle_diffusion/   Sinh glyph tham chiếu.
 prepared/<sách>/       Trung gian: pages, pages_denoised, detected/*_ocr_cache.json
                        (PRIMARY DATA — mất là phải gọi lại API, tốn tiền),
                        transcriptions/.
@@ -294,8 +294,8 @@ A. CODE CHẾT THẬT SỰ — không ai import, không entrypoint nào gọi:
    · core/text/loanword.py — chỉ step3_label (đường cũ) gọi.
    · pipeline/align_engine/nom_classifier/model.py — infer.py không import.
    · pipeline/align_engine/to_standard.py — trùng chức năng với pipeline/publish/.
-   · pipeline/export_review_excel.py, scripts/delete_pua_codepoints.py,
-     scripts/check_ocr_token.py, scripts/_retired/* (4 file PaddleOCR).
+   · pipeline/export_review_excel.py, scripts/_oneoff/delete_pua_codepoints.py,
+     scripts/_oneoff/check_ocr_token.py, scripts/_retired/* (4 file PaddleOCR).
 
 B. ĐƯỜNG CŨ ĐÃ NGHỈ HƯU (giữ để đối chứng luận văn, KHÔNG chạy):
    · pipeline/step3_label.py + pipeline/step4_export.py
@@ -319,7 +319,7 @@ D. TEST (chạy qua scripts/run_all_selftests.sh, 414 assertion):
 E. THƯ MỤC NẶNG KHÔNG THAM GIA RUNTIME:
    NomNaOCR/ 1,4 GB · font_diffusion/ 1,0 GB (chỉ dùng khi sinh glyph mới;
    pipeline đọc thẳng gannhanocr-fd/ 726 MB đã sinh sẵn, skip_local_fd_gen: true)
-   · kaggle_diffusion/ 12 MB · ArcFace/ 544 MB · nom-char-det-r34_kaggle.zip 1,1 GB
+   · lab/kaggle_diffusion/ 12 MB · ArcFace/ 544 MB · nom-char-det-r34_kaggle.zip 1,1 GB
    · evaluation/ chỉ còn _kinhhannom_debug (12 KB) — README align_engine vẫn trỏ
    vào evaluation/ver_new/ đã không còn tồn tại.
 ================================================================================

@@ -152,7 +152,7 @@ step3:
   # When true, step 3 will NOT try to generate missing FontDiffusion images
   # locally (~7s/img on Mac CPU = bottleneck). Chars missing from fd_cache get
   # no Tier-3 candidate — they fall through to Tier 2 or unmatched.
-  # Offload generation to Kaggle via kaggle_diffusion/diffusion_run.ipynb.
+  # Offload generation to Kaggle via lab/kaggle_diffusion/diffusion_run.ipynb.
   skip_local_fd_gen: true
 
 step4:

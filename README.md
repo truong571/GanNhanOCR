@@ -33,7 +33,7 @@ PDF sach co (Han Nom + Quoc Ngu)
 ```
 
 **Sinh anh tham chieu (FontDiffusion):** chay 1 lan tren Kaggle GPU bang
-[`kaggle_diffusion/diffusion_run.ipynb`](kaggle_diffusion/diffusion_run.ipynb)
+[`lab/kaggle_diffusion/diffusion_run.ipynb`](lab/kaggle_diffusion/diffusion_run.ipynb)
 de tao **universal cache** ~21,837 ky tu chu Nom (toan bo CJK ranges trong font
 NomNaTong). Cache nay duoc luu len HuggingFace Hub roi keo ve
 `prepared/_universal_fd_cache/`. Tat ca 3 cuon sach dung chung 1 cache nay,
@@ -100,7 +100,7 @@ chon cookie `token` -> copy full value. Sau 1 gio phai lay lai.
 **Check trang thai token:**
 
 ```sh
-python3 scripts/check_ocr_token.py
+python3 scripts/_oneoff/check_ocr_token.py
 ```
 
 In ra `idToken` con bao lau, auto-login co dang active khong.
@@ -114,13 +114,13 @@ API mac dinh: `https://tools.clc.hcmus.edu.vn`.
 
 ### Buoc A — Sinh universal fd_cache tren Kaggle (1 lan duy nhat)
 
-Lam theo [`kaggle_diffusion/README.md`](kaggle_diffusion/README.md):
+Lam theo [`lab/kaggle_diffusion/README.md`](lab/kaggle_diffusion/README.md):
 
-1. Chay `python kaggle_diffusion/build_char_universe.py` tren may local de tao
-   `kaggle_diffusion/exports/char_universe.txt` (~21,837 ky tu).
+1. Chay `python lab/kaggle_diffusion/build_char_universe.py` tren may local de tao
+   `lab/kaggle_diffusion/exports/char_universe.txt` (~21,837 ky tu).
 2. Tao 1 dataset repo tren HuggingFace Hub, dat ten tuy y (mac dinh notebook
    dung `mdnt571/gannhanocr-universal-fd-cache`).
-3. Mo `kaggle_diffusion/diffusion_run.ipynb` tren Kaggle (GPU T4 x2).
+3. Mo `lab/kaggle_diffusion/diffusion_run.ipynb` tren Kaggle (GPU T4 x2).
 4. Notebook tu sinh, push moi 500 ky tu, resume duoc neu Kaggle reset
    (~10–12h tong).
 5. Sau khi xong, keo cache ve may local:
@@ -194,6 +194,11 @@ SYLLABLE/REVIEW, S3 = encoder Nom da train, + xuat 3 chuan quoc te):
 
 ## Cau truc du an
 
+> **Ban chuan 2026-09-23: `docs/CAU_TRUC_MA_NGUON_2026-09-23.md`** — vai tro tung thu muc goc,
+> quy tac dat ten, thu muc sinh ra khi chay, va cac bay khi don kho (hoa/thuong `KhoiB/`,
+> grep thieu pham vi, "chet theo do thi" ma van song theo luan van). Cay duoi day la ban cu,
+> chua cap nhat het.
+
 ```
 GanNhanOCR/
 ├── config/
@@ -220,7 +225,7 @@ GanNhanOCR/
 │   ├── nom_classifier/           #   train encoder Nom (Kaggle P100)
 │   └── FLOW.md                   #   mo ta flow chi tiet
 │
-├── kaggle_diffusion/             # One-shot generator universal fd_cache
+├── lab/kaggle_diffusion/             # One-shot generator universal fd_cache
 │   ├── README.md
 │   ├── build_char_universe.py    # Trich xuat 21k ky tu tu font NomNaTong
 │   ├── extract_book_chars.py     # Trich xuat ky tu rieng tung sach (optional)

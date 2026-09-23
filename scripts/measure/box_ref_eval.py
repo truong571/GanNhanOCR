@@ -48,6 +48,11 @@ from pipeline.align_engine.char_detector import pitch_decode as PD              
 from pipeline.align_engine.crop_quality import BORDER_INK_MAX                              # noqa: E402
 
 PAGE_OF_UID = {"LucVanTien1883": lambda u: u, "KimVanKieu1884": lambda u: 167 - u}
+# 2026-09-23 (vòng 9): 3 sách còn lại KHÔNG có ánh xạ uid→page (prose / IHR-NomDB) — lấy thẳng
+# `prepared/<Book>/pages/*.png` (ĐÚNG ảnh detector thấy trong pipeline). Chỉ biến thể "prepared"
+# (không có ảnh quét gốc cùng hệ toạ độ để chạy otsu).  kind: litho = 2 tầng 6/8, prose = 1 tầng/cột.
+PREPARED_BOOKS = {"Chrestomathie1872": "prose", "LucVanTien1916": "litho", "TruyenKieu1872": "litho"}
+ALL_BOOKS = [*PAGE_OF_UID, *PREPARED_BOOKS]
 THRS = [0.15, 0.2]
 X_MARGIN = 0.05            # books[].det_xmargin thạch bản
 Y_MARGIN = 0.35            # cửa sổ y tầng (× bước)
@@ -56,27 +61,38 @@ VARIANTS = ["prepared", "otsu"]   # prepared = ảnh pipeline thấy (LVT stretc
 
 
 # ----------------------------------------------------------------------------- dữ liệu
+def book_pages(book):
+    """Danh sách tệp trang của sách (jpg gốc với 2 sách thạch bản; png prepared với 3 sách kia)."""
+    if book in PAGE_OF_UID:
+        return litho_text_pages(book)
+    return sorted((REPO / "prepared" / book / "pages").glob("*.png"))
+
+
 def load_page(book, jpg: Path):
     """→ (page_name, gray_prepared, gray_raw, cache, trans, col_pitch)."""
-    uid = int(jpg.stem.split("_")[-1])
-    page = f"page_{PAGE_OF_UID[book](uid):04d}"
     pdir = REPO / "prepared" / book
     import cv2
+    if book in PAGE_OF_UID:
+        uid = int(jpg.stem.split("_")[-1])
+        page = f"page_{PAGE_OF_UID[book](uid):04d}"
+    else:
+        page = jpg.stem                      # prepared/<Book>/pages/page_XXXX.png
     gp = cv2.imread(str(pdir / "pages" / f"{page}.png"), cv2.IMREAD_GRAYSCALE)
     gr = cv2.imread(str(jpg), cv2.IMREAD_GRAYSCALE)
     cache = json.load(open(pdir / "detected" / f"{page}_ocr_cache.json", encoding="utf-8"))
     tp = pdir / "transcriptions" / f"{page}.json"
     trans = json.load(open(tp, encoding="utf-8")) if tp.exists() else {}
-    pitch = None
+    pitch = cache.get("col_pitch") if book not in PAGE_OF_UID else None
+    pitch = float(pitch) if pitch else None
     lp = REPO / "measure_out" / book / "layout" / "layout_pages.csv"
-    if lp.exists():
+    if pitch is None and lp.exists():
         for r in csv.DictReader(open(lp, encoding="utf-8")):
-            if int(r["uid"]) == uid and r.get("col_pitch"):
+            if book in PAGE_OF_UID and int(r["uid"]) == uid and r.get("col_pitch"):
                 pitch = float(r["col_pitch"]); break
     return page, gp, gr, cache, trans, pitch
 
 
-def ref_cells_for_page(gray, cache, trans, col_pitch):
+def ref_cells_for_page(gray, cache, trans, col_pitch, kind="litho"):
     """→ list cột: {col, x_range, chars, n_qn, tiers: [{t, box, n_kim, n_ref, verified, cells}]}."""
     out = []
     tcols = {c.get("column", i + 1): c for i, c in enumerate(trans.get("columns") or [])}
@@ -85,6 +101,23 @@ def ref_cells_for_page(gray, cache, trans, col_pitch):
             continue
         split = (cache.get("tier_split") or [[None, None]] * (j + 1))[j] if j < len(cache.get("tier_split") or []) else None
         tc = tcols.get(j + 1, {})
+        if kind == "prose":
+            # văn xuôi: 1 tầng/cột, N = số âm QN của cột (transcriptions num_syllables), KHÔNG có luật 6/8
+            n_ref = int(tc.get("num_syllables") or 0)
+            if n_ref <= 0:
+                continue
+            xs = [c["bbox"][0] for c in chars] + [c["bbox"][2] for c in chars]
+            col = {"col": j + 1, "x_range": (min(xs), max(xs)), "chars": chars, "n_qn": n_ref, "tiers": []}
+            x1, y0, x2, y1 = PD.tier_box(chars, list(range(len(chars))))
+            if col_pitch:
+                xc = (x1 + x2) / 2.0
+                x1, x2 = int(max(x1, xc - 0.5 * col_pitch)), int(min(x2, xc + 0.5 * col_pitch))
+            col["tiers"].append({"t": 0, "box": [x1, y0, x2, y1], "n_kim": len(chars), "n_ref": n_ref,
+                                 "verified": len(chars) == n_ref,
+                                 "cells": PD.ink_cut_cells(gray, x1, x2, y0, y1, n_ref),
+                                 "pitch": (y1 - y0) / n_ref})
+            out.append(col)
+            continue
         n_odd = (tc.get("verse_odd") or {}).get("n_syll") or tc.get("len_odd") or 6
         n_even = (tc.get("verse_even") or {}).get("n_syll") or (tc.get("num_syllables", 14) - n_odd if tc else 8)
         if split and split[0] is not None:
@@ -182,12 +215,15 @@ def in_tier(boxes, tier):
 # ----------------------------------------------------------------------------- đo 1 trang
 def measure_page(det, book, jpg, variants, out_dbg=None):
     import cv2
+    kind = PREPARED_BOOKS.get(book, "litho")
+    if book not in PAGE_OF_UID:
+        variants = [v for v in variants if v == "prepared"] or ["prepared"]
     page, gp, gr, cache, trans, col_pitch = load_page(book, jpg)
     if gp is None or gr is None:
         return None, [], []
     _, binp = cv2.threshold(cv2.GaussianBlur(gp, (3, 3), 0), 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
     binp = (binp > 0).astype(np.uint8)
-    cols = ref_cells_for_page(gp, cache, trans, col_pitch)
+    cols = ref_cells_for_page(gp, cache, trans, col_pitch, kind=kind)
     prow = {"book": book, "page": page, "jpg": jpg.name, "n_cols": len(cols),
             "n_tiers": sum(len(c["tiers"]) for c in cols),
             "n_tiers_verified": sum(t["verified"] for c in cols for t in c["tiers"]),
@@ -365,7 +401,7 @@ def build_invariants(per_book, variants, limited):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--book", default="all", choices=["all", *LITHO_BOOKS])
+    ap.add_argument("--book", default="all", choices=["all", "all5", *ALL_BOOKS])
     ap.add_argument("--out", default=None, help="mặc định measure_out/<book>/box_ref/ (all → measure_out/box_ref/)")
     ap.add_argument("--pages", type=int, default=27)
     ap.add_argument("--limit", type=int, default=0)
@@ -379,8 +415,9 @@ def main():
                     help="phép thu ảnh trang cho detector: linear (v1/pipeline mặc định) | area (= books[].detector_resize: area)")
     a = ap.parse_args()
     variants = [v for v in a.variants.split(",") if v in VARIANTS]
-    books = list(LITHO_BOOKS) if a.book == "all" else [a.book]
-    out = Path(a.out) if a.out else REPO / "measure_out" / ("box_ref" if a.book == "all" else f"{a.book}/box_ref")
+    books = (list(LITHO_BOOKS) if a.book == "all" else
+             list(ALL_BOOKS) if a.book == "all5" else [a.book])
+    out = Path(a.out) if a.out else REPO / "measure_out" / ("box_ref" if a.book in ("all", "all5") else f"{a.book}/box_ref")
     out.mkdir(parents=True, exist_ok=True)
     os.environ.setdefault("OMP_NUM_THREADS", str(a.workers))
     import torch
@@ -392,7 +429,7 @@ def main():
     page_ids = parse_page_ids(a.page_ids)
     pages = []
     for b in books:
-        files = litho_text_pages(b)
+        files = book_pages(b)
         if b in page_ids:
             files = [f for f in files if f.stem.split("_")[-1] in page_ids[b]]
         else:

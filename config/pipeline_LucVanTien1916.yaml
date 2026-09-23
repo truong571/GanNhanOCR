@@ -43,13 +43,13 @@ run:
   # --scale 1: đã đo kim ×1 vs ×3 trên chính bộ này, chênh lệch trong nhiễu ⇒ không phóng ảnh
   # (×3 chỉ làm crop xuất ra to hơn, không đổi độ đúng nhãn). --qn-count-rule: luật 6/8.
   ingest_args: "--qn-count-rule"
-  dataset_out: prepared_ihr/LucVanTien1916/dataset_out   # giữ mọi thứ dưới prepared_ihr/, không tạo thư mục ở gốc repo
+  dataset_out: prepared/LucVanTien1916/dataset_out   # giữ mọi thứ dưới prepared/, không tạo thư mục ở gốc repo
   n_columns: 10
   cross: false                  # KHÔNG có dị bản số hoá riêng; độ đúng đo bằng NHÃN NGƯỜI (ihr_endtoend_eval)
   measure_steps: ihr_layout
 
 paths:
-  data_dir: prepared_ihr
+  data_dir: prepared
   output_dir: dataset/LucVanTien1916
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv

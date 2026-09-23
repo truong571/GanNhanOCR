@@ -5,7 +5,7 @@
 
 // Trạng thái toàn cục của ứng dụng
 const AppState = {
-  theme: localStorage.getItem("gannhan_theme") || "dark",
+  theme: localStorage.getItem("gannhan_theme") || "light",
   activeTab: "overview",
   isLiveServer: false,
   stats: null,
@@ -113,12 +113,12 @@ async function loadData() {
       AppState.benchmarks = benchResp;
 
       badge.classList.add("connected");
-      badgeText.textContent = "Live Server (Kết nối API thật)";
+      badgeText.textContent = "Máy chủ API: Trực tuyến";
       renderAllComponents();
       return;
     }
   } catch (err) {
-    console.warn("[GanNhanOCR] Server API không phản hồi, chuyển sang chế độ Standalone/SampleData:", err);
+    console.warn("[GanNhanOCR] Server API không phản hồi, chuyển sang chế độ dữ liệu mẫu:", err);
   }
 
   // Chế độ Standalone: Đọc từ sample_data.json
@@ -127,14 +127,14 @@ async function loadData() {
     if (localResp.ok) {
       AppState.sampleData = await localResp.json();
       badge.classList.remove("connected");
-      badgeText.textContent = "Chế độ Độc lập (Demo Mode)";
+      badgeText.textContent = "Chế độ dữ liệu mẫu";
 
       adaptSampleData();
       renderAllComponents();
     }
   } catch (err) {
     console.error("[GanNhanOCR] Không nạp được cả API lẫn sample_data.json", err);
-    badgeText.textContent = "Ngoại tuyến (Offline)";
+    badgeText.textContent = "Ngoại tuyến";
   }
 }
 
@@ -160,63 +160,63 @@ function adaptSampleData() {
   AppState.pipelineFlow = [
     {
       step: 1,
-      name: "Thu Nhận & Tiền Xử Lý",
-      tag: "Ingest & Denoise",
-      input: "File PDF bản quét gốc (scan 300 DPI) + Phiên âm Quốc ngữ",
-      model: "Sauvola Adaptive Threshold + Otsu / Stretch",
-      process: "Khử nhiễu nền giấy cổ ố vàng, bóc tách viền trang, phân đoạn cột văn bản tự động (9-10 cột với thơ, 7 cột với văn xuôi).",
-      output: "Ảnh trang sạch (pages/) và dữ liệu OCR thô (kim_raw/)",
-      evidence: "Cache kim_raw/ theo tham số; 0 gọi API lại.",
+      name: "Tiền xử lý ảnh tài liệu",
+      tag: "Phân đoạn & Khử nhiễu",
+      input: "Tệp ảnh quét tài liệu gốc (300 DPI) và bản phiên âm Quốc ngữ đối ứng",
+      model: "Thuật toán nhị phân hóa thích nghi Sauvola kết hợp Otsu",
+      process: "Khử nhiễu nền giấy ố vàng, tách biên trang, phân đoạn cột văn bản dọc (10 cột với thơ, 7 cột với văn xuôi) và khởi tạo nhận dạng ký tự sơ bộ.",
+      output: "Tập ảnh trang đã chuẩn hóa, tọa độ phân đoạn cột và dữ liệu nhận dạng ban đầu",
+      evidence: "Đảm bảo tính độc lập và khả năng tái lập kết quả phân đoạn cột.",
     },
     {
       step: 2,
-      name: "Phát Hiện Ký Tự Nôm",
-      tag: "CenterNet ResNet-34",
-      input: "Ảnh cột chữ dọc đã bóc tách từ trang sách",
-      model: "CenterNet ResNet-34 (Ảnh 1024px, hồi quy tâm Heatmap, ngưỡng 0.15)",
-      process: "Dự đoán tâm ký tự Nôm, phân tách hộp dính bằng Seam Carving và Pitch Decoding (giải mã nhịp cách đều).",
-      output: "Tập hộp bao ký tự [xmin, ymin, xmax, ymax] cho từng cột",
-      evidence: "Giảm tỷ lệ cắt vào thân chữ từ 10.6% xuống 2.6%; tỷ lệ n_det==N đạt >78-90%.",
+      name: "Phát hiện vị trí ký tự",
+      tag: "CenterNet & Pitch Decoding",
+      input: "Ảnh các cột chữ dọc bóc tách từ trang tài liệu",
+      model: "Mạng CenterNet (Backbone ResNet-34) kết hợp giải mã nhịp ký tự (Pitch Decoding)",
+      process: "Dự đoán tâm ký tự Nôm qua bản đồ nhiệt (heatmap), phân tách các vị trí dính chữ bằng giải mã khoảng cách nhịp đều, triệt tiêu hộp rỗng và cắt phạm nét.",
+      output: "Tập hợp tọa độ hộp bao ký tự [xmin, ymin, xmax, ymax] cho từng cột chữ",
+      evidence: "Tỷ lệ cắt phạm thân chữ giảm từ 10.6% xuống 2.6%; đếm đúng số chữ trên cột đạt >78%.",
     },
     {
       step: 3,
-      name: "Gióng Hàng Đa Nguồn (DP)",
+      name: "Gióng hàng song ngữ",
       tag: "Banded Dynamic Programming",
-      input: "Hộp chữ Nôm phát hiện được + Chuỗi âm Quốc ngữ đối ứng",
-      model: "Banded Dynamic Programming 2 chiều + Từ điển Hán Nôm QuocNgu_SinoNom",
-      process: "Tìm đường đi tối ưu giữa chuỗi hộp ảnh và chuỗi âm thơ lục bát. Áp dụng ràng buộc cứng theo cấu trúc nhịp 6/8.",
-      output: "Nhãn sơ bộ cho từng hộp ký tự kèm xác suất posterior (labels.csv)",
-      evidence: "Tự động 100% — 0 ô can thiệp thủ công (quyet_dinh_nguoi = 0).",
+      input: "Tập hộp ký tự phát hiện được và chuỗi âm Quốc ngữ đối ứng",
+      model: "Quy hoạch động dải hẹp (Banded DP) kết hợp từ điển Hán Nôm Quốc ngữ (104.177 mục từ)",
+      process: "Tìm đường đi tối ưu giữa chuỗi hộp ảnh và chuỗi âm tiết văn bản. Áp dụng ràng buộc cấu trúc nhịp thơ lục bát (câu lục 6 chữ, câu bát 8 chữ) để ngăn lệch vị trí xuyên dòng.",
+      output: "Bảng nhãn sơ bộ cho từng hộp ký tự kèm xác suất hậu nghiệm và mã quy tắc liên kết",
+      evidence: "Quy trình gán nhãn vận hành hoàn toàn theo quy tắc thuật toán, không cần can thiệp thủ công.",
     },
     {
       step: 4,
-      name: "Kiểm Kê & Sửa Lỗi Nhầm",
-      tag: "Census AE-1/F1 & Confusion Fix",
-      input: "Bảng nhãn sơ bộ sau bước gióng hàng",
-      model: "Kiểm kê tần suất ngữ nghĩa + Bảng tri thức sửa nhầm hệ thống",
-      process: "Phát hiện các chữ bị nhầm lẫn phổ biến. Phân hạng 4 bậc: GOLD, SYLLABLE, REVIEW, QUARANTINE.",
-      output: "Bảng nhãn đã hiệu chỉnh (labels_remediated.csv)",
-      evidence: "Ghi nhận mã băm sha256 vào CHECKSUMS.txt sau mỗi bước.",
+      name: "Kiểm kê & Hiệu chỉnh lỗi",
+      tag: "Rà soát nhầm lẫn dị tự",
+      input: "Bảng nhãn sơ bộ sau giai đoạn gióng hàng",
+      model: "Kiểm kê tần suất ngữ cảnh và bảng tri thức sửa lỗi nhầm lẫn có tính hệ thống",
+      process: "Phát hiện các chữ bị nhầm lẫn phổ biến (đồng âm khác nghĩa, tự dạng gần giống nhau). Phân loại nhãn theo 3 bậc chất lượng: GOLD, SYLLABLE, và nhãn cần cách ly.",
+      output: "Bảng nhãn đã được chuẩn hóa và hiệu chỉnh",
+      evidence: "Lưu vết kiểm tra toàn vẹn bằng chuỗi mã băm SHA-256 sau mỗi bước biến đổi dữ liệu.",
     },
     {
       step: 5,
-      name: "Giải Cứu Thông Minh & Cổng Cơ Chế",
-      tag: "Self-Training & Mechanism Gates",
-      input: "Các ô rơi vào vùng nghi vấn (REVIEW / lệch số lượng)",
-      model: "Enhanced SE-ResNet v3 (Self-Training nội bộ) & 4 Cổng cơ chế (a, b, c, d)",
-      process: "• STT: Mô hình nhận dạng Nôm nội vùng giải cứu ô REVIEW >= 0.70 lên GOLD.\n• Sách mới: 4 cổng cơ chế (a, b, c, d đối chiếu dị bản độc lập 1871/1916).",
-      output: "Bảng nhãn công bố hoàn thiện (labels_final.csv / labels_gated.csv)",
-      evidence: "Giải cứu hàng nghìn mẫu chữ lên GOLD mà không làm tăng nhiễu nhãn.",
+      name: "Kiểm soát biên & Cứu nhãn",
+      tag: "Cổng cơ chế & Đối soát dị bản",
+      input: "Các vị trí ký tự nghi vấn hoặc lệch số lượng",
+      model: "Mô hình nhận dạng nội vùng SE-ResNet kết hợp 4 cổng kiểm soát điều kiện biên",
+      process: "Đối chiếu độc lập qua 4 cổng điều kiện (số lượng chữ trên cột, nhịp pitch, ranh giới hộp bao, và so sánh chéo với các bản khắc độc lập 1871/1916) để nâng bậc nhãn an toàn hoặc phân loại nhãn văn bản thuần.",
+      output: "Bảng nhãn công bố hoàn thiện",
+      evidence: "Nâng tỷ lệ nhãn đạt chuẩn chất lượng cao mà không làm tăng độ nhiễu của bộ ngữ liệu.",
     },
     {
       step: 6,
-      name: "Đóng Gói & Xuất Bản Dataset",
-      tag: "Final Dataset Export",
-      input: "labels_final.csv + ảnh crop gốc từ thư mục trung gian",
-      model: "export_final_dataset.py + make_dataset_docs + make_xlsx",
-      process: "Lọc sạch các ô đạt chuẩn (GOLD, SYLLABLE), bóc tách ảnh crop sang thư mục tự chứa dataset/, sinh bảng tính labels.xlsx và tài liệu lai lịch thư tịch.",
-      output: "Thư mục dataset/ tự chứa: labels.csv (12 cột cố định), gold/, syllable/, labels.xlsx",
-      evidence: "Độc lập hoàn toàn, tự chứa 100%, không còn phụ thuộc dữ liệu trung gian.",
+      name: "Đóng gói tập ngữ liệu",
+      tag: "Xuất bản bộ dữ liệu chuẩn",
+      input: "Bảng nhãn hoàn thiện và tập ảnh trích xuất từ các giai đoạn trước",
+      model: "Quy trình đóng gói tự chứa chuẩn hóa",
+      process: "Trích xuất ảnh cắt ký tự theo từng mức tin cậy (thư mục gold/, syllable/), xây dựng bảng chỉ mục chuẩn 12 trường thông tin (labels.csv, labels.xlsx) và tự động tạo tài liệu mô tả xuất xứ thư tịch.",
+      output: "Thư mục dataset/ tự chứa hoàn chỉnh: labels.csv, gold/, syllable/, tài liệu kỹ thuật",
+      evidence: "Tập dữ liệu độc lập hoàn toàn, sẵn sàng phục vụ huấn luyện và đánh giá các mô hình OCR.",
     },
   ];
 
@@ -271,8 +271,8 @@ function renderOverview() {
   if (!AppState.stats) return;
   const im = AppState.stats.impact_metrics;
 
-  document.getElementById("kpiTotalChars").textContent = (im.total_characters || 107786).toLocaleString();
-  document.getElementById("kpiGoldRate").textContent = `${im.gold_rate_overall || 75.5}%`;
+  document.getElementById("kpiTotalChars").textContent = (im.total_characters || 111525).toLocaleString();
+  document.getElementById("kpiGoldRate").textContent = `${im.gold_rate_overall || 80.6}%`;
 
   // Render danh sách 4 sách
   const listEl = document.getElementById("overviewBooksList");
@@ -285,9 +285,9 @@ function renderOverview() {
     item.innerHTML = `
       <div class="book-stat-top">
         <span class="book-stat-title">${b.title}</span>
-        <span class="book-stat-count">${b.total.toLocaleString()} chữ</span>
+        <span class="book-stat-count">${b.total.toLocaleString()} ký tự</span>
       </div>
-      <div class="book-stat-sub">${b.subtitle || b.layout} · ${b.gold.toLocaleString()} GOLD (${b.gold_pct}%)</div>
+      <div class="book-stat-sub">${b.subtitle || b.layout} · ${b.gold.toLocaleString()} nhãn GOLD (${b.gold_pct}%)</div>
       <div class="progress-bar-wrap">
         <div class="progress-bar-fill" style="width: ${b.gold_pct}%"></div>
       </div>
@@ -297,7 +297,7 @@ function renderOverview() {
 }
 
 /* ==========================================================================
-   5. Render Tab 2: Luồng Xử Lý (Pipeline Flow)
+   5. Render Tab 2: Quy Trình Xử Lý (Pipeline Flow)
    ========================================================================== */
 let currentFlowStep = 1;
 
@@ -313,7 +313,7 @@ function renderPipelineFlow() {
     btn.className = `step-nav-btn ${s.step === currentFlowStep ? "active" : ""}`;
     btn.innerHTML = `
       <div class="step-top">
-        <span class="step-index-pill">Bước ${s.step}</span>
+        <span class="step-index-pill">Giai đoạn ${s.step}</span>
       </div>
       <div class="step-title-text">${s.name}</div>
       <div class="step-tag-text">${s.tag}</div>
@@ -336,30 +336,30 @@ function renderStepDetail(s) {
   detailEl.innerHTML = `
     <div class="step-detail-head">
       <div class="step-main-title">
-        <span>BƯỚC ${s.step} / 6</span>
+        <span>GIAI ĐOẠN ${s.step} / 6</span>
         <h3>${s.name} (${s.tag})</h3>
       </div>
-      <span class="badge badge-primary">Tự Động 100%</span>
+      <span class="badge badge-neutral">Tự động theo quy tắc</span>
     </div>
     <div class="step-grid-info">
       <div class="info-box">
-        <h4>📥 Dữ Liệu Đầu Vào (Input)</h4>
+        <h4>Dữ liệu đầu vào</h4>
         <p>${s.input}</p>
       </div>
       <div class="info-box">
-        <h4>🤖 Mô Hình & Thuật Toán</h4>
+        <h4>Phương pháp & Mô hình áp dụng</h4>
         <p><strong>${s.model}</strong></p>
       </div>
       <div class="info-box" style="grid-column: span 2;">
-        <h4>⚙️ Nguyên Lý & Cơ Chế Xử Lý</h4>
+        <h4>Nội dung và nguyên lý thực hiện</h4>
         <p style="white-space: pre-line;">${s.process}</p>
       </div>
       <div class="info-box">
-        <h4>📤 Dữ Liệu Đầu Ra (Output)</h4>
+        <h4>Kết quả đầu ra</h4>
         <p>${s.output}</p>
       </div>
       <div class="info-box">
-        <h4>🛡️ Bằng Chứng Đo Kiểm & Độc Lập</h4>
+        <h4>Chỉ tiêu kiểm soát & Đánh giá</h4>
         <p>${s.evidence}</p>
       </div>
     </div>
@@ -461,9 +461,9 @@ async function loadInspectorPage() {
   const { book, page } = AppState.inspector;
   const overlay = document.getElementById("bboxOverlay");
   const scanImg = document.getElementById("pageScanImage");
-  const titleEl = document.getElementById("viewerTitle");
-
-  titleEl.textContent = `Đang soi: ${book} · ${page}`;
+  const bookCfg = AppState.books?.find((b) => b.id === book);
+  const bookTitle = bookCfg?.title || book;
+  titleEl.textContent = `${bookTitle} — Trang ${page.replace("page_", "")}`;
   overlay.innerHTML = "";
 
   let pageData = null;
@@ -702,13 +702,13 @@ async function executeSearch() {
     });
   }
 
-  countEl.textContent = `Tìm thấy ${results.length} mẫu chữ phù hợp trong bộ dataset:`;
+  countEl.textContent = `Tìm thấy ${results.length} mẫu ký tự phù hợp trong bộ ngữ liệu:`;
   gridEl.innerHTML = "";
 
   if (results.length === 0) {
     gridEl.innerHTML = `
       <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--text-dim);">
-        Không tìm thấy mẫu chữ nào khớp với từ khoá "<strong>${query}</strong>".
+        Không tìm thấy mẫu ký tự nào khớp với từ khóa "<strong>${query}</strong>".
       </div>
     `;
     return;

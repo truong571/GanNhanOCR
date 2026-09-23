@@ -1,4 +1,4 @@
-"""Adapter ingest hai bộ IHR-NomDB có NHÃN NGƯỜI (LucVanTien1916, TruyenKieu1872) → `prepared_ihr/<book>/`.
+"""Adapter ingest hai bộ IHR-NomDB có NHÃN NGƯỜI (LucVanTien1916, TruyenKieu1872) → `prepared/<book>/`.
 
 Vì sao có adapter riêng: hai bộ này KÈM SẴN bố cục do người vẽ (VoTT `pages/bboxes.json`,
 tag "Column") và QN câu-với-câu (`pages/annotation.json` → `translation`), nên KHÔNG phải
@@ -20,7 +20,7 @@ Hai bộ này là **TẬP ĐÁNH GIÁ**, không trộn vào tập huấn luyện
   data/<book>/pages/bboxes.json        VoTT v2.2, region tag "Column"
   data/<book>/pages/annotation.json    [{img, annotations:[{hn_text, translation}]}]
 
-Đầu ra (`--out prepared_ihr` → prepared_ihr/<book>/) — ĐÚNG hợp đồng engine như thạch bản:
+Đầu ra (`--out prepared` → prepared/<book>/) — ĐÚNG hợp đồng engine như thạch bản:
   pages/page_XXXX.png · pages_denoised/page_XXXX.png
   detected/page_XXXX_ocr_cache.json    coords_space=fullpage, columns phải→trái, tier_split
   transcriptions/page_XXXX.json + .txt 10 dòng = câu lẻ ⧺ câu chẵn (14 âm)
@@ -437,7 +437,7 @@ def main(argv=None) -> int:
     ap.add_argument("--pages", default=None, help="vd 1,2,5-8 (số trang page_XXXX)")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--ocr", default="kim", choices=["kim", "none"])
-    ap.add_argument("--out", default="prepared_ihr")
+    ap.add_argument("--out", default="prepared")
     ap.add_argument("--contrast", default="none", choices=["none", "stretch", "otsu"])
     ap.add_argument("--scale", type=int, default=1,
                     help="phóng ảnh trang ×N trước khi ghi/gọi kim (đo: ×3 không hơn ×1)")

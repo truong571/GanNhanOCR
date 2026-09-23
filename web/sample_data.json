@@ -1,15 +1,16 @@
 {
-  "title": "GanNhanOCR: Hệ Thống Gán Nhãn Tự Động Dữ Liệu Văn Bản Hán Nôm Cổ",
+  "title": "Hệ thống hỗ trợ gán nhãn tự động văn bản Hán Nôm cổ (GanNhanOCR)",
+  "subtitle": "Báo cáo thực nghiệm & Trực quan hóa dữ liệu — Đề tài luận văn Thạc sĩ",
   "stats": {
-    "total_characters": 107786,
-    "total_gold": 80624,
-    "total_syllable": 26396,
-    "total_gold_text_only": 766,
-    "gold_rate_overall": 75.5,
+    "total_characters": 111525,
+    "total_gold": 88839,
+    "total_syllable": 21584,
+    "total_gold_text_only": 1102,
+    "gold_rate_overall": 80.6,
     "books_count": 4,
     "human_intervention": 0,
-    "automation_rate": "100%",
-    "code_invariants": "18/18 PASS"
+    "automation_rate": "Tự động theo quy tắc",
+    "code_invariants": "18/18 Đạt chuẩn"
   },
   "books": {
     "LucVanTien1883": {

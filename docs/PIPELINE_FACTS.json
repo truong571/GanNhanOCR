@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-23T06:48:23Z",
+ "generated_at": "2026-09-23T07:49:42Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "014a0733fa",
+ "git_head": "1c44d200a9",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 60,
@@ -16,8 +16,8 @@
   "config_books": 3,
   "pdf_readers": 2,
   "checkpoint_paths": 11,
-  "checkpoint_exists": 5,
-  "git_dirty_pipeline_core": 10,
+  "checkpoint_exists": 6,
+  "git_dirty_pipeline_core": 2,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
  },
@@ -3387,8 +3387,8 @@
      "page_exts": {},
      "has_quocngu_pages": false,
      "has_nom_pages": false,
-     "prepared_exists": false,
-     "n_ocr_cache": 0,
+     "prepared_exists": true,
+     "n_ocr_cache": 99,
      "n_qn_cache": 0
     },
     {
@@ -3441,8 +3441,8 @@
      "page_exts": {},
      "has_quocngu_pages": false,
      "has_nom_pages": false,
-     "prepared_exists": false,
-     "n_ocr_cache": 0,
+     "prepared_exists": true,
+     "n_ocr_cache": 161,
      "n_qn_cache": 0
     },
     {
@@ -3826,13 +3826,12 @@
   "checkpoints": {
    "how": "AST: ast.Constant/JoinedStr khớp /\\.(?:pt|pth|h5|ckpt|keras|onnx|safetensors)$/ trong pipeline/ core/; leo qua chuỗi BinOp '/' rồi ước lượng tĩnh (REPO, __file__, Path().parent, hằng module) -> đường dẫn; kiểm tồn tại + kích thước. f-string (fold{k}.pt) -> glob trong tuple/list Path cùng tệp (vd DEFAULT_MODEL_DIRS) và CKPT_DIR_HINTS. env_overrides: os.environ.get('*CKPT*').",
    "n_paths": 11,
-   "n_exists": 5,
+   "n_exists": 6,
    "missing": [
     "/a/b/detector_r34_v2_litho.pt",
     "md / 'fold0.pt'",
     "pipeline/align_engine/char_detector/detector_r34.best.pt",
     "pipeline/align_engine/nom_classifier/checkpoints/best.pt",
-    "train_crop/detector_r34_v2_litho.pt",
     "train_crop/khong_co_tep_nay.pt"
    ],
    "items": [
@@ -3983,8 +3982,8 @@
      "src": "'train_crop/detector_r34_v2_litho.pt'",
      "resolved": "train_crop/detector_r34_v2_litho.pt",
      "unresolved_expr": false,
-     "exists": false,
-     "size_mb": null
+     "exists": true,
+     "size_mb": 86.5
     },
     {
      "path": "train_crop/khong_co_tep_nay.pt",
@@ -4014,7 +4013,8 @@
    ],
    "known_dirs": {
     "train_crop": [
-     "detector_r34.best.pt"
+     "detector_r34.best.pt",
+     "detector_r34_v2_litho.pt"
     ],
     "nom-embed": [
      "best.pt",
@@ -4033,69 +4033,21 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "014a0733fa",
+   "head": "1c44d200a9",
    "branch": "main",
-   "n_dirty_pipeline_core": 10,
+   "n_dirty_pipeline_core": 2,
    "dirty_pipeline_core": [
-    {
-     "file": "pipeline/align_engine/align_production.py",
-     "status": "M",
-     "ins": 45,
-     "del": 11
-    },
-    {
-     "file": "pipeline/align_engine/book_layout.py",
-     "status": "M",
-     "ins": 111,
-     "del": 6
-    },
-    {
-     "file": "pipeline/align_engine/book_layout_selftest.py",
-     "status": "M",
-     "ins": 116,
-     "del": 4
-    },
-    {
-     "file": "pipeline/align_engine/build_dataset.py",
-     "status": "M",
-     "ins": 168,
-     "del": 7
-    },
-    {
-     "file": "pipeline/phase1_engine_selftest.py",
-     "status": "M",
-     "ins": 155,
-     "del": 0
-    },
-    {
-     "file": "pipeline/remediation/mechanism_gates.py",
-     "status": "M",
-     "ins": 66,
-     "del": 7
-    },
-    {
-     "file": "pipeline/remediation/mechanism_gates_selftest.py",
-     "status": "M",
-     "ins": 63,
-     "del": 0
-    },
-    {
-     "file": "pipeline/tools/enrich_crop_quality.py",
-     "status": "M",
-     "ins": 28,
-     "del": 4
-    },
     {
      "file": "pipeline/tools/ingest_ihr_book.py",
      "status": "M",
-     "ins": 24,
+     "ins": 3,
      "del": 3
     },
     {
      "file": "pipeline/tools/ingest_ihr_selftest.py",
      "status": "M",
-     "ins": 38,
-     "del": 2
+     "ins": 1,
+     "del": 1
     }
    ],
    "untracked_pipeline_core": [],

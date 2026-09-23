@@ -1,3 +1,5 @@
+# 🔴 2026-09-23 (vòng 9): thư mục `prepared_b1_boost/` ĐÃ XOÁ (gộp prepared/). Config này chỉ còn là HỒ SƠ
+# của ablation; muốn chạy lại phải ingest lại: `ingest_lithograph_book --out prepared_b1_boost ... --dict-boost`.
 # ⚠️ CHỈ ĐỂ TÁI LẬP ABLATION (docs/CHAY_KVK1884_B1_2026-09-22.md §5) — KHÔNG DÙNG: --dict-boost ghi đè ocr_char bằng chữ 1871
 # nên khớp 1871 = 100 % theo định nghĩa (tự khẳng định); đường chính thức = config/pipeline_KimVanKieu1884_b1.yaml.
 # B1' (2026-09-22, docs/CHAY_KVK1884_B1_2026-09-22.md): bản sao config/pipeline_KimVanKieu1884.yaml CHỈ đổi

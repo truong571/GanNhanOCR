@@ -755,7 +755,7 @@ def main(argv=None) -> int:
     ap.add_argument("--labels", default=None,
                     help="(B1') ghi đè ĐƯỜNG DẪN labels_final.csv của sách duy nhất trong --books (không đổi mặc định CROSS_BOOKS)")
     ap.add_argument("--trans", default=None,
-                    help="(B1') ghi đè thư mục transcriptions của sách duy nhất trong --books (vd prepared_b1/<book>/transcriptions)")
+                    help="(B1') ghi đè thư mục transcriptions của sách duy nhất trong --books (vd prepared/<book>/transcriptions)")
     a = ap.parse_args(argv)
     a.books = [b for b in a.books.split(",") if b]
     if a.labels or a.trans:

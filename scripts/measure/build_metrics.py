@@ -8,7 +8,7 @@ cho từng ô theo (page, column, syl_idx < len_odd → câu lục, else câu b�
 Chạy:
   .venv/bin/python scripts/measure/build_metrics.py --book KimVanKieu1884 \
       dataset_out_KimVanKieu1884:prepared/KimVanKieu1884/transcriptions \
-      dataset_out_KimVanKieu1884_b1:prepared_b1/KimVanKieu1884/transcriptions [--out measure_out/.../build_metrics.json]
+      dataset_out_KimVanKieu1884_b1:prepared/KimVanKieu1884/transcriptions [--out measure_out/.../build_metrics.json]
 Mỗi tham số vị trí = <dataset_out dir>[:<transcriptions dir>]. In JSON; --out ghi tệp. Chỉ đọc.
 """
 from __future__ import annotations

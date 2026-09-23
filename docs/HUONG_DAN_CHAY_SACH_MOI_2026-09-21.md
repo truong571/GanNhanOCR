@@ -1,5 +1,17 @@
 # Hướng dẫn chạy sách mới (LVT1883 / KVK1884 thạch bản; Chrestomathie1872 văn xuôi) — 2026-09-21, cập nhật vòng 2 22/09
 
+> 🔴 **CẬP NHẬT VÒNG 9 (23/09/2026) — hai thay đổi làm SAI mọi đường dẫn viết bên dưới**
+> 1. **Chỉ còn `prepared/`.** `prepared_b1/`, `prepared_ihr/` đã dời vào `prepared/<Book>/`;
+>    `prepared_b1_080/` + `prepared_b1_boost/` đã xoá. Mọi `data_dir` / `dataset_out` trong 6 config
+>    nay là `prepared/<Book>/dataset_out` (bỏ hậu tố `_b1` / `_ihr`).
+> 2. **Detector v2 khai THEO SÁCH**: `LucVanTien1883`, `KimVanKieu1884`, `TruyenKieu1872` dùng
+>    `detector_ckpt: train_crop/detector_r34_v2_litho.pt` + `detector_resize: area`;
+>    `Chrestomathie1872` và `LucVanTien1916` **giữ v1**; STT không đụng.
+>
+> Số liệu + lý do từng sách: `docs/VONG9_DETECTOR_V2_APDUNG_2026-09-23.md`.
+> Kế hoạch commit: `docs/KE_HOACH_COMMIT_VONG9_2026-09-23.md`.
+
+
 Tổng hợp NV1–NV5 (21/09), NV-B/NV-D (22/09 sáng) và **vòng 2** 22/09: (A) cổng cơ chế B4' + tầng `GOLD_text_only`; (B) B1' KVK
 (QN đầu vào = phiên âm 1871, `verses_ref_fix.py`); (C) `layout: prose` + adapter văn xuôi (Chrestomathie1872). Chi tiết từng lần chạy:
 `docs/CHAY_LVT1883_2026-09-21.md` §6, `docs/CHAY_KVK1884_2026-09-21.md` (không B1'), `docs/CHAY_KVK1884_B1_2026-09-22.md` (**chính thức**),

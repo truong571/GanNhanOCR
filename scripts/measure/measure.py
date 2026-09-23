@@ -267,7 +267,7 @@ def plan_steps(books: list[str], steps: list[str], a) -> list[dict]:
                 cli = [PY, str(HERE / "ihr_layout.py"), "--book", b, "--out", str(out), *lim,
                        "--kim-pages", str(a.ihr_kim_pages)]
                 plan.append(dict(step="ihr_layout", book=b, out=out, cli=cli, summary=out / "summary.json"))
-            if "ihr_endtoend" in steps and (REPO / "prepared_ihr" / b / "dataset_out" / "labels_gated.csv").exists():
+            if "ihr_endtoend" in steps and (REPO / "prepared" / b / "dataset_out" / "labels_gated.csv").exists():
                 out = root / b / "ihr_endtoend"
                 cli = [PY, str(HERE / "ihr_endtoend_eval.py"), "--book", b, "--out", str(out)]
                 plan.append(dict(step="ihr_endtoend", book=b, out=out, cli=cli, summary=out / "summary.json"))

@@ -54,7 +54,7 @@ BOOKS = {
         prod_contrast="stretch", layout="lithograph"),
     "KimVanKieu1884": dict(
         prepared=REPO / "prepared/KimVanKieu1884",
-        dataset=(REPO / "prepared_b1/KimVanKieu1884/dataset_out_b1" if (REPO / "prepared_b1/KimVanKieu1884/dataset_out_b1").exists() else (REPO / "prepared/KimVanKieu1884/dataset_out" if (REPO / "prepared/KimVanKieu1884/dataset_out").exists() else REPO / "dataset_out_KimVanKieu1884_b1")),
+        dataset=(REPO / "prepared/KimVanKieu1884/dataset_out" if (REPO / "prepared/KimVanKieu1884/dataset_out").exists() else (REPO / "prepared/KimVanKieu1884/dataset_out" if (REPO / "prepared/KimVanKieu1884/dataset_out").exists() else REPO / "dataset_out_KimVanKieu1884_b1")),
         src_dir=REPO / "data/KimVanKieu1884/nom_pages",
         cross=REPO / "measure_out/auto_precision/cross/KimVanKieu1884/cells.csv",
         prod_contrast="otsu", layout="lithograph"),

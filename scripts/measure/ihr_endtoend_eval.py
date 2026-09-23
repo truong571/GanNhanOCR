@@ -7,7 +7,7 @@ ghép theo (trang, cột, VỊ TRÍ CHỮ). Mọi phép đo "precision" khác tr
 kim ∈ R(âm)…). Adapter ingest KHÔNG đọc `nom_text`, nên phép đo này KHÔNG vòng tròn.
 
 Ghép khoá:
-    labels.csv  page = page_XXXX      -> page_id gốc qua prepared_ihr/<book>/manifest.json
+    labels.csv  page = page_XXXX      -> page_id gốc qua prepared/<book>/manifest.json
     labels.csv  column = 1..10 (PHẢI→TRÁI) -> manifest.tsv col_index = column − 1
     labels.csv  syl_idx = 0..13       -> part = 1 (0..5, câu lục) | 2 (6..13, câu bát); vị trí trong câu
 So sánh `label` (chữ pipeline gán) với chữ GT cùng vị trí. Phân loại lỗi:
@@ -20,7 +20,7 @@ So sánh `label` (chữ pipeline gán) với chữ GT cùng vị trí. Phân lo�
 Chạy:
     .venv/bin/python scripts/measure/ihr_endtoend_eval.py --book all
     .venv/bin/python scripts/measure/ihr_endtoend_eval.py --book LucVanTien1916 \\
-        --labels prepared_ihr/LucVanTien1916/dataset_out/labels_gated.csv
+        --labels prepared/LucVanTien1916/dataset_out/labels_gated.csv
     .venv/bin/python scripts/measure/ihr_endtoend_eval.py --selftest
 Đầu ra: measure_out/<book>/ihr_endtoend/{summary.json, cells.csv, errors.csv}
 """
@@ -38,10 +38,10 @@ if str(REPO) not in sys.path:
     sys.path.insert(0, str(REPO))
 
 BOOKS = {
-    "LucVanTien1916": dict(prepared="prepared_ihr/LucVanTien1916",
-                           labels="prepared_ihr/LucVanTien1916/dataset_out/labels_gated.csv"),
-    "TruyenKieu1872": dict(prepared="prepared_ihr/TruyenKieu1872",
-                           labels="prepared_ihr/TruyenKieu1872/dataset_out/labels_gated.csv"),
+    "LucVanTien1916": dict(prepared="prepared/LucVanTien1916",
+                           labels="prepared/LucVanTien1916/dataset_out/labels_gated.csv"),
+    "TruyenKieu1872": dict(prepared="prepared/TruyenKieu1872",
+                           labels="prepared/TruyenKieu1872/dataset_out/labels_gated.csv"),
 }
 TIER_RULE = (6, 8)
 N_PER_COL = sum(TIER_RULE)
@@ -80,7 +80,7 @@ def load_gt(book: str) -> dict[tuple[str, int, int], str]:
 
 
 def load_page_map(prepared: Path) -> dict[str, str]:
-    """prepared_ihr/<book>/manifest.json → {page_XXXX: page_id gốc}."""
+    """prepared/<book>/manifest.json → {page_XXXX: page_id gốc}."""
     m = json.loads((prepared / "manifest.json").read_text(encoding="utf-8"))
     return {p["page_name"]: p["page_id"] for p in m.get("pages", [])}
 

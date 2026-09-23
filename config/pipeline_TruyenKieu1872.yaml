@@ -21,12 +21,13 @@ books:
     det_xmargin: 0.05
     det_thr: 0.15
     box_decoder: pitch
+    detector_ckpt: train_crop/detector_r34_v2_litho.pt
     # kim `lang_type = 2` (Nôm). ĐO TRÊN CHÍNH BỘ NÀY, có nhãn người nên là độ đúng THẬT, không
     # phải chỉ số thay thế: kim ∈ R(âm) 98,8 %, kim == chữ NGƯỜI GÁN 98,2 % ở ×1 (×3: 98,5 %) (10 trang, 100 cột).
     kim_lang_type: 2
     # DP chữ↔âm riêng từng tầng 6/8 (ranh giới câu lục/câu bát thành ràng buộc cứng).
     tier_dp: true
-    detector_resize: linear
+    detector_resize: area
     # 2026-09-23 (vòng 7): NGUỒN ĐIỂM ẢNH của crop GIAO NỘP. `processed` (mặc định, STT không đổi byte)
     # cắt từ prepared/<Book>/pages/*.png — ảnh adapter đã xám hoá + kéo nền (stretch/otsu) nên crop mất
     # nền giấy của bản quét. `original` cắt ĐÚNG CÙNG khung hình đó từ ảnh quét gốc trong data/<Book>/:
@@ -43,13 +44,13 @@ run:
   # --scale 1: đã đo kim ×1 vs ×3 trên chính bộ này, chênh lệch trong nhiễu ⇒ không phóng ảnh
   # (×3 chỉ làm crop xuất ra to hơn, không đổi độ đúng nhãn). --qn-count-rule: luật 6/8.
   ingest_args: "--qn-count-rule"
-  dataset_out: prepared_ihr/TruyenKieu1872/dataset_out   # giữ mọi thứ dưới prepared_ihr/, không tạo thư mục ở gốc repo
+  dataset_out: prepared/TruyenKieu1872/dataset_out   # giữ mọi thứ dưới prepared/, không tạo thư mục ở gốc repo
   n_columns: 10
   cross: false                  # KHÔNG có dị bản số hoá riêng; độ đúng đo bằng NHÃN NGƯỜI (ihr_endtoend_eval)
   measure_steps: ihr_layout
 
 paths:
-  data_dir: prepared_ihr
+  data_dir: prepared
   output_dir: dataset/TruyenKieu1872
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv

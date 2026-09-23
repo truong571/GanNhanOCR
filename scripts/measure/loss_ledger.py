@@ -54,7 +54,7 @@ BOOKS: dict[str, dict] = {
         qn_ocr="measure_out/LucVanTien1883/qn_ocr/summary.json"),
     "KimVanKieu1884": dict(
         out="dataset_out_KimVanKieu1884_b1", ds="dataset_KimVanKieu1884",
-        pages="prepared/KimVanKieu1884", trans="prepared_b1/KimVanKieu1884/transcriptions",
+        pages="prepared/KimVanKieu1884", trans="prepared/KimVanKieu1884/transcriptions",
         n_pages_src=163, verses=3256, chars_theo=3256 // 2 * 14,
         theo_src="3.256 câu lục-bát = 1.628 cặp × 14 chữ (docs/BAO_CAO_TONG_HOP §1; QN chỉ có 3.251 dòng)",
         cross="measure_out/auto_precision_b1/cross/KimVanKieu1884/cells.csv",
@@ -144,7 +144,7 @@ def step_ledger(book: str, cfg: dict, out: Path, R, allnom) -> dict:
         ds_dir = REPO / cfg["ds"]
     o = REPO / "prepared" / book / "dataset_out"
     if not o.exists():
-        o = REPO / "prepared_b1" / book / "dataset_out_b1"
+        o = REPO / "prepared" / book / "dataset_out"
     if not o.exists():
         o = REPO / cfg["out"]
     lab_p = o / "labels_gated.csv"
@@ -360,7 +360,7 @@ def step_qn(book: str, cfg: dict, R) -> dict:
     cols = read_csv(ds_dir / "columns.csv")
     out_dir = REPO / "prepared" / book / "dataset_out"
     if not out_dir.exists():
-        out_dir = REPO / "prepared_b1" / book / "dataset_out_b1"
+        out_dir = REPO / "prepared" / book / "dataset_out"
     if not out_dir.exists():
         out_dir = REPO / cfg["out"]
     p = out_dir / "labels_gated.csv"

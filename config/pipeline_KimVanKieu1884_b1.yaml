@@ -1,5 +1,5 @@
 # B1' (2026-09-22, docs/CHAY_KVK1884_B1_2026-09-22.md) — ĐƯỜNG CHÍNH THỨC KVK1884 (chốt vòng 2 22/09): bản sao
-# config/pipeline_KimVanKieu1884.yaml CHỈ đổi paths.data_dir → prepared_b1 (ingest_lithograph_book --verses
+# config/pipeline_KimVanKieu1884.yaml CHỈ đổi paths.data_dir → prepared (ingest_lithograph_book --verses
 # measure_out/KimVanKieu1884/qn_ref_fix/verses_b1.tsv, KHÔNG --dict-boost) và paths.output_dir. Tham số sách giữ nguyên.
 # Config RIÊNG KimVanKieu1884 (bản sao pipeline_LucVanTien1883.yaml 2026-09-21, chỉ đổi tên sách và paths.output_dir)
 # GanNhanOCR Pipeline Configuration
@@ -47,6 +47,7 @@ books:
     # extra/100 ô 2,3 → 0,4, "cắt vào thân chữ" 3,8 → 2,6 %. Lý do/cơ chế: xem config LVT1883.
     # Ablation dict-boost (pipeline_KimVanKieu1884_b1_boost.yaml) GIỮ legacy để so sánh cũ.
     box_decoder: pitch
+    detector_ckpt: train_crop/detector_r34_v2_litho.pt
     # 2026-09-23 (vòng 5, docs/CHOT_KENH_OCR_VA_QUY_HOACH_GAN_2026-09-23.md §1/§6 #1): kênh OCR Hán-Nôm
     # (kim/kinhhannom) vẫn đang được gọi với `lang_type = 1` = HÁN cho sách chữ NÔM. Đo 5 trang/sách, hai tiêu
     # chí không vòng tròn, CI Wilson KHÔNG chồng nhau: "kim ∈ tập chữ của âm QN" 72,5 -> 92,7 %, "kim == chữ dị bản
@@ -64,7 +65,7 @@ books:
     # text_only 510 → 201, ảnh export 17.752 → 17.999; bleed trên ảnh export 10,5 = 10,5 %; blank/truncated +40/+14 ô
     # (đều → REVIEW bởi cổng (c)); khớp dị bản sau (a)(b)(c) 81,3 → 81,1 % (trong CI). KVK là sách duy nhất không có chỉ
     # số nào giảm, nhưng quyết định `_area` lấy chung 3 sách (LVT bleed tăng) → giữ `linear`; đổi `area` để tái lập _area.
-    detector_resize: linear
+    detector_resize: area
     # 2026-09-23 (vòng 7): NGUỒN ĐIỂM ẢNH của crop GIAO NỘP. `processed` (mặc định, STT không đổi byte)
     # cắt từ prepared/<Book>/pages/*.png — ảnh adapter đã xám hoá + kéo nền (stretch/otsu) nên crop mất
     # nền giấy của bản quét. `original` cắt ĐÚNG CÙNG khung hình đó từ ảnh quét gốc trong data/<Book>/:
@@ -95,12 +96,12 @@ run:
     ref: data/TruyenKieuPhongTinhCoLuc/thamchieu_kieu_1871_LieuVanDuong_phienam.json
     ref_name: nf1871
     fuzzy_min: 0.9
-  dataset_out: prepared_b1/KimVanKieu1884/dataset_out_b1  # lưu trung gian trong prepared_b1, không tạo thư mục ở root
+  dataset_out: prepared/KimVanKieu1884/dataset_out  # lưu trung gian trong prepared, không tạo thư mục ở root
   n_columns: 10
   cross: true                   # auto_precision cross (CÒN 1 tham chiếu: 1872 DMT; 1871 LVĐ đã gỡ cùng PTCL) -> cổng (d) + B6
 
 paths:
-  data_dir: prepared_b1
+  data_dir: prepared
   output_dir: dataset/KimVanKieu1884   # B1' chính thức: export vào dataset/KimVanKieu1884
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv

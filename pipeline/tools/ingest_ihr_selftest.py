@@ -1,7 +1,7 @@
 """Selftest cho pipeline/tools/ingest_ihr_book.py (adapter 2 bộ IHR-NomDB có nhãn người).
 
 Chạy: .venv/bin/python -m pipeline.tools.ingest_ihr_selftest
-Không gọi API, không ghi vào data/, không cần prepared_ihr/ có sẵn.
+Không gọi API, không ghi vào data/, không cần prepared/ có sẵn.
 """
 from __future__ import annotations
 

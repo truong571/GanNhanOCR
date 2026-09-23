@@ -106,6 +106,11 @@ ANCHOR_MIN_PAGES = 3   # trên >= ngần này TRANG khác nhau (chặn 1 trang h
 L3_MIN_ATTEST = 1      # L3 chỉ đòi cặp (chữ-cầu, âm) ĐÃ TỪNG được chứng thực GOLD-trực-tiếp
 
 # rule id do bộ vá này sinh ra — gom một chỗ để bảng số liệu/báo cáo bắt được hết
+# (2026-09-24) cột TRUY VẾT của tầng L3 `qn_charfix` (books[].qn_charfix = true):
+#   "" (không sửa) | "charfix" (sửa lỗi ký tự OCR) | "tone_place" (tầng dời dấu có sẵn).
+# Chỉ xuất hiện trong labels.csv của sách đã bật cờ -> STT giữ nguyên bộ cột cũ.
+COL_QN_FIX_KIND = "qn_fix_kind"
+
 RULE_L1 = "s1_inter_s2_direct_am_sua_dau"
 RULE_L3 = "s1_inter_s2_similar_cot_lech"
 
@@ -856,6 +861,9 @@ def _record(book, page, page_png, idx, p, dec, s3, seg_backend) -> dict:
         # (2026-09-23) cờ cột "số đếm âm QN không sửa được" — CHỈ có khi sách là lithograph
         # (luật 6/8) hoặc prose (dp_ratio); STT không có khoá này -> labels.csv không có cột.
         **({COL_QN_UNFIXED: int(p[COL_QN_UNFIXED])} if COL_QN_UNFIXED in p else {}),
+        # (2026-09-24) L3 sửa lỗi ký tự OCR quốc ngữ — "" | charfix | tone_place. CHỈ có khi
+        # books[].qn_charfix = true; cột TRUY VẾT, không tham gia quyết định tier.
+        **({COL_QN_FIX_KIND: p[COL_QN_FIX_KIND]} if COL_QN_FIX_KIND in p else {}),
         # B-2 (--visual-emission): P(âm ghép | crop hộp OCR thô) out-of-fold; '' khi tắt cờ,
         # âm ∉ lớp hoặc hộp không cắt được. CHỈ ĐO — không quyết tier.
         "p_visual_syl": p.get("p_visual_syl", ""), "visual_fold": p.get("visual_fold", ""),
@@ -1458,6 +1466,9 @@ def main():
                         "n_det": cs.get("n_det", ""), "count_source": count_source,
                         "box_source": box_source[i] if box_source else "",
                         **({COL_QN_UNFIXED: cs[COL_QN_UNFIXED]} if COL_QN_UNFIXED in cs else {}),
+                        **({COL_QN_FIX_KIND: (cs["qn_fix_kind"][j]
+                                              if j < len(cs["qn_fix_kind"]) else "")}
+                           if "qn_fix_kind" in cs else {}),
                         # B-2: '' khi tắt cờ / âm ∉ lớp / hộp không cắt được
                         **({"p_visual_syl": (round(float(math.exp(logP[i, j])), 4)
                                              if vinfo["syl_in_classes"][j] and vinfo["argmax"][i] != "" else ""),
@@ -1826,6 +1837,7 @@ def main():
                 "box_source": r.get("box_source", ""),
                 # (2026-09-23) cờ cột đếm âm QN hỏng — chỉ sách lithograph/prose mới có khoá
                 **({COL_QN_UNFIXED: r[COL_QN_UNFIXED]} if COL_QN_UNFIXED in r else {}),
+                **({COL_QN_FIX_KIND: r[COL_QN_FIX_KIND]} if COL_QN_FIX_KIND in r else {}),
                 # A-7 (PASS 1c): tier_v3 + chẩn đoán + cờ QĐ-01 (dày 0/1)
                 **{k: r.get(k, v) for k, v in FIELDS_1C.items()},
                 # A-8 (N5i): mã chuẩn theo bảng dị thể người ký; = label khi chưa ký
@@ -1929,6 +1941,9 @@ def main():
               # đặt TRƯỚC khối FIELDS_1C để FIELDS_1C vẫn ở cuối (selftest A-6/A-7 bám chuỗi)
               "label_canonical",
               *FIELDS_1C.keys()]
+    if any(COL_QN_FIX_KIND in r for r in labels):
+        # (2026-09-24) cột truy vết L3 — chỉ sách khai books[].qn_charfix mới có.
+        fields += [COL_QN_FIX_KIND]
     if any(COL_QN_UNFIXED in r for r in labels):
         # (2026-09-23) cột cờ CHỈ xuất hiện với sách lithograph/prose (align_production ghi
         # khoá này); sách STT không có ô nào mang khoá -> labels.csv giữ nguyên bộ cột cũ.

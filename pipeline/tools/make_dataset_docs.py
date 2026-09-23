@@ -127,7 +127,11 @@ NGHIA_TRACE = {
     "nom_idx": "thứ tự chữ trong cột OCR Nôm (khoá bền cùng `book,page,column`)",
     "syl_idx": "thứ tự âm trong cột Quốc ngữ",
     "syllable_ocr": "âm Quốc ngữ NGUYÊN VĂN VietOCR (lower) — \"ghi đè bản in\" đo trên cột này",
-    "syllable_raw": "âm sau `normalize_column` (vá dấu), TRƯỚC mọi sửa L1",
+    "syllable_raw": "âm sau `normalize_column` (vá dấu + L3 sửa lỗi ký tự OCR), TRƯỚC mọi sửa L1",
+    "qn_fix_kind": ("bước chuẩn hoá đã đụng vào âm này trước khi căn chỉnh: rỗng = không đụng · "
+                    "`charfix` = sửa lỗi ký tự OCR quốc ngữ (L3, `config/lexicon/qn_charfix.json`, "
+                    "chỉ âm NGOÀI từ điển + đúng MỘT ứng viên) · `tone_place` = tầng dời dấu có sẵn. "
+                    "Chỉ có ở bộ của sách khai `qn_charfix: true`"),
     "tier_v3": "tầng theo luật v3 (`CHAR_A`/`CHAR_B`/`SYL`/…) trước khi ánh xạ sang `tier`",
     "tier_goc": "tier trước khi bị hạ (rỗng nếu chưa từng hạ)",
     "rule_goc": "luật trước khi bị hạ (rỗng nếu chưa từng hạ)",

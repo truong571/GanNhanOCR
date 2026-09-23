@@ -14,8 +14,14 @@ import pandas as pd
 __all__ = ["char_labeled", "class_names", "PARQUET_COLUMNS", "build_hf_dataset",
            "write_imagefolder_metadata"]
 
+# `syllable_raw`/`syllable_ocr`/`qn_fix_kind`: âm QUỐC NGỮ của bản in trước và sau các bước
+# chuẩn hoá (2026-09-24). `syllable` đã là âm SAU chuẩn hoá, nên nếu chỉ xuất nó thì bộ giao
+# nộp mất âm bản in và phép chuẩn hoá không hoàn nguyên được. `build_hf_dataset`/
+# `write_imagefolder_metadata` chỉ lấy các cột CÓ MẶT trong khung, nên bộ nào không có ba
+# cột này (STT) vẫn xuất như cũ.
 PARQUET_COLUMNS = ("image", "label", "tier", "rule", "book", "page", "column",
-                   "syllable", "unicode", "s3_cosine", "split", "bbox")
+                   "syllable", "syllable_ocr", "syllable_raw", "qn_fix_kind",
+                   "unicode", "s3_cosine", "split", "bbox")
 
 
 def char_labeled(df: pd.DataFrame) -> pd.DataFrame:

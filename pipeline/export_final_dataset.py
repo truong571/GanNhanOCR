@@ -41,7 +41,7 @@ USABLE_TIERS = IMAGE_TIERS | {TIER_TEXT_ONLY}
 GIAO_NOP = ["image", "book", "page", "column", "ocr_char", "syllable", "label",
             "unicode", "tier", "rule", "bbox", "image_md5"]
 # Sidecar labels_trace.csv: chỉ những cột có mặt trong nguồn được ghi (không bịa cột rỗng).
-TRACE = ["image", "nom_idx", "syl_idx", "syllable_ocr", "syllable_raw", "tier_v3",
+TRACE = ["image", "nom_idx", "syl_idx", "syllable_ocr", "syllable_raw", "qn_fix_kind", "tier_v3",
          "tier_goc", "rule_goc", "p_register", "dict_support", "context_evidence",
          "l1_support", "l1_tie", "flank_gold", "box_source", "qd01_locked", "qd01_excluded",
          "label_canonical", "crop_quality_flag", "stray_ink", "border_ink", "ink_pct",

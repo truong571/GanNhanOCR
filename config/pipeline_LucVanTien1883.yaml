@@ -69,6 +69,14 @@ books:
     # và "cắt thân chữ" pitch 9,5 → 10,6 % → theo luật "không chỉ số nào giảm" CHƯA lấy làm bản chốt; giữ `linear`.
     # Đổi một chữ `area` là tái lập bản _area. Detector v2 (Kaggle) so với mốc v1+area, không so với linear.
     detector_resize: linear
+    # 2026-09-23 (vòng 7): NGUỒN ĐIỂM ẢNH của crop GIAO NỘP. `processed` (mặc định, STT không đổi byte)
+    # cắt từ prepared/<Book>/pages/*.png — ảnh adapter đã xám hoá + kéo nền (stretch/otsu) nên crop mất
+    # nền giấy của bản quét. `original` cắt ĐÚNG CÙNG khung hình đó từ ảnh quét gốc trong data/<Book>/:
+    # hình học (pad, seam carve, tighten_box) VẪN tính trên ảnh đã xử lý rồi áp nguyên xi, nên
+    # crop_w/crop_h/ink_pct/seg_flag không đổi một chữ số; chỉ điểm ảnh (và image_md5) đổi. Bản đã xử lý
+    # vẫn được ghi song song ở $out/crops_bin/ cho mã đọc crop nhị phân (enrich_crop_quality tự ưu tiên
+    # thư mục này nên crop_quality_flag/stray_ink/border_ink giữ nguyên). crops_bin/ KHÔNG giao nộp.
+    crop_source: original
     reocr: false
 
 # 2026-09-22: khối `run:` CHỈ run_pipeline.sh --book đọc (book_profile); engine/adapter/step0/mechanism_gates KHÔNG đọc.

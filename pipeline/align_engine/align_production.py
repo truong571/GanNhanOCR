@@ -37,7 +37,9 @@ from pipeline.align_engine.consensus import decide_label
 from pipeline.align_engine.bbox_fix import frame_offset, correct_columns
 from pipeline.align_engine.book_layout import (BookLayout, DEFAULT_LAYOUT,
                                                 lithograph_gate, prose_gate, expected_qn_counts,
-                                                expected_tier_counts, tier_rule_for)
+                                                expected_tier_counts, tier_rule_for,
+                                                qn_count_unfixed_columns, qn_count_flag_on,
+                                                COL_QN_COUNT_UNFIXED)
 
 
 def _detect(page_name: str, data_dir: Path, qn_dict_set: set,
@@ -116,8 +118,11 @@ def _detect(page_name: str, data_dir: Path, qn_dict_set: set,
         # đúng num_syllables ghi trong transcriptions/<page>.json. Không partial_recovery.
         # projection_fallback LUÔN trả đúng n_expected cột (ép chiếu ảnh) nên đếm cột là
         # tautology ở nhánh đó -> thạch bản đòi phương pháp hybrid* (SPEC §7: >= 95 % trang).
+        # (2026-09-23) kỳ vọng số âm/cột lấy LUẬT 6/8 khi sách có tier_rule, không lấy
+        # `num_syllables` của JSON (cột 13/15 âm từng đi lọt cổng) — book_layout.lithograph_gate.
         g_ok, gate = lithograph_gate(cols, qn_lines, lay,
-                                     expected_qn_counts(data_dir, page_name))
+                                     expected_qn_counts(data_dir, page_name),
+                                     tier_rule=tier_rule_for(lay))
         gate["col_method"] = col_method
         # "hybrid_no_image" = không nhị phân hoá được ảnh (cột chỉ từ cache OCR): không
         # phải kết quả dò trên ảnh -> không qua cổng (crop cũng không dựng được).
@@ -623,19 +628,30 @@ def assign_boxes(G, ops, n_ocr, n_qn, cluster=None, cb=None, det=None, guard=Non
     return boxes, src, "conflict"
 
 
-def pitch_target_count(n_ocr: int, n_qn: int, n_det: int) -> tuple[int, str]:
+def pitch_target_count(n_ocr: int, n_qn: int, n_det: int,
+                       n_rule: int | None = None) -> tuple[int, str]:
     """(box_decoder=pitch) Số ô N để giải mã + cách gán:
+      n_rule (luật 6/8) và n_qn != n_rule == n_ocr -> N = n_rule, gán theo nom_idx ('pitch_rule')
       (n_ocr == n_qn) hoặc (n_det != n_ocr)  -> N = n_qn, gán theo syl_idx ('pitch')
       n_det == n_ocr != n_qn                  -> N = n_ocr, gán theo nom_idx ('pitch_ocr')
     Vì: khi kim và detector cùng đếm n_ocr mà QN lệch (OCR QN rụng/thừa âm — đo build --limit 10:
     100 % cột equal_ocr), ép n_qn ô lên n_ocr chữ làm mọi hộp sau khe lệch một chữ. Đây chính là
-    nhánh (b) của assign_boxes, giữ nguyên nghĩa."""
+    nhánh (b) của assign_boxes, giữ nguyên nghĩa.
+
+    n_rule (2026-09-23, docs/RA_SOAT_CAN_CHINH_2026-09-23.md §3.1 "còn dính" + §4): luật thể thơ
+    lục bát 6⧺8 = 14 âm/cột là BẤT BIẾN CỦA BẢN IN, còn `n_qn` là số tesseract đếm. Trên 4 bộ lục
+    bát, 100 % cột có `n_qn != 14` lại được kim đọc ĐÚNG 14 chữ (27 cột LVT1883, 26 KVK1884), mà
+    nhánh `pitch_ocr` cũ chỉ bật khi `n_det == n_ocr` nên KHÔNG cứu được chúng: hộp vẫn bị ép về
+    n_qn ô cho 14 chữ. Khi có luật và kim đọc đúng luật thì lấy LUẬT làm số ô. Chỉ bật cho
+    layout=lithograph (`tier_rule_for`); STT/prose truyền n_rule=None -> hành vi cũ nguyên vẹn."""
+    if n_rule and n_qn != n_rule and n_ocr == n_rule:
+        return n_rule, "pitch_rule"
     if n_ocr == n_qn or n_det != n_ocr:
         return n_qn, "pitch"
     return n_ocr, "pitch_ocr"
 
 
-def assign_boxes_pitch(G, G_src, ops, n_ocr, n_qn):
+def assign_boxes_pitch(G, G_src, ops, n_ocr, n_qn, mode: str = ""):
     """(box_decoder=pitch, 2026-09-22) Gán hộp đã GIẢI MÃ THEO BƯỚC (pitch_decode.decode_column)
     cho từng chữ OCR. len(G) == n_qn: theo syl_idx của match (nhánh (a) của assign_boxes),
     count_source 'pitch'; len(G) == n_ocr != n_qn: theo nom_idx (nhánh (b)), count_source
@@ -655,7 +671,10 @@ def assign_boxes_pitch(G, G_src, ops, n_ocr, n_qn):
                     src[i] = G_src[j]
         return boxes, src, "pitch"
     if len(G) == n_ocr:
-        return [[int(v) for v in g[:4]] for g in G], list(G_src), "pitch_ocr"
+        # mode='pitch_rule' (2026-09-23): cùng phép gán theo nom_idx, nhưng N đến từ LUẬT 6/8
+        # chứ không từ `n_det == n_ocr` — ghi count_source riêng để đếm/soát được.
+        return ([[int(v) for v in g[:4]] for g in G], list(G_src),
+                "pitch_rule" if mode == "pitch_rule" else "pitch_ocr")
     return None, None, ""
 
 
@@ -687,7 +706,7 @@ def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
                     encoder=None, page_bgr=None, det=None, page_boxes=None,
                     box_rule: str = "syl_index", legacy_page_boxes=None,
                     box_decoder: str = "legacy", page_boxes_low=None, tier_n=None,
-                    tier_dp: bool = False
+                    tier_dp: bool = False, tier_rule=None
                     ) -> tuple[list[dict], int, list[dict], list | None, dict]:
     """Như `_pair_new` nhưng trả thêm (ops lượt 1, reseg_boxes, box_info) — trạng thái
     cột cho PASS 1b (flow N3g): build_dataset chạy DP lại với `cost_fn` neo ngữ liệu
@@ -726,11 +745,15 @@ def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
             # (2026-09-22) giải mã theo bước cột: ứng viên ≥ 0,05 + ô ảo chiếu mực -> đúng N hộp
             # (N = n_qn, hoặc n_ocr khi detector đồng ý với kim mà QN lệch — pitch_target_count)
             from pipeline.align_engine.char_detector import pitch_decode as _pd
-            N_pitch, _mode = pitch_target_count(n_ocr, n_qn, n_det)
+            N_pitch, _mode = pitch_target_count(n_ocr, n_qn, n_det,
+                                                n_rule=(sum(tier_rule) if tier_rule else None))
+            # số âm mỗi tầng cho bộ giải mã: theo QN khi N == n_qn; theo LUẬT khi N đến từ luật
+            _tn = tier_n if N_pitch == n_qn else (list(tier_rule) if _mode == "pitch_rule" else None)
             Gp, G_src, _pinfo = _pd.decode_column(cluster, page_boxes_low, det._gray, N_pitch,
                                                   DETECTOR_THR, DETECTOR_XMARGIN,
-                                                  tier_n=(tier_n if N_pitch == n_qn else None))
-            reseg_boxes, box_source, count_source = assign_boxes_pitch(Gp, G_src, ops, n_ocr, n_qn)
+                                                  tier_n=_tn)
+            reseg_boxes, box_source, count_source = assign_boxes_pitch(Gp, G_src, ops, n_ocr, n_qn,
+                                                                       mode=_mode)
             if reseg_boxes is not None:
                 G = [[int(b[0]), int(b[1]), int(b[2]), int(b[3]), float(b[4])] for b in Gp]
                 box_rule = "pitch"               # PASS 1b gán lại bằng assign_boxes_pitch
@@ -836,6 +859,13 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
     page_boxes_low = None          # box_decoder=pitch: hộp ở ngưỡng ứng viên 0,05
     tier_n_by_line: dict = {}      # box_decoder=pitch: số âm QN mỗi tầng theo cột (transcriptions)
     tier_rule = tier_rule_for(layout)          # (2026-09-23) lithograph 14 âm -> (6, 8), else None
+    # (2026-09-23) cờ cột "số đếm âm QN không sửa được" — book_layout.qn_count_unfixed_columns.
+    # STT: tier_rule None + không prose -> qn_flag_on False -> KHÔNG ô nào mang khoá này,
+    # labels.csv không có cột -> byte-identical.
+    qn_flag_on = qn_count_flag_on(layout, tier_rule)
+    qn_unfixed = (qn_count_unfixed_columns(qn_lines, layout, tier_rule=tier_rule,
+                                           data_dir=data_dir, page_name=page_name)
+                  if qn_flag_on else {})
     tier_dp = bool(getattr(layout, "tier_dp", False)) if layout is not None else False
     seg_backend_suffix = ""
     box_decoder = getattr(layout, "box_decoder", "legacy") if layout is not None else "legacy"
@@ -910,7 +940,7 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                 box_rule=col_rule, legacy_page_boxes=legacy_page_boxes,
                 box_decoder=box_decoder, page_boxes_low=page_boxes_low,
                 tier_n=tier_n_by_line.get(line_id),
-                tier_dp=tier_dp)
+                tier_dp=tier_dp, tier_rule=tier_rule)
             n_gap_total += n_gap
             # syllable_raw = âm SAU normalize_column (đầu vào DP); syllable_ocr = âm
             # VietOCR nguyên văn. Chỉ PHÁT THÊM vào pair, không đổi hành vi ghép.
@@ -928,6 +958,7 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
             col_states.append({
                 "line_id": line_id, "cluster": cluster, "syllables": syllables,
                 "syllable_ocr": syllable_ocr, "matched": matched,
+                **({COL_QN_COUNT_UNFIXED: int(line_id in qn_unfixed)} if qn_flag_on else {}),
                 "reseg_boxes": reseg_boxes, "ops1": ops1,
                 "legacy_boxes": legacy_boxes,     # B-5: chỉ khác None ở cột legacy_also_columns
                 **box_info,          # A-6: G, cb, n_ocr, n_qn, n_det, count/box_source, box_rule
@@ -941,10 +972,13 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
             # an UN-confirmed pair next to a confirmed one can finally reach the
             # similar-bridge GOLD / SILVER(S3) paths in a count-diverged column.
             conf = [p["confirmed"] for p in col_pairs]
+            _unfixed = int(line_id in qn_unfixed) if qn_flag_on else None
             for k, p in enumerate(col_pairs):
                 nbr = (k > 0 and conf[k - 1]) or (k + 1 < len(col_pairs) and conf[k + 1])
                 p.update(column=line_id, matched=matched,
                          anchored=bool(nbr))
+                if _unfixed is not None:
+                    p[COL_QN_COUNT_UNFIXED] = _unfixed
             pairs.extend(col_pairs)
     rec = {"page": page_name, "page_ok": page_ok, "pairs": pairs,
            "n_review_gap": n_gap_total, "seg_backend": seg_backend,

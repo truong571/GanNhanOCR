@@ -1372,6 +1372,159 @@ def test_tier_v3_branches():
           (r0["tier_v3"], r0["rule"]) == ("CHAR_B", "s1_inter_s2_direct_lowp"), (r0["tier_v3"], r0["rule"]))
 
 
+def test_crop_source_original():
+    """Vòng 7 (2026-09-23): books[].crop_source = original — crop GIAO NỘP cắt từ ảnh quét gốc,
+    HÌNH HỌC không đổi một chữ số, bản đã xử lý vẫn ghi ở crops_bin/ cho mã đọc crop nhị phân."""
+    import json
+    import shutil
+    import tempfile
+    from pathlib import Path as _P
+
+    import cv2
+    import numpy as np
+
+    from pipeline.align_engine import build_dataset as BD
+    print("[crop_source: original — crop giao nộp giữ ảnh quét gốc]")
+
+    H, W = 140, 100
+    # ảnh "đã xử lý": nền 255 bệt, hai chữ đen chồng lấn dải pad (mô phỏng stretch/otsu)
+    proc = np.full((H, W, 3), 255, np.uint8)
+    cv2.rectangle(proc, (25, 20), (70, 60), (0, 0, 0), -1)
+    cv2.rectangle(proc, (25, 78), (70, 118), (0, 0, 0), -1)
+    # ảnh "gốc": CÙNG hình, nhưng nền giấy 130 và mực 40 -> khác điểm ảnh, giống hình học
+    orig = np.full((H, W, 3), 130, np.uint8)
+    orig[:, :, 2] = 120                                    # kênh đỏ khác -> chứng minh giữ MÀU
+    cv2.rectangle(orig, (25, 20), (70, 60), (40, 40, 45), -1)
+    cv2.rectangle(orig, (25, 78), (70, 118), (40, 40, 45), -1)
+    gray_full = cv2.cvtColor(proc, cv2.COLOR_BGR2GRAY)
+    bbox, prev_b, next_b = [25, 78, 70, 118], [25, 20, 70, 60], None
+
+    td = _P(tempfile.mkdtemp())
+    try:
+        q_old = BD.save_crop(proc, gray_full, bbox, 0.12, td / "old.png",
+                             prev_bbox=prev_b, next_bbox=next_b)
+        q_new = BD.save_crop(proc, gray_full, bbox, 0.12, td / "new.png",
+                             prev_bbox=prev_b, next_bbox=next_b,
+                             img_orig=orig, bin_path=td / "bin" / "new.png")
+        check("save_crop(img_orig) trả kết quả (không None)", q_new is not None)
+        check("ink/w/h/seg KHÔNG đổi khi đổi nguồn điểm ảnh",
+              (q_old["ink"], q_old["w"], q_old["h"], q_old["seg"])
+              == (q_new["ink"], q_new["w"], q_new["h"], q_new["seg"]),
+              f"{q_old} vs {q_new}")
+        check("md5 ĐỔI (băm của tệp THẬT đã giao, không phải của bản đã xử lý)",
+              q_old["md5"] != q_new["md5"])
+        check("q['crop_source'] ghi đúng nguồn",
+              q_old["crop_source"] == "processed" and q_new["crop_source"] == "original")
+        A = cv2.imread(str(td / "old.png")); B = cv2.imread(str(td / "new.png"))
+        C = cv2.imread(str(td / "bin" / "new.png"))
+        check("crops_bin/ TRÙNG BYTE với crop của bản processed (0 hồi quy cho mã đọc crop nhị phân)",
+              np.array_equal(A, C))
+        check("crop giao nộp CÙNG kích thước với bản processed", A.shape == B.shape)
+        check("crop giao nộp KHÁC điểm ảnh (giữ nền giấy, không bệt 255)",
+              not np.array_equal(A, B) and int(np.percentile(cv2.cvtColor(B, cv2.COLOR_BGR2GRAY), 90)) < 200)
+        check("crop giao nộp giữ MÀU (kênh B ≠ kênh R ở nền giấy)",
+              int(B[0, 0, 0]) != int(B[0, 0, 2]))
+        check("carve mực hàng xóm tô NỀN GIẤY chứ không tô 255 trên ảnh gốc",
+              int(B[0, B.shape[1] // 2, 1]) < 200 and int(A[0, A.shape[1] // 2, 1]) == 255)
+        # ảnh gốc SAI KÍCH THƯỚC -> bỏ qua, quay về bản đã xử lý (không crash, không ghi bin)
+        q_bad = BD.save_crop(proc, gray_full, bbox, 0.12, td / "bad.png",
+                             prev_bbox=prev_b, next_bbox=next_b,
+                             img_orig=cv2.resize(orig, (W // 2, H // 2)), bin_path=td / "bin" / "bad.png")
+        check("ảnh gốc sai kích thước -> rơi về bản đã xử lý, KHÔNG ghi crops_bin",
+              q_bad["crop_source"] == "processed" and not (td / "bin" / "bad.png").exists()
+              and q_bad["md5"] == q_old["md5"])
+
+        # --- tra ảnh gốc qua manifest.json ---
+        pdir = td / "prep" / "BookX"
+        (pdir / "pages").mkdir(parents=True)
+        (td / "orig").mkdir(exist_ok=True)
+        cv2.imwrite(str(pdir / "pages" / "page_0001.png"), proc)
+        cv2.imwrite(str(td / "orig" / "scan_001.png"), orig)
+        (pdir / "manifest.json").write_text(json.dumps(
+            {"book": "BookX", "scale": 1, "orig_dir": "orig",
+             "pages": [{"page_name": "page_0001", "source_file": "scan_001.png"}]}), encoding="utf-8")
+        old_repo = BD.REPO
+        BD.REPO = td
+        BD._ORIG_INDEX_CACHE.clear()
+        try:
+            idx = BD._orig_index(pdir)
+            check("_orig_index đọc manifest: 1 trang, scale 1",
+                  len(idx["pages"]) == 1 and idx["scale"] == 1 and idx["book"] == "BookX")
+            got = BD.load_original_page(pdir, "page_0001", shape_like=(H, W))
+            check("load_original_page trả ĐÚNG ảnh gốc", got is not None and np.array_equal(got, orig))
+            check("load_original_page: trang không có trong manifest -> None",
+                  BD.load_original_page(pdir, "page_9999", shape_like=(H, W)) is None)
+            check("load_original_page: kích thước không khớp -> None (không im lặng lệch toạ độ)",
+                  BD.load_original_page(pdir, "page_0001", shape_like=(H + 1, W)) is None)
+        finally:
+            BD.REPO = old_repo
+            BD._ORIG_INDEX_CACHE.clear()
+
+        _REPO = _P(__file__).resolve().parents[1]
+        src = (_REPO / "pipeline" / "align_engine" / "build_dataset.py").read_text(encoding="utf-8")
+        check("PASS 2 dọn crops_bin/ trước khi cắt (không để tệp mồ côi)",
+              'shutil.rmtree(out / "crops_bin")' in src)
+        check("crop_source='original' mà không tra được ảnh gốc -> FileNotFoundError (fail fast)",
+              src.count("crop_source = 'original'") >= 1 and "FileNotFoundError(" in src)
+        enr = (_REPO / "pipeline" / "tools" / "enrich_crop_quality.py").read_text(encoding="utf-8")
+        check("enrich_crop_quality tự ưu tiên crops_bin/ -> 3 cột chất lượng không đổi",
+              'cand = src_root / "crops_bin"' in enr and "bin_root / img" in enr)
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
+
+
+def test_pitch_rule_and_qn_flag():
+    """(2026-09-23) `pitch_target_count(n_rule=…)`: luật 6/8 thắng số đếm QN sai; và cờ
+    `qn_count_unfixed` chỉ vào bản ghi khi sách phát cờ (STT không có cột)."""
+    from pipeline.align_engine import align_production as AP
+    from pipeline.align_engine import build_dataset as BD
+    print("[pitch_target_count n_rule (luật 6/8) + cờ qn_count_unfixed]")
+    P = AP.pitch_target_count
+    # --- hành vi CŨ phải nguyên vẹn khi n_rule=None (STT/prose) ---
+    check("cũ: n_ocr == n_qn -> (n_qn, pitch)", P(14, 14, 13) == (14, "pitch"))
+    check("cũ: n_det != n_ocr -> (n_qn, pitch)", P(14, 13, 12) == (13, "pitch"))
+    check("cũ: n_det == n_ocr != n_qn -> (n_ocr, pitch_ocr)", P(14, 13, 14) == (14, "pitch_ocr"))
+    check("cũ: n_rule=None không đổi gì", all(P(a, b, c) == P(a, b, c, n_rule=None)
+                                              for a in (12, 13, 14) for b in (12, 13, 14) for c in (12, 13, 14)))
+    # --- nhánh MỚI: cột QN đếm sai mà kim đọc đúng 14 ---
+    check("mới: n_qn 13, n_ocr 14, n_det 12 -> (14, pitch_rule)", P(14, 13, 12, n_rule=14) == (14, "pitch_rule"))
+    check("mới: n_qn 15, n_ocr 14, n_det 14 -> (14, pitch_rule)", P(14, 15, 14, n_rule=14) == (14, "pitch_rule"))
+    check("mới: n_qn == 14 (đúng luật) -> KHÔNG vào nhánh luật, y hệt bản cũ",
+          P(13, 14, 13, n_rule=14) == P(13, 14, 13) and P(13, 14, 12, n_rule=14) == (14, "pitch"))
+    check("mới: kim CŨNG không đọc đủ 14 -> giữ hành vi cũ (không ép luật)",
+          P(13, 13, 13, n_rule=14) == (13, "pitch") and P(13, 12, 13, n_rule=14) == (13, "pitch_ocr"))
+    check("mới: N trả về LUÔN == n_rule ở nhánh pitch_rule",
+          all(P(14, q, d, n_rule=14)[0] == 14 for q in (10, 11, 12, 13, 15, 16) for d in (12, 13, 14, 15)))
+    check("mới: nhánh pitch_rule chỉ bật khi n_qn != n_rule == n_ocr",
+          all((P(o, q, d, n_rule=14)[1] == "pitch_rule") == (q != 14 and o == 14)
+              for o in (12, 13, 14) for q in (12, 13, 14) for d in (12, 13, 14)))
+    # --- assign_boxes_pitch ghi count_source riêng cho nhánh luật ---
+    G = [[0, 10 * k, 9, 10 * k + 9, 0.9] for k in range(14)]
+    src = ["detector"] * 14
+    ops = [{"op": "match", "nom_idx": i, "syl_idx": i} for i in range(13)]
+    b1, s1, c1 = AP.assign_boxes_pitch(G, src, ops, 14, 13)
+    check("assign_boxes_pitch |G|==n_ocr, mode rỗng -> count_source pitch_ocr (cũ)", c1 == "pitch_ocr")
+    b2, s2, c2 = AP.assign_boxes_pitch(G, src, ops, 14, 13, mode="pitch_rule")
+    check("assign_boxes_pitch mode=pitch_rule -> count_source pitch_rule", c2 == "pitch_rule")
+    check("assign_boxes_pitch: hộp/nguồn KHÔNG đổi giữa hai mode", b1 == b2 and s1 == s2)
+    check("assign_boxes_pitch: |G|==n_qn thì mode bị bỏ qua (vẫn 'pitch')",
+          AP.assign_boxes_pitch(G, src, ops, 15, 14, mode="pitch_rule")[2] == "pitch")
+    check("mechanism_gates nhận pitch_rule là chế độ pitch",
+          "pitch_rule" in __import__("pipeline.remediation.mechanism_gates",
+                                     fromlist=["x"]).COUNT_SOURCE_PITCH)
+    # --- cờ vào bản ghi CHỈ khi pair mang khoá ---
+    dec = type("D", (), {"tier": "REVIEW", "rule_id": "r", "label": ""})()
+    base = dict(column=1, ocr_char="天", syllable="thiên", bbox=[0, 0, 1, 1])
+    r_stt = BD._record("b", "page_0001", "x.png", 0, dict(base), dec, None, "")
+    check("STT (pair không có khoá): bản ghi KHÔNG có cột qn_count_unfixed",
+          BD.COL_QN_UNFIXED not in r_stt)
+    r_lit = BD._record("b", "page_0001", "x.png", 0, dict(base, qn_count_unfixed=1), dec, None, "")
+    check("thạch bản: bản ghi có cột qn_count_unfixed = 1 (int, ghi DÀY)",
+          r_lit.get(BD.COL_QN_UNFIXED) == 1 and isinstance(r_lit[BD.COL_QN_UNFIXED], int))
+    r_ok = BD._record("b", "page_0001", "x.png", 0, dict(base, qn_count_unfixed=0), dec, None, "")
+    check("cột đếm ĐÚNG -> cờ = 0 (không để trống)", r_ok.get(BD.COL_QN_UNFIXED) == 0)
+
+
 def main() -> int:
     print("=" * 64)
     print("PHASE-1 ENGINE-FIX SELFTEST")
@@ -1383,6 +1536,7 @@ def main() -> int:
     test_ocr_cache_guard()
     test_proto_cache_not_poisoned()
     test_crop_geometry_wired()
+    test_crop_source_original()
     test_labels_sorted()
     test_anchor_align_calib()
     test_two_pass_pass1b()
@@ -1391,6 +1545,7 @@ def main() -> int:
     test_enforce_count()
     test_pair_new_three_branches()
     test_tier_v3_branches()
+    test_pitch_rule_and_qn_flag()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

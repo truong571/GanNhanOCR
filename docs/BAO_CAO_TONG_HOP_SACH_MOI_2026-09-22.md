@@ -213,6 +213,18 @@ Sách thứ tư: `data/<BOOK>/pages/` + `SOURCE.md` → thêm vào `BOOKS` của
 
 ## 10. Ba bộ còn lại của `data/` (23/09) — LucVanTien1916, TruyenKieu1872, TruyenKieuPhongTinhCoLuc
 
+> 🔴 **CẬP NHẬT 23/09 — PTCL (bản chép tay R.987) LOẠI KHỎI PHẠM VI, NHƯNG TỆP KIỀU 1871 GIỮ LẠI.**
+> Bốn tệp mô tả bản chép tay (`README_tai_ve.md`, `SOURCE.md`, `metadata.json`, `reference_kieu_1872.tsv`)
+> đã bị xoá khỏi đĩa; lý do đã đo: tầng trên mỗi cột là **lời bình chữ Hán**, không có số câu neo, QN chỉ có dị bản.
+> **`data/TruyenKieuPhongTinhCoLuc/thamchieu_kieu_1871_LieuVanDuong_phienam.json` ĐƯỢC GIỮ LẠI** (vòng 8): nó chỉ
+> *nằm nhờ* trong thư mục ấy, còn nội dung là **bản phiên âm Truyện Kiều 1871 (Liễu Văn Đường)** — tham chiếu dị bản
+> của **KimVanKieu1884**, không phải dữ liệu của PTCL. Vì vậy vòng 8 đã **bật lại**: khối `run.verses_ref_fix` trong
+> `config/pipeline_KimVanKieu1884_b1.yaml` (bước B1'), `CROSS_BOOKS["KimVanKieu1884"].refs[0] = Kieu1871_LVD`
+> (`auto_precision.py`) và `REFS["KimVanKieu1884"]` (`qn_engine_compare.py`) → "nền dị bản 1871↔1872" tính được trở lại
+> và số trôi của KVK trùng khít mốc công bố (n 31.866 · đúng 80,58 % · lệch vị trí 16).
+> `measure.py` / `verses_ref_fix.py` / `run_pipeline.sh` vẫn giữ cách xử lý "thiếu tệp → cảnh báo, bỏ bước".
+> Chi tiết: `docs/VONG8_CAN_CHINH_VA_CROP_2026-09-23.md` §6. Phần dưới đây giữ nguyên làm hồ sơ lịch sử.
+
 Chi tiết đầy đủ (đo bố cục, adapter, rủi ro, khuyến nghị): **`docs/CHAY_3_BO_CON_LAI_2026-09-23.md`**.
 Tái lập: `./run_pipeline.sh --book all-ihr`; `.venv/bin/python scripts/measure/ihr_endtoend_eval.py --book all`;
 `.venv/bin/python scripts/measure/ptcl_layout.py --kim-pages 6`.

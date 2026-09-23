@@ -39,9 +39,23 @@ REPO = Path(__file__).resolve().parents[2]
 COLS = ("crop_quality_flag", "stray_ink", "border_ink")
 
 
-def enrich(labels: Path, src_root: Path, verbose: bool = True) -> dict:
+def enrich(labels: Path, src_root: Path, verbose: bool = True, bin_root: Path | None = None) -> dict:
+    """`bin_root` (2026-09-23) = thư mục chứa BẢN ĐÃ XỬ LÝ của cùng những crop đó
+    (`$out/crops_bin/<tier>/<cùng tên>.png`, do build_dataset sinh khi sách khai
+    `books[].crop_source: original`). Ba cột này đo HÌNH HỌC MỰC bằng ngưỡng cố định
+    (`gray < 128`), nên phải đo trên bản đã xử lý — nếu đo trên crop gốc (nền giấy
+    còn nguyên) thì `stray_ink`/`border_ink`/`crop_quality_flag` đổi hàng loạt chỉ vì
+    đổi nguồn điểm ảnh, kéo theo cổng cơ chế B4' đọc `crop_quality_flag`. Vắng tham
+    số: tự lấy `src_root/crops_bin` nếu có; không có thì đo thẳng crop giao nộp
+    (đúng hành vi cũ, 0 thay đổi cho STT và cho mọi bộ `crop_source: processed`).
+    """
     import cv2
     from pipeline.align_engine import crop_quality as CQ
+
+    if bin_root is None:
+        cand = src_root / "crops_bin"
+        bin_root = cand if cand.is_dir() else None
+    n_bin = 0
 
     with open(labels, encoding="utf-8", newline="") as fh:
         rows = list(csv.DictReader(fh))
@@ -59,7 +73,11 @@ def enrich(labels: Path, src_root: Path, verbose: bool = True) -> dict:
                 r[c] = ""
             stat["không có ảnh"] += 1
             continue
-        g = cv2.imread(str(src_root / img), cv2.IMREAD_GRAYSCALE)
+        path = src_root / img
+        if bin_root is not None and (bin_root / img).exists():
+            path = bin_root / img
+            n_bin += 1
+        g = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
         if g is None:
             for c in COLS:
                 r[c] = ""
@@ -80,7 +98,9 @@ def enrich(labels: Path, src_root: Path, verbose: bool = True) -> dict:
 
     if verbose:
         n = sum(v for k, v in stat.items() if k in ("ok", "bleed", "truncated", "blank"))
-        print(f"  [chất lượng crop] {n:,} ảnh đã đo")
+        print(f"  [chất lượng crop] {n:,} ảnh đã đo"
+              + (f" ({n_bin:,} đo trên crops_bin/ = bản đã xử lý; crop giao nộp là ảnh quét gốc)"
+                 if n_bin else ""))
         for k in ("ok", "bleed", "truncated", "blank"):
             if stat.get(k):
                 print(f"    {k:12} {stat[k]:7,}  {100 * stat[k] / max(n, 1):5.2f}%")
@@ -93,6 +113,10 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="pipeline.tools.enrich_crop_quality")
     ap.add_argument("--labels", default=str(REPO / "dataset_out" / "labels.csv"))
     ap.add_argument("--src-root", default=str(REPO / "dataset_out"))
+    ap.add_argument("--bin-root", default="",
+                    help="thư mục bản ĐÃ XỬ LÝ của cùng bộ crop (mặc định: <src-root>/crops_bin nếu có). "
+                         "Ba cột chất lượng luôn đo trên bản này khi có, để không đổi khi crop giao nộp "
+                         "chuyển sang ảnh quét gốc (books[].crop_source: original).")
     ap.add_argument("--check", action="store_true",
                     help="chỉ kiểm đã có 3 cột chưa; exit 1 nếu thiếu")
     args = ap.parse_args(argv)
@@ -113,7 +137,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"[chất lượng crop] đủ 3 cột trong {p.name}")
         return 0
 
-    enrich(p, Path(args.src_root))
+    enrich(p, Path(args.src_root), bin_root=(Path(args.bin_root) if args.bin_root else None))
     return 0
 
 

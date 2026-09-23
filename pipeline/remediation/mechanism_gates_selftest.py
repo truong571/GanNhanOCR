@@ -377,6 +377,68 @@ def test_export(tmp: Path) -> None:
     check("docs: README KHÔNG có khối khi không tầng", "GOLD_text_only" not in md.readme(s0) and "GOLD_text_only" not in md.datasheet(s0))
 
 
+def test_qn_count():
+    """[6] (2026-09-23) luật (e) — cột có SỐ ĐẾM ÂM QN hỏng (cờ qn_count_unfixed)."""
+    print("\n[6] (e) qn_count_unfixed")
+    # chế độ mặc định theo config
+    check("mặc định lithograph -> review", mg.qn_count_mode({"name": "x", "layout": "lithograph"}) == "review")
+    check("mặc định prose -> off", mg.qn_count_mode({"name": "x", "layout": "prose"}) == "off")
+    check("mặc định STT (không layout) -> off", mg.qn_count_mode({"name": "x"}) == "off")
+    check("books[].qn_count_gate thắng mặc định",
+          mg.qn_count_mode({"name": "x", "layout": "lithograph", "qn_count_gate": "off"}) == "off")
+    check("--qn-count-gate thắng config",
+          mg.qn_count_mode({"name": "x", "layout": "lithograph", "qn_count_gate": "off"}, "text_only") == "text_only")
+    try:
+        mg.qn_count_mode({"name": "x", "qn_count_gate": "bậy"})
+        check("qn_count_gate sai giá trị -> ValueError", False)
+    except ValueError:
+        check("qn_count_gate sai giá trị -> ValueError", True)
+    # áp cổng trên dữ liệu giả
+    df = pd.DataFrame([
+        _row(1, qn_count_unfixed="0"),                                   # cột đếm đúng
+        _row(2, qn_count_unfixed="1"),                                   # (e)
+        _row(3, qn_count_unfixed="1", box_source="midpoint"),            # (e) thắng (a)
+        _row(4, qn_count_unfixed="1", crop_quality_flag="blank"),        # (c) thắng (e)
+        _row(5, qn_count_unfixed="1", tier="SILVER"),                    # không phải GOLD -> giữ
+        _row(6, qn_count_unfixed="1", rule="s1_inter_s2_similar", tier_v3="CHAR_B"),  # (e) thắng (b)
+    ])
+    off, r_off = mg.apply_gates(df, None, pitch=False, qn_count="off")
+    check("(e) off: không ô nào bị hạ vì cờ",
+          r_off["qn_count_decided"] == 0 and (off["gate_reason"] == mg.G_QNCOUNT).sum() == 0)
+    check("(e) off vẫn ĐẾM thô", r_off["gates_raw_hits"][mg.G_QNCOUNT] == 4
+          and r_off["gates_raw_hits"]["qn_count_unfixed_rows"] == 5)
+    rev, r_rev = mg.apply_gates(df, None, pitch=False, qn_count="review")
+    check("(e) review: 3 ô GOLD có cờ -> REVIEW (ô 4 đã bị (c) lấy trước)",
+          r_rev["qn_count_decided"] == 3
+          and list(rev["tier"]) == ["GOLD", "REVIEW", "REVIEW", "REVIEW", "SILVER", "REVIEW"],
+          str(list(rev["tier"])))
+    check("(e) review: ô 4 mang lý do crop_bad (ưu tiên (c) > (e))",
+          rev.loc[3, "gate_reason"].startswith(mg.G_CROP))
+    check("(e) thắng (b): ô 6 lý do qn_count_unfixed, nhãn GIỮ để truy vết",
+          rev.loc[5, "gate_reason"] == mg.G_QNCOUNT and rev.loc[5, "label"] == "城")
+    check("(e) review: rule ghi hậu tố |gate:qn_count_unfixed",
+          rev.loc[1, "rule"].endswith("|gate:" + mg.G_QNCOUNT))
+    check("(e) review: label_level rỗng như (c)/(d)", rev.loc[1, "label_level"] == "")
+    check("(e) ô SILVER có cờ KHÔNG bị đụng", rev.loc[4, "tier"] == "SILVER" and rev.loc[4, "gate_reason"] == "")
+    txt, r_txt = mg.apply_gates(df, None, pitch=False, qn_count="text_only")
+    check("(e) text_only: hạ xuống GOLD_text_only, GIỮ nhãn",
+          txt.loc[1, "tier"] == mg.TIER_TEXT_ONLY and txt.loc[1, "label"] == "城"
+          and r_txt["qn_count_decided"] == 3)
+    check("(e) không mutate df đầu vào", list(df["tier"]) == ["GOLD"] * 4 + ["SILVER", "GOLD"])
+    check("(e) idempotent: chạy lại trên kết quả không hạ thêm ô GOLD nào",
+          mg.apply_gates(rev, None, pitch=False, qn_count="review")[1]["qn_count_decided"] == 0)
+    # bảng KHÔNG có cột cờ (STT / thế hệ cũ) -> cổng không trúng gì
+    df_no = pd.DataFrame([_row(1), _row(2)])
+    _, r_no = mg.apply_gates(df_no, None, pitch=False, qn_count="review")
+    check("bảng không có cột qn_count_unfixed -> (e) trúng 0 (không lỗi)",
+          r_no["qn_count_decided"] == 0 and r_no["gates_raw_hits"][mg.G_QNCOUNT] == 0)
+    try:
+        mg.apply_gates(df, None, qn_count="bậy")
+        check("apply_gates qn_count sai -> ValueError", False)
+    except ValueError:
+        check("apply_gates qn_count sai -> ValueError", True)
+
+
 def main() -> int:
     print("=" * 64)
     print("MECHANISM GATES SELFTEST")
@@ -388,6 +450,7 @@ def main() -> int:
         test_run_cli(tmp)
         test_export(tmp)
         test_pitch(tmp)
+        test_qn_count()
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("=" * 64)

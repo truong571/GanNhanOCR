@@ -597,6 +597,12 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
   else
     ok "bộ đo đã có: measure_out/$book"
   fi
+  # 2026-09-23: tệp tham chiếu có thể đã bị gỡ khỏi data/ (vd bản 1871 trong thư mục PTCL) —
+  # bỏ B1' kèm cảnh báo THẤY ĐƯỢC thay vì để verses_ref_fix chết vì không mở được tệp.
+  if [[ -n "$BK_REF" && ! -f "$BK_REF" ]]; then
+    log "  ⚠️  B1' BỎ QUA: không có tệp tham chiếu $BK_REF (đã gỡ khỏi data/). Bản dựng này KHÔNG có bước sửa QN theo dị bản."
+    BK_REF=""
+  fi
   if [[ -n "$BK_REF" && "$BK_INGEST" != "prose" ]]; then
     cmd=("$PY" scripts/measure/verses_ref_fix.py --book "$book" --ref "$BK_REF" --ref-name "$BK_REF_NAME")
     [[ -n "$BK_REF_FUZZY" ]] && cmd+=(--fuzzy-min "$BK_REF_FUZZY")

@@ -4,6 +4,33 @@ Mục tiêu (docs/HUONG_DAN_HUAN_LUYEN_I5_2026-09-22.md §3, phương án B): fi
 (LVT1883 + KVK1884) + STT, đo trung thực trên val page-disjoint, rồi đưa vào pipeline bằng 1 lệnh. **Không commit; không sửa
 run_pipeline.sh; không đụng dataset_out/, data/, STT** (STT 3 trang `labels.csv` md5 `59e436d7641fa849bb6759868ac29259` giữ nguyên).
 
+## 🔴 KẾT QUẢ LẦN CHẠY 22/09 + SỬA CỦA VÒNG 7 (23/09) — đọc trước tiên
+
+Kaggle T4, 349 s, **dừng sớm ở epoch 6/20**. Trên thạch bản v2 **tốt hơn hẳn**; nhưng guard STT chặn nên
+**KHÔNG ckpt nào được ghi**, và chỉ `last.pt` (346 MB) được đẩy lên HF repo **riêng tư** `mdnt571/nom-char-det-v2`
+— token trong `.env` đã hết hiệu lực (`Invalid user token`) nên **chưa lấy về được** (chi tiết + 3 cách lấy:
+`docs/VONG7_DETECTOR_V2_VA_CROP_GOC_2026-09-23.md` §1.2). Output đầy đủ giữ ở `kaggle_run_2026-09-22_ketqua.ipynb`.
+
+| epoch | litho ok50 | n==N @0,15 | cắt thân chữ | STT F1@0,2 | Chrestomathie n==N (held-out) |
+|---|---|---|---|---|---|
+| 0 = v1 | 98,71 | 94,7 | 11,32 | **0,8772** | **83,8** |
+| 3 (tốt nhất) | **100,0** | **98,7** | **0,22** | 0,8584 | 74,7 |
+| 6 (= `last.pt`) | 100,0 | 98,0 | 0,22 | 0,8625 | 73,7 |
+
+- **Quên miền, không phải v2 kém**: STT tụt ~0,013. Vì repo đã có `books[].detector_ckpt` **THEO SÁCH**, ckpt thạch
+  bản không bao giờ chạy trên STT → guard chỉ cần khi MỘT mô hình phục vụ cả hai miền.
+- 🔴 **Chrestomathie (KHÔNG train) cũng TỤT ở mọi epoch** (83,8 → 64,6–78,8). Nên **chưa có bằng chứng** áp v2 cho
+  Chresto; hai bộ IHR không có trong bundle nên cũng chưa có số. Khi có ckpt: khai v2 cho **LVT1883 + KVK1884
+  trước**, mở rộng chỉ khi `box_ref_eval --ckpt` trên ảnh gốc của chính sách đó tốt hơn v1.
+
+**Sửa vòng 7** (chạy lại 1 lần ~1 h là có ckpt): `--guard-stt-f1 <số|none>` (mặc định giữ 0,01) và trainer **LUÔN**
+ghi `best_litho.pt` = epoch tốt nhất theo riêng tiêu chí thạch bản, kèm `warning` **trong chính ckpt** + mục cảnh báo
+trong `report.md`; `apply_v2.sh` nhận ckpt đó (không bị guard chặn, chỉ cảnh báo) và ghi `detector_ckpt` cho **6
+config** (thêm LVT1916, TK1872). Notebook có `GUARD_STT = "none"`.
+**Chỉ sửa mã thì KHÔNG phải đẩy lại 243 MB**: `make_bundle.py` sinh thêm `i5v2_code.zip` (39 KB) — tạo 1 Kaggle
+dataset từ nó, Add Input **cả hai** (bundle cũ + code mới); ô (2) ưu tiên input có `train_kaggle.py` mà không có
+`bundle_stats.json`.
+
 ## Phát hiện khi dựng mốc v1 (22/09) — đọc trước khi train
 Cùng mã đo, cùng 27 trang thạch bản val gốc, chỉ đổi phép thu ảnh trang về 1024 trong `CenterNetDetector._preprocess`:
 
@@ -59,7 +86,7 @@ build `_v2` (bước 6), không phải số trong Kaggle.
 ## Cách đọc `metrics.csv`
 Hàng `epoch 0` = v1 (cùng mã, cùng val). Mỗi epoch: `loss`, `litho_*` (ok50 / miss / extra / |dy| trung vị & p90 % bước / IoU /
 n==N @0,15 & @0,2 / % tầng thiếu / thừa / cắt), `stt_F1_020`, `stt_F1_015`, `chresto_*`, `is_best`, `stt_ok`. `report.md` = bảng
-v1 ↔ v2(best) + Δ + mục tiêu + theo epoch + kết luận ĐẠT/chưa. `best.pt` (định dạng pipeline: `model`, `arch`, `img`, `use_dcn`,
+v1 ↔ v2(best) + Δ + mục tiêu + theo epoch + kết luận ĐẠT/chưa. `best.pt` / `best_litho.pt` (định dạng pipeline: `model`, `arch`, `img`, `use_dcn`,
 `val`, `base_v1`) nạp thẳng vào `CenterNetDetector`; `last.pt` = toàn trạng thái để resume (không dùng cho pipeline).
 
 ## Sự cố

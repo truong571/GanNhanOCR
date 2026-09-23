@@ -44,7 +44,13 @@ def main():
     ap.add_argument("--limit", type=int, default=0, help="số trang mỗi miền (thử)")
     ap.add_argument("--eval-pages", type=int, default=0, help="số trang val mỗi miền (0 = tất cả)")
     ap.add_argument("--eval-chresto", type=int, default=20, help="số trang Chrestomathie held-out đo mỗi epoch")
-    ap.add_argument("--stt-tol", type=float, default=0.01)
+    ap.add_argument("--stt-tol", type=float, default=0.01,
+                    help="(cũ, giữ tương thích) dung sai guard STT; bị --guard-stt-f1 ghi đè nếu khai")
+    ap.add_argument("--guard-stt-f1", default="",
+                    help="dung sai guard STT F1 (số, vd 0.01 = mặc định như cũ) hoặc 'none' = TẮT guard. "
+                         "Tắt khi ckpt v2 chỉ phục vụ sách thạch/mộc bản qua books[].detector_ckpt theo sách "
+                         "(STT không bao giờ chạy qua nó). Dù bật hay tắt, trainer LUÔN ghi thêm best_litho.pt "
+                         "= epoch tốt nhất theo riêng tiêu chí thạch bản, kèm cảnh báo trong report.md.")
     ap.add_argument("--patience", type=int, default=4)
     ap.add_argument("--min-gain", type=float, default=0.2)
     ap.add_argument("--p-crop", type=float, default=0.35)
@@ -64,6 +70,15 @@ def main():
     ap.add_argument("--ckpt", default="", help="(eval-only) ckpt cần đo")
     ap.add_argument("--out-json", default="", help="(eval-only) ghi kết quả JSON")
     a = ap.parse_args()
+    if a.guard_stt_f1:
+        g = a.guard_stt_f1.strip().lower()
+        if g in ("none", "off", "tat", "tắt", "0none"):
+            a.stt_tol = None
+        else:
+            try:
+                a.stt_tol = float(g)
+            except ValueError:
+                ap.error(f"--guard-stt-f1 = {a.guard_stt_f1!r}; cần một số (vd 0.01) hoặc 'none'")
 
     if a.eval_only:
         ck = a.ckpt or a.init or str(Path(a.data) / "v1" / "detector_r34.best.pt")

@@ -250,6 +250,15 @@ def main():
         t0 = time.time()
         subprocess.run(["zip", "-qr", str(zp), "."], cwd=a.out, check=True)
         print(f"[bundle] {zp} = {zp.stat().st_size / 1e6:.0f} MB ({time.time() - t0:.0f}s)", flush=True)
+        # (2026-09-23) GÓI MÃ RIÊNG, ~50 KB. Khi CHỈ mã đổi (vd guard STT / best_litho.pt) thì
+        # không phải đẩy lại 243 MB ảnh: tạo/cập nhật một Kaggle dataset chỉ chứa zip này và
+        # Add Input thêm nó; cell (2) của notebook ưu tiên thư mục input có train_kaggle.py mà
+        # KHÔNG có bundle_stats.json, nên ảnh vẫn lấy từ bundle cũ.
+        cz = zp.with_name("i5v2_code.zip")
+        if cz.exists():
+            cz.unlink()
+        subprocess.run(["zip", "-qr", str(cz), "i5v2", "train_kaggle.py"], cwd=a.out, check=True)
+        print(f"[bundle] {cz} = {cz.stat().st_size / 1e3:.0f} KB (chỉ mã — đẩy riêng khi chỉ sửa mã)", flush=True)
     if not ok:
         sys.exit(1)
 

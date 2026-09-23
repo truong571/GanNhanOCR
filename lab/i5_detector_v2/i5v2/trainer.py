@@ -6,6 +6,9 @@
     % tầng n==N @0,15 & 0,2 / cắt thân chữ; STT F1 @0,2 và @0,15; Chrestomathie (sách KHÔNG train,
     chỉ đo): % cột n==N, cắt.
   • best = ok50_litho cao nhất VỚI ĐIỀU KIỆN STT F1 (cả 0,2 lẫn 0,15) ≥ v1 − stt_tol (0,01);
+    `--guard-stt-f1 none` TẮT điều kiện đó (ckpt chỉ dùng cho sách thạch/mộc bản qua
+    books[].detector_ckpt). NGOÀI RA luôn ghi `best_litho.pt` = epoch tốt nhất theo RIÊNG
+    tiêu chí thạch bản, KHÔNG xét guard STT — để một lần chạy luôn để lại ckpt dùng được;
     dừng sớm khi `patience` (4) epoch liền không tăng ≥ 0,2 điểm (hoặc STT tụt).
   • ghi out/{last.pt (toàn trạng thái, resume), best.pt (định dạng pipeline), metrics.csv, report.md,
     base_v1.json, history.json}; resume tự động từ out/last.pt (hoặc kéo từ HF hub nếu khai --hf-repo).
@@ -60,7 +63,7 @@ class Cfg:
     limit: int = 0                 # số trang mỗi miền (thử)
     eval_pages: int = 0            # 0 = toàn bộ val mỗi miền
     eval_chresto: int = 20         # số trang Chrestomathie (held-out) đo mỗi epoch; 0 = bỏ
-    stt_tol: float = 0.01
+    stt_tol: float = 0.01           # dung sai guard STT; None = TẮT guard (--guard-stt-f1 none)
     patience: int = 4
     min_gain: float = 0.2          # điểm ok50 tăng tối thiểu để tính "cải thiện"
     min_epochs: int = 6            # không dừng sớm trước epoch này (đầu fine-tune ok50 có thể tụt dưới v1 rồi mới vượt)
@@ -151,7 +154,12 @@ def _score(ev: dict) -> tuple:
             -round(ev.get("litho_cut") or 0.0, 2))
 
 
-def _stt_ok(ev: dict, base: dict, tol: float) -> bool:
+def _stt_ok(ev: dict, base: dict, tol: float | None) -> bool:
+    """`tol=None` -> guard TẮT (luôn True). Dùng khi ckpt v2 chỉ phục vụ sách thạch/mộc
+    bản (books[].detector_ckpt theo sách) nên STT không bao giờ chạy qua nó — guard chỉ
+    cần khi MỘT mô hình phải phục vụ cả hai miền."""
+    if tol is None:
+        return True
     for k in ("stt_F1_020", "stt_F1_015"):
         if ev.get(k) is None or base.get(k) is None:
             continue
@@ -169,7 +177,8 @@ def _pipeline_ckpt(state_dict, meta, cfg: Cfg, epoch: int, val: dict | None, ext
     return d
 
 
-def write_report(out: Path, base: dict, hist: list[dict], best_ep: int, cfg: Cfg):
+def write_report(out: Path, base: dict, hist: list[dict], best_ep: int, cfg: Cfg,
+                 best_litho_ep: int = -1):
     rows = [("thạch bản val: ô tham chiếu IoU ≥ 0,5 (%)", "litho_ok50", "↑"),
             ("thạch bản: miss (%)", "litho_miss", "↓"), ("thạch bản: extra / 100 ô", "litho_extra", "↓"),
             ("thạch bản: |dy| tâm trung vị (% bước)", "litho_dy_med", "↓"), ("thạch bản: |dy| p90 (% bước)", "litho_dy_p90", "↓"),
@@ -189,11 +198,30 @@ def write_report(out: Path, base: dict, hist: list[dict], best_ep: int, cfg: Cfg
              "Val page-disjoint (trang 10k+3 mỗi sách). Mọi số là proxy (ô tham chiếu = kim + chiếu mực, không GT người);"
              " % tầng n==N đếm hộp THÔ (không ép N). Chrestomathie không có trang nào trong train.", "",
              "| chỉ số | v1 | v2 (best) | Δ | mục tiêu |", "|---|---|---|---|---|"]
-    goals = {"litho_ok50": "≥ 98", "litho_tiers_eq_015": "≥ 90", "stt_F1_020": f"≥ v1 − {cfg.stt_tol}", "litho_cut": "giảm"}
+    bl = next((h for h in hist if h["epoch"] == best_litho_ep), None)
+    goals = {"litho_ok50": "≥ 98", "litho_tiers_eq_015": "≥ 90", "litho_cut": "giảm",
+             "stt_F1_020": (f"≥ v1 − {cfg.stt_tol}" if cfg.stt_tol is not None else "GUARD TẮT")}
     for name, k, arrow in rows:
         b = base.get(k); v = best.get(k) if best else None
         d = (None if b is None or v is None else round(v - b, 2))
         lines.append(f"| {name} | {b} | {v} | {'' if d is None else ('+' if d > 0 else '') + str(d)} {arrow} | {goals.get(k, '')} |")
+    if bl:
+        lines += ["", "## `best_litho.pt` — chọn theo RIÊNG tiêu chí thạch bản (KHÔNG qua guard STT)", "",
+                  f"Epoch **{best_litho_ep}**. Ckpt này tồn tại để một lần chạy luôn để lại tệp dùng được cho "
+                  "sách thạch/mộc bản, kể cả khi guard STT chặn `best.pt`.", "",
+                  "| chỉ số | v1 | best_litho | Δ |", "|---|---|---|---|"]
+        for name, k, arrow in rows:
+            b = base.get(k); v = bl.get(k)
+            d = (None if b is None or v is None else round(v - b, 2))
+            lines.append(f"| {name} | {b} | {v} | {'' if d is None else ('+' if d > 0 else '') + str(d)} {arrow} |")
+        _ok = _stt_ok(bl, base, cfg.stt_tol if cfg.stt_tol is not None else 0.01)
+        lines += ["", ("> ⚠️ **CẢNH BÁO.** Epoch này " + ("QUA" if _ok else "KHÔNG qua")
+                       + f" guard STT (F1@0,2 {base.get('stt_F1_020')} → {bl.get('stt_F1_020')}"
+                       + f", @0,15 {base.get('stt_F1_015')} → {bl.get('stt_F1_015')}). "
+                       + ("Vì vậy CHỈ được khai qua `books[].detector_ckpt` cho các sách thạch/mộc bản; "
+                          "đặt làm detector TOÀN CỤC (env `NOM_DETECTOR_CKPT`) sẽ làm STT tụt và phá "
+                          "bất biến byte-identical của bộ STT." if not _ok
+                          else "Dù vậy vẫn nên khai theo sách để giữ STT hoàn toàn không đổi byte."))]
     lines += ["", "## Theo epoch", "", "| ep | loss | ok50 | n==N@0,15 | cut | STT F1@0,2 | STT ok | best |", "|---|---|---|---|---|---|---|---|"]
     for h in hist:
         lines.append(f"| {h['epoch']} | {h.get('loss')} | {h.get('litho_ok50')} | {h.get('litho_tiers_eq_015')} | {h.get('litho_cut')} "
@@ -209,9 +237,18 @@ def write_report(out: Path, base: dict, hist: list[dict], best_ep: int, cfg: Cfg
         verdict.append(f"- cắt thân chữ {base.get('litho_cut')} → {best.get('litho_cut')}: "
                        f"{'giảm' if (best.get('litho_cut') or 0) < (base.get('litho_cut') or 0) else 'KHÔNG giảm'}")
     else:
-        verdict.append("- KHÔNG có epoch nào vượt v1 (ok50 → n==N → cắt, cùng mã cùng val) qua guard STT → không có best.pt; "
-                       "giữ v1 + `detector_resize: area` (đã cho phần lớn cải thiện, xem README).")
-    lines += ["", "## Kết luận", ""] + verdict + ["", "Bước tiếp: tải best.pt về máy → `lab/i5_detector_v2/apply_v2.sh best.pt` "
+        verdict.append("- KHÔNG có epoch nào vượt v1 (ok50 → n==N → cắt, cùng mã cùng val) qua guard STT → không có best.pt.")
+        if bl:
+            verdict.append(f"- **NHƯNG có `best_litho.pt` (epoch {best_litho_ep})**: trên thạch bản ok50 "
+                           f"{base.get('litho_ok50')} → {bl.get('litho_ok50')}, % tầng n==N @0,15 "
+                           f"{base.get('litho_tiers_eq_015')} → {bl.get('litho_tiers_eq_015')}, cắt thân chữ "
+                           f"{base.get('litho_cut')} → {bl.get('litho_cut')}. Dùng ckpt này cho 5 sách thạch/mộc bản "
+                           "qua `books[].detector_ckpt`; 3 sách STT KHÔNG khai (giữ v1) — xem cảnh báo ở trên.")
+        else:
+            verdict.append("- Cũng KHÔNG có `best_litho.pt` (không epoch nào vượt v1 ngay trên thạch bản) → "
+                           "giữ v1 + `detector_resize: area`.")
+    lines += ["", "## Kết luận", ""] + verdict + ["", "Bước tiếp: tải `best.pt` (hoặc `best_litho.pt` nếu guard STT chặn) "
+                                                 "về máy → `lab/i5_detector_v2/apply_v2.sh <ckpt>` "
                                                  "(đo box_ref_eval v1↔v2 trên ảnh gốc + build all-new _v2)."]
     (out / "report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -294,8 +331,14 @@ def run(cfg: Cfg) -> dict:
     if cfg.hf_repo and token:
         hub.ensure_repo(cfg.hf_repo, token)
     last_p, best_p = out / "last.pt", out / "best.pt"
+    # (2026-09-23) best_litho.pt = epoch tốt nhất theo RIÊNG tiêu chí thạch bản (ok50 → n==N
+    # → −cắt), KHÔNG xét guard STT. Lý do: repo đã có books[].detector_ckpt THEO SÁCH, nên
+    # ckpt thạch bản không bao giờ chạy trên STT; guard chỉ cần khi một mô hình phục vụ cả
+    # hai miền. Lần chạy 22/09 mất trắng vì guard chặn mà không có tệp nào khác được ghi.
+    litho_p = out / "best_litho.pt"
     # best khởi điểm = v1 (cùng mã, cùng val): epoch nào không vượt v1 thì không thành best.pt
     start_ep, best, best_ep, stall, hist, global_step = 0, _score(base), -1, 0, [], 0
+    best_litho, best_litho_ep = _score(base), -1
     best_ok50_ref = base.get("litho_ok50") or 0.0
     if cfg.resume and not last_p.exists() and cfg.hf_repo:
         hub.pull(cfg.hf_repo, "last.pt", token, out)
@@ -309,6 +352,8 @@ def run(cfg: Cfg) -> dict:
             start_ep, global_step = int(st["epoch"]), int(st.get("global_step", 0))
             ema.n_updates = global_step
             best, best_ep, stall, hist = tuple(st.get("best") or _score(base)), int(st.get("best_epoch", -1)), int(st.get("stall", 0)), list(st.get("history", []))
+            best_litho = tuple(st.get("best_litho") or best)
+            best_litho_ep = int(st.get("best_litho_epoch", -1))
             best_ok50_ref = float(st.get("best_ok50_ref", best_ok50_ref))
             if "rng" in st:
                 torch.set_rng_state(st["rng"]["torch"]); np.random.set_state(st["rng"]["numpy"])
@@ -376,27 +421,44 @@ def run(cfg: Cfg) -> dict:
         if is_best:
             best, best_ep = score, ep + 1
             torch.save(_pipeline_ckpt(ema.module.state_dict(), meta, cfg, ep + 1, ev, {"base_v1": {k: v for k, v in base.items() if k != "_raw"}}), best_p)
+        is_best_litho = bool(ev.get("litho_ok50") is not None and score > best_litho)
+        if is_best_litho:
+            best_litho, best_litho_ep = score, ep + 1
+            torch.save(_pipeline_ckpt(ema.module.state_dict(), meta, cfg, ep + 1, ev, {
+                "base_v1": {k: v for k, v in base.items() if k != "_raw"},
+                "selected_by": "litho_only",
+                "stt_guard_passed": bool(stt_ok),
+                # CẢNH BÁO đi THEO TỆP: ai nạp ckpt này cũng đọc được lý do và giới hạn.
+                "warning": ("best_litho.pt chọn theo RIÊNG tiêu chí thạch bản (ok50 → % tầng n==N → −cắt), "
+                            "KHÔNG qua guard STT F1. CHỈ dùng cho sách thạch/mộc bản qua books[].detector_ckpt "
+                            f"theo sách; STT F1@0,2 của epoch này = {ev.get('stt_F1_020')} so v1 {base.get('stt_F1_020')}. "
+                            "Đưa ckpt này thành detector TOÀN CỤC sẽ làm STT tụt."),
+            }), litho_p)
         with open(mcsv, "a", newline="", encoding="utf-8") as f:
             csv.DictWriter(f, fieldnames=METRIC_KEYS, extrasaction="ignore").writerow(row)
         torch.save(_pipeline_ckpt(ema.module.state_dict(), meta, cfg, ep + 1, ev, {
             "model_raw": net.state_dict(), "opt": opt.state_dict(), "scaler": scaler.state_dict(),
             "global_step": global_step, "best": list(best), "best_epoch": best_ep, "stall": stall, "history": hist,
+            "best_litho": list(best_litho), "best_litho_epoch": best_litho_ep,
             "best_ok50_ref": best_ok50_ref,
             "rng": {"torch": torch.get_rng_state(), "numpy": np.random.get_state()}}), last_p)
         json.dump({"base_v1": {k: v for k, v in base.items() if k != "_raw"}, "history": hist, "best_epoch": best_ep,
                    "best_score(ok50,tiers,-cut)": list(best), "cfg": {k: v for k, v in asdict(cfg).items() if k != "hf_token"}},
                   open(out / "history.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
-        write_report(out, base, hist, best_ep, cfg)
+        write_report(out, base, hist, best_ep, cfg, best_litho_ep)
         if cfg.hf_repo and token:
             hub.push(last_p, cfg.hf_repo, token)
             if is_best:
                 hub.push(best_p, cfg.hf_repo, token)
+            if is_best_litho:
+                hub.push(litho_p, cfg.hf_repo, token)
             hub.push(mcsv, cfg.hf_repo, token); hub.push(out / "report.md", cfg.hf_repo, token)
         if stall >= cfg.patience and ep + 1 >= cfg.min_epochs:
             print(f"  dừng sớm: {cfg.patience} epoch không cải thiện ≥ {cfg.min_gain} điểm ok50 (hoặc STT tụt)", flush=True)
             break
     print(f"[done] {time.time() - t_start:.0f}s | best epoch {best_ep} score(ok50,n==N,-cut) {best} (v1 {_score(base)}) "
-          f"| {best_p if best_ep > 0 else 'KHÔNG có best.pt: không epoch nào vượt v1 qua guard STT -> giữ v1 (+ detector_resize area)'}"
+          f"| {best_p if best_ep > 0 else 'KHÔNG có best.pt: không epoch nào vượt v1 qua guard STT'}"
+          f" | best_litho epoch {best_litho_ep}: {litho_p if best_litho_ep > 0 else 'KHÔNG có (không epoch nào vượt v1 trên thạch bản)'}"
           f" | {out / 'report.md'}", flush=True)
     return {"best_epoch": best_ep, "best_score": best, "base_v1": base, "history": hist, "out": str(out)}
 

@@ -21,7 +21,9 @@ thể XOÁ dị bản QN thật của 1884 (câu 1884 khác 1871 một âm mà O
 
 Chạy:
   .venv/bin/python scripts/measure/verses_ref_fix.py --book KimVanKieu1884 \
-      --ref data/TruyenKieuPhongTinhCoLuc/thamchieu_kieu_1871_LieuVanDuong_phienam.json --ref-name nf1871
+      --ref data/TruyenKieu1872/nomfoundation_1872_phienam.json --ref-name nf1872
+  (bản 1871 Liễu Văn Đường nằm trong data/TruyenKieuPhongTinhCoLuc/ đã gỡ khỏi phạm vi — xem
+   docs/VONG7_DETECTOR_V2_VA_CROP_GOC_2026-09-23.md §4; khôi phục bằng git checkout nếu cần.)
   → measure_out/KimVanKieu1884/qn_ref_fix/{verses_b1.tsv,matches.csv,summary.json}
   .venv/bin/python scripts/measure/verses_ref_fix.py --selftest
 Chỉ đọc data/ và measure_out/; không sửa pipeline/ core/.
@@ -445,7 +447,10 @@ def selftest() -> int:
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--book", default="KimVanKieu1884")
-    ap.add_argument("--ref", default=str(REPO / "data/TruyenKieuPhongTinhCoLuc/thamchieu_kieu_1871_LieuVanDuong_phienam.json"))
+    # 2026-09-23 (vòng 7): KHÔNG còn mặc định trỏ vào data/TruyenKieuPhongTinhCoLuc/ (thư mục PTCL
+    # đã gỡ khỏi phạm vi và khỏi đĩa) — phải khai --ref tường minh.
+    ap.add_argument("--ref", default="", help="json phiên âm dị bản (bắt buộc; vd data/TruyenKieu1872/"
+                                              "nomfoundation_1872_phienam.json)")
     ap.add_argument("--ref-name", default="nf1871")
     ap.add_argument("--verses", default=None, help="verses.tsv đầu vào (mặc định measure_out/<book>/qn_ocr/verses.tsv)")
     ap.add_argument("--out", default=None, help="thư mục ra (mặc định measure_out/<book>/qn_ref_fix)")
@@ -464,6 +469,11 @@ def main(argv=None) -> int:
         print(json.dumps({k: r[k] for k in ("n_changed_syllables_with_kim", "pct")}, ensure_ascii=False))
         print("→", out / f"mechanism_check_{name}.json")
         return 0
+    if not a.ref or not Path(a.ref).exists():
+        ap.error(f"--ref {a.ref!r} không tồn tại. Bản 1871 Liễu Văn Đường (mặc định cũ) nằm trong "
+                 "data/TruyenKieuPhongTinhCoLuc/ — thư mục PTCL đã gỡ khỏi phạm vi; khôi phục bằng "
+                 "`git checkout -- data/TruyenKieuPhongTinhCoLuc/thamchieu_kieu_1871_LieuVanDuong_phienam.json` "
+                 "hoặc khai một json phiên âm khác.")
     out = Path(a.out) if a.out else REPO / "measure_out" / a.book / "qn_ref_fix"
     s = run(a.book, Path(a.ref), a.ref_name, out, a.fuzzy_min, Path(a.verses) if a.verses else None)
     print(json.dumps({k: s[k] for k in ("by_source", "n_rows_syll_not_6_8_before", "n_rows_syll_not_6_8_after",

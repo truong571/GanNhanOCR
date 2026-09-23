@@ -137,6 +137,61 @@ def test_gate():
               BL.expected_qn_counts(td, "page_0001") == {1: 14, 2: 12})
 
 
+def test_gate_tier_rule():
+    """[11] (2026-09-23) cổng thạch bản lấy LUẬT 6/8 làm kỳ vọng + cờ qn_count_unfixed."""
+    print("[11] lithograph_gate tier_rule + qn_count_unfixed")
+    lay = BL.BookLayout("lithograph", 10, 14)
+    cols = [{"chars": []} for _ in range(10)]
+    qn = {i + 1: ["a"] * 14 for i in range(10)}
+    rule = BL.LITHO_TIER_RULE
+    check("tier_rule_for(lithograph 14) = (6, 8)", BL.tier_rule_for(lay) == (6, 8))
+    check("tier_rule_for(STT) = None", BL.tier_rule_for(BL.DEFAULT_LAYOUT) is None)
+    check("tier_rule_for(prose) = None", BL.tier_rule_for(BL.BookLayout("prose", 0, 0)) is None)
+    ok, g = BL.lithograph_gate(cols, qn, lay, tier_rule=rule)
+    check("10 cột × 14 âm + luật -> PASS", ok and not g["bad_syl_cols"] and g["expect_n"] == 14)
+    qn13 = dict(qn); qn13[3] = ["a"] * 13
+    ok_old, _ = BL.lithograph_gate(cols, qn13, lay, expected_counts={3: 13})
+    ok_new, g_new = BL.lithograph_gate(cols, qn13, lay, expected_counts={3: 13}, tier_rule=rule)
+    check("CŨ: JSON ghi num_syllables=13 -> cột 13 âm ĐI LỌT cổng", ok_old)
+    check("MỚI: luật 6/8 -> cột 13 âm TRƯỢT cổng", not ok_new)
+    check("MỚI: bad_syl_cols nêu cột 3 muốn 14, nguồn tier_rule",
+          g_new["bad_syl_cols"] == [{"column": 3, "n_syl": 13, "want": 14, "src": "tier_rule"}],
+          str(g_new["bad_syl_cols"]))
+    qn15 = dict(qn); qn15[7] = ["a"] * 15
+    check("MỚI: cột 15 âm cũng trượt cổng",
+          not BL.lithograph_gate(cols, qn15, lay, expected_counts={7: 15}, tier_rule=rule)[0])
+    check("tier_rule=None -> hành vi CŨ nguyên vẹn (không khoá expect_src)",
+          BL.lithograph_gate(cols, qn13, lay, expected_counts={3: 13})[1].get("expect_src") is None)
+    # --- cờ qn_count_unfixed ---
+    check("qn_count_flag_on: lithograph có luật -> True", BL.qn_count_flag_on(lay, rule) is True)
+    check("qn_count_flag_on: STT -> False", BL.qn_count_flag_on(BL.DEFAULT_LAYOUT, None) is False)
+    check("qn_count_flag_on: prose -> True", BL.qn_count_flag_on(BL.BookLayout("prose", 0, 0), None) is True)
+    check("cờ: 10 cột đủ 14 âm -> rỗng", BL.qn_count_unfixed_columns(qn, lay, tier_rule=rule) == {})
+    u13 = BL.qn_count_unfixed_columns(qn13, lay, tier_rule=rule)
+    check("cờ: cột 13 âm bị đánh dấu", list(u13) == [3] and "13!=14" in u13[3], str(u13))
+    u15 = BL.qn_count_unfixed_columns(qn15, lay, tier_rule=rule)
+    check("cờ: cột 15 âm bị đánh dấu", list(u15) == [7], str(u15))
+    check("cờ: STT (tier_rule None, không prose) -> LUÔN rỗng",
+          BL.qn_count_unfixed_columns(qn13, BL.DEFAULT_LAYOUT) == {})
+    with tempfile.TemporaryDirectory() as td:
+        (Path(td) / "transcriptions").mkdir()
+        js = {"columns": [{"column": 1, "dp_ratio": 0.9}, {"column": 2, "dp_ratio": 0.5},
+                          {"column": 3}, {"column": 4, "dp_ratio": 0.75}]}
+        (Path(td) / "transcriptions" / "page_0001.json").write_text(json.dumps(js), encoding="utf-8")
+        pr = BL.BookLayout("prose", 0, 0)
+        check("prose_dp_ratios đọc theo column, bỏ cột thiếu khoá",
+              BL.prose_dp_ratios(td, "page_0001") == {1: 0.9, 2: 0.5, 4: 0.75})
+        up = BL.qn_count_unfixed_columns({}, pr, data_dir=td, page_name="page_0001")
+        check("prose: chỉ cột dp_ratio < 0,75 bị đánh dấu (0,75 KHÔNG tính)", list(up) == [2], str(up))
+        check("prose: ngưỡng dp_min truyền tay",
+              list(BL.qn_count_unfixed_columns({}, pr, data_dir=td, page_name="page_0001",
+                                               dp_min=0.95)) == [1, 2, 4])
+        check("prose: thiếu tệp -> rỗng",
+              BL.qn_count_unfixed_columns({}, pr, data_dir=td, page_name="page_9999") == {})
+    check("PROSE_DP_RATIO_MIN = 0,75", abs(BL.PROSE_DP_RATIO_MIN - 0.75) < 1e-9)
+    check("COL_QN_COUNT_UNFIXED = 'qn_count_unfixed'", BL.COL_QN_COUNT_UNFIXED == "qn_count_unfixed")
+
+
 def test_get_qn_lines():
     print("[3] _get_qn_lines n_columns")
     text = "\n".join(f"{i}. " + " ".join(["xa"] * 14) for i in range(1, 11))
@@ -235,11 +290,22 @@ def test_detect():
             det13 = AP._detect("page_0001", root, set(), layout=lay, gate_out=g13)
             check("mỗi cột 13 âm (JSON ghi 14): page_ok False, 10 cột lệch trong gate",
                   det13 is not None and det13[4] is False and len(g13["bad_syl_cols"]) == 10)
-            # JSON ghi đúng 13 -> qua cổng ("như transcriptions ghi")
+            # (2026-09-23) JSON ghi đúng 13 NHƯNG sách có luật 6/8 -> KHÔNG còn qua cổng:
+            # `num_syllables` do chính tesseract đếm, "khớp với chính mình" không phải bằng chứng.
             (root / "transcriptions" / "page_0001.json").write_text(json.dumps(
                 {"book_page": 1, "columns": [{"column": i + 1, "num_syllables": 13} for i in range(10)]}), encoding="utf-8")
-            det13b = AP._detect("page_0001", root, set(), layout=lay)
-            check("JSON ghi num_syllables=13 khớp .txt -> page_ok True", det13b is not None and det13b[4] is True)
+            g13b: dict = {}
+            det13b = AP._detect("page_0001", root, set(), layout=lay, gate_out=g13b)
+            check("JSON ghi num_syllables=13 khớp .txt: luật 6/8 vẫn CHẶN (page_ok False)",
+                  det13b is not None and det13b[4] is False)
+            check("gate ghi nguồn kỳ vọng = tier_rule, muốn 14",
+                  g13b.get("expect_src") == "tier_rule" and g13b.get("expect_n") == 14
+                  and len(g13b["bad_syl_cols"]) == 10, str(g13b.get("bad_syl_cols", []))[:120])
+            # sách lithograph KHÔNG có luật (qn_per_column != 14) -> hành vi CŨ: JSON 13 vẫn qua
+            lay13 = BL.BookLayout("lithograph", 10, 13)
+            det13c = AP._detect("page_0001", root, set(), layout=lay13)
+            check("lithograph qn_syllables_per_column=13 (không có luật 6/8) -> vẫn PASS như cũ",
+                  det13c is not None and det13c[4] is True)
             # 9 cột kim / 10 dòng QN: detect_nom_columns_v3 (mã cũ) rơi xuống projection_fallback
             # và ÉP ảnh về n_expected=10 cột -> gate phải ghi col_method để build đếm được
             # tỉ lệ trang fallback (SPEC §7: hybrid >= 95 % trang).
@@ -542,9 +608,55 @@ def test_kim_and_tier_dp():
           and 'cs.get("col_tiers")' in src_bd)
 
 
+def test_crop_source():
+    """[10] books[].crop_source (vòng 7, 2026-09-23) — nguồn điểm ảnh của crop giao nộp."""
+    print("[10] crop_source: processed | original (2026-09-23)")
+    d = BL.book_layout(None)
+    check("mặc định: crop_source 'processed' (hành vi cũ, STT không đổi byte)",
+          d.crop_source == "processed" and d.crop_from_original is False)
+    check("STT không khai crop_source -> vẫn DEFAULT_LAYOUT",
+          BL.book_layout({"name": "SachThanhTruyen2", "pdf": "x.pdf"}) is BL.DEFAULT_LAYOUT)
+    check("khai crop_source: processed (bằng mặc định) -> vẫn DEFAULT_LAYOUT",
+          BL.book_layout({"name": "SachThanhTruyen2", "crop_source": "processed"}) is BL.DEFAULT_LAYOUT)
+    st = BL.book_layout({"name": "s", "crop_source": "original"})
+    check("STT khai crop_source: original -> BookLayout riêng, 9 cột, ckpt None",
+          st is not BL.DEFAULT_LAYOUT and st.n_columns == 9 and st.detector_ckpt is None
+          and st.crop_source == "original" and st.crop_from_original is True)
+    lv = BL.book_layout({"name": "L", "layout": "lithograph", "n_columns": 10, "crop_source": "original"})
+    check("lithograph + crop_source original -> đọc đúng, không đụng khoá khác",
+          lv.crop_from_original and lv.detector_resize == "linear" and lv.qn_per_column == 14)
+    for bad in ({"name": "x", "crop_source": "orig"}, {"name": "x", "crop_source": ""},
+                {"name": "x", "crop_source": None}, {"name": "x", "crop_source": True},
+                {"name": "x", "crop_source": "raw"}):
+        try:
+            BL.book_layout(bad)
+            check(f"giá trị sai {bad} -> ValueError", False)
+        except ValueError:
+            check(f"giá trị sai {bad} -> ValueError", True)
+    check("CROP_SOURCES đúng 2 giá trị", BL.CROP_SOURCES == ("processed", "original"))
+    # 5 config sách thạch/mộc bản phải khai original; 3 sách STT (config/pipeline.yaml) KHÔNG khai
+    import yaml
+    for f, book in (("pipeline_LucVanTien1883.yaml", "LucVanTien1883"),
+                    ("pipeline_KimVanKieu1884.yaml", "KimVanKieu1884"),
+                    ("pipeline_KimVanKieu1884_b1.yaml", "KimVanKieu1884"),
+                    ("pipeline_Chrestomathie1872.yaml", "Chrestomathie1872"),
+                    ("pipeline_LucVanTien1916.yaml", "LucVanTien1916"),
+                    ("pipeline_TruyenKieu1872.yaml", "TruyenKieu1872")):
+        cf = REPO / "config" / f
+        if not cf.exists():
+            continue
+        b = next(x for x in yaml.safe_load(cf.read_text(encoding="utf-8"))["books"] if x["name"] == book)
+        check(f"config/{f}: crop_source = original", BL.book_layout(b).crop_from_original)
+    stt = yaml.safe_load((REPO / "config" / "pipeline.yaml").read_text(encoding="utf-8"))["books"]
+    check("config/pipeline.yaml (STT): KHÔNG sách nào khai crop_source -> giữ processed",
+          all("crop_source" not in b for b in stt)
+          and all(BL.book_layout(b).crop_source == "processed" for b in stt))
+
+
 def main():
     for t in (test_book_layout, test_det_params, test_gate, test_get_qn_lines, test_detect,
-              test_signatures, test_prose, test_detector_ckpt, test_kim_and_tier_dp):
+              test_signatures, test_prose, test_detector_ckpt, test_kim_and_tier_dp,
+              test_crop_source, test_gate_tier_rule):
         try:
             t()
         except Exception as e:      # noqa: BLE001

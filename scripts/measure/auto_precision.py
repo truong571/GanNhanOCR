@@ -58,6 +58,11 @@ CROSS_BOOKS = {
     "KimVanKieu1884": dict(
         labels=REPO / "dataset_out_KimVanKieu1884/labels_final.csv",
         trans=REPO / "prepared/KimVanKieu1884/transcriptions",
+        # 2026-09-23 (vòng 8): tham chiếu "Kieu1871_LVD" ĐƯỢC TRẢ LẠI (ref chính, r0). Tệp phiên âm
+        # Kiều 1871 (Liễu Văn Đường) nằm trong thư mục data/TruyenKieuPhongTinhCoLuc/ nhưng KHÔNG
+        # thuộc bản chép tay PTCL đã loại khỏi phạm vi — nó là dị bản của chính KimVanKieu1884.
+        # Có đủ 2 ref thì "nền dị bản" (1871 ↔ 1872 khác nhau bao nhiêu ở cùng vị trí) mới tính được.
+        # Ref thiếu tệp vẫn bị BỎ QUA kèm cảnh báo (không crash) — xem _existing_refs.
         refs=[("Kieu1871_LVD", REPO / "data/TruyenKieuPhongTinhCoLuc/thamchieu_kieu_1871_LieuVanDuong_phienam.json"),
               ("Kieu1872_DMT", REPO / "data/TruyenKieu1872/nomfoundation_1872_phienam.json")]),
     "LucVanTien1883": dict(
@@ -423,6 +428,15 @@ def match_verses(book: str, cfg: dict, min_frac: float) -> tuple[list[dict], dic
     """Mỗi câu (page, column, half) của sách thạch bản → câu tham chiếu khớp QN (exact / ≥min_frac duy nhất)."""
     out = []
     stat = Counter()
+    # Tham chiếu THIẾU TỆP thì bỏ qua kèm cảnh báo (trước đây crash). Cùng một chỗ xử lý mọi
+    # bản phiên âm đã bị gỡ khỏi data/ — cross vẫn chạy với các tham chiếu còn lại.
+    _missing = [n for n, jf in cfg["refs"] if not Path(jf).exists()]
+    for _n in _missing:
+        print(f"  [cross] ⚠️ BỎ QUA tham chiếu {_n}: không có tệp trên đĩa", flush=True)
+    cfg["refs"] = [(n, jf) for n, jf in cfg["refs"] if Path(jf).exists()]
+    if not cfg["refs"]:
+        print("  [cross] không còn tham chiếu nào -> bỏ bước cross cho sách này", flush=True)
+        return [], {"skipped": "no_refs"}
     refs = {name: load_ref(jf) for name, jf in cfg["refs"]}
     for tf in sorted(glob.glob(str(cfg["trans"] / "page_*.json"))):
         t = json.load(open(tf, encoding="utf-8"))
@@ -481,6 +495,8 @@ def step_cross(a, out: Path) -> dict:
             print(f"[cross] {book}: thiếu {lp}", file=sys.stderr)
             continue
         verses, vstat = match_verses(book, cfg, a.min_frac)
+        if not cfg["refs"]:          # mọi tham chiếu đều thiếu tệp -> bỏ hẳn sách này
+            continue
         labels = load_labels(lp)
         by_col = defaultdict(list)
         for r in labels:

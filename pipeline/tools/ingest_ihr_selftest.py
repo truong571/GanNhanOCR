@@ -85,6 +85,27 @@ def main() -> int:
     ok3, fl3 = M.page_gate(odd)
     chk("page_gate: 21 câu -> 11 cột PASS nhưng cờ n_cols", ok3 and any("n_cols=" in f for f in fl3),
         str(fl3))
+    # (2026-09-23) page_seq_step: bước tiến số câu = 2 * ceil(n/2) — parity không đảo
+    chk("page_seq_step: 20 câu -> 20", M.page_seq_step(20) == 20)
+    chk("page_seq_step: 21 câu -> 22 (làm tròn LÊN cặp)", M.page_seq_step(21) == 22)
+    chk("page_seq_step: 19 câu -> 20", M.page_seq_step(19) == 20)
+    chk("page_seq_step: 0 câu -> 0", M.page_seq_step(0) == 0)
+    chk("page_seq_step: luôn CHẴN", all(M.page_seq_step(k) % 2 == 0 for k in range(0, 40)))
+    chk("page_seq_step >= số câu thô (không nuốt câu)",
+        all(M.page_seq_step(k) >= k for k in range(0, 40)))
+    _seq, _ok = 1, True
+    for k in (21, 21, 19, 21, 20):          # đúng hình các trang lẻ của LucVanTien1916
+        _ok = _ok and _seq % 2 == 1
+        _seq += M.page_seq_step(k)
+    chk("page_seq_step: chuỗi 21/21/19/21/20 giữ first_seq LẺ ở mọi trang", _ok)
+    chk("page_gate: trang số câu lẻ -> cờ verses_odd (KHÔNG chặn)",
+        M.page_gate(dict(rec, cols=rec["cols"] + [rec["cols"][0]],
+                         verses=rec["verses"] + ["cau 20"]))[0]
+        and any(f.startswith("verses_odd=")
+                for f in M.page_gate(dict(rec, cols=rec["cols"] + [rec["cols"][0]],
+                                          verses=rec["verses"] + ["cau 20"]))[1]))
+    chk("page_gate: trang số câu chẵn KHÔNG có cờ verses_odd",
+        not any(f.startswith("verses_odd=") for f in M.page_gate(rec)[1]))
     vp = M.verse_pairs_for_page(rec)
     chk("verse_pairs: 10 cặp", len(vp) == 10)
     chk("verse_pairs: cột 1 = (1,2)", vp[0] == (1, 2))
@@ -123,9 +144,24 @@ def main() -> int:
         chk(f"{bk}: cột 0 nằm PHẢI nhất",
             all(recs[0]["cols"][i]["x0"] > recs[0]["cols"][i + 1]["x0"]
                 for i in range(len(recs[0]["cols"]) - 1)))
-        chk(f"{bk}: first_seq tăng đều",
-            all(recs[i + 1]["first_seq"] == recs[i]["first_seq"] + len(recs[i]["verses"])
+        chk(f"{bk}: first_seq tiến theo CẶP câu (page_seq_step)",
+            all(recs[i + 1]["first_seq"] == recs[i]["first_seq"] + M.page_seq_step(len(recs[i]["verses"]))
                 for i in range(len(recs) - 1)))
+        chk(f"{bk}: MỌI first_seq đều LẺ (parity không đảo)",
+            all(r["first_seq"] % 2 == 1 for r in recs),
+            str([r["page_id"] for r in recs if r["first_seq"] % 2 == 0][:3]))
+        _vn = [v for r in recs if M.page_gate(r)[0] for v in M.verse_rows(r).values()]
+        chk(f"{bk}: verse_rows — câu tầng TRÊN luôn lẻ",
+            all(vr["verse_no"] % 2 == 1 for vr in _vn if vr["expect_syll"] == M.EXPECT_TIER[0]))
+        _all = [vr["verse_no"] for r in recs if M.page_gate(r)[0] for vr in M.verse_rows(r).values()]
+        chk(f"{bk}: không số câu nào bị dùng hai lần", len(_all) == len(set(_all)),
+            f"{len(_all)} vs {len(set(_all))}")
+        _odd_pages = [r["page_id"] for r in recs if r.get("verses_odd")]
+        chk(f"{bk}: trang số câu LẺ được ghi cờ verses_odd",
+            all("verses_odd=" in M.page_gate(r)[1] or
+                any(f.startswith("verses_odd=") for f in M.page_gate(r)[1])
+                for r in recs if r.get("verses_odd")),
+            str(_odd_pages[:4]))
         npass = sum(1 for r in recs if M.page_gate(r)[0])
         chk(f"{bk}: >= 95 % trang qua cổng", npass / len(recs) >= 0.95, f"{npass}/{len(recs)}")
         ann = M.load_annotation(bk)

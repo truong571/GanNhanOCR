@@ -103,8 +103,24 @@ def load_annotation(book: str) -> list[dict]:
     return out
 
 
+def page_seq_step(n_verses: int) -> int:
+    """Bước tiến số câu của MỘT trang = 2 * ceil(số câu / 2) (2026-09-23, sửa A11/A12).
+
+    `verse_pairs_for_page` gán cột k ↔ (first_seq + 2k, +1) nên nó GIẢ ĐỊNH `first_seq` LẺ:
+    mỗi cột là một cặp lục-bát trọn vẹn. Công thức cũ `seq += len(verses)` cộng số câu THÔ,
+    nên một trang có số câu LẺ (annotation thiếu câu cuối / trang bìa) đảo parity cho MỌI
+    trang sau đó — đo được 61/988 cột (LucVanTien1916) và 1.078/1.610 cột (TruyenKieu1872)
+    có `verse_odd` là số CHẴN, và mỗi lần đảo còn làm một số câu bị dùng hai lần (A12).
+    Cộng theo SỐ CỘT (= ceil(n/2) cặp) giữ bất biến "câu lẻ luôn ở tầng trên".
+    Không đổi phép ghép ô↔chữ (ghép theo trang/cột/vị trí), chỉ đổi `verse_no` công bố."""
+    return 2 * math.ceil(max(int(n_verses), 0) / 2)
+
+
 def load_pages(book: str) -> list[dict]:
-    """Trang theo THỨ TỰ TÊN ẢNH → page_0001…; gộp ô cột + QN; đánh số câu chạy suốt sách."""
+    """Trang theo THỨ TỰ TÊN ẢNH → page_0001…; gộp ô cột + QN; đánh số câu chạy suốt sách.
+
+    Số câu chạy suốt sách tiến theo `page_seq_step` (CẶP câu, không phải câu thô) để parity
+    câu lẻ/chẵn không bị đảo sau một trang có số câu lẻ — xem `page_seq_step`."""
     bbx = load_bboxes(book)
     ann = {a["img"]: a["verses"] for a in load_annotation(book)}
     src = BOOKS[book]["root"] / BOOKS[book]["images"]
@@ -114,8 +130,9 @@ def load_pages(book: str) -> list[dict]:
         b = bbx.get(name) or dict(W=0, H=0, cols=[])
         verses = ann.get(name) or []
         recs.append(dict(page=i, page_id=Path(name).stem, img=name, file=src / name,
-                         W=b["W"], H=b["H"], cols=b["cols"], verses=verses, first_seq=seq))
-        seq += len(verses)
+                         W=b["W"], H=b["H"], cols=b["cols"], verses=verses, first_seq=seq,
+                         verses_odd=bool(len(verses) % 2)))
+        seq += page_seq_step(len(verses))
     return recs
 
 
@@ -130,6 +147,10 @@ def page_gate(rec: dict) -> tuple[bool, list[str]]:
         flags.append(f"cols={n_cols}!=ceil(verses/2)={want}")
     if n_cols and n_cols != N_COLUMNS:
         flags.append(f"n_cols={n_cols}!={N_COLUMNS}")
+    if n_v % 2:
+        # trang có số câu LẺ: nguồn của lỗi parity cũ (page_seq_step). Nay chỉ GHI CỜ —
+        # số câu của trang sau đã tiến theo cặp nên parity không còn đảo.
+        flags.append(f"verses_odd={n_v}")
     ok = not any(f.startswith(("no_layout", "cols=")) for f in flags)
     return ok, flags
 

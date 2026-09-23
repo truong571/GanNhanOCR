@@ -51,6 +51,21 @@ Khoá tuỳ chọn trong `books:` của config/pipeline.yaml (vắng = hành vi 
                                     # 5 Văn bia · 6 Kinh Phật. Đã đo: 5 (+epitaph) KÉM hơn -> giữ 1.
     kim_font_type: 1                # (2026-09-23, tuỳ chọn) `font_type`: 0 Tự động · 1 In (mặc định) ·
                                     # 2 Viết tay. Đã đo: 2 KÉM hơn trên sách in -> giữ 1.
+    crop_source: original           # (2026-09-23, tuỳ chọn) NGUỒN ĐIỂM ẢNH của crop GIAO NỘP:
+                                    # "processed" (MẶC ĐỊNH = hành vi cũ, STT không đổi byte) cắt từ
+                                    # prepared/<Book>/pages/*.png — ảnh đã qua adapter (xám L +
+                                    # --contrast stretch|otsu), nền bị kéo/ép về 255; "original" cắt
+                                    # ĐÚNG CÙNG khung hình đó từ ẢNH QUÉT GỐC trong data/<Book>/
+                                    # (giữ màu/nền giấy). HÌNH HỌC KHÔNG ĐỔI: cửa sổ pad, seam carve
+                                    # và tighten_box vẫn tính trên ảnh ĐÃ XỬ LÝ rồi áp NGUYÊN xi sang
+                                    # ảnh gốc -> crop_w/crop_h/ink_pct/seg_flag giữ nguyên, chỉ điểm
+                                    # ảnh đổi. Khi bật, build_dataset ghi THÊM bản đã xử lý ở
+                                    # $out/crops_bin/<tier>/<cùng tên>.png cho mã đọc crop nhị phân
+                                    # (pipeline.tools.enrich_crop_quality tự ưu tiên crops_bin/ nên
+                                    # crop_quality_flag/stray_ink/border_ink KHÔNG đổi); crops_bin/
+                                    # KHÔNG đi vào bộ giao nộp (export_final_dataset chỉ copy `image`).
+                                    # Ảnh gốc tra qua prepared/<Book>/manifest.json (pages[].source_file
+                                    # + scale); thiếu ảnh gốc -> lỗi ngay (fail fast), không rơi ngầm.
     detector_resize: area           # (2026-09-22, tuỳ chọn) phép thu ảnh trang cho detector: "linear"
                                     # (mặc định = cv2.resize cũ, STT không đổi) | "area" (INTER_AREA khử
                                     # răng cưa khi thu ~3×; đo v1 27 trang thạch bản: tầng n==N 77,0 →
@@ -101,6 +116,9 @@ KIM_FONT_TYPE_DEFAULT = 1
 DETECTOR_RESIZE_LINEAR = "linear"
 DETECTOR_RESIZE_AREA = "area"
 DETECTOR_RESIZES = (DETECTOR_RESIZE_LINEAR, DETECTOR_RESIZE_AREA)
+CROP_SOURCE_PROCESSED = "processed"   # cắt từ prepared/<Book>/pages/*.png (hành vi cũ)
+CROP_SOURCE_ORIGINAL = "original"     # cắt từ ảnh quét gốc data/<Book>/… (giữ nền giấy)
+CROP_SOURCES = (CROP_SOURCE_PROCESSED, CROP_SOURCE_ORIGINAL)
 
 
 @dataclass(frozen=True)
@@ -114,6 +132,7 @@ class BookLayout:
     box_decoder: str = BOX_DECODER_LEGACY   # "legacy" | "pitch" (pitch_decode, tuỳ chọn)
     detector_ckpt: str | None = None   # None = ckpt toàn cục (v1); chuỗi = ckpt riêng sách (v2)
     detector_resize: str = DETECTOR_RESIZE_LINEAR   # "linear" (v1) | "area" (khử răng cưa)
+    crop_source: str = CROP_SOURCE_PROCESSED        # "processed" (cũ) | "original" (ảnh quét gốc)
     tier_dp: bool = False           # True = DP riêng từng tầng 6/8 (chỉ lithograph)
     kim_lang_type: int = KIM_LANG_TYPE_DEFAULT      # body lang_type của kênh kim (1 = Hán = bộ cũ)
     kim_ocr_id: int = KIM_OCR_ID_DEFAULT            # body ocr_id (1 = văn bản thông thường)
@@ -131,6 +150,11 @@ class BookLayout:
         return (self.kim_lang_type == KIM_LANG_TYPE_DEFAULT
                 and self.kim_ocr_id == KIM_OCR_ID_DEFAULT
                 and self.kim_font_type == KIM_FONT_TYPE_DEFAULT)
+
+    @property
+    def crop_from_original(self) -> bool:
+        """True khi crop giao nộp phải cắt từ ẢNH QUÉT GỐC (data/<Book>/…)."""
+        return self.crop_source == CROP_SOURCE_ORIGINAL
 
     @property
     def is_lithograph(self) -> bool:
@@ -196,6 +220,9 @@ def book_layout(book_cfg: dict | None) -> BookLayout:
     detector_resize = book_cfg.get("detector_resize", DETECTOR_RESIZE_LINEAR)
     if detector_resize not in DETECTOR_RESIZES:
         raise ValueError(f"books[{name}].detector_resize = {detector_resize!r}; chỉ nhận {DETECTOR_RESIZES}")
+    crop_source = book_cfg.get("crop_source", CROP_SOURCE_PROCESSED)
+    if crop_source not in CROP_SOURCES:
+        raise ValueError(f"books[{name}].crop_source = {crop_source!r}; chỉ nhận {CROP_SOURCES}")
     tier_dp = book_cfg.get("tier_dp", False)
     if not isinstance(tier_dp, bool):
         raise ValueError(f"books[{name}].tier_dp = {tier_dp!r}; cần true/false")
@@ -207,13 +234,14 @@ def book_layout(book_cfg: dict | None) -> BookLayout:
     if (layout == LAYOUT_STT and n_columns == DEFAULT_N_COLUMNS and qpc == 0
             and det_xmargin is None and det_thr is None and box_decoder == BOX_DECODER_LEGACY
             and detector_ckpt is None and detector_resize == DETECTOR_RESIZE_LINEAR
+            and crop_source == CROP_SOURCE_PROCESSED
             and kim_lang_type == KIM_LANG_TYPE_DEFAULT and kim_ocr_id == KIM_OCR_ID_DEFAULT
             and kim_font_type == KIM_FONT_TYPE_DEFAULT and not tier_dp):
         return DEFAULT_LAYOUT
     return BookLayout(layout=layout, n_columns=n_columns, qn_per_column=qpc,
                       det_xmargin=det_xmargin, det_thr=det_thr, box_decoder=box_decoder,
                       detector_ckpt=detector_ckpt, detector_resize=detector_resize,
-                      tier_dp=tier_dp, kim_lang_type=kim_lang_type, kim_ocr_id=kim_ocr_id,
+                      crop_source=crop_source, tier_dp=tier_dp, kim_lang_type=kim_lang_type, kim_ocr_id=kim_ocr_id,
                       kim_font_type=kim_font_type)
 
 
@@ -256,7 +284,8 @@ def _float_key(book_cfg: dict, name: str, key: str, default: float | None,
 
 
 def lithograph_gate(cols: list, qn_lines: dict, lay: BookLayout,
-                    expected_counts: dict | None = None) -> tuple[bool, dict]:
+                    expected_counts: dict | None = None,
+                    tier_rule: tuple[int, ...] | None = None) -> tuple[bool, dict]:
     """Cổng page_ok cho layout=lithograph.
 
     PASS khi: số cột Nôm == n_columns, số cột QN == n_columns, và mỗi cột QN có
@@ -266,21 +295,33 @@ def lithograph_gate(cols: list, qn_lines: dict, lay: BookLayout,
     Trả (ok, chi tiết) để ghi vào bản ghi trang. align_production._detect còn đòi
     phương pháp cột hybrid* (projection_fallback luôn ép đúng n_columns nên đếm cột
     ở nhánh đó là tautology).
+
+    tier_rule (2026-09-23, docs/RA_SOAT_CAN_CHINH_2026-09-23.md §4 #4): khi sách có
+    luật thể thơ (lithograph 14 âm -> (6, 8), xem `tier_rule_for`) thì KỲ VỌNG lấy
+    LUẬT `sum(tier_rule)`, KHÔNG lấy `num_syllables` của JSON. Lý do: `num_syllables`
+    do chính tesseract đếm, nên cột 13/15 âm "khớp với chính mình" và ĐI LỌT cổng —
+    đo được 27/1.044 (LVT1883), 26/1.628 (KVK1884), 22/988 (LVT1916), 7/1.610 (TK1872)
+    cột như vậy, và 76–86 % trôi căn chỉnh nằm đúng trong nhóm ấy. Cổng chỉ ĐẾM
+    (page_ok vào summary.json["layout_gate"]), KHÔNG loại ô nào — việc hạ cấp do
+    cờ `qn_count_unfixed` + mechanism_gates làm. None = hành vi cũ (STT/prose).
     """
     n_nom = len(cols)
     n_qn = len(qn_lines)
     bad_cols: list[dict] = []
-    if lay.qn_per_column or expected_counts:
+    rule_n = sum(tier_rule) if tier_rule else None
+    if lay.qn_per_column or expected_counts or rule_n:
         for lid in sorted(qn_lines):
-            want = (expected_counts or {}).get(lid, lay.qn_per_column)
+            want = rule_n if rule_n else (expected_counts or {}).get(lid, lay.qn_per_column)
             if not want:
                 continue
             got = len(qn_lines[lid])
             if got != want:
-                bad_cols.append({"column": lid, "n_syl": got, "want": want})
+                bad_cols.append({"column": lid, "n_syl": got, "want": want,
+                                 **({"src": "tier_rule"} if rule_n else {})})
     ok = (n_nom == lay.n_columns and n_qn == lay.n_columns and not bad_cols)
     return ok, {"layout": lay.layout, "n_columns": lay.n_columns,
-                "n_nom_cols": n_nom, "n_qn_cols": n_qn, "bad_syl_cols": bad_cols}
+                "n_nom_cols": n_nom, "n_qn_cols": n_qn, "bad_syl_cols": bad_cols,
+                **({"expect_src": "tier_rule", "expect_n": rule_n} if rule_n else {})}
 
 
 def prose_gate(cols: list, qn_lines: dict, lay: BookLayout) -> tuple[bool, dict]:
@@ -356,6 +397,70 @@ def expected_tier_counts(data_dir, page_name: str,
         if (isinstance(n, int) and isinstance(lo, int) and not isinstance(n, bool) and not isinstance(lo, bool)
                 and 0 < lo < n and isinstance(lid, int)):
             out[lid] = [lo, n - lo]
+    return out
+
+
+# --- Cờ "SỐ ĐẾM ÂM QN KHÔNG SỬA ĐƯỢC" (2026-09-23) --------------------------------
+# docs/RA_SOAT_CAN_CHINH_2026-09-23.md §2.2/§4 #1. Đo trên NHÃN NGƯỜI (2 bộ IHR):
+# ô GOLD nằm trong cột `n_qn != 14` chỉ đúng 52,2 % (n 209, LucVanTien1916) và 49,0 %
+# (n 51, TruyenKieu1872), trong khi phần còn lại đạt 98,4 % / 98,7 %; và 85,7 % / 75,0 %
+# TOÀN BỘ ô "đúng chữ, sai ô" nằm trong đúng nhóm cột ấy. Adapter đã cố sửa số đếm bằng
+# luật 6/8 (`ingest_lithograph_book.repair_tier_syllables`), cột nào không sửa nổi thì
+# ở đây thành CỜ THẬT trong labels.csv để cổng cơ chế B4' hạ cấp được.
+#   lithograph (có tier_rule): cột có số âm QN != sum(tier_rule) (= 14)
+#   prose      : cột có dp_ratio < PROSE_DP_RATIO_MIN (tỉ lệ khớp DP chữ↔âm của cột,
+#                ingest_prose_book ghi vào transcriptions/<page>.json) — Chrestomathie
+#                KHÔNG có chuẩn độc lập nên mặc định chỉ GHI CỜ, không hạ cấp.
+#   STT        : tier_rule = None và không phải prose -> cờ LUÔN RỖNG, cột không tồn tại
+#                trong labels.csv (STT byte-identical).
+PROSE_DP_RATIO_MIN = 0.75
+COL_QN_COUNT_UNFIXED = "qn_count_unfixed"
+
+
+def qn_count_flag_on(lay, tier_rule: tuple[int, ...] | None = None) -> bool:
+    """Sách này có phát cờ `qn_count_unfixed` không? (lithograph có luật, hoặc prose)."""
+    return bool(tier_rule) or bool(lay is not None and getattr(lay, "is_prose", False))
+
+
+def prose_dp_ratios(data_dir, page_name: str) -> dict[int, float]:
+    """{line_id: dp_ratio} từ transcriptions/<page>.json (layout=prose). Thiếu -> {}."""
+    import json
+    from pathlib import Path
+    p = Path(data_dir) / "transcriptions" / f"{page_name}.json"
+    if not p.exists():
+        return {}
+    try:
+        data = json.load(open(p, encoding="utf-8"))
+    except Exception:
+        return {}
+    out: dict[int, float] = {}
+    for i, c in enumerate(data.get("columns") or []):
+        if not isinstance(c, dict):
+            continue
+        lid = c.get("column", i + 1)
+        r = c.get("dp_ratio")
+        if isinstance(lid, int) and isinstance(r, (int, float)) and not isinstance(r, bool):
+            out[lid] = float(r)
+    return out
+
+
+def qn_count_unfixed_columns(qn_lines: dict, lay, tier_rule: tuple[int, ...] | None = None,
+                             data_dir=None, page_name: str | None = None,
+                             dp_min: float | None = None) -> dict[int, str]:
+    """{line_id: lý do} các cột SỐ ĐẾM ÂM QN hỏng. Rỗng với STT (xem chú thích trên)."""
+    out: dict[int, str] = {}
+    if tier_rule:
+        want = sum(tier_rule)
+        for lid, syl in (qn_lines or {}).items():
+            got = len(syl or [])
+            if got != want:
+                out[lid] = f"n_qn={got}!={want}"
+        return out
+    if lay is not None and getattr(lay, "is_prose", False) and data_dir is not None and page_name:
+        lo = PROSE_DP_RATIO_MIN if dp_min is None else float(dp_min)
+        for lid, r in prose_dp_ratios(data_dir, page_name).items():
+            if r < lo:
+                out[lid] = f"dp_ratio={r:.3f}<{lo}"
     return out
 
 

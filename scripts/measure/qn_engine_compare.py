@@ -31,8 +31,12 @@ OUT = REPO / "measure_out" / "qn_engine"
 
 REFS = {
     "LucVanTien1883": REPO / "data/LucVanTien1916/nomfoundation_lvt_phienam.json",
+    # 2026-09-23 (vòng 8): trả lại tham chiếu của KVK1884 — bản phiên âm Kiều 1871 (Liễu Văn Đường)
+    # nằm trong thư mục data/TruyenKieuPhongTinhCoLuc/ nhưng là dị bản của KimVanKieu1884, không
+    # phải dữ liệu của bản chép tay PTCL đã loại khỏi phạm vi. Dòng lọc dưới vẫn bỏ ref thiếu tệp.
     "KimVanKieu1884": REPO / "data/TruyenKieuPhongTinhCoLuc/thamchieu_kieu_1871_LieuVanDuong_phienam.json",
 }
+REFS = {b: p for b, p in REFS.items() if p.exists()}
 PROD = {b: REPO / "measure_out" / b / "qn_ocr" / "verses.tsv" for b in REFS}
 
 

@@ -67,7 +67,8 @@ from pipeline.align_engine.align_production import (                    # noqa: 
 from pipeline.align_engine.consensus import (                         # noqa: E402
     AM_DA_QUYET, am_da_quyet, chuan_am, decide_label)
 from pipeline.align_engine.bbox_fix import tighten_box, carve_neighbor_ink  # noqa: E402
-from pipeline.align_engine.book_layout import book_layout, DEFAULT_LAYOUT, resolve_detector_ckpt  # noqa: E402  (n_columns/layout/ckpt theo sách)
+from pipeline.align_engine.book_layout import (book_layout, DEFAULT_LAYOUT, resolve_detector_ckpt,  # noqa: E402
+                                               COL_QN_COUNT_UNFIXED as COL_QN_UNFIXED)  # (n_columns/layout/ckpt theo sách)
 from pipeline.align_engine import recenter_f3g as rf3g                 # noqa: E402  (D-1, chỉ chạy khi --crops-v2)
 from pipeline.align_engine import tier_v3 as tv3                      # noqa: E402
 from pipeline.align_engine.visual_emission import load_page_gray as vis_load_gray  # noqa: E402  (B-2; torch nạp lười)
@@ -852,6 +853,9 @@ def _record(book, page, page_png, idx, p, dec, s3, seg_backend) -> dict:
         # A-6 (N4d/N4e): số đếm cột (n_* và count_source sang columns.csv ở S9) + nguồn hộp
         "n_ocr": p.get("n_ocr", ""), "n_qn": p.get("n_qn", ""), "n_det": p.get("n_det", ""),
         "count_source": p.get("count_source", ""), "box_source": p.get("box_source", ""),
+        # (2026-09-23) cờ cột "số đếm âm QN không sửa được" — CHỈ có khi sách là lithograph
+        # (luật 6/8) hoặc prose (dp_ratio); STT không có khoá này -> labels.csv không có cột.
+        **({COL_QN_UNFIXED: int(p[COL_QN_UNFIXED])} if COL_QN_UNFIXED in p else {}),
         # B-2 (--visual-emission): P(âm ghép | crop hộp OCR thô) out-of-fold; '' khi tắt cờ,
         # âm ∉ lớp hoặc hộp không cắt được. CHỈ ĐO — không quyết tier.
         "p_visual_syl": p.get("p_visual_syl", ""), "visual_fold": p.get("visual_fold", ""),
@@ -861,6 +865,92 @@ def _record(book, page, page_png, idx, p, dec, s3, seg_backend) -> dict:
     }
 
 
+# ---------------------------------------------------------------------------
+# crop_source: original — tra ẢNH QUÉT GỐC của một trang (books[].crop_source,
+# pipeline/align_engine/book_layout.py). prepared/<Book>/pages/page_XXXX.png do
+# adapter ingest sinh ra: PIL convert("L") + --contrast stretch|otsu (+ ×scale với
+# IHR) nên nền giấy đã bị kéo/ép về 255. Ảnh gốc nằm ở data/<Book>/… và được tra
+# qua manifest.json (pages[].source_file + scale) — KHÔNG đoán tên tệp.
+# ---------------------------------------------------------------------------
+_ORIG_INDEX_CACHE: dict = {}
+
+
+def _orig_index(data_dir: Path) -> dict:
+    """{page_name: đường dẫn ảnh gốc} + scale, đọc prepared/<Book>/manifest.json.
+
+    Thư mục ảnh gốc lấy theo `orig_dir` nếu manifest có (adapter mới ghi), ngược
+    lại dò các thư mục quen của data/<Book>/ rồi rglob (bộ prepared cũ vẫn dùng
+    được, không phải ingest lại). Thiếu manifest/ảnh -> {} và người gọi báo lỗi.
+    """
+    key = str(data_dir)
+    if key in _ORIG_INDEX_CACHE:
+        return _ORIG_INDEX_CACHE[key]
+    out: dict = {"scale": 1, "pages": {}, "book": Path(data_dir).name}
+    mf = Path(data_dir) / "manifest.json"
+    if mf.exists():
+        try:
+            man = json.loads(mf.read_text(encoding="utf-8"))
+        except Exception:
+            man = {}
+        out["scale"] = int(man.get("scale", 1) or 1)
+        book = man.get("book") or Path(data_dir).name
+        out["book"] = book
+        root = REPO / "data" / book
+        dirs = []
+        if man.get("orig_dir"):
+            dirs.append(REPO / man["orig_dir"])
+        dirs += [root / d for d in ("pages/images", "pages", "nom_pages", "images")]
+        by_name: dict = {}
+        for d in dirs:
+            if d.is_dir():
+                for f in d.iterdir():
+                    if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png", ".tif", ".tiff"):
+                        by_name.setdefault(f.name, f)
+        if root.is_dir() and not by_name:
+            for f in root.rglob("*"):
+                if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png", ".tif", ".tiff"):
+                    by_name.setdefault(f.name, f)
+        for pg in man.get("pages") or []:
+            src = pg.get("source_file")
+            name = pg.get("page_name")
+            if name and src and src in by_name:
+                out["pages"][name] = str(by_name[src])
+    _ORIG_INDEX_CACHE[key] = out
+    return out
+
+
+def load_original_page(data_dir, page_name: str, shape_like=None):
+    """Ảnh quét GỐC của trang (BGR), đã phóng ×scale đúng như adapter ingest.
+
+    Trả None khi không tra được; người gọi (PASS 2) coi đó là lỗi cứng vì sách đã
+    khai `crop_source: original`. `shape_like` = (H, W) của ảnh prepared: kích thước
+    phải TRÙNG, nếu không toạ độ bbox (hệ ảnh prepared) không áp được sang ảnh gốc.
+    """
+    idx = _orig_index(Path(data_dir))
+    src = idx["pages"].get(page_name)
+    if not src:
+        return None
+    img = cv2.imread(src, cv2.IMREAD_COLOR)
+    if img is None:
+        return None
+    sc = idx.get("scale", 1) or 1
+    if sc != 1:
+        img = cv2.resize(img, (img.shape[1] * sc, img.shape[0] * sc),
+                         interpolation=cv2.INTER_LANCZOS4)
+    if shape_like is not None and tuple(img.shape[:2]) != tuple(shape_like):
+        return None
+    return img
+
+
+def _paper_bg(crop):
+    """Mức nền GIẤY của một crop gốc (p90 mỗi kênh) — dùng thay 255 khi carve mực
+    hàng xóm trên ảnh gốc, để vết xoá không thành mảng trắng bệt trên nền giấy."""
+    import numpy as np
+    a = crop.reshape(-1, crop.shape[2]) if crop.ndim == 3 else crop.reshape(-1, 1)
+    bg = np.percentile(a, 90, axis=0)
+    return bg.astype(crop.dtype) if crop.ndim == 3 else int(bg[0])
+
+
 def _seg_flag(crop_gray) -> str:
     """Cheap advisory flag: 'tall' crops may be a merged 2-glyph or a tall char."""
     h, w = crop_gray.shape[:2]
@@ -868,11 +958,19 @@ def _seg_flag(crop_gray) -> str:
 
 
 def save_crop(img, gray_full, bbox, pad, path: Path, tighten: bool = True,
-              prev_bbox=None, next_bbox=None) -> dict | None:
+              prev_bbox=None, next_bbox=None, img_orig=None, bin_path: Path | None = None) -> dict | None:
     """Cut + carve-neighbour-ink + (tighten) + save a crop; return per-crop quality
     stats or None. prev_bbox/next_bbox = raw bbox of the char immediately before/after
     THIS one in the SAME column (by y-order) — used to erase neighbour ink that
-    bled into the padded window (tighten_box alone can't separate 2 touching glyphs)."""
+    bled into the padded window (tighten_box alone can't separate 2 touching glyphs).
+
+    `img_orig` (books[].crop_source: original, 2026-09-23) = ẢNH QUÉT GỐC của CHÍNH
+    trang đó, CÙNG kích thước với `img`. Khi có: MỌI phép hình học (cửa sổ pad, seam
+    carve, tighten_box) vẫn tính trên `img`/`gray_full` (ảnh đã xử lý) rồi áp NGUYÊN
+    XI sang `img_orig`; tệp ghi ra `path` là điểm ảnh GỐC (giữ nền giấy), còn bản đã
+    xử lý ghi ra `bin_path` nếu khai. Vì thế `ink`/`w`/`h`/`seg` KHÔNG đổi một chữ số
+    (vẫn đo trên bản đã xử lý) — chỉ `md5` đổi vì nó là băm của tệp THẬT ĐÃ GIAO.
+    """
     if img is None or not bbox:
         return None
     H, W = img.shape[:2]
@@ -884,9 +982,16 @@ def save_crop(img, gray_full, bbox, pad, path: Path, tighten: bool = True,
     if crop.size == 0:
         return None
     crop = crop.copy()
+    use_orig = img_orig is not None and tuple(img_orig.shape[:2]) == (H, W)
+    crop_o = img_orig[y1:y2, x1:x2].copy() if use_orig else None
     if gray_full is not None and (prev_bbox is not None or next_bbox is not None):
         crop = carve_neighbor_ink(crop, gray_full, x1, y1, x2, y2, (oy1, oy2),
                                   prev_bbox, next_bbox)
+        if crop_o is not None:
+            # cùng seam (tính từ gray_full đã xử lý), chỉ khác MÀU tô: nền giấy của
+            # chính crop này thay vì 255, để vết xoá không thành mảng trắng bệt.
+            crop_o = carve_neighbor_ink(crop_o, gray_full, x1, y1, x2, y2, (oy1, oy2),
+                                        prev_bbox, next_bbox, bg=_paper_bg(crop_o))
     gray = cv2.cvtColor(crop, cv2.COLOR_BGR2GRAY) if crop.ndim == 3 else crop
     if tighten:
         tb = tighten_box(gray)
@@ -894,16 +999,22 @@ def save_crop(img, gray_full, bbox, pad, path: Path, tighten: bool = True,
             a, c, b, d = tb
             crop = crop[c:d, a:b]
             gray = gray[c:d, a:b]
+            if crop_o is not None:
+                crop_o = crop_o[c:d, a:b]
     if crop.size == 0:
         return None
     path.parent.mkdir(parents=True, exist_ok=True)
-    cv2.imwrite(str(path), crop)
+    cv2.imwrite(str(path), crop_o if crop_o is not None else crop)
+    if bin_path is not None and crop_o is not None:
+        bin_path.parent.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(bin_path), crop)
     ch, cw = crop.shape[:2]
     return {
         "ink": round(float((gray < 128).mean()), 3),
         "w": cw, "h": ch,
         "md5": hashlib.md5(path.read_bytes()).hexdigest()[:12],
         "seg": _seg_flag(gray),
+        "crop_source": "original" if crop_o is not None else "processed",
     }
 
 
@@ -1037,6 +1148,9 @@ def main():
     # đè cho riêng sách đó trong vòng lặp PASS 1 rồi khôi phục; sách STT không khai -> y hệt.
     det_thr_global, det_xmargin_global = ap_mod.DETECTOR_THR, ap_mod.DETECTOR_XMARGIN
     det_params_by_book: dict = {}
+    # (2026-09-23) books[].crop_source: {mã sách -> (thư mục prepared, 'processed'|'original')}
+    # PASS 2 đọc để biết trang nào phải cắt từ ảnh quét gốc trong data/<Book>/.
+    crop_src_by_book: dict = {}
     pages_sel: set | None = None
     if args.pages:
         with open(args.pages, encoding="utf-8", newline="") as f:
@@ -1149,9 +1263,20 @@ def main():
         # Bố cục theo sách (khoá tuỳ chọn layout/n_columns; vắng = STT 9 cột). Đọc
         # TRƯỚC khi duyệt trang: giá trị sai -> ValueError ngay, không rơi ngầm về 9.
         lay = book_layout(b)
+        crop_src_by_book[_book_code(book)] = (data_dir, lay.crop_source)
         if lay is not DEFAULT_LAYOUT:
             print(f"[align] {book}: layout={lay.layout} n_columns={lay.n_columns} "
                   f"qn_syllables_per_column={lay.qn_per_column}", flush=True)
+        if lay.crop_from_original:
+            _oi = _orig_index(data_dir)
+            if not _oi["pages"]:
+                raise FileNotFoundError(
+                    f"books[{book}].crop_source = 'original' nhưng KHÔNG tra được ảnh quét gốc nào "
+                    f"cho {data_dir}: cần {data_dir}/manifest.json (pages[].source_file) và các tệp "
+                    f"ảnh tương ứng trong data/{book}/. Bỏ khoá = quay về 'processed'.")
+            print(f"[align] {book}: crop_source=original — crop giao nộp cắt từ ảnh quét gốc "
+                  f"({len(_oi['pages'])} trang tra được, scale ×{_oi.get('scale', 1)}); "
+                  f"bản đã xử lý ghi song song ở crops_bin/", flush=True)
         # Tham số detector THEO SÁCH (2026-09-22): chỉ luật syl_index đọc DETECTOR_*; legacy
         # trọn gói hằng cũ. Vắng khoá -> giá trị step2 toàn cục (STT: 0,2 / ±0,25w, không đổi).
         if args.box_rule == "syl_index":
@@ -1310,7 +1435,8 @@ def main():
                     # box_decoder=pitch (2026-09-22): hộp đã giải mã theo bước, gán lại theo syl_idx
                     # của ops lượt 2; nguồn hộp từng ô giữ G_src (detector/detector_low/ink_cut)
                     _rb, _bs, _cs = ap_mod.assign_boxes_pitch(cs["G"], cs.get("G_src"), ops2,
-                                                              cs["n_ocr"], cs["n_qn"])
+                                                              cs["n_ocr"], cs["n_qn"],
+                                                              mode=cs.get("count_source", ""))
                     if _rb is not None:
                         reseg_boxes, box_source, count_source = _rb, _bs, _cs
                 # PASS 1c (A-7) cần ops CUỐI + hộp cuối của cột (khe QĐ-01 không có record)
@@ -1331,6 +1457,7 @@ def main():
                         "n_ocr": cs.get("n_ocr", ""), "n_qn": cs.get("n_qn", ""),
                         "n_det": cs.get("n_det", ""), "count_source": count_source,
                         "box_source": box_source[i] if box_source else "",
+                        **({COL_QN_UNFIXED: cs[COL_QN_UNFIXED]} if COL_QN_UNFIXED in cs else {}),
                         # B-2: '' khi tắt cờ / âm ∉ lớp / hộp không cắt được
                         **({"p_visual_syl": (round(float(math.exp(logP[i, j])), 4)
                                              if vinfo["syl_in_classes"][j] and vinfo["argmax"][i] != "" else ""),
@@ -1568,6 +1695,10 @@ def main():
                 shutil.rmtree(out / d)
         if args.crops_v2 and (out / "crops_v2").is_dir():
             shutil.rmtree(out / "crops_v2")
+        # (2026-09-23) books[].crop_source=original ghi THÊM bản đã xử lý ở crops_bin/ —
+        # dọn y như các thư mục tầng để không còn tệp mồ côi của lần chạy trước.
+        if (out / "crops_bin").is_dir():
+            shutil.rmtree(out / "crops_bin")
     crops_v2_rows: list[dict] = []          # D-1 sidecar (chỉ khi --crops-v2)
     by_page = defaultdict(list)
     for r in records:
@@ -1582,6 +1713,19 @@ def main():
         img = cv2.imread(png, cv2.IMREAD_COLOR) if need else None
         gray_full = (cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
                     if img is not None and not args.no_carve else None)
+        # (2026-09-23) books[].crop_source=original: ảnh quét GỐC cùng trang, cùng kích
+        # thước -> save_crop cắt ĐÚNG cùng khung hình từ đây. Không tra được = lỗi cứng
+        # (sách đã khai original; im lặng rơi về ảnh đã xử lý là đúng thứ phải tránh).
+        img_orig = None
+        _bk = recs[0]["book"] if recs else ""
+        _dd, _csrc = crop_src_by_book.get(_bk, (None, "processed"))
+        if img is not None and _csrc == "original":
+            img_orig = load_original_page(_dd, Path(png).stem, shape_like=img.shape[:2])
+            if img_orig is None:
+                raise FileNotFoundError(
+                    f"crop_source='original' ({_bk}): không đọc được ảnh quét gốc cùng kích thước "
+                    f"{img.shape[1]}×{img.shape[0]} cho {png}. Kiểm {_dd}/manifest.json "
+                    f"(pages[].source_file, scale) và tệp ảnh trong data/.")
 
         # Neighbour bbox (prev/next by y-order) of every record IN THE SAME COLUMN,
         # over ALL records on this page (not just crop_tiers) — a REVIEW-tier char
@@ -1617,7 +1761,10 @@ def main():
                 else:
                     pv, nx = r.get("_prev_bbox"), r.get("_next_bbox")
                 q = save_crop(img, gray_full, r.get("bbox"), args.pad, out / r["tier"].lower() / fn,
-                              tighten=not args.no_tighten, prev_bbox=pv, next_bbox=nx)
+                              tighten=not args.no_tighten, prev_bbox=pv, next_bbox=nx,
+                              img_orig=img_orig,
+                              bin_path=(out / "crops_bin" / r["tier"].lower() / fn
+                                        if img_orig is not None else None))
                 if q:
                     img_rel = f"{r['tier'].lower()}/{fn}"
                 if q and args.crops_v2:
@@ -1647,7 +1794,10 @@ def main():
                     fn_cu = fn[:-4] + "_cu.png"
                     q_cu = save_crop(img, gray_full, r["_bbox_cu"], args.pad,
                                      out / r["tier"].lower() / fn_cu, tighten=not args.no_tighten,
-                                     prev_bbox=r.get("_prev_bbox"), next_bbox=r.get("_next_bbox"))
+                                     prev_bbox=r.get("_prev_bbox"), next_bbox=r.get("_next_bbox"),
+                                     img_orig=img_orig,
+                                     bin_path=(out / "crops_bin" / r["tier"].lower() / fn_cu
+                                               if img_orig is not None else None))
                     if q_cu:
                         r["_image_cu"] = f"{r['tier'].lower()}/{fn_cu}"
             r["_image"], r["_md5"] = img_rel or "", q["md5"] if q else ""
@@ -1674,6 +1824,8 @@ def main():
                 "n_ocr": r.get("n_ocr", ""), "n_qn": r.get("n_qn", ""),
                 "n_det": r.get("n_det", ""), "count_source": r.get("count_source", ""),
                 "box_source": r.get("box_source", ""),
+                # (2026-09-23) cờ cột đếm âm QN hỏng — chỉ sách lithograph/prose mới có khoá
+                **({COL_QN_UNFIXED: r[COL_QN_UNFIXED]} if COL_QN_UNFIXED in r else {}),
                 # A-7 (PASS 1c): tier_v3 + chẩn đoán + cờ QĐ-01 (dày 0/1)
                 **{k: r.get(k, v) for k, v in FIELDS_1C.items()},
                 # A-8 (N5i): mã chuẩn theo bảng dị thể người ký; = label khi chưa ký
@@ -1777,6 +1929,10 @@ def main():
               # đặt TRƯỚC khối FIELDS_1C để FIELDS_1C vẫn ở cuối (selftest A-6/A-7 bám chuỗi)
               "label_canonical",
               *FIELDS_1C.keys()]
+    if any(COL_QN_UNFIXED in r for r in labels):
+        # (2026-09-23) cột cờ CHỈ xuất hiện với sách lithograph/prose (align_production ghi
+        # khoá này); sách STT không có ô nào mang khoá -> labels.csv giữ nguyên bộ cột cũ.
+        fields += [COL_QN_UNFIXED]
     if vis_em is not None:
         # B-2: cột sidecar ở CUỐI, chỉ khi bật cờ -> tắt cờ thì labels.csv y hệt trước. Qua
         # remediate/export (pandas/fieldnames) tới labels_final.csv rồi labels_trace.csv.
@@ -1844,6 +2000,11 @@ def main():
                              else ap_mod.DETECTOR_XMARGIN),
         # tham số detector từng sách (books[].det_thr / det_xmargin ghi đè step2; chỉ syl_index)
         "detector_params_by_book": det_params_by_book,
+        # (2026-09-23) nguồn điểm ảnh crop giao nộp theo sách (books[].crop_source);
+        # "original" = cắt từ data/<Book>/… và có thêm crops_bin/ (bản đã xử lý).
+        # Chỉ ghi khi CÓ sách khai khác mặc định -> summary.json của STT không đổi thêm khoá.
+        **({"crop_source_by_book": {b: c for b, (_d, c) in crop_src_by_book.items() if c != "processed"}}
+          if any(c != "processed" for _d, c in crop_src_by_book.values()) else {}),
         "n_locked_cols_qd01": sum(len(v) for v in locked_cols.values()),
         # B-5: phạm vi khoá + thống kê dời hàng xóm (chỉ khác rỗng khi --lock-scope cell)
         "lock_scope": args.lock_scope,

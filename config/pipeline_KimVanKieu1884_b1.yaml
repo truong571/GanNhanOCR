@@ -65,6 +65,14 @@ books:
     # (đều → REVIEW bởi cổng (c)); khớp dị bản sau (a)(b)(c) 81,3 → 81,1 % (trong CI). KVK là sách duy nhất không có chỉ
     # số nào giảm, nhưng quyết định `_area` lấy chung 3 sách (LVT bleed tăng) → giữ `linear`; đổi `area` để tái lập _area.
     detector_resize: linear
+    # 2026-09-23 (vòng 7): NGUỒN ĐIỂM ẢNH của crop GIAO NỘP. `processed` (mặc định, STT không đổi byte)
+    # cắt từ prepared/<Book>/pages/*.png — ảnh adapter đã xám hoá + kéo nền (stretch/otsu) nên crop mất
+    # nền giấy của bản quét. `original` cắt ĐÚNG CÙNG khung hình đó từ ảnh quét gốc trong data/<Book>/:
+    # hình học (pad, seam carve, tighten_box) VẪN tính trên ảnh đã xử lý rồi áp nguyên xi, nên
+    # crop_w/crop_h/ink_pct/seg_flag không đổi một chữ số; chỉ điểm ảnh (và image_md5) đổi. Bản đã xử lý
+    # vẫn được ghi song song ở $out/crops_bin/ cho mã đọc crop nhị phân (enrich_crop_quality tự ưu tiên
+    # thư mục này nên crop_quality_flag/stray_ink/border_ink giữ nguyên). crops_bin/ KHÔNG giao nộp.
+    crop_source: original
     reocr: false
 
 # 2026-09-22: khối `run:` CHỈ run_pipeline.sh --book KimVanKieu1884 đọc (qua run_config: của config chính);
@@ -75,13 +83,21 @@ run:
   # ảnh nào (đo 2026-09-23, crop `none` và `otsu` TRÙNG md5 — CHOT_KENH_OCR §3). Giữ khoá để pages/*.png
   # không đổi md5 so với bản chốt. --qn-count-rule: sửa số đếm âm QN theo luật 6/8 trước DP (§6 #2).
   ingest_args: "--contrast otsu --verse-map content --qn-count-rule"      # KHÔNG --dict-boost (tự khẳng định)
-  verses_ref_fix:               # B1': scripts/measure/verses_ref_fix.py -> measure_out/KimVanKieu1884/qn_ref_fix/verses_b1.tsv -> --verses
+  # 2026-09-23 (vòng 7) — ĐÃ GỠ. Khối B1' dưới đây trỏ vào bản phiên âm Kiều 1871 (Liễu Văn Đường)
+  # nằm trong data/TruyenKieuPhongTinhCoLuc/ — thư mục PTCL đã bị xoá khỏi đĩa và PTCL đã loại khỏi
+  # phạm vi (docs/VONG7_DETECTOR_V2_VA_CROP_GOC_2026-09-23.md §4). Để nguyên thì `./run_pipeline.sh
+  # --book KimVanKieu1884` (run_config _b1) sẽ gọi verses_ref_fix với --ref không tồn tại.
+  # 2026-09-23 (vòng 8): người dùng ĐÃ KHÔI PHỤC tệp phiên âm Kiều 1871 (Liễu Văn Đường). Tệp này
+  # nằm TRONG thư mục data/TruyenKieuPhongTinhCoLuc/ nhưng KHÔNG phải dữ liệu của PTCL (bản chép
+  # tay R.987 đã loại khỏi phạm vi): nó là TRUYỆN KIỀU 1871, tức bản phiên âm dị bản của chính
+  # KimVanKieu1884 — nên GIỮ LẠI và B1' chạy lại như cũ.
+  verses_ref_fix:             # B1': scripts/measure/verses_ref_fix.py -> measure_out/KimVanKieu1884/qn_ref_fix/verses_b1.tsv -> --verses
     ref: data/TruyenKieuPhongTinhCoLuc/thamchieu_kieu_1871_LieuVanDuong_phienam.json
     ref_name: nf1871
     fuzzy_min: 0.9
   dataset_out: prepared_b1/KimVanKieu1884/dataset_out_b1  # lưu trung gian trong prepared_b1, không tạo thư mục ở root
   n_columns: 10
-  cross: true                   # auto_precision cross (1871 LVĐ + 1872 DMT đối chứng) -> --cross cổng (d) + B6
+  cross: true                   # auto_precision cross (CÒN 1 tham chiếu: 1872 DMT; 1871 LVĐ đã gỡ cùng PTCL) -> cổng (d) + B6
 
 paths:
   data_dir: prepared_b1

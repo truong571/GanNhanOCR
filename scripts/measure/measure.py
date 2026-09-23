@@ -40,10 +40,15 @@ LITHO_BOOKS = ["LucVanTien1883", "KimVanKieu1884"]
 # 2026-09-23: 3 bộ còn lại trong data/. IHR_BOOKS = mộc bản IHR-NomDB CÓ NHÃN NGƯỜI (tập ĐÁNH GIÁ);
 # PTCL_BOOK = bản CHÉP TAY R.987, chỉ có dị bản 1871/1872 làm tham chiếu.
 IHR_BOOKS = ["LucVanTien1916", "TruyenKieu1872"]
+# 2026-09-23 (vòng 7): PTCL (bản chép tay R.987) ĐÃ LOẠI KHỎI PHẠM VI — thư mục data/ của nó
+# không còn trên đĩa và phép đo bố cục (docs/CHAY_3_BO_CON_LAI_2026-09-23.md §3) cho thấy adapter
+# hiện có không dùng được: mỗi cột 2 tầng mà tầng trên là LỜI BÌNH CHỮ HÁN, không có số câu neo,
+# QN chỉ có dị bản 1871/1872. Vì vậy PTCL KHÔNG còn trong ALL_BOOKS/ALL_STEPS; `ptcl_layout.py`
+# giữ lại làm hồ sơ lịch sử và vẫn chạy được bằng tay nếu có ai đặt lại thư mục data/.
 PTCL_BOOK = "TruyenKieuPhongTinhCoLuc"
-ALL_BOOKS = LITHO_BOOKS + ["Chrestomathie1872"] + IHR_BOOKS + [PTCL_BOOK]
+ALL_BOOKS = LITHO_BOOKS + ["Chrestomathie1872"] + IHR_BOOKS
 ALL_STEPS = ["code_facts", "layout", "qn_ocr", "chresto_map", "detector_transfer", "box_ref",
-             "ihr_layout", "ihr_endtoend", "ptcl_layout"]
+             "ihr_layout", "ihr_endtoend"]
 
 # Invariant FAIL được xếp "mềm" (không đổi mã thoát) — chỉ khi có lý do đo đạc rõ ràng.
 SOFT_INVARIANTS: dict[str, dict[str, str]] = {
@@ -266,7 +271,7 @@ def plan_steps(books: list[str], steps: list[str], a) -> list[dict]:
                 out = root / b / "ihr_endtoend"
                 cli = [PY, str(HERE / "ihr_endtoend_eval.py"), "--book", b, "--out", str(out)]
                 plan.append(dict(step="ihr_endtoend", book=b, out=out, cli=cli, summary=out / "summary.json"))
-        elif b == PTCL_BOOK and "ptcl_layout" in steps:
+        elif b == PTCL_BOOK and "ptcl_layout" in steps and (REPO / "data" / PTCL_BOOK).is_dir():
             out = root / b / "ptcl_layout"
             cli = [PY, str(HERE / "ptcl_layout.py"), "--out", str(out), *w, *lim,
                    "--kim-pages", str(a.ptcl_kim_pages)]

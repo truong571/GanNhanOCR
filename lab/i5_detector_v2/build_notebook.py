@@ -17,7 +17,7 @@ Internet chỉ cần nếu đẩy lên HF (`HF_REPO` + Secret `HF_TOKEN`).
 Mỗi epoch: train cân bằng 50/50 thạch bản/STT (aug nền xám · otsu/stretch · kéo dọc ±10 % · nét · blur · crop cột) →
 đánh giá trên **val page-disjoint**: ok50 / miss / extra / |dy| / **% tầng n==N** (hộp thô @0,15 & 0,2) / cắt thân chữ,
 **STT F1** (guard ≥ v1 − 0,01), Chrestomathie (sách không train). Best theo ok50_litho qua guard; dừng sớm 4 epoch.
-Kết quả: `/kaggle/working/{best.pt, last.pt, metrics.csv, report.md}`. **Reset?** Run All lại → tự resume từ `last.pt`."""
+Kết quả: `/kaggle/working/{best.pt, best_litho.pt, last.pt, metrics.csv, report.md}`. **Reset?** Run All lại → tự resume từ `last.pt`."""
 
 CELL_CFG = '''# ---- 1) Cấu hình — chỉ sửa ở đây -------------------------------------------------
 EPOCHS   = 20        # ≈ 2–3 phút/epoch trên T4 ở img 1024 (20 epoch ≈ 1 giờ + eval)
@@ -26,19 +26,31 @@ IMG      = 1024      # hoặc 1280 (chậm ~1,6×, batch 2)
 LR       = 2e-4      # cosine + warmup 1 epoch
 SEED     = 0
 EVAL_CHRESTO = 20    # số trang Chrestomathie (held-out, không train) đo mỗi epoch; 0 = bỏ
-HF_REPO  = ""        # vd "mdnt571/nom-char-det-v2": đẩy last/best mỗi epoch + resume từ hub (cần Secret HF_TOKEN). "" = local
-EXTRA    = ""        # tham số thêm cho train_kaggle.py, vd "--patience 6 --stt-tol 0.01 --p-gray 0.5"
+HF_REPO  = "mdnt571/nom-char-det-v2"   # ""=local; vd "mdnt571/nom-char-det-v2": đẩy last/best/best_litho mỗi epoch + resume từ hub (cần Secret HF_TOKEN). "" = local
+# GUARD STT (2026-09-23, vòng 7). Lần chạy 22/09 cho thấy v2 TỐT HƠN HẲN trên thạch bản
+# (ok50 98,71 → 100,0 · % tầng n==N 94,7 → 98,7 · cắt thân chữ 11,32 → 0,22) nhưng STT F1@0,2
+# tụt 0,8772 → 0,858–0,864 (quên miền), nên guard chặn và KHÔNG ckpt nào được ghi ra.
+# Repo ĐÃ CÓ `books[].detector_ckpt` THEO SÁCH -> ckpt thạch bản không bao giờ chạy trên STT,
+# guard chỉ cần khi một mô hình phải phục vụ cả hai miền. "none" = tắt guard (best.pt chọn
+# theo riêng tiêu chí thạch bản); "0.01" = như cũ. DÙ THẾ NÀO trainer cũng LUÔN ghi thêm
+# best_litho.pt (+ cảnh báo trong report.md), nên một lần chạy không bao giờ về tay trắng.
+GUARD_STT = "none"   # "none" | số, vd "0.01"
+EXTRA    = ""        # tham số thêm cho train_kaggle.py, vd "--patience 6 --p-gray 0.5"
 SMOKE    = False     # True: chạy thử 4 trang/miền, 1 epoch (kiểm tra đường ống ~2 phút)'''
 
 CELL_SETUP = '''# ---- 2) Tìm bundle, chép mã ra /kaggle/working, kiểm GPU ---------------------------
 import os, sys, glob, shutil, subprocess
 hits = sorted(glob.glob("/kaggle/input/**/train_kaggle.py", recursive=True)) or sorted(glob.glob("./**/train_kaggle.py", recursive=True))
 assert hits, "Không thấy train_kaggle.py — Add Input: gắn dataset dựng từ i5v2_bundle.zip"
-DATA = os.path.dirname(hits[0])
+dirs = [os.path.dirname(h) for h in hits]
+# DATA = thư mục CÓ ảnh (bundle_stats.json). SRC = thư mục mã MỚI NHẤT: nếu có input chỉ chứa
+# mã (i5v2_code.zip, ~50 KB) thì ưu tiên nó, để sửa mã không phải đẩy lại 243 MB ảnh.
+DATA = next((d for d in dirs if os.path.exists(os.path.join(d, "bundle_stats.json"))), dirs[0])
+SRC  = next((d for d in dirs if not os.path.exists(os.path.join(d, "bundle_stats.json"))), DATA)
 WORK = "/kaggle/working" if os.path.isdir("/kaggle/working") else os.path.abspath("work")
 CODE = os.path.join(WORK, "i5v2_code"); os.makedirs(CODE, exist_ok=True)
-shutil.copytree(os.path.join(DATA, "i5v2"), os.path.join(CODE, "i5v2"), dirs_exist_ok=True)
-shutil.copy2(os.path.join(DATA, "train_kaggle.py"), os.path.join(CODE, "train_kaggle.py"))
+shutil.copytree(os.path.join(SRC, "i5v2"), os.path.join(CODE, "i5v2"), dirs_exist_ok=True)
+shutil.copy2(os.path.join(SRC, "train_kaggle.py"), os.path.join(CODE, "train_kaggle.py"))
 for f in ("manifest_train.json", "manifest_val.json", "v1/detector_r34.best.pt", "bundle_stats.json"):
     assert os.path.exists(os.path.join(DATA, f)), f"bundle thiếu {f}"
 tok = ""
@@ -51,7 +63,8 @@ if HF_REPO:
         tok = os.environ.get("HF_TOKEN", "")
     os.environ["HF_TOKEN"] = tok or ""
 import torch, json
-print("data :", DATA); print("code :", CODE); print("out  :", WORK)
+print("data :", DATA); print("mã   :", SRC, "(gói mã riêng)" if SRC != DATA else "(trong bundle)")
+print("code :", CODE); print("out  :", WORK)
 print("GPU  :", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU (bật GPU T4!)", "| torch", torch.__version__)
 print("bundle:", json.load(open(os.path.join(DATA, "bundle_stats.json")))["by_domain_split"])
 print("HF   :", HF_REPO or "(local-only)", "| token", "có" if tok else "không")
@@ -62,6 +75,7 @@ cmd = [sys.executable, os.path.join(CODE, "train_kaggle.py"), "--data", DATA, "-
        "--epochs", str(EPOCHS), "--batch", str(BATCH), "--img", str(IMG), "--lr", str(LR), "--seed", str(SEED),
        "--eval-chresto", str(EVAL_CHRESTO), "--workers", "2"]
 if HF_REPO: cmd += ["--hf-repo", HF_REPO]
+if GUARD_STT: cmd += ["--guard-stt-f1", str(GUARD_STT)]
 if SMOKE:   cmd += ["--smoke"]
 if EXTRA:   cmd += EXTRA.split()
 print("$", " ".join(cmd), flush=True)
@@ -75,18 +89,22 @@ keys = ["epoch", "loss", "litho_ok50", "litho_tiers_eq_015", "litho_tiers_eq_020
 print(" | ".join(keys))
 for r in rows:
     print(" | ".join(str(r.get(k, "")) for k in keys))
-bp = os.path.join(WORK, "best.pt")
-if os.path.exists(bp):
+for nm in ("best.pt", "best_litho.pt"):
+    bp = os.path.join(WORK, nm)
+    if not os.path.exists(bp):
+        print("\\nKHÔNG có", nm)
+        continue
     d = torch.load(bp, map_location="cpu", weights_only=False)
-    print("\\nbest.pt: epoch", d["epoch"], "| img", d["img"], "| use_dcn", d["use_dcn"], "|", os.path.getsize(bp) // 2**20, "MB")
+    print("\\n" + nm + ": epoch", d["epoch"], "| img", d["img"], "| use_dcn", d["use_dcn"], "|", os.path.getsize(bp) // 2**20, "MB")
     print("val:", {k: d["val"].get(k) for k in ("litho_ok50", "litho_tiers_eq_015", "litho_cut", "stt_F1_020")})
     print("v1 :", {k: d["base_v1"].get(k) for k in ("litho_ok50", "litho_tiers_eq_015", "litho_cut", "stt_F1_020")})
-else:
-    print("\\nKHÔNG có best.pt: không epoch nào qua guard STT F1 ≥ v1 − 0,01 → giữ v1 (xem report.md)")'''
+    if d.get("warning"): print("⚠️", d["warning"])'''
 
 MD_END = """### Xong
-- Tải **`best.pt`** (tab Output / `/kaggle/working/best.pt`) + `metrics.csv` + `report.md` về máy.
-- Ở repo: `lab/i5_detector_v2/apply_v2.sh <đường dẫn best.pt>` → đo `box_ref_eval` v1↔v2 trên ảnh gốc, build `--book all-new --suffix _v2`.
+- Tải **`best.pt`** *hoặc* **`best_litho.pt`** (tab Output / `/kaggle/working/`) + `metrics.csv` + `report.md` về máy.
+  `best_litho.pt` luôn được ghi (chọn theo RIÊNG tiêu chí thạch bản, không xét guard STT) — dùng nó khi guard chặn `best.pt`.
+  ⚠️ ckpt chọn theo tiêu chí thạch bản CHỈ được khai qua `books[].detector_ckpt` cho sách thạch/mộc bản, KHÔNG đặt làm detector toàn cục (STT sẽ tụt).
+- Ở repo: `lab/i5_detector_v2/apply_v2.sh <đường dẫn ckpt>` → đo `box_ref_eval` v1↔v2 trên ảnh gốc, build `--book all-new --suffix _v2`.
 - Reset / hết giờ: **Run All** lại — cell (3) tự resume từ `last.pt` (Persistence Files only) hoặc từ HF nếu khai `HF_REPO`."""
 
 

@@ -73,7 +73,8 @@ IMAGE_TIERS = ("GOLD", "SILVER", "SYLLABLE")          # tầng có ảnh crop đ
 BAD_CROP = ("blank", "truncated")
 BOX_NOT_DETECTOR = ("midpoint", "split")
 BOX_LOW_CONF = ("ink_cut", "detector_low")        # (a') pitch_decode: ô detector không tự tin
-COUNT_SOURCE_PITCH = ("pitch", "pitch_ocr")       # count_source do assign_boxes_pitch ghi
+COUNT_SOURCE_PITCH = ("pitch", "pitch_ocr", "pitch_rule")   # count_source do assign_boxes_pitch ghi
+                                                  # ("pitch_rule" 2026-09-23: N lấy từ luật 6/8)
 BOX_DECODER_MODES = ("auto", "legacy", "pitch")
 COL_NDET_MISMATCH = "n_det_mismatch"              # cờ (a') thay cho hạ theo cột
 RULE_BRIDGE = "s1_inter_s2_similar"
@@ -89,6 +90,17 @@ G_TONE = "am_sua_dau"
 G_NDET = "n_det_ne_n_qn"
 G_BOX = "box_not_detector"
 G_BOX_LOW = "box_low_conf"                        # (a') chỉ trong chế độ pitch
+G_QNCOUNT = "qn_count_unfixed"                    # (e) cột có SỐ ĐẾM ÂM QN hỏng
+
+# (e) 2026-09-23 — cột "số đếm âm QN không sửa được" (cờ do align_production ghi qua
+# book_layout.qn_count_unfixed_columns). Đo trên NHÃN NGƯỜI 2 bộ IHR
+# (docs/RA_SOAT_CAN_CHINH_2026-09-23.md §2.2): ô GOLD trong cột `n_qn != 14` chỉ ĐÚNG
+# 52,2 % (n 209) / 49,0 % (n 51) — gần như tung đồng xu — trong khi phần còn lại 98,4 % /
+# 98,7 %; và 85,7 % / 75,0 % toàn bộ ô "đúng chữ, sai ô" nằm trong nhóm này. Vì SAI ở chính
+# NHÃN VĂN BẢN (không phải chỉ ở hộp) nên hạ xuống REVIEW chứ KHÔNG phải GOLD_text_only —
+# GOLD_text_only vẫn giao nộp nhãn, tức vẫn giao nộp ~50 % nhãn sai.
+COL_QN_UNFIXED = "qn_count_unfixed"
+QN_COUNT_MODES = ("review", "text_only", "off")
 
 
 # --------------------------------------------------------------------------- config
@@ -117,6 +129,28 @@ def gates_enabled(book_cfg: dict | None, enable: str = "auto") -> bool:
             raise ValueError(f"books[{book_cfg.get('name')}].mechanism_gates = {v!r}; cần true/false")
         return v
     return book_cfg.get("layout") == LAYOUT_LITHOGRAPH
+
+
+def qn_count_mode(book_cfg: dict | None, override: str | None = None) -> str:
+    """(e) Hạ cấp ô thuộc cột `qn_count_unfixed` thế nào: review | text_only | off.
+
+    Thứ tự: --qn-count-gate ghi đè > books[].qn_count_gate > mặc định theo layout
+    (lithograph -> 'review'; prose/khác -> 'off'). Vì sao mặc định khác nhau: hai bộ IHR
+    có NHÃN NGƯỜI chứng minh nhóm này chỉ đúng ~50 % trên sách LỤC BÁT, còn Chrestomathie
+    (prose, cờ theo `dp_ratio`) KHÔNG có chuẩn độc lập nào — nên ở đó chỉ GHI CỜ."""
+    if override is not None:
+        if override not in QN_COUNT_MODES:
+            raise ValueError(f"--qn-count-gate = {override!r}; chỉ nhận {QN_COUNT_MODES}")
+        return override
+    if book_cfg and "qn_count_gate" in book_cfg:
+        v = book_cfg.get("qn_count_gate")
+        if v not in QN_COUNT_MODES:
+            raise ValueError(f"books[{book_cfg.get('name')}].qn_count_gate = {v!r}; "
+                             f"chỉ nhận {QN_COUNT_MODES}")
+        return str(v)
+    if book_cfg and book_cfg.get("layout") == LAYOUT_LITHOGRAPH:
+        return "review"
+    return "off"
 
 
 def detect_pitch_mode(df: pd.DataFrame | None, book_cfg: dict | None, summary_path: Path | None = None,
@@ -185,9 +219,12 @@ def load_cross(path: Path) -> dict[str, dict]:
 
 # --------------------------------------------------------------------------- áp cổng
 def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
-                pitch: bool = False) -> tuple[pd.DataFrame, dict]:
+                pitch: bool = False, qn_count: str = "off") -> tuple[pd.DataFrame, dict]:
     """Hàm THUẦN (không mutate df). Trả (df mới, báo cáo dict). `pitch=True` = luật (a') thay (a):
-    hạ theo Ô box_source ink_cut/detector_low (+ midpoint/split), n_det ≠ n_qn chỉ ghi cờ."""
+    hạ theo Ô box_source ink_cut/detector_low (+ midpoint/split), n_det ≠ n_qn chỉ ghi cờ.
+    `qn_count` = luật (e): 'review' | 'text_only' | 'off' (xem `qn_count_mode`)."""
+    if qn_count not in QN_COUNT_MODES:
+        raise ValueError(f"qn_count = {qn_count!r}; chỉ nhận {QN_COUNT_MODES}")
     out = df.copy()
     n = len(out)
     for c in ("gate_reason", "di_ban_khac"):
@@ -216,6 +253,8 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
     hit_ndet = is_gold & ndet_mismatch & (not pitch)    # (a) chỉ legacy; pitch → cờ, không hạ
     hit_box = is_gold & box.isin(BOX_NOT_DETECTOR)
     hit_box_low = is_gold & box.isin(BOX_LOW_CONF) & bool(pitch)   # (a') chỉ pitch
+    qn_unfixed = col(COL_QN_UNFIXED) == "1"                        # (e) cờ cấp CỘT, mọi tầng
+    hit_qn = is_gold & qn_unfixed & (qn_count != "off")
     if cross is not None:
         cx = image.map(lambda i: cross.get(i))
         agree = cx.map(lambda d: bool(d and d["agree"]))
@@ -240,6 +279,8 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
         G_TONE: int(hit_tone.sum()),
         G_NDET: int((is_gold & ndet_mismatch).sum()),   # trúng thô (pitch: chỉ ghi cờ, không hạ)
         G_BOX: int(hit_box.sum()),
+        G_QNCOUNT: int((is_gold & qn_unfixed).sum()),       # thô; chỉ hạ khi qn_count != off
+        "qn_count_unfixed_rows": int(qn_unfixed.sum()),
         G_BOX_LOW: int((is_gold & box.isin(BOX_LOW_CONF)).sum()),   # thô; chỉ hạ khi pitch
         "box_source_GOLD": {k: int(v) for k, v in box[is_gold].value_counts().items()},
         "n_det_blank_GOLD": int((is_gold & (n_det == "")).sum()),
@@ -256,6 +297,7 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
 
     m_crop = take(hit_crop)
     m_cross = take(hit_cross)
+    m_qn = take(hit_qn)            # (e) TRƯỚC (b)/(a): nhãn văn bản mới là thứ đáng ngờ
     m_bridge = take(hit_bridge)
     m_tone = take(hit_tone)
     m_box = take(hit_ndet | hit_box | hit_box_low)
@@ -272,6 +314,13 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
     out.loc[m_cross, "tier"] = "REVIEW"
     if "label_level" in out.columns:
         out.loc[m_cross, "label_level"] = ""
+    # (e) → REVIEW (mặc định thạch bản) hoặc GOLD_text_only (--qn-count-gate text_only)
+    _qn_tier = "REVIEW" if qn_count == "review" else TIER_TEXT_ONLY
+    out.loc[m_qn, "gate_reason"] = G_QNCOUNT
+    out.loc[m_qn, "rule"] = rule[m_qn] + "|gate:" + G_QNCOUNT
+    out.loc[m_qn, "tier"] = _qn_tier
+    if qn_count == "review" and "label_level" in out.columns:
+        out.loc[m_qn, "label_level"] = ""
     # cờ dị bản khác (không hạ): chỉ ô GOLD còn đứng (kể cả sắp thành GOLD_text_only)
     out.loc[hit_khac & ~m_crop & ~m_cross, "di_ban_khac"] = "1"
     # (b) → SYLLABLE: label/unicode rỗng theo quy ước tầng; chữ gốc còn ở label_canonical
@@ -319,6 +368,8 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
         "di_ban_khac": int((out["di_ban_khac"] == "1").sum()),
         "n_rows": n,
         "pitch_mode": bool(pitch),
+        "qn_count_gate": qn_count,
+        "qn_count_decided": int(m_qn.sum()),
         COL_NDET_MISMATCH: (int((out[COL_NDET_MISMATCH] == "1").sum()) if pitch else None),
         "n_det_mismatch_GOLD_kept": (int((is_gold & ndet_mismatch & (out["tier"] == "GOLD")).sum())
                                      if pitch else None),
@@ -335,7 +386,7 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
             # dùng mặt nạ TRÚNG THÔ (không phải mặt nạ ưu tiên): ô vừa trúng (d) vừa trúng (a)/(b)
             # phải bị loại ở đây, nếu không tập "abc_only" còn giữ chính các ô bất đồng mà (a)/(b) sẽ hạ
             "GOLD_image_after_abc_only": proxy(is_gold & ~hit_crop & ~hit_bridge & ~hit_tone & ~hit_ndet
-                                               & ~hit_box & ~hit_box_low),
+                                               & ~hit_box & ~hit_box_low & ~hit_qn),
             "GOLD_image_after": proxy(out["tier"] == "GOLD"),
             "GOLD_text_only_after": proxy(out["tier"] == TIER_TEXT_ONLY),
             "note": "agree = có tham chiếu nào khớp hẳn; 'after' đã trừ (d) nên tự khẳng định — "
@@ -347,7 +398,7 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
 # --------------------------------------------------------------------------- CLI
 def run(in_csv: Path, out_csv: Path, config: Path | None, book: str | None, cross: Path | None,
         enable: str, report_path: Path | None, box_decoder: str = "auto",
-        summary_path: Path | None = None) -> dict:
+        summary_path: Path | None = None, qn_count_gate: str | None = None) -> dict:
     book_cfg = load_book_cfg(config, book) if (config and book) else None
     enabled = gates_enabled(book_cfg, enable)
     if summary_path is None:
@@ -369,7 +420,9 @@ def run(in_csv: Path, out_csv: Path, config: Path | None, book: str | None, cros
         cx = load_cross(cross) if cross else None
         pitch, pitch_src = detect_pitch_mode(df, book_cfg, summary_path, book, box_decoder)
         rep["pitch_mode_source"] = pitch_src
-        out, r = apply_gates(df, cx, pitch=pitch)
+        qn_mode = qn_count_mode(book_cfg, qn_count_gate)
+        rep["qn_count_gate_arg"] = qn_count_gate
+        out, r = apply_gates(df, cx, pitch=pitch, qn_count=qn_mode)
         out.to_csv(out_csv, index=False)
         rep.update(r)
         g = r["gold_image"]
@@ -378,6 +431,8 @@ def run(in_csv: Path, out_csv: Path, config: Path | None, book: str | None, cros
         print(f"[gates] {book}: chế độ hộp = {mode_txt} [nguồn: {pitch_src}]")
         print(f"[gates] {book}: GOLD ảnh {g['before']:,} → {g['after']:,} ({g['coverage_pct']} %); "
               f"GOLD_text_only {r['gold_text_only']:,}; quyết định theo cổng {r['gates_decided']}")
+        print(f"[gates] (e) qn_count_unfixed = {qn_mode}: cờ {r['gates_raw_hits']['qn_count_unfixed_rows']:,} dòng "
+              f"(GOLD trúng thô {r['gates_raw_hits'][G_QNCOUNT]:,}) -> hạ {r['qn_count_decided']:,} ô")
         if pitch:
             print(f"[gates] (a') n_det_mismatch cờ {r[COL_NDET_MISMATCH]:,} dòng (GOLD giữ ảnh dù n_det≠N: "
                   f"{r['n_det_mismatch_GOLD_kept']:,}); box_low_conf thô {r['gates_raw_hits'][G_BOX_LOW]:,}")
@@ -413,6 +468,9 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--box-decoder", choices=BOX_DECODER_MODES, default="auto",
                     help="auto (mặc định: config books[].box_decoder > summary.json > labels) | legacy | pitch — "
                          "pitch = luật (a') theo ô box_source ink_cut/detector_low, n_det≠N chỉ ghi cờ")
+    ap.add_argument("--qn-count-gate", choices=QN_COUNT_MODES, default=None,
+                    help="(e) cột có SỐ ĐẾM ÂM QN hỏng (cờ qn_count_unfixed): review (mặc định thạch bản) | "
+                         "text_only | off (mặc định prose/STT). Vắng = theo books[].qn_count_gate > layout")
     ap.add_argument("--summary", default=None,
                     help="summary.json của build_dataset (mặc định cạnh --in) — đọc detector_params_by_book[book].box_decoder")
     a = ap.parse_args(argv)
@@ -421,7 +479,8 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     run(Path(a.in_csv), Path(a.out), Path(a.config) if a.config else None, a.book,
         Path(a.cross) if a.cross else None, a.enable, Path(a.report) if a.report else None,
-        box_decoder=a.box_decoder, summary_path=Path(a.summary) if a.summary else None)
+        box_decoder=a.box_decoder, summary_path=Path(a.summary) if a.summary else None,
+        qn_count_gate=a.qn_count_gate)
     return 0
 
 

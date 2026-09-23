@@ -49,6 +49,10 @@ Invariant "mềm" (bảng `SOFT_INVARIANTS` trong `measure.py`, mỗi mục có 
 | `build_metrics.py` | chỉ số một lần build `dataset_out_<X>/` (tier thô/final, n_det==N, M==N, page_ok, box/count_source, crop flag, remediation) + tier theo `qn_source` khi có transcriptions | (bất kỳ build) | 5 s | JSON stdout hoặc `--out` |
 | `auto_precision.py` | (1) GT độc lập IHR, (2) đối chứng dị bản, (3) cổng máy — xem docstring; 22/09: `--labels/--trans` (đo một build khác, không đổi mặc định), `by_qn_source` trong `cross/summary.json` | KVK1884, LVT1883 | 8 s (cross,gates) | `measure_out/auto_precision/` |
 
+| `align_audit.py` | **(23/09) RÀ CHUẨN CĂN CHỈNH trên CẢ 8 BỘ** (0 API): 13 bất biến gán ô↔âm (ô duy nhất, âm đúng vị trí, đơn điệu `nom_idx`/`syl_idx`, cột phải→trái, tầng 6⧺8, không xuyên tầng, parity + duy nhất số câu, span truyện liền mạch) + **TRÔI CĂN CHỈNH** (nhãn đúng chữ nhưng lệch ô ±1/±2) đo bằng nhãn người IHR và bằng dị bản | 8 bộ | 10 s | `SUMMARY.json`, `REPORT.md`, `<Book>_{invariants,violations,drift}.csv` — kết luận ở `docs/RA_SOAT_CAN_CHINH_2026-09-23.md` |
+
+| `crop_source_samples.py` | **(23/09, vòng 7)** ảnh mẫu TRƯỚC/SAU của `books[].crop_source`: ghép crop đã xử lý (`<build>/crops_bin/`) cạnh crop giao nộp cắt từ ảnh quét gốc; 2 bất biến (cùng kích thước · tương quan mức xám ≥ `--min-corr`) | build bất kỳ có `crops_bin/` | 2 s | `measure_out/crop_source/{*.png,samples.csv,summary.json}` |
+
 Mỗi mô-đun cũng chạy độc lập: `--book`, `--out`, `--limit N`, `--workers N` (xem `--help`).
 
 ## Đầu ra

@@ -1,0 +1,117 @@
+{
+ "date": "2026-09-26",
+ "api_calls": 0,
+ "theta_used": {
+  "T_on_L16": 0.45,
+  "L_on_TK": 0.25,
+  "LOBO": {
+   "LucVanTien1916": [
+    "T",
+    0.25
+   ],
+   "TruyenKieu1872": [
+    "L",
+    0.45
+   ]
+  }
+ },
+ "invariants": {
+  "LucVanTien1916_huy_trung_hop_don_dieu": [
+   44,
+   0
+  ],
+  "LucVanTien1916_fix_equals_TN2_decisions": true,
+  "LucVanTien1916_n_flag": 234,
+  "LucVanTien1916_n_fix": 55,
+  "TruyenKieu1872_huy_trung_hop_don_dieu": [
+   6,
+   0
+  ],
+  "TruyenKieu1872_fix_equals_TN2_decisions": true,
+  "TruyenKieu1872_n_flag": 167,
+  "TruyenKieu1872_n_fix": 0,
+  "Chrestomathie1872_raw_T_L_both": [
+   50,
+   147,
+   35
+  ],
+  "Chrestomathie1872_huy_trung_hop_don_dieu": [
+   25,
+   0
+  ],
+  "Chrestomathie1872_fix_equals_TN2_decisions": true,
+  "Chrestomathie1872_n_flag": 738,
+  "Chrestomathie1872_n_fix": 10,
+  "SachThanhTruyen_raw_T_L_both": [
+   88,
+   312,
+   57
+  ],
+  "SachThanhTruyen_huy_trung_hop_don_dieu": [
+   32,
+   0
+  ],
+  "SachThanhTruyen_fix_equals_TN2_decisions": true,
+  "SachThanhTruyen_n_flag": 1562,
+  "SachThanhTruyen_n_fix": 25,
+  "LucVanTien1883_raw_T_L_both": [
+   0,
+   6,
+   0
+  ],
+  "LucVanTien1883_huy_trung_hop_don_dieu": [
+   0,
+   0
+  ],
+  "LucVanTien1883_n_flag": 111,
+  "LucVanTien1883_n_fix": 0,
+  "KimVanKieu1884_raw_T_L_both": [
+   6,
+   16,
+   4
+  ],
+  "KimVanKieu1884_huy_trung_hop_don_dieu": [
+   3,
+   0
+  ],
+  "KimVanKieu1884_n_flag": 61,
+  "KimVanKieu1884_n_fix": 1,
+  "L83_KVK_old_crop_md5_reproduce": true,
+  "L83_KVK_kim_char_ok_all": true,
+  "labels_never_changed": true,
+  "all_pass": true
+ },
+ "fix_by_set": {
+  "Chrestomathie1872": {
+   "fix": 10,
+   "flag": 738
+  },
+  "KimVanKieu1884": {
+   "fix": 1,
+   "flag": 61
+  },
+  "LucVanTien1883": {
+   "fix": 0,
+   "flag": 111
+  },
+  "LucVanTien1916": {
+   "fix": 55,
+   "flag": 234
+  },
+  "SachThanhTruyen": {
+   "fix": 25,
+   "flag": 1562
+  },
+  "TruyenKieu1872": {
+   "fix": 0,
+   "flag": 167
+  }
+ },
+ "ihr_fix_new_slot": {
+  "LucVanTien1916": {
+   "0": 2,
+   "1": 53
+  }
+ },
+ "sec": 5.9
+}

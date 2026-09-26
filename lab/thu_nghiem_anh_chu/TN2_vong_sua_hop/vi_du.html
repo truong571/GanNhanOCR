@@ -1,0 +1,929 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vòng sửa hộp TN2</title>
+<style>
+:root{--bg:#fafaf7;--fg:#1d1d1b;--mut:#6b6b66;--card:#fff;--line:#e2e1dc;--ok:#1f7a4a;--bad:#b3261e;--warn:#9a6700}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#161614;--fg:#ecebe6;--mut:#a3a29c;--card:#201f1d;--line:#34332f;--ok:#5fc48d;--bad:#ff8a80;--warn:#e0b04a}}
+:root[data-theme="dark"]{--bg:#161614;--fg:#ecebe6;--mut:#a3a29c;--card:#201f1d;--line:#34332f;--ok:#5fc48d;--bad:#ff8a80;--warn:#e0b04a}
+body{background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,sans-serif;margin:0;padding:16px;max-width:1400px;margin:auto}
+h1{font-size:20px;margin:4px 0} h2{font-size:16px;margin:28px 0 4px} .sub{color:var(--mut);margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:8px}
+.hd{display:flex;justify-content:space-between;gap:6px;align-items:center;margin-bottom:6px}
+.uid{font:11px ui-monospace,monospace;color:var(--mut);overflow-wrap:anywhere;text-align:right}
+.tag{font-size:12px;font-weight:600} .tag.ok{color:var(--ok)} .tag.bad{color:var(--bad)} .tag.warn{color:var(--warn)}
+.imgs{display:flex;gap:8px;align-items:flex-end} figure{margin:0;text-align:center} figcaption{font-size:11px;color:var(--mut)}
+img.crop{height:72px;width:auto;max-width:72px;object-fit:contain;background:#fff;border:1px solid var(--line)}
+.g{display:inline-flex;align-items:center;gap:2px;vertical-align:middle} .g img{height:26px;background:#fff;border-radius:3px}
+.g.big img{height:72px} .nofont{font-size:11px;border:1px dashed var(--line);padding:1px 3px} .g i{font-style:normal;font-size:11px;color:var(--mut)} .g.big i{display:none}
+.row{margin-top:4px} .small{font-size:12px} .mono{font-family:ui-monospace,monospace} .na{color:var(--mut)}
+</style></head><body>
+<h1>Vòng lặp sửa hộp ảnh GOLD — thử nghiệm 2 (26/09/2026)</h1>
+<p class="sub">Luật trùng hộp NGHIÊM (ô bị hạ vẫn giữ hộp cũ). Vòng lặp chỉ đổi HỘP/crop, không bao giờ đổi nhãn. m = cos(crop, nguyên mẫu nhãn) − max cos(crop, đối thủ: chữ kim kề ±1/±2, đồng âm, gần hình);
+bộ kiểm T học TK1872, L học LVT1916 (IHR chấm bằng mô hình KHÔNG thấy sách đó). Sự thật IHR = mô hình khe người (hộp cột người vẽ + chữ GT người) — không phải bộ kiểm.
+Số liệu: KET_QUA.md.</p>
+<section><h2>IHR — sửa đúng (điểm vận hành LOBO)</h2><p class="sub">47 ô; hiện 20. Sự thật = chữ GT người ở khe mà crop nằm (mô hình khe người). CHẮC CHẮN THEO MÁY.</p><div class="grid"><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0016/c1/n7/s7</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/f2413c071b66fe02b85684474f08e6b0.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/e4d0193f223a1c8657979831bb062cac.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/bec97a0cdb57ca6d892261a32a19ae6e.png" alt="盘"><i>盘</i></span><figcaption>nhãn · bàn</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/25f14d3f8c653fee660b5cb3b702b81e.png" alt="達"><i>達</i></span> dưới <span class="g "><img src="img/bf7b4ac40b1580d5259cb0fea88e285f.png" alt="香"><i>香</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/25f14d3f8c653fee660b5cb3b702b81e.png" alt="達"><i>達</i></span> · khe crop mới <span class="g "><img src="img/bec97a0cdb57ca6d892261a32a19ae6e.png" alt="盘"><i>盘</i></span></div><div class="row small mono">m<sub>T</sub> -0.83 → +0.28</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0099/c8/n12/s12</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/b05fe0620fe5991346e0da7474f677e6.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/0e0cb277270ac6232842eee2fb4456f6.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0d180509eec2eb7fccaea9bff402aba2.png" alt="主"><i>主</i></span><figcaption>nhãn · chủ</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/1c021efb21b2f4edf4e8e88dc1e0f01f.png" alt="𠽄"><i>𠽄</i></span> dưới <span class="g "><img src="img/a5084848a0c189676d61543711ac0c14.png" alt="茄"><i>茄</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/1c021efb21b2f4edf4e8e88dc1e0f01f.png" alt="𠽄"><i>𠽄</i></span> · khe crop mới <span class="g "><img src="img/0d180509eec2eb7fccaea9bff402aba2.png" alt="主"><i>主</i></span></div><div class="row small mono">m<sub>T</sub> -0.55 → +0.30</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0041/c10/n8/s8</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/2d345abdc1f69a509e2c75551e7eb905.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/6d257de1cb2582655e67741c7773b4cc.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/ff7883514a7fcb306baf1d744e83579c.png" alt="三"><i>三</i></span><figcaption>nhãn · tam</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/9fffdb586eb530ae82b30bbf9b1d1247.png" alt="位"><i>位</i></span> dưới <span class="g "><img src="img/69c80d3765c92d071fcab92d4f126eed.png" alt="府"><i>府</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/9fffdb586eb530ae82b30bbf9b1d1247.png" alt="位"><i>位</i></span> · khe crop mới <span class="g "><img src="img/ff7883514a7fcb306baf1d744e83579c.png" alt="三"><i>三</i></span></div><div class="row small mono">m<sub>T</sub> -0.67 → +0.30</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0062/c9/n10/s10</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/25be741b5c00d2dd08195f4a2fcd3b4d.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/53f64df6be722d666fed8161e6b84d37.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/cdb120f4ebac2eaaa4e77dfcd985765a.png" alt="結"><i>結</i></span><figcaption>nhãn · kết</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/c529bf31ba3937160b3e6a3ba3f81da7.png" alt="㐌"><i>㐌</i></span> dưới <span class="g "><img src="img/571998f54654a6d6e1dc249de968479d.png" alt="願"><i>願</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/c529bf31ba3937160b3e6a3ba3f81da7.png" alt="㐌"><i>㐌</i></span> · khe crop mới <span class="g "><img src="img/cdb120f4ebac2eaaa4e77dfcd985765a.png" alt="結"><i>結</i></span></div><div class="row small mono">m<sub>T</sub> -0.50 → +0.37</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0044/c8/n7/s7</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/0bf3b9e777dfc1d2d9d23afe9b25d70a.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/56e96573b64ab10c432df3da0a30cb39.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/ee6d398d3d9e4928abcc9ee4fe2640ba.png" alt="船"><i>船</i></span><figcaption>nhãn · thuyền</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/963eb7bda637a67b5b38254a8e88bdc6.png" alt="尋"><i>尋</i></span> dưới <span class="g "><img src="img/ccc4f3e42b0c6972a184b2b322bb0cae.png" alt="些"><i>些</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/963eb7bda637a67b5b38254a8e88bdc6.png" alt="尋"><i>尋</i></span> · khe crop mới <span class="g "><img src="img/ee6d398d3d9e4928abcc9ee4fe2640ba.png" alt="船"><i>船</i></span></div><div class="row small mono">m<sub>T</sub> -0.77 → +0.39</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0044/c8/n6/s6</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/3af29b6dcb5c5b03f491d03fb4ab14e6.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/0bf3b9e777dfc1d2d9d23afe9b25d70a.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/963eb7bda637a67b5b38254a8e88bdc6.png" alt="尋"><i>尋</i></span><figcaption>nhãn · tìm</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/08daf637cc1e2292b9d7de89181775f1.png" alt="中"><i>中</i></span> dưới <span class="g "><img src="img/ee6d398d3d9e4928abcc9ee4fe2640ba.png" alt="船"><i>船</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="na">—</span> · khe crop mới <span class="g "><img src="img/963eb7bda637a67b5b38254a8e88bdc6.png" alt="尋"><i>尋</i></span></div><div class="row small mono">m<sub>T</sub> -0.14 → +0.51</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0033/c1/n11/s11</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/1344ad2506c65f7f0c6d3a7b6259e01c.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/0b9c1b4d6d106617de37488780bb417d.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/b176bba79de7072ca44367f7a4535864.png" alt="𡽫"><i>𡽫</i></span><figcaption>nhãn · non</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/f50a5392cf2cd122950bff99efc4f59b.png" alt="渃"><i>渃</i></span> dưới <span class="g "><img src="img/83682d4a0606738855a6b7fd47a8d26c.png" alt="朱"><i>朱</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/f50a5392cf2cd122950bff99efc4f59b.png" alt="渃"><i>渃</i></span> · khe crop mới <span class="g "><img src="img/b176bba79de7072ca44367f7a4535864.png" alt="𡽫"><i>𡽫</i></span></div><div class="row small mono">m<sub>T</sub> -0.45 → +0.33</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0033/c1/n9/s9</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/edd03c4c026f2ce3ce0a39c7642dcc14.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/60b402bc0259801673f8f1f44e03657b.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0cef8288a86fcf72b0cacd84af9e0d32.png" alt="浽"><i>浽</i></span><figcaption>nhãn · nợ</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/64b093cd820bd00ac1f23443505fb50f.png" alt="呂"><i>呂</i></span> dưới <span class="g "><img src="img/f50a5392cf2cd122950bff99efc4f59b.png" alt="渃"><i>渃</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/64b093cd820bd00ac1f23443505fb50f.png" alt="呂"><i>呂</i></span> · khe crop mới <span class="g "><img src="img/0cef8288a86fcf72b0cacd84af9e0d32.png" alt="浽"><i>浽</i></span></div><div class="row small mono">m<sub>T</sub> -0.44 → +0.27</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0029/c9/n9/s9</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/0955b095b82fe416675cf039b6b7ab74.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/23947b5722efb5bced49a6160da38512.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/46c79166912cb6595ef3b4a1adeb4746.png" alt="負"><i>負</i></span><figcaption>nhãn · phụ</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/3f77c068f8560151ed27a14610a7e3c8.png" alt="女"><i>女</i></span> dưới <span class="g "><img src="img/ffde187d3cfa8bf2f0ffa5e3dc21b5ae.png" alt="仍"><i>仍</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/3f77c068f8560151ed27a14610a7e3c8.png" alt="女"><i>女</i></span> · khe crop mới <span class="g "><img src="img/46c79166912cb6595ef3b4a1adeb4746.png" alt="負"><i>負</i></span></div><div class="row small mono">m<sub>T</sub> -0.39 → +0.30</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0034/c3/n9/s9</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/c42bed4e36cd99439331a143891cdf8f.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/65e89fda673d6b20b866551f8585bc86.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/ceb7d4463e39f4ee99969b9a395b241b.png" alt="畧"><i>畧</i></span><figcaption>nhãn · trước</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/9dfc6ee75654a5eb83c5a1cd4ac1807e.png" alt="細"><i>細</i></span> dưới <span class="g "><img src="img/963eb7bda637a67b5b38254a8e88bdc6.png" alt="尋"><i>尋</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="na">—</span> · khe crop mới <span class="g "><img src="img/ceb7d4463e39f4ee99969b9a395b241b.png" alt="畧"><i>畧</i></span></div><div class="row small mono">m<sub>T</sub> +0.18 → +0.38</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0037/c8/n8/s8</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/751c03a399b14891612427c2cb154b08.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/2bc5791764fc442bbb16834230fa5a39.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/2ee108e30b28db59d5439f53a4a0e515.png" alt="天"><i>天</i></span><figcaption>nhãn · thiên</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/d41ff3b233bf660be92f8cb9f129b523.png" alt="通"><i>通</i></span> dưới <span class="g "><img src="img/ac4cfd7babd0bb7fb1fdfc18e96b0725.png" alt="地"><i>地</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/d41ff3b233bf660be92f8cb9f129b523.png" alt="通"><i>通</i></span> · khe crop mới <span class="g "><img src="img/2ee108e30b28db59d5439f53a4a0e515.png" alt="天"><i>天</i></span></div><div class="row small mono">m<sub>T</sub> -0.15 → +0.31</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0069/c10/n8/s8</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/0b9b781b8ce3ffe6ca1e07286aea5103.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/1334c4d7c3bd54e083330b30ef015544.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/f1c5a83fc87909e45320862306e94968.png" alt="𣎃"><i>𣎃</i></span><figcaption>nhãn · tháng</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/080291e99a9960c5e21785b6c15effd9.png" alt="㝵"><i>㝵</i></span> dưới <span class="g "><img src="img/f8610401d9f17bd219e85b79e5685321.png" alt="𠃩"><i>𠃩</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/080291e99a9960c5e21785b6c15effd9.png" alt="㝵"><i>㝵</i></span> · khe crop mới <span class="g "><img src="img/f1c5a83fc87909e45320862306e94968.png" alt="𣎃"><i>𣎃</i></span></div><div class="row small mono">m<sub>T</sub> -0.37 → +0.34</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0043/c1/n1/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/4ed197c86bf59bed80ab96400a59461b.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/525feb25e9b439d6865bc0b1d8fee786.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/4184eb11099a4b27b58f44c769496e60.png" alt="台"><i>台</i></span><figcaption>nhãn · thay</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/dcae76be210747697e4b7118ab261949.png" alt="傷"><i>傷</i></span> dưới <span class="g "><img src="img/7a05b8f6ee7b3e37e21c7fce5e28dc6f.png" alt="錢"><i>錢</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/da26c5888690641cb840bc85d6064011.png" alt="钱"><i>钱</i></span> · khe crop mới <span class="g "><img src="img/4184eb11099a4b27b58f44c769496e60.png" alt="台"><i>台</i></span></div><div class="row small mono">m<sub>T</sub> -0.05 → +0.26</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0046/c8/n2/s2</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/572068c09382c8adac1de851b8e4eee2.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/72e4915f6fce9bde18f2d46ddafc7232.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/7f6879b983da88e70b71df9d860f01f4.png" alt="姅"><i>姅</i></span><figcaption>nhãn · nửa</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/74a9ae33812ebbfc7396716703a73e49.png" alt="𢜠"><i>𢜠</i></span> dưới <span class="g "><img src="img/01a090debffddcefcbbd709b80420708.png" alt="吏"><i>吏</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/01a090debffddcefcbbd709b80420708.png" alt="吏"><i>吏</i></span> · khe crop mới <span class="g "><img src="img/7f6879b983da88e70b71df9d860f01f4.png" alt="姅"><i>姅</i></span></div><div class="row small mono">m<sub>T</sub> -0.42 → +0.29</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0017/c1/n11/s11</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/48057202e4bc302e00330b3e956e083e.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/c7657cd7211b5f295473bfeea59bcee2.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/c74d40f6f3851561c16b11f8e871a564.png" alt="芇"><i>芇</i></span><figcaption>nhãn · nào</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/53f8b2e225d0ee5236032b0f33081af5.png" alt="理"><i>理</i></span> dưới <span class="g "><img src="img/02a3d48dab3d7bb4c550c8bc0ba57306.png" alt="爫"><i>爫</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/53f8b2e225d0ee5236032b0f33081af5.png" alt="理"><i>理</i></span> · khe crop mới <span class="g "><img src="img/c74d40f6f3851561c16b11f8e871a564.png" alt="芇"><i>芇</i></span></div><div class="row small mono">m<sub>T</sub> -0.52 → +0.28</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0069/c7/n10/s10</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/5dd81e7db82e8f3952f27ffe8f4dd354.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/39d409e302435770b6b0b6e993119e95.png"><figcaption>mới (det)</figcaption></figure>
+    <figure><span class="g big"><img src="img/bf6611eaca6b947559f580fdc6b624f3.png" alt="乙"><i>乙</i></span><figcaption>nhãn · ắt</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/40e18be4ed81a85ccf60e8b7fa401a42.png" alt="國"><i>國</i></span> dưới <span class="g "><img src="img/f1a8eeb4398fb491e8913ca72cadf32f.png" alt="安"><i>安</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/40e18be4ed81a85ccf60e8b7fa401a42.png" alt="國"><i>國</i></span> · khe crop mới <span class="g "><img src="img/bf6611eaca6b947559f580fdc6b624f3.png" alt="乙"><i>乙</i></span></div><div class="row small mono">m<sub>T</sub> -0.25 → +0.48</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0062/c9/n8/s8</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/2d0017d434ad615dd2f1dc6475ed1f23.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/c8220d33c5dc366da9a92a93b46ea31e.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/ceb7d4463e39f4ee99969b9a395b241b.png" alt="畧"><i>畧</i></span><figcaption>nhãn · trước</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/ceb8767a98d7096e648f361065f873fe.png" alt="㛪"><i>㛪</i></span> dưới <span class="g "><img src="img/c529bf31ba3937160b3e6a3ba3f81da7.png" alt="㐌"><i>㐌</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/ceb8767a98d7096e648f361065f873fe.png" alt="㛪"><i>㛪</i></span> · khe crop mới <span class="g "><img src="img/ceb7d4463e39f4ee99969b9a395b241b.png" alt="畧"><i>畧</i></span></div><div class="row small mono">m<sub>T</sub> -0.57 → +0.36</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0103/c10/n6/s6</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/e8840389cbf22be2770fe209b0d6c0d7.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/a7a6bbb8cc1a04cd7a3fc008c07df7d3.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/26c61a8720f3d68916a332090f37905e.png" alt="生"><i>生</i></span><figcaption>nhãn · sinh</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/c2b0f7d77c36044b093b0c6d35b6821d.png" alt="神"><i>神</i></span> dưới <span class="g "><img src="img/3da7deb335f867863247bb9894e7b8be.png" alt="昆"><i>昆</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/c2b0f7d77c36044b093b0c6d35b6821d.png" alt="神"><i>神</i></span> · khe crop mới <span class="g "><img src="img/26c61a8720f3d68916a332090f37905e.png" alt="生"><i>生</i></span></div><div class="row small mono">m<sub>T</sub> -0.20 → +0.48</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0079/c10/n1/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/41f28457eb1c2541e968f73b3bc0e5d5.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/64dbf290d6267850777d1d76504d22b9.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/243a21e5cd89967b86c2ab48f3c6030d.png" alt="陽"><i>陽</i></span><figcaption>nhãn · dương</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/86ded667017dfede8bbea8fd0087339a.png" alt="胡"><i>胡</i></span> dưới <span class="g "><img src="img/45bb92781413d2d9d465c2506fff119e.png" alt="𠸗"><i>𠸗</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/45bb92781413d2d9d465c2506fff119e.png" alt="𠸗"><i>𠸗</i></span> · khe crop mới <span class="g "><img src="img/243a21e5cd89967b86c2ab48f3c6030d.png" alt="陽"><i>陽</i></span></div><div class="row small mono">m<sub>T</sub> -0.23 → +0.27</div>
+</div><div class="card">
+  <div class="hd"><span class="tag ok">sửa đúng</span><span class="uid">LucV page_0049/c1/n3/s3</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/b407d3f5ba726e2a775e07eea116a6df.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/cc967cbb3b72949232dff9d00b2fcbf3.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/c529bf31ba3937160b3e6a3ba3f81da7.png" alt="㐌"><i>㐌</i></span><figcaption>nhãn · đã</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/563aeac2f0b121fb448b09a1e42cabf6.png" alt="𡗶"><i>𡗶</i></span> dưới <span class="g "><img src="img/77458757e9c50f894b369fc0317b2e62.png" alt="𤎜"><i>𤎜</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/77458757e9c50f894b369fc0317b2e62.png" alt="𤎜"><i>𤎜</i></span> · khe crop mới <span class="g "><img src="img/c529bf31ba3937160b3e6a3ba3f81da7.png" alt="㐌"><i>㐌</i></span></div><div class="row small mono">m<sub>T</sub> -0.09 → +0.36</div>
+</div></div></section>
+<section><h2>IHR — sửa sai / làm hỏng / chưa xác định (ngoài điểm vận hành, để lộ kiểu lỗi)</h2><p class="sub">20 ô, gom lần lượt từ: θ = 0 nghiêm → θ = −0,2 nghiêm → θ = 0 nới → &quot;chỉ hộp kim&quot; (không bộ kiểm). Ở điểm vận hành LOBO chỉ các ô ghi &quot;CŨNG bị nhận&quot; mới xảy ra.</p><div class="grid"><div class="card">
+  <div class="hd"><span class="tag bad">sửa, khe mới chưa xác định</span><span class="uid">LucV page_0048/c5/n7/s7</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/df6aaa3a5920a043d1e42aa1abfcfaa9.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/0e9dbced9c923858c6592887d2782ce5.png"><figcaption>mới (det)</figcaption></figure>
+    <figure><span class="g big"><img src="img/dcae76be210747697e4b7118ab261949.png" alt="傷"><i>傷</i></span><figcaption>nhãn · thương</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/58913e07929f5caf5fd8351d0d9e5316.png" alt="感"><i>感</i></span> dưới <span class="g "><img src="img/b9413fa79a3c2ca5d6a8ca7830b50638.png" alt="𠄩"><i>𠄩</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/58913e07929f5caf5fd8351d0d9e5316.png" alt="感"><i>感</i></span> · khe crop mới <span class="na">—</span></div><div class="row small mono">m<sub>T</sub> -0.53 → +0.42</div><div class="row small">θ = 0, luật nghiêm — CŨNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">Truy page_0008/c5/n2/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/009ca55e9769d58204998d4c4570584d.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/5af1415d68e5335b4a561096ebfa77b3.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/2a5355271f8e47627964ef2d352cf292.png" alt="富"><i>富</i></span><figcaption>nhãn · phú</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/26568966cb3ef17c829e667b4c042ef4.png" alt="𪤍"><i>𪤍</i></span> dưới <span class="g "><img src="img/c59a3ee71fbf45ee03a420122d93865a.png" alt="厚"><i>厚</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/2a5355271f8e47627964ef2d352cf292.png" alt="富"><i>富</i></span> · khe crop mới <span class="na">—</span></div><div class="row small mono">m<sub>L</sub> +0.03 → +0.11</div><div class="row small">θ = 0, luật nghiêm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">sửa sai</span><span class="uid">Truy page_0054/c6/n26/s12</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/584554d565a2be75ae75d28cfeff849a.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/ad2444de5f75fe6df2d17560daf220dd.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/f8f40482b16dfb30f33e536feef6cd24.png" alt="𢚸"><i>𢚸</i></span><figcaption>nhãn · trời</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/6fb81c3b21a729862cc6bf49681056ee.png" alt="如"><i>如</i></span> dưới <span class="g "><img src="img/b37a5d5221f12e7c39821f68c719d778.png" alt="󱉁"><i>󱉁</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/c2f44e32caff06df325bf3ea3f23b6ef.png" alt="闭"><i>闭</i></span> · khe crop mới <span class="g "><img src="img/4d5d1bbfeeae894175715acc30a04893.png" alt="花"><i>花</i></span></div><div class="row small mono">m<sub>L</sub> -0.21 → +0.17</div><div class="row small">θ = 0, luật nghiêm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">Truy page_0138/c1/n7/s6</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/38fb72fa95e7775ac567ff75fab41250.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/b450b72497b528fe49d76f85b50c5667.png"><figcaption>mới (det)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0cef8288a86fcf72b0cacd84af9e0d32.png" alt="浽"><i>浽</i></span><figcaption>nhãn · nỗi</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/691157c4bb6621be43559be4bfcec33b.png" alt="伽"><i>伽</i></span> dưới <span class="g "><img src="img/a465e844936b9a1dccbd9c7b737fef50.png" alt="払"><i>払</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/0cef8288a86fcf72b0cacd84af9e0d32.png" alt="浽"><i>浽</i></span> · khe crop mới <span class="na">—</span></div><div class="row small mono">m<sub>L</sub> -0.10 → +0.22</div><div class="row small">θ = 0, luật nghiêm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">Truy page_0149/c1/n7/s6</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/829c913342f303db4172d6a1c06ac38a.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/2aa750f5db6b8b0e792eb5f6e21fad66.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/6da2fafa8e0268d8e2aea7abf3c102d4.png" alt="失"><i>失</i></span><figcaption>nhãn · thất</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/3ebf9f3046e2c2aeb571b1af4ea89fc4.png" alt="和"><i>和</i></span> dưới <span class="g "><img src="img/0306b2cdb26e95b7d2550344cad9388a.png" alt="机"><i>机</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/6da2fafa8e0268d8e2aea7abf3c102d4.png" alt="失"><i>失</i></span> · khe crop mới <span class="na">—</span></div><div class="row small mono">m<sub>L</sub> -0.47 → +0.09</div><div class="row small">θ = 0, luật nghiêm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">sửa, khe mới chưa xác định</span><span class="uid">Truy page_0149/c1/n8/s7</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/1b30155be219d72a28b867d88aba59f8.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/b872c788184fadef4004d636ebdf665b.png"><figcaption>mới (det)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0306b2cdb26e95b7d2550344cad9388a.png" alt="机"><i>机</i></span><figcaption>nhãn · cơ</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/6da2fafa8e0268d8e2aea7abf3c102d4.png" alt="失"><i>失</i></span> dưới <span class="g "><img src="img/47260e16215d249aaafcfd172a015faa.png" alt="徐"><i>徐</i></span></div>
+  <div class="row small mono">m<sub>L</sub> -0.44 → +0.04</div><div class="row small">θ = 0, luật nghiêm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">LucV page_0021/c10/n0/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/9bb03636482586f5c464aa6903594244.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/c3dcf4ff41432d801f5898c0350b84ae.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/15a0c6d95fcc135dfd176316b7214d00.png" alt="蹎"><i>蹎</i></span><figcaption>nhãn · chân</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="na">—</span> dưới <span class="g "><img src="img/0423429ecacc77925b1288bdc6689899.png" alt="被"><i>被</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/15a0c6d95fcc135dfd176316b7214d00.png" alt="蹎"><i>蹎</i></span> · khe crop mới <span class="g "><img src="img/726449ae98b8e6fbde15cd99fb76b2e3.png" alt="𣃣"><i>𣃣</i></span></div><div class="row small mono">m<sub>T</sub> -0.15 → -0.03</div><div class="row small">θ = −0,2, luật nghiêm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">sửa, khe mới chưa xác định</span><span class="uid">Truy page_0127/c10/n3/s3</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/1016e437b0c1ae3d62a5045319200f98.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/2d7a1c4d60377694f83fe12a474fe4c5.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/01a090debffddcefcbbd709b80420708.png" alt="吏"><i>吏</i></span><figcaption>nhãn · lại</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/139d00e7a3e3d97d6a2afbd20e55653a.png" alt="几"><i>几</i></span> dưới <span class="g "><img src="img/080291e99a9960c5e21785b6c15effd9.png" alt="㝵"><i>㝵</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/139d00e7a3e3d97d6a2afbd20e55653a.png" alt="几"><i>几</i></span> · khe crop mới <span class="na">—</span></div><div class="row small mono">m<sub>L</sub> -0.30 → -0.01</div><div class="row small">θ = −0,2, luật nghiêm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">Truy page_0160/c4/n2/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/f30365af0a64348ad0ca6ed7d144d319.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/2895f8d6abdf5f9592badf8cfcc1db78.png"><figcaption>mới (prev)</figcaption></figure>
+    <figure><span class="g big"><img src="img/586d81ef64b435ee856e96b9bb7a07a5.png" alt="𨑤"><i>𨑤</i></span><figcaption>nhãn · che</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/d47942c7a4140927a8241e95c973333e.png" alt="𨔾"><i>𨔾</i></span> dưới <span class="g "><img src="img/f85786cea7da970b48d255e52669dd50.png" alt="𧝓"><i>𧝓</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/586d81ef64b435ee856e96b9bb7a07a5.png" alt="𨑤"><i>𨑤</i></span> · khe crop mới <span class="g "><img src="img/d47942c7a4140927a8241e95c973333e.png" alt="𨔾"><i>𨔾</i></span></div><div class="row small mono">m<sub>L</sub> -0.18 → -0.16</div><div class="row small">θ = −0,2, luật nghiêm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">sửa sai</span><span class="uid">LucV page_0086/c8/n15/s7</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/76bebcc9bd1e229d6ec97aab005a2627.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/1e5fe42c7a66656960096f5c86282b40.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/829614f54dcbccfc75daeb7e0b9521f2.png" alt="尼"><i>尼</i></span><figcaption>nhãn · nơi</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/80ff5350c58eb55f36a584beaaee6721.png" alt="牢"><i>牢</i></span> dưới <span class="g "><img src="img/078490ecbb72f7107d4aaf9cc8281984.png" alt="﨤"><i>﨤</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/80ff5350c58eb55f36a584beaaee6721.png" alt="牢"><i>牢</i></span> · khe crop mới <span class="g "><img src="img/078490ecbb72f7107d4aaf9cc8281984.png" alt="﨤"><i>﨤</i></span></div><div class="row small mono">m<sub>T</sub> -0.08 → +0.18</div><div class="row small">θ = 0, luật nới — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">Truy page_0014/c10/n8/s8</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/d227489c36f7ddecc63b3df0b85c60fc.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/e115930283de82c8dd428bee229e538f.png"><figcaption>mới (prev)</figcaption></figure>
+    <figure><span class="g big"><img src="img/00e29e5976671593ebf1cd5e388976e0.png" alt="𬄦"><i>𬄦</i></span><figcaption>nhãn · lãm</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/42ae3dc2d126da6e39b5e25423a75314.png" alt="軒"><i>軒</i></span> dưới <span class="g "><img src="img/b64c7f525d8fdff04153866496b1d283.png" alt="翠"><i>翠</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/00e29e5976671593ebf1cd5e388976e0.png" alt="𬄦"><i>𬄦</i></span> · khe crop mới <span class="na">—</span></div><div class="row small mono">m<sub>L</sub> -0.19 → +0.04</div><div class="row small">θ = 0, luật nới — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">sửa, khe mới chưa xác định</span><span class="uid">Truy page_0135/c1/n7/s7</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/220c92eb020c31ce22e24d5429a8a2dd.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/312686f341db3533324f3f473c376394.png"><figcaption>mới (prev)</figcaption></figure>
+    <figure><span class="g big"><img src="img/806896fb0cf870d419982656bdc2e4b6.png" alt="緣"><i>緣</i></span><figcaption>nhãn · duyên</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/fd9bdb507861e72c5b877e93fc9447df.png" alt="業"><i>業</i></span> dưới <span class="g "><img src="img/74833f24d339de8fabb574b2b334446d.png" alt="斤"><i>斤</i></span></div>
+  <div class="row small mono">m<sub>L</sub> -0.02 → +0.02</div><div class="row small">θ = 0, luật nới — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">LucV page_0021/c10/n2/s3</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/ec74ec2ef4a31d6305d7a0a8b110332c.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/a58197c70eeeab80157119b89f6b9011.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/15d5d571771a3c97555e517a35623eb7.png" alt="課"><i>課</i></span><figcaption>nhãn · thuở</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/0423429ecacc77925b1288bdc6689899.png" alt="被"><i>被</i></span> dưới <span class="g "><img src="img/168e4c603cce4f7887ac1d0051330064.png" alt="平"><i>平</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/15d5d571771a3c97555e517a35623eb7.png" alt="課"><i>課</i></span> · khe crop mới <span class="na">—</span></div><div class="row small mono">m<sub>T</sub> +0.20 → -0.16</div><div class="row small">chỉ hộp kim, không bộ kiểm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">LucV page_0026/c1/n8/s8</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/906598fde929b7014dfdc7b3894c9f24.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/141ef5022ebc4276c40793106b530ae4.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/9dfc6ee75654a5eb83c5a1cd4ac1807e.png" alt="細"><i>細</i></span><figcaption>nhãn · tới</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/f53d5eebd5572d4ef5a77f11f37c609f.png" alt="民"><i>民</i></span> dưới <span class="g "><img src="img/0cef8288a86fcf72b0cacd84af9e0d32.png" alt="浽"><i>浽</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/9dfc6ee75654a5eb83c5a1cd4ac1807e.png" alt="細"><i>細</i></span> · khe crop mới <span class="g "><img src="img/0cef8288a86fcf72b0cacd84af9e0d32.png" alt="浽"><i>浽</i></span></div><div class="row small mono">m<sub>T</sub> -0.04 → -0.41</div><div class="row small">chỉ hộp kim, không bộ kiểm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">LucV page_0026/c1/n9/s9</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/aac266b71f955fbcd8c6c81b6a1ed6f1.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/5b2b48a5aea32617cb39bf14dbd16d89.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0cef8288a86fcf72b0cacd84af9e0d32.png" alt="浽"><i>浽</i></span><figcaption>nhãn · nỗi</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/9dfc6ee75654a5eb83c5a1cd4ac1807e.png" alt="細"><i>細</i></span> dưới <span class="g "><img src="img/0847879ecaa0a0a2341977ee8b6347bf.png" alt="沙"><i>沙</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/0cef8288a86fcf72b0cacd84af9e0d32.png" alt="浽"><i>浽</i></span> · khe crop mới <span class="g "><img src="img/0847879ecaa0a0a2341977ee8b6347bf.png" alt="沙"><i>沙</i></span></div><div class="row small mono">m<sub>T</sub> -0.18 → -0.26</div><div class="row small">chỉ hộp kim, không bộ kiểm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">LucV page_0026/c1/n10/s10</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/41e2e83878ff3ad56df85c3da1f2aa45.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/da3f5a3f600b7bf1ec5c62a4477d0d90.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0847879ecaa0a0a2341977ee8b6347bf.png" alt="沙"><i>沙</i></span><figcaption>nhãn · sa</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/0cef8288a86fcf72b0cacd84af9e0d32.png" alt="浽"><i>浽</i></span> dưới <span class="g "><img src="img/ee6d398d3d9e4928abcc9ee4fe2640ba.png" alt="船"><i>船</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/0847879ecaa0a0a2341977ee8b6347bf.png" alt="沙"><i>沙</i></span> · khe crop mới <span class="na">—</span></div><div class="row small mono">m<sub>T</sub> +0.31 → -0.08</div><div class="row small">chỉ hộp kim, không bộ kiểm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">LucV page_0027/c2/n1/s0</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/ae6b560a3e46ee51c1a83e4a23ce2c2e.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/54deb8b53afb587ecb36506280398ab3.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/43ac1b3891c348356732254495d82f0a.png" alt="䀡"><i>䀡</i></span><figcaption>nhãn · xem</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/6240483018518a7a25b43ef6834ac605.png" alt="一"><i>一</i></span> dưới <span class="g "><img src="img/6b9752d80329858da8c00a9eee403976.png" alt="戈"><i>戈</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/43ac1b3891c348356732254495d82f0a.png" alt="䀡"><i>䀡</i></span> · khe crop mới <span class="g "><img src="img/6b9752d80329858da8c00a9eee403976.png" alt="戈"><i>戈</i></span></div><div class="row small mono">m<sub>T</sub> -0.37 → -0.63</div><div class="row small">chỉ hộp kim, không bộ kiểm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">LucV page_0027/c2/n2/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/665c1668833e708382c5f892af143f53.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/45a90c242cf1038d14e0323c335c53e5.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/6b9752d80329858da8c00a9eee403976.png" alt="戈"><i>戈</i></span><figcaption>nhãn · qua</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/43ac1b3891c348356732254495d82f0a.png" alt="䀡"><i>䀡</i></span> dưới <span class="g "><img src="img/6c4f0be5fe5ebbb8e15789a386a5f3be.png" alt="册"><i>册</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/6b9752d80329858da8c00a9eee403976.png" alt="戈"><i>戈</i></span> · khe crop mới <span class="g "><img src="img/6c4f0be5fe5ebbb8e15789a386a5f3be.png" alt="册"><i>册</i></span></div><div class="row small mono">m<sub>T</sub> +0.47 → -0.19</div><div class="row small">chỉ hộp kim, không bộ kiểm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">LucV page_0027/c2/n3/s2</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/eb6d9ca53c08e667246b3731f3432135.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/3a95d2d1be91d0bad71632331cd1c9bf.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/6c4f0be5fe5ebbb8e15789a386a5f3be.png" alt="册"><i>册</i></span><figcaption>nhãn · sách</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/6b9752d80329858da8c00a9eee403976.png" alt="戈"><i>戈</i></span> dưới <span class="g "><img src="img/d7a067bc3271f147adb2e84a7079d12d.png" alt="𡲈"><i>𡲈</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/6c4f0be5fe5ebbb8e15789a386a5f3be.png" alt="册"><i>册</i></span> · khe crop mới <span class="g "><img src="img/d7a067bc3271f147adb2e84a7079d12d.png" alt="𡲈"><i>𡲈</i></span></div><div class="row small mono">m<sub>T</sub> +0.07 → -0.28</div><div class="row small">chỉ hộp kim, không bộ kiểm — KHÔNG bị nhận ở điểm vận hành</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">làm hỏng ô đúng</span><span class="uid">LucV page_0035/c10/n1/s0</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/08c514cd0e092280ede8f0c1da943f7c.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/fd8b0a76c7f8c3d8b8b3e622c97de434.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/c28a82091a1da954e34f2f5d6388f430.png" alt="昂"><i>昂</i></span><figcaption>nhãn · ngang</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/6240483018518a7a25b43ef6834ac605.png" alt="一"><i>一</i></span> dưới <span class="g "><img src="img/e16106e21589584b5607f2113f88ba95.png" alt="浪"><i>浪</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/c28a82091a1da954e34f2f5d6388f430.png" alt="昂"><i>昂</i></span> · khe crop mới <span class="g "><img src="img/e16106e21589584b5607f2113f88ba95.png" alt="浪"><i>浪</i></span></div><div class="row small mono">m<sub>T</sub> +0.54 → -0.19</div><div class="row small">chỉ hộp kim, không bộ kiểm — KHÔNG bị nhận ở điểm vận hành</div>
+</div></div></section>
+<section><h2>IHR — bị hạ (điểm vận hành LOBO)</h2><p class="sub">341 ô; hiện 12 ô crop cũ sai + 8 ô crop cũ vốn đúng.</p><div class="grid"><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">LucV page_0045/c4/n10/s10</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/a23215fc6a1458c24db825dbf0218e37.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/23bcfb6dcb15ddcda37b2ac5b934f234.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/a18013c8d289d32c940d2df1bc69a50c.png" alt="謀"><i>謀</i></span><figcaption>nhãn · mưu</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/3a01ef9f31d7280bfb0738e56400984a.png" alt="用"><i>用</i></span> dưới <span class="g "><img src="img/829614f54dcbccfc75daeb7e0b9521f2.png" alt="尼"><i>尼</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/3a01ef9f31d7280bfb0738e56400984a.png" alt="用"><i>用</i></span> · khe crop mới <span class="g "><img src="img/a18013c8d289d32c940d2df1bc69a50c.png" alt="謀"><i>謀</i></span></div><div class="row small mono">m<sub>T</sub> -0.55 → +0.22</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">Truy page_0144/c1/n3/s2</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/7496a2f791b03c64bf59cc21f45fa15e.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/ea566f90467f5c42b6017909707023e3.png"><figcaption>mới (prev)</figcaption></figure>
+    <figure><span class="g big"><img src="img/a5b8d9b0e08a99da396af8cd006be6dc.png" alt="及"><i>及</i></span><figcaption>nhãn · gặp</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/a7c1d216be94618c96c682c3dc802c2f.png" alt="科"><i>科</i></span> dưới <span class="g "><img src="img/6e2f36fc8d370838bcacbd2cba3a3b94.png" alt="会"><i>会</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="na">—</span> · khe crop mới <span class="g "><img src="img/a5b8d9b0e08a99da396af8cd006be6dc.png" alt="及"><i>及</i></span></div><div class="row small mono">m<sub>L</sub> -0.68 → +0.34</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">Truy page_0051/c10/n1/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/c55e59eb7a58c02a77ced81aff160240.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/0d3f89e7a8f663c2cfd0e735fd90ca48.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/829614f54dcbccfc75daeb7e0b9521f2.png" alt="尼"><i>尼</i></span><figcaption>nhãn · này</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/d67d71f4ec627c79c2ba7ded7217c404.png" alt="刼"><i>刼</i></span> dưới <span class="g "><img src="img/3f77c068f8560151ed27a14610a7e3c8.png" alt="女"><i>女</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/d67d71f4ec627c79c2ba7ded7217c404.png" alt="刼"><i>刼</i></span> · khe crop mới <span class="g "><img src="img/829614f54dcbccfc75daeb7e0b9521f2.png" alt="尼"><i>尼</i></span></div><div class="row small mono">m<sub>L</sub> -0.55 → +0.32</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">LucV page_0005/c8/n7/s7</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/fe900e4b3a19e21106046a29cee1ea5c.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/f249d948c1046344b1cde89485e62353.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/4b2969f2897bc2b4b8de4a6f16e2dd88.png" alt="󰑼"><i>󰑼</i></span><figcaption>nhãn · là</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/ceb7d4463e39f4ee99969b9a395b241b.png" alt="畧"><i>畧</i></span> dưới <span class="g "><img src="img/69898d2905b57abf8c72e520522feb98.png" alt="探"><i>探</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/ceb7d4463e39f4ee99969b9a395b241b.png" alt="畧"><i>畧</i></span> · khe crop mới <span class="g "><img src="img/4b2969f2897bc2b4b8de4a6f16e2dd88.png" alt="󰑼"><i>󰑼</i></span></div><div class="row small mono">m<sub>T</sub> -0.81 → -0.16</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">Truy page_0036/c1/n3/s3</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/7c21686cff019abc3c7aacc3ace49ec7.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/013cdd1dfd0b2ad78046214e30182c9c.png"><figcaption>mới (det)</figcaption></figure>
+    <figure><span class="g big"><img src="img/3f195869f65aefbfef8ebb208e364b4b.png" alt="燥"><i>燥</i></span><figcaption>nhãn · ráo</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/89aa4fcff59b78ef6970472b716b0b02.png" alt="渚"><i>渚</i></span> dưới <span class="g "><img src="img/f5c8768ce24301a781d8613e86437153.png" alt="𡃹"><i>𡃹</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/89aa4fcff59b78ef6970472b716b0b02.png" alt="渚"><i>渚</i></span> · khe crop mới <span class="g "><img src="img/3f195869f65aefbfef8ebb208e364b4b.png" alt="燥"><i>燥</i></span></div><div class="row small mono">m<sub>L</sub> -0.51 → -0.12</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">Truy page_0054/c1/n3/s3</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/5893a24cad36d509776a75f6a29aadb1.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/749c84a640d68169e1d76440597deb81.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0a43abf2701c9c4b49c79cecaacb97af.png" alt="脉"><i>脉</i></span><figcaption>nhãn · mạch</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/61bb0f611cbab6c51bf59bee1f7a9692.png" alt="拱"><i>拱</i></span> dưới <span class="g "><img src="img/a1ec0170f2547a8c4192fb4eca35fdd5.png" alt="書"><i>書</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/61bb0f611cbab6c51bf59bee1f7a9692.png" alt="拱"><i>拱</i></span> · khe crop mới <span class="g "><img src="img/0a43abf2701c9c4b49c79cecaacb97af.png" alt="脉"><i>脉</i></span></div><div class="row small mono">m<sub>L</sub> -0.47 → +0.03</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">Truy page_0130/c6/n14/s12</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/9ec0aa38928a2029b55d8807f309a860.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/6ddb6dc90e4d62e66358cf3305612a73.png"><figcaption>mới (prev)</figcaption></figure>
+    <figure><span class="g big"><img src="img/191cc6dd0a29b032c07270e2c60ce0c4.png" alt="𢖵"><i>𢖵</i></span><figcaption>nhãn · nhớ</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/170c9aeb5cd35e4794213a7856ceb8d4.png" alt="𣈜"><i>𣈜</i></span> dưới <span class="g "><img src="img/38d4902f2969cde6d5eaf76ebc88a655.png" alt="𦋦"><i>𦋦</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="na">—</span> · khe crop mới <span class="g "><img src="img/191cc6dd0a29b032c07270e2c60ce0c4.png" alt="𢖵"><i>𢖵</i></span></div><div class="row small mono">m<sub>L</sub> -0.38 → -0.13</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">LucV page_0028/c8/n9/s9</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/85860f2cf33da0e071c7e8fc4889b3b3.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/99f55e60350c7b3515854d5b351fcdcf.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/31549ef28a9286f187d6774ed1bba238.png" alt="𨢇"><i>𨢇</i></span><figcaption>nhãn · rượu</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/2975bf4f7f2e193558833d628eca933b.png" alt="欺"><i>欺</i></span> dưới <span class="g "><img src="img/2975bf4f7f2e193558833d628eca933b.png" alt="欺"><i>欺</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/2975bf4f7f2e193558833d628eca933b.png" alt="欺"><i>欺</i></span> · khe crop mới <span class="g "><img src="img/31549ef28a9286f187d6774ed1bba238.png" alt="𨢇"><i>𨢇</i></span></div><div class="row small mono">m<sub>T</sub> -0.79 → +0.18</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">LucV page_0027/c6/n11/s11</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/abd6a062b7e3cce104cce02abd2bd7a2.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/3c094e7876077262fb009cf2efefebaa.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0cb96ef4c50c34ae9e58bab1a515bafe.png" alt="候"><i>候</i></span><figcaption>nhãn · hầu</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/90abad7a3dea7eafb643c141b3ebc4b1.png" alt="埃"><i>埃</i></span> dưới <span class="g "><img src="img/1aaaa3da14f485f3b33aa9e15828e801.png" alt="之"><i>之</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/90abad7a3dea7eafb643c141b3ebc4b1.png" alt="埃"><i>埃</i></span> · khe crop mới <span class="g "><img src="img/0cb96ef4c50c34ae9e58bab1a515bafe.png" alt="候"><i>候</i></span></div><div class="row small mono">m<sub>T</sub> -0.22 → +0.17</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">Truy page_0139/c10/n12/s12</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/cf06b5e6480631a0951c2dcca1f8d979.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/3eb1d3466c9e52a348d2f4c9b26576c3.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/69cfd27b640af27c2513e20fb3900a2b.png" alt="貝"><i>貝</i></span><figcaption>nhãn · với</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/561b3cf0cb9ac367a7bfe6c799c5b689.png" alt="絲"><i>絲</i></span> dưới <span class="g "><img src="img/a465e844936b9a1dccbd9c7b737fef50.png" alt="払"><i>払</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/a465e844936b9a1dccbd9c7b737fef50.png" alt="払"><i>払</i></span> · khe crop mới <span class="g "><img src="img/69cfd27b640af27c2513e20fb3900a2b.png" alt="貝"><i>貝</i></span></div><div class="row small mono">m<sub>L</sub> -0.32 → +0.40</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">Truy page_0146/c10/n2/s2</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/7e12a57335e38da5efe554d2c1254f80.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/0b8f711324a53a327921e8c182e1809e.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/a5b8d9b0e08a99da396af8cd006be6dc.png" alt="及"><i>及</i></span><figcaption>nhãn · gặp</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/e16106e21589584b5607f2113f88ba95.png" alt="浪"><i>浪</i></span> dưới <span class="g "><img src="img/9bc7bdb3b8052fe51fb2a08b1f367c51.png" alt="六"><i>六</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/e16106e21589584b5607f2113f88ba95.png" alt="浪"><i>浪</i></span> · khe crop mới <span class="g "><img src="img/a5b8d9b0e08a99da396af8cd006be6dc.png" alt="及"><i>及</i></span></div><div class="row small mono">m<sub>L</sub> -0.43 → +0.16</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">hạ (crop cũ sai)</span><span class="uid">LucV page_0029/c9/n8/s8</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/4de5f3f3cc5be4af5edcb313dc116e5a.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/473f57db876e63f556647b94565af268.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/3f77c068f8560151ed27a14610a7e3c8.png" alt="女"><i>女</i></span><figcaption>nhãn · nỡ</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/80ff5350c58eb55f36a584beaaee6721.png" alt="牢"><i>牢</i></span> dưới <span class="g "><img src="img/46c79166912cb6595ef3b4a1adeb4746.png" alt="負"><i>負</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/80ff5350c58eb55f36a584beaaee6721.png" alt="牢"><i>牢</i></span> · khe crop mới <span class="g "><img src="img/3f77c068f8560151ed27a14610a7e3c8.png" alt="女"><i>女</i></span></div><div class="row small mono">m<sub>T</sub> -0.19 → +0.03</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">hạ (crop cũ vốn đúng)</span><span class="uid">Truy page_0107/c2/n2/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/d9610c9bbf305ce55a88938eea9a17b9.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/b8af27a597622918379bf9993c19b6a8.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/2975bf4f7f2e193558833d628eca933b.png" alt="欺"><i>欺</i></span><figcaption>nhãn · khi</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/3f77c068f8560151ed27a14610a7e3c8.png" alt="女"><i>女</i></span> dưới <span class="g "><img src="img/2bbd4d45738c17ed556fded25f9cbf00.png" alt="𬮙"><i>𬮙</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/2975bf4f7f2e193558833d628eca933b.png" alt="欺"><i>欺</i></span> · khe crop mới <span class="na">—</span></div><div class="row small mono">m<sub>L</sub> +0.39 → -0.03</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">hạ (crop cũ vốn đúng)</span><span class="uid">Truy page_0146/c7/n2/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/2d8aeae0c10f15dfb0483b02e9c79ef1.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/bf2d5bd86a070c8486922a73a5b84a27.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/11c2185abc28e7931beb652ac4ee1241.png" alt="詳"><i>詳</i></span><figcaption>nhãn · tường</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/89aa4fcff59b78ef6970472b716b0b02.png" alt="渚"><i>渚</i></span> dưới <span class="g "><img src="img/482eac88759b88aea9628a7c391f849c.png" alt="特"><i>特</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/11c2185abc28e7931beb652ac4ee1241.png" alt="詳"><i>詳</i></span> · khe crop mới <span class="g "><img src="img/482eac88759b88aea9628a7c391f849c.png" alt="特"><i>特</i></span></div><div class="row small mono">m<sub>L</sub> -0.01 → -0.37</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">hạ (crop cũ vốn đúng)</span><span class="uid">Truy page_0155/c2/n2/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/c0caeffec2d40d578db5a10d0d397e2b.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/01017c1990bdb18bf6ca554208d76273.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/d81f2f4fc469499122baf4dbd6b8ef85.png" alt="強"><i>強</i></span><figcaption>nhãn · càng</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/1858cfba688626d300cb26dd67fbb9d8.png" alt="呐"><i>呐</i></span> dưới <span class="g "><img src="img/458b1c1c61ff6cdf1c708c494bb8bb57.png" alt="虎"><i>虎</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/d81f2f4fc469499122baf4dbd6b8ef85.png" alt="強"><i>強</i></span> · khe crop mới <span class="na">—</span></div><div class="row small mono">m<sub>L</sub> +0.28 → -0.00</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">hạ (crop cũ vốn đúng)</span><span class="uid">Truy page_0056/c10/n13/s13</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/300310c930cc75402a57818bf19957b4.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/45e627f11f8d963fdec7c17650bc477a.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/5516e96962ea7b1173b66a3772a19866.png" alt="团"><i>团</i></span><figcaption>nhãn · đoàn</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/411c6f7f2499683d8e99b79fe5917f6b.png" alt="𠬠"><i>𠬠</i></span> dưới <span class="na">—</span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/5516e96962ea7b1173b66a3772a19866.png" alt="团"><i>团</i></span> · khe crop mới <span class="g "><img src="img/5516e96962ea7b1173b66a3772a19866.png" alt="团"><i>团</i></span></div><div class="row small mono">m<sub>L</sub> -0.19 → -0.07</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">hạ (crop cũ vốn đúng)</span><span class="uid">Truy page_0058/c4/n2/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/faf77aa4582dc51257555862e9e6cb22.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/5bab4bee6b2dcb1ff70c1a367ad86010.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/11149b1de75220ab37f5b8424cdcb664.png" alt="碎"><i>碎</i></span><figcaption>nhãn · tôi</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/ffde187d3cfa8bf2f0ffa5e3dc21b5ae.png" alt="仍"><i>仍</i></span> dưới <span class="g "><img src="img/f44808215ea835fa10cd3143b93bb63a.png" alt="󰡏"><i>󰡏</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/11149b1de75220ab37f5b8424cdcb664.png" alt="碎"><i>碎</i></span> · khe crop mới <span class="g "><img src="img/f44808215ea835fa10cd3143b93bb63a.png" alt="󰡏"><i>󰡏</i></span></div><div class="row small mono">m<sub>L</sub> +0.31 → -0.13</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">hạ (crop cũ vốn đúng)</span><span class="uid">LucV page_0026/c1/n10/s10</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/41e2e83878ff3ad56df85c3da1f2aa45.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/da3f5a3f600b7bf1ec5c62a4477d0d90.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0847879ecaa0a0a2341977ee8b6347bf.png" alt="沙"><i>沙</i></span><figcaption>nhãn · sa</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/0cef8288a86fcf72b0cacd84af9e0d32.png" alt="浽"><i>浽</i></span> dưới <span class="g "><img src="img/ee6d398d3d9e4928abcc9ee4fe2640ba.png" alt="船"><i>船</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/0847879ecaa0a0a2341977ee8b6347bf.png" alt="沙"><i>沙</i></span> · khe crop mới <span class="na">—</span></div><div class="row small mono">m<sub>T</sub> +0.31 → -0.08</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">hạ (crop cũ vốn đúng)</span><span class="uid">Truy page_0149/c8/n1/s0</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/03a7e3d893edec176a45fc7a599f7d80.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/cb33dc63c1d85616c685113e3aa908e8.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0306b2cdb26e95b7d2550344cad9388a.png" alt="机"><i>机</i></span><figcaption>nhãn · cơ</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/6240483018518a7a25b43ef6834ac605.png" alt="一"><i>一</i></span> dưới <span class="g "><img src="img/806896fb0cf870d419982656bdc2e4b6.png" alt="緣"><i>緣</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/0306b2cdb26e95b7d2550344cad9388a.png" alt="机"><i>机</i></span> · khe crop mới <span class="g "><img src="img/806896fb0cf870d419982656bdc2e4b6.png" alt="緣"><i>緣</i></span></div><div class="row small mono">m<sub>L</sub> +0.05 → +0.02</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div><div class="card">
+  <div class="hd"><span class="tag bad">hạ (crop cũ vốn đúng)</span><span class="uid">Truy page_0049/c6/n1/s0</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/583a3aa451a7c8fb4cbab67333cbb7e6.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/f5b8ae701413e03ad9b564d84be6afdd.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/3da7deb335f867863247bb9894e7b8be.png" alt="昆"><i>昆</i></span><figcaption>nhãn · con</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/6240483018518a7a25b43ef6834ac605.png" alt="一"><i>一</i></span> dưới <span class="g "><img src="img/a5efcfadfc8b221519a2d59d1f11c97e.png" alt="箕"><i>箕</i></span></div>
+  <div class="row small">GT người ở khe crop cũ <span class="g "><img src="img/3da7deb335f867863247bb9894e7b8be.png" alt="昆"><i>昆</i></span> · khe crop mới <span class="g "><img src="img/a5efcfadfc8b221519a2d59d1f11c97e.png" alt="箕"><i>箕</i></span></div><div class="row small mono">m<sub>L</sub> +0.24 → -0.12</div><div class="row small">crop &quot;mới&quot; = ứng viên điểm cao nhất nhưng KHÔNG được nhận</div>
+</div></div></section>
+<section><h2>Chr — đề xuất sửa (ƯỚC LƯỢNG, chưa kiểm)</h2><p class="sub">10 ô đề xuất sửa (luật nghiêm) / 738 ô bị cờ; hiện 20 (thêm ô chỉ luật nới đề xuất nếu thiếu). Hai bộ kiểm T và L phải cùng chọn một ứng viên và cùng qua ngưỡng của mình.</p><div class="grid"><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Chre page_0046/c1/n12/s12</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/59cbfe3c4102e1538e16c8055d721559.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/1c1ac27d438d7dab5c5f200708c48242.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/b9413fa79a3c2ca5d6a8ca7830b50638.png" alt="𠄩"><i>𠄩</i></span><figcaption>nhãn · hai</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/24c65609f8c80cfefcd69ee1d553590b.png" alt="衛"><i>衛</i></span> dưới <span class="g "><img src="img/b85a6d5a94d3f4ab2bec541d60caa73f.png" alt="重"><i>重</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.16 → +0.46 · m<sub>L</sub> -0.01 → +0.35</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Chre page_0021/c7/n9/s10</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/36b329296d578720b506655fdafbe816.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/fddbaa94c13d493d3bd8f7c4c447eb63.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/11149b1de75220ab37f5b8424cdcb664.png" alt="碎"><i>碎</i></span><figcaption>nhãn · tôi</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/79c69fe0ef80f0b2602f845de7433f58.png" alt="底"><i>底</i></span> dưới <span class="g "><img src="img/c8ad40bf77b8abd023edf7d7474e9a63.png" alt="併"><i>併</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.10 → +0.53 · m<sub>L</sub> -0.51 → +0.62</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Chre page_0062/c4/n9/s9</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/ebd93d8658981b6ceb5b56fc8d94c192.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/8d707042b5cea4422eb6594fe125f0e2.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/02a3d48dab3d7bb4c550c8bc0ba57306.png" alt="爫"><i>爫</i></span><figcaption>nhãn · làm</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/ebfee238c21119091a772cc1d8876a38.png" alt="兜"><i>兜</i></span> dưới <span class="g "><img src="img/80ff5350c58eb55f36a584beaaee6721.png" alt="牢"><i>牢</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.04 → +0.51 · m<sub>L</sub> -0.12 → +0.63</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Chre page_0033/c7/n5/s4</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/cd557f3b2a5b0319740aa8d4b09ef37e.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/692f681a498232add0dcc7698bdd591a.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/2c92ef54ba94ea0571f32ff206717db7.png" alt="買"><i>買</i></span><figcaption>nhãn · mới</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/829614f54dcbccfc75daeb7e0b9521f2.png" alt="尼"><i>尼</i></span> dưới <span class="g "><img src="img/bbfb64d2b59cd6752b3ed926b3857cda.png" alt="鉑"><i>鉑</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.61 → +0.55 · m<sub>L</sub> -0.83 → +0.61</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Chre page_0041/c3/n12/s12</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/43bd94997890c8482a0cc093ba71f2aa.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/4a4ada66b06acf9879206d70a4bbed47.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/69cfd27b640af27c2513e20fb3900a2b.png" alt="貝"><i>貝</i></span><figcaption>nhãn · bói</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/0f20cfc9e3cdb2f2369b55e793731d3b.png" alt="柴"><i>柴</i></span> dưới <span class="g "><img src="img/a5efcfadfc8b221519a2d59d1f11c97e.png" alt="箕"><i>箕</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.21 → +0.51 · m<sub>L</sub> +0.38 → +0.44</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Chre page_0006/c2/n8/s9</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/82b03dc21c53aa607e395d9b1f87428f.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/c0cdb0cebde0a0ca8ab75398fe9cb495.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/e16106e21589584b5607f2113f88ba95.png" alt="浪"><i>浪</i></span><figcaption>nhãn · rằng</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/238018c015fab289820accfae4c95072.png" alt="豹"><i>豹</i></span> dưới <span class="g "><img src="img/4b5a7eefa9aa91e950e2a97c2f850ac5.png" alt="蚤"><i>蚤</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.14 → +0.45 · m<sub>L</sub> +0.45 → +0.53</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Chre page_0042/c6/n3/s3</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/e8e1e0d17569ed22772b37ef66210fc9.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/20d9fea67acaf8b355f66e28ae986a2f.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/a5f7827d0b34e87f13d724e7d683fc6e.png" alt="𠫾"><i>𠫾</i></span><figcaption>nhãn · đi</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/776a3f6208bbcd155dfcb244dc56d1d1.png" alt="秩"><i>秩</i></span> dưới <span class="g "><img src="img/378edbef34e75d4c6ef183925a3c5efb.png" alt="冲"><i>冲</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.13 → +0.46 · m<sub>L</sub> -0.03 → +0.36</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Chre page_0036/c1/n14/s14</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/efe152c160374ffef345fef60e725d3a.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/c5bb55f1e13c3bec3a91ff4cf7428ae5.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/11149b1de75220ab37f5b8424cdcb664.png" alt="碎"><i>碎</i></span><figcaption>nhãn · tôi</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/3f77c068f8560151ed27a14610a7e3c8.png" alt="女"><i>女</i></span> dưới <span class="g "><img src="img/b333b61259b1c6824fb937137204d4e7.png" alt="明"><i>明</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.76 → +0.54 · m<sub>L</sub> -0.68 → +0.54</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Chre page_0042/c5/n1/s2</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/d03bde345fddcf2667cba9190e11aab2.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/961d0eb2a66a77b38bef9884119961df.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/a5f7827d0b34e87f13d724e7d683fc6e.png" alt="𠫾"><i>𠫾</i></span><figcaption>nhãn · đi</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/49c16dc9aac0835f852db9a85ba87558.png" alt="頭"><i>頭</i></span> dưới <span class="g "><img src="img/7215b5a5939ca29ba8e63be10b23c4e5.png" alt="麻"><i>麻</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.94 → +0.49 · m<sub>L</sub> -0.93 → +0.37</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Chre page_0036/c1/n13/s13</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/e24629450bb02519566dd979b7626bca.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/efe152c160374ffef345fef60e725d3a.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/3f77c068f8560151ed27a14610a7e3c8.png" alt="女"><i>女</i></span><figcaption>nhãn · nữa</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/8fa0427073b2f5ca20a508cfb74ad5e3.png" alt="固"><i>固</i></span> dưới <span class="g "><img src="img/11149b1de75220ab37f5b8424cdcb664.png" alt="碎"><i>碎</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.18 → +0.59 · m<sub>L</sub> -0.30 → +0.33</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">chỉ luật nới đề xuất</span><span class="uid">Chre page_0048/c3/n9/s10</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/5d94f90b37e46e1ce4cb0eeece0c20d9.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/9817d0b65b3b638474e5ad66e389a682.png"><figcaption>mới (prev)</figcaption></figure>
+    <figure><span class="g big"><img src="img/963eb7bda637a67b5b38254a8e88bdc6.png" alt="尋"><i>尋</i></span><figcaption>nhãn · tìm</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/6ed6009d002f3459868cb76969ae1c68.png" alt="慮"><i>慮</i></span> dưới <span class="g "><img src="img/9dfc6ee75654a5eb83c5a1cd4ac1807e.png" alt="細"><i>細</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.36 → +0.50 · m<sub>L</sub> -0.67 → +0.55</div><div class="row small">ƯỚC LƯỢNG — luật nghiêm chặn vì trùng hộp với ô bị hạ</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">chỉ luật nới đề xuất</span><span class="uid">Chre page_0056/c5/n4/s5</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/09e7c1e0367605b6012d56d799721ac3.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/039f620b8a2047a8e040afedf38fef75.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/ceb7d4463e39f4ee99969b9a395b241b.png" alt="畧"><i>畧</i></span><figcaption>nhãn · trước</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/15d5d571771a3c97555e517a35623eb7.png" alt="課"><i>課</i></span> dưới <span class="g "><img src="img/775d62c38e9cb8dad9268c996b696e20.png" alt="代"><i>代</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.78 → +0.56 · m<sub>L</sub> -0.74 → +0.57</div><div class="row small">ƯỚC LƯỢNG — luật nghiêm chặn vì trùng hộp với ô bị hạ</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">chỉ luật nới đề xuất</span><span class="uid">Chre page_0006/c4/n17/s16</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/bcf59c2484bd36702fd57c8d3cb37044.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/a203128931ec87feb508e468b32022d0.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/e22360ef9e315c6612cc27a8e9e2cab8.png" alt="時"><i>時</i></span><figcaption>nhãn · thì</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/1858cfba688626d300cb26dd67fbb9d8.png" alt="呐"><i>呐</i></span> dưới <span class="g "><img src="img/9ae7e5c3ba08bcd02bf5b944498cc3a3.png" alt="丕"><i>丕</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.48 → +0.55 · m<sub>L</sub> -0.60 → +0.48</div><div class="row small">ƯỚC LƯỢNG — luật nghiêm chặn vì trùng hộp với ô bị hạ</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">chỉ luật nới đề xuất</span><span class="uid">Chre page_0045/c1/n5/s6</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/0846567aa1caa72773d7983afbbc1e64.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/b44cfa95ddd8b164ef4264584508865d.png"><figcaption>mới (prev)</figcaption></figure>
+    <figure><span class="g big"><img src="img/1858cfba688626d300cb26dd67fbb9d8.png" alt="呐"><i>呐</i></span><figcaption>nhãn · nói</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/31549ef28a9286f187d6774ed1bba238.png" alt="𨢇"><i>𨢇</i></span> dưới <span class="g "><img src="img/aa117bb8ba4e3158b28b2fd471603f37.png" alt="傳"><i>傳</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.46 → +0.48 · m<sub>L</sub> -0.56 → +0.44</div><div class="row small">ƯỚC LƯỢNG — luật nghiêm chặn vì trùng hộp với ô bị hạ</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">chỉ luật nới đề xuất</span><span class="uid">Chre page_0002/c4/n6/s5</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/ae1fa34e6291f7a7fd6f7e672311970c.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/945e1a3a1708761921396b7f4c818689.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/e2ccdb31de20c9fd82a4aa420c5149be.png" alt="於"><i>於</i></span><figcaption>nhãn · ở</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/7908b8cbf156d1360007179ee7b26af5.png" alt="撞"><i>撞</i></span> dưới <span class="g "><img src="img/88fa436fe8708bfc00955c54097b28ff.png" alt="婁"><i>婁</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.60 → +0.45 · m<sub>L</sub> -0.49 → +0.44</div><div class="row small">ƯỚC LƯỢNG — luật nghiêm chặn vì trùng hộp với ô bị hạ</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">chỉ luật nới đề xuất</span><span class="uid">Chre page_0021/c7/n13/s15</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/55930317476973bb37515ee2a205bc6d.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/fc0bd2c13814f031872446479879d3e5.png"><figcaption>mới (prev)</figcaption></figure>
+    <figure><span class="g big"><img src="img/83682d4a0606738855a6b7fd47a8d26c.png" alt="朱"><i>朱</i></span><figcaption>nhãn · cho</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/984374aaa3a8d6d4b6d9c7b2eae75844.png" alt="救"><i>救</i></span> dưới <span class="g "><img src="img/83682d4a0606738855a6b7fd47a8d26c.png" alt="朱"><i>朱</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.45 → +0.54 · m<sub>L</sub> +0.55 → +0.60</div><div class="row small">ƯỚC LƯỢNG — luật nghiêm chặn vì trùng hộp với ô bị hạ</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">chỉ luật nới đề xuất</span><span class="uid">Chre page_0033/c7/n2/s1</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/eba06b9d379b7fcdeeffda514e8771d9.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/215aaa7827c2d80804679782dae4b56f.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/01a090debffddcefcbbd709b80420708.png" alt="吏"><i>吏</i></span><figcaption>nhãn · lại</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/70637965fad8830a57012ae8b422fa0a.png" alt="意"><i>意</i></span> dưới <span class="g "><img src="img/91f1920e85438a13b5764593f0ba17e3.png" alt="核"><i>核</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.62 → +0.50 · m<sub>L</sub> -0.32 → +0.45</div><div class="row small">ƯỚC LƯỢNG — luật nghiêm chặn vì trùng hộp với ô bị hạ</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">chỉ luật nới đề xuất</span><span class="uid">Chre page_0012/c1/n9/s10</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/e808358c819312418907bf805fac61b9.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/c0a4227872310b555a8e63ba8b94742f.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/2c92ef54ba94ea0571f32ff206717db7.png" alt="買"><i>買</i></span><figcaption>nhãn · mới</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/3da7deb335f867863247bb9894e7b8be.png" alt="昆"><i>昆</i></span> dưới <span class="g "><img src="img/1858cfba688626d300cb26dd67fbb9d8.png" alt="呐"><i>呐</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.53 → +0.55 · m<sub>L</sub> -0.37 → +0.58</div><div class="row small">ƯỚC LƯỢNG — luật nghiêm chặn vì trùng hộp với ô bị hạ</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">chỉ luật nới đề xuất</span><span class="uid">Chre page_0056/c5/n20/s21</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/7d742ffebd6e1985c26668d80d15d2c5.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/7df8072c1097d6cea6b430abe32c9a04.png"><figcaption>mới (prev)</figcaption></figure>
+    <figure><span class="g big"><img src="img/2daa2e895d3224b9c2da783bf692537c.png" alt="翁"><i>翁</i></span><figcaption>nhãn · ông</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/7215b5a5939ca29ba8e63be10b23c4e5.png" alt="麻"><i>麻</i></span> dưới <span class="g "><img src="img/70637965fad8830a57012ae8b422fa0a.png" alt="意"><i>意</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.54 → +0.51 · m<sub>L</sub> -0.68 → +0.56</div><div class="row small">ƯỚC LƯỢNG — luật nghiêm chặn vì trùng hộp với ô bị hạ</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">chỉ luật nới đề xuất</span><span class="uid">Chre page_0054/c1/n14/s14</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/62bdaa58bf9a8fe68d8e4793dcf4fdd9.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/7b02b73ae8709e78aaff63c1ae1fd185.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/02a3d48dab3d7bb4c550c8bc0ba57306.png" alt="爫"><i>爫</i></span><figcaption>nhãn · làm</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/a5084848a0c189676d61543711ac0c14.png" alt="茄"><i>茄</i></span> dưới <span class="g "><img src="img/1aaaa3da14f485f3b33aa9e15828e801.png" alt="之"><i>之</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.38 → +0.55 · m<sub>L</sub> +0.30 → +0.67</div><div class="row small">ƯỚC LƯỢNG — luật nghiêm chặn vì trùng hộp với ô bị hạ</div>
+</div></div></section>
+<section><h2>STT — đề xuất sửa (ƯỚC LƯỢNG, chưa kiểm)</h2><p class="sub">25 ô đề xuất sửa (luật nghiêm) / 1562 ô bị cờ; hiện 20 (thêm ô chỉ luật nới đề xuất nếu thiếu). Hai bộ kiểm T và L phải cùng chọn một ứng viên và cùng qua ngưỡng của mình.</p><div class="grid"><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0324/c8/n11/s11</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/2af7ada5d67e371dfdd0b9fbfd2a9060.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/2de73650fb0b54ea4297ac92220d6409.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/81c24cde375f9ca331d39d6823bfcd60.png" alt="罰"><i>罰</i></span><figcaption>nhãn · phạt</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/c211181d8239bcfb465bb8cddfcc5820.png" alt="并"><i>并</i></span> dưới <span class="g "><img src="img/0763464e7d3d69bf3525a2f949f7d898.png" alt="体"><i>体</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.03 → +0.62 · m<sub>L</sub> +0.11 → +0.60</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0232/c1/n9/s10</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/2013663c07c1d3b4c51866291b2da967.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/f40c98e8e523f232eab3a38f7c69a8f0.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0d180509eec2eb7fccaea9bff402aba2.png" alt="主"><i>主</i></span><figcaption>nhãn · chúa</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/aa64f078143ccf80167a14970d1cad9a.png" alt="行"><i>行</i></span> dưới <span class="g "><img src="img/2525c19e60fb759f2993c00dd167fbd7.png" alt="夲"><i>夲</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.15 → +0.64 · m<sub>L</sub> +0.05 → +0.62</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0070/c1/n4/s6</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/5840beea9d7ce76efc7169a1ab4d7518.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/2652c7876ca06d9ced6f9a1457492e87.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/83682d4a0606738855a6b7fd47a8d26c.png" alt="朱"><i>朱</i></span><figcaption>nhãn · cho</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/60b7fe3e235d0229b70a61da32e60b58.png" alt="間"><i>間</i></span> dưới <span class="g "><img src="img/652e7fa9de8c89651c8822e315da204c.png" alt="楼"><i>楼</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.07 → +0.48 · m<sub>L</sub> -0.16 → +0.38</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0088/c2/n3/s3</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/9a98f6f3a4bc5450a2a2dd4678232022.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/a900d685171b6e3ec28f22c4268dbc9f.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/f37332c33ac028caa897cf9a2dd205af.png" alt="罪"><i>罪</i></span><figcaption>nhãn · tội</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/e7a33803415ed3e890caa0e3929765cb.png" alt="爲"><i>爲</i></span> dưới <span class="g "><img src="img/2ee108e30b28db59d5439f53a4a0e515.png" alt="天"><i>天</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.28 → +0.70 · m<sub>L</sub> -0.08 → +0.49</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0140/c2/n11/s11</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/4855d655124d52f762c63f38e2c0175d.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/480fe4d98abda6d04f56795a83db0296.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/1e09aab29dd216610eb22f3c4e50c527.png" alt="沛"><i>沛</i></span><figcaption>nhãn · phải</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/e22360ef9e315c6612cc27a8e9e2cab8.png" alt="時"><i>時</i></span> dưới <span class="g "><img src="img/13bc22fd213e0ec3a70601866311b70b.png" alt="𠮦"><i>𠮦</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.99 → +0.53 · m<sub>L</sub> -0.83 → +0.32</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0070/c1/n6/s8</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/9ade326e3715c5c1b5b68de87582a7b2.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/990687014e9c7ce77f554cec586cf7b6.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/7215b5a5939ca29ba8e63be10b23c4e5.png" alt="麻"><i>麻</i></span><figcaption>nhãn · mà</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/652e7fa9de8c89651c8822e315da204c.png" alt="楼"><i>楼</i></span> dưới <span class="g "><img src="img/756305b1cc190df547463a1c39e5e5c5.png" alt="丸"><i>丸</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.20 → +0.45 · m<sub>L</sub> +0.08 → +0.59</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0116/c8/n13/s13</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/150379774ea070d23dd7ab60becd8e36.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/0d9c663ad76909ca1e4fdc8deb356d0d.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/ab8dad0a62cbb4d8d0484bc3bb01c09e.png" alt="連"><i>連</i></span><figcaption>nhãn · liên</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/1b12af31d742fc1ea156301158780170.png" alt="奴"><i>奴</i></span> dưới <span class="g "><img src="img/35a89e87e796043a5c399e34bfb25b1f.png" alt="嚶"><i>嚶</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.13 → +0.48 · m<sub>L</sub> -0.08 → +0.43</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0046/c8/n11/s12</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/7411769453058e8fef33e67dba600bd8.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/dc364a60c9359282b31090c727e806ae.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/11149b1de75220ab37f5b8424cdcb664.png" alt="碎"><i>碎</i></span><figcaption>nhãn · tôi</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g  nofont" title="NomNaTong không có chữ này">𭔿 U+2D53F</span> dưới <span class="g "><img src="img/321e44d0ebe1239182abe83a776fa5b6.png" alt="夋"><i>夋</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.49 → +0.51 · m<sub>L</sub> +0.26 → +0.46</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0136/c3/n22/s22</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/a67b031a9cd49b7f2aad66515034b3ed.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/972104584e2e2acc4d1284fc600a226d.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/83682d4a0606738855a6b7fd47a8d26c.png" alt="朱"><i>朱</i></span><figcaption>nhãn · cho</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/03ac4cbdf0ab9f6da8efbd1b235fece9.png" alt="債"><i>債</i></span> dưới <span class="na">—</span></div>
+  <div class="row small mono">m<sub>T</sub> +0.43 → +0.48 · m<sub>L</sub> +0.32 → +0.43</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0282/c1/n14/s14</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/1f2bf640cc3f39467fa392f176a341a9.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/18fd60d5f7f52cbc142ba3d38789508b.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/1b12af31d742fc1ea156301158780170.png" alt="奴"><i>奴</i></span><figcaption>nhãn · nó</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/8d4ad49e2730be44ddabe623bf7ada53.png" alt="寝"><i>寝</i></span> dưới <span class="g "><img src="img/85fbb5c9e6f975d38e769409c83ddb97.png" alt="庒"><i>庒</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.05 → +0.52 · m<sub>L</sub> +0.00 → +0.49</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0216/c9/n15/s15</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/2c0c3fd41c7b142643f034ad61b9899b.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/5ed0a15727d311a06997cc1aacedbc36.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/0d180509eec2eb7fccaea9bff402aba2.png" alt="主"><i>主</i></span><figcaption>nhãn · chúa</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/4ab51a6351a8c761fcddedb9470027bd.png" alt="乞"><i>乞</i></span> dưới <span class="g "><img src="img/9f05330c6fa20a17de4dc50616066528.png" alt="尽"><i>尽</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.08 → +0.60 · m<sub>L</sub> +0.25 → +0.66</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0034/c1/n18/s16</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/fbb9c9045ace8e02070634bbca35386b.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/f9bacfd3aca99497bc05726de0fa5f75.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/1b12af31d742fc1ea156301158780170.png" alt="奴"><i>奴</i></span><figcaption>nhãn · nó</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/b2ce00525d234ceb66531eee63aa6721.png" alt="年"><i>年</i></span> dưới <span class="g "><img src="img/e80426e3054798650a04330fbcac561e.png" alt="唆"><i>唆</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.31 → +0.47 · m<sub>L</sub> +0.37 → +0.38</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0096/c9/n19/s19</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/b079db99521cb45f48bc7ad44f8ac6a2.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/f5b088f351a393f101d28b719147dcc7.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/e22360ef9e315c6612cc27a8e9e2cab8.png" alt="時"><i>時</i></span><figcaption>nhãn · thì</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/9ae7e5c3ba08bcd02bf5b944498cc3a3.png" alt="丕"><i>丕</i></span> dưới <span class="g "><img src="img/94fb50c304dc9f50aff1e4fc63b358b4.png" alt="扒"><i>扒</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.65 → +0.45 · m<sub>L</sub> -0.68 → +0.33</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0010/c4/n7/s6</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/4ecd1fb9fb4202799602b5938e4c4878.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/2bda0be4b77b1106374bfffc7ea52a17.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/f8eed2b002c66dcaf1b641bd2b853df7.png" alt="葩"><i>葩</i></span><figcaption>nhãn · pha</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/19ed6995e7a126499b956fb44f4932ef.png" alt="垩"><i>垩</i></span> dưới <span class="g "><img src="img/1aaaa3da14f485f3b33aa9e15828e801.png" alt="之"><i>之</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.36 → +0.58 · m<sub>L</sub> +0.55 → +0.64</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0236/c8/n14/s14</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/2278abb44bf27c0c6747aad5351d91a4.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/6713dd67feadd0f02cf4b966cedfa0e5.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/829614f54dcbccfc75daeb7e0b9521f2.png" alt="尼"><i>尼</i></span><figcaption>nhãn · này</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/19ed6995e7a126499b956fb44f4932ef.png" alt="垩"><i>垩</i></span> dưới <span class="g "><img src="img/e16106e21589584b5607f2113f88ba95.png" alt="浪"><i>浪</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.34 → +0.53 · m<sub>L</sub> +0.29 → +0.45</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0318/c4/n17/s17</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/6ebdf4e3d89480032298bde0f19aca8d.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/28cf73ded1d3dbd4bb7d495d08acf4e0.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/3da7deb335f867863247bb9894e7b8be.png" alt="昆"><i>昆</i></span><figcaption>nhãn · con</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/633bddef7b28820e6da2a0696d960f08.png" alt="折"><i>折</i></span> dưới <span class="g "><img src="img/589d7cd0613a5efe200b6866fc86e791.png" alt="采"><i>采</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.66 → +0.56 · m<sub>L</sub> -0.71 → +0.31</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0050/c8/n18/s18</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/486c9fcf49754f3eef27c377752933ba.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/ddac13446e8c5342e77c7b6d7b8964f0.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/83682d4a0606738855a6b7fd47a8d26c.png" alt="朱"><i>朱</i></span><figcaption>nhãn · cho</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/2f122d6b4ba9ab8d610d54aca8aa067e.png" alt="求"><i>求</i></span> dưới <span class="g "><img src="img/1b12af31d742fc1ea156301158780170.png" alt="奴"><i>奴</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.74 → +0.51 · m<sub>L</sub> -0.50 → +0.48</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0178/c4/n14/s14</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/adb3e6da4660c378444acde4abf1abc5.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/b02e75ae6ed4ec96b2684a262fec3c91.png"><figcaption>mới (kim)</figcaption></figure>
+    <figure><span class="g big"><img src="img/8fa0427073b2f5ca20a508cfb74ad5e3.png" alt="固"><i>固</i></span><figcaption>nhãn · có</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g  nofont" title="NomNaTong không có chữ này">䍐 U+4350</span> dưới <span class="g "><img src="img/080291e99a9960c5e21785b6c15effd9.png" alt="㝵"><i>㝵</i></span></div>
+  <div class="row small mono">m<sub>T</sub> +0.46 → +0.50 · m<sub>L</sub> +0.42 → +0.43</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0284/c5/n3/s2</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/7e22e31c14b820896ff7535db09b1d6e.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/1c44e5ba0560f8c3d2ba492a784108fb.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/139d00e7a3e3d97d6a2afbd20e55653a.png" alt="几"><i>几</i></span><figcaption>nhãn · kẻ</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/a35e74456546e0ab0d3401363aeb3e59.png" alt="礼"><i>礼</i></span> dưới <span class="g "><img src="img/5effda801a3a0876bd47f78f5e6703f0.png" alt="宠"><i>宠</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.28 → +0.58 · m<sub>L</sub> -0.41 → +0.51</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div><div class="card">
+  <div class="hd"><span class="tag warn">đề xuất sửa (nghiêm)</span><span class="uid">Sach page_0112/c8/n6/s6</span></div>
+  <div class="imgs">
+    <figure><img class="crop" src="img/b951bb5ad460b081668db7b2f34039ef.png"><figcaption>cũ</figcaption></figure>
+    <figure><img class="crop" src="img/43cc73b3d7771574e7d3f64c00faf165.png"><figcaption>mới (next)</figcaption></figure>
+    <figure><span class="g big"><img src="img/58cf19f2be4f200acba6847d8ffc0577.png" alt="城"><i>城</i></span><figcaption>nhãn · thành</figcaption></figure>
+  </div>
+  <div class="row small">kim kề trên <span class="g "><img src="img/e2ccdb31de20c9fd82a4aa420c5149be.png" alt="於"><i>於</i></span> dưới <span class="g "><img src="img/9c514da9bbdee6a6577c2d3ff1d8e57d.png" alt="午"><i>午</i></span></div>
+  <div class="row small mono">m<sub>T</sub> -0.42 → +0.46 · m<sub>L</sub> -0.51 → +0.29</div><div class="row small">ƯỚC LƯỢNG — chưa kiểm được, cần người xem</div>
+</div></div></section>
+</body></html>

@@ -1,0 +1,22 @@
+{
+ "cclib_md5": "65eb98b892c1d08df9e33741929a3354",
+ "frozen_at": "2026-09-26 22:49",
+ "smoke_test": "Trước khi đóng băng: chạy thử 3 trang mỗi bộ L16/stt2/KVK chỉ để bắt lỗi chương trình (không có lỗi). Thấy: (i) cờ blank của crop_quality pipeline (ngưỡng 128 toàn cục) bật trên crop chặt mới ở L16 mực nhạt -> KHÔNG dùng blank của pipeline cho crop mới (cclib có blank riêng theo ngưỡng cục bộ); (ii) KVK: stray_ink>0,08 trên crop mới ở 10/354 ô (mảnh mực sát mép) -> đưa bleed/truncated của pipeline đo trên crop chặt MỚI vào kiểm một chữ. Không đổi tham số cclib.",
+ "prereg": {
+  "one_char_ok": "status=ok ∧ ¬{blank,cut,two} (cclib) ∧ ¬ink (tỉ lệ mực/trung vị cùng nhãn ngoài khoảng) ∧ crop_quality pipeline trên crop chặt MỚI ∉ {bleed,truncated}",
+  "B0_crop_old": "cqf∈{blank,truncated,bleed} ∪ blank ∪ truncated ∪ f_tight_nb ∪ seg_flag=tall (phần cấp crop của B0 TN1)",
+  "B0_box": "geo_f_dup_bbox ∪ geo_f_ov_heavy (cấp hộp, không đổi)",
+  "B0_new": "B0_box ∪ ¬one_char_ok ∪ tall_new",
+  "A0_new": "int_foreign ∪ geo_f_dup_bbox ∪ cclib blank ∪ cclib cut",
+  "H1_new": "¬(A0_new ∪ B0_new ∪ CNT ∪ BC)  (CNT, BC như TN3: L16 bc_k06v1, bộ khác bc_k05dxv05)",
+  "H2_new": "H1_new ∧ bộ kiểm ảnh (công thức TN3) với điểm tính trên CROP MỚI; ngưỡng C5/C2 CHỌN LẠI trên sách tune phần B đúng thủ tục TN1 sel_C5/sel_C2 (τ=0,995, LOBO L16↔TK), lọc tune r2=¬(A0_new∪BC)",
+  "H4_new": "H2_new ∧ TA_OK (dị bản người, không đổi)",
+  "scorers": "verifier_ft: CNN/W/nguyên mẫu/logistic 'wood' GIỮ NGUYÊN (học trên crop cũ; logistic tái lập trên đặc trưng cũ, invariant p_wood cũ) — chỉ đổi ảnh đầu vào = khung vuông crop chuẩn qua cùng tiền xử lý 64×64. viss: chạy lại xếp hạng lại r01–r03 (bản chép) với view A = crop chuẩn cho MỌI ô 4 sách + nguyên mẫu 'oth'/'self' từ crop chuẩn GOLD; view B (cắt bbox) giữ nguyên. STT: bộ viết tay LOBO (mô hình/hiệu chuẩn Kinh) giữ nguyên, q=0,00015, n_hum≥3.",
+  "slot_new": "khe của crop mới = 2 mô hình khe của harness (mẫu t + dòng kim) áp cho TÂM HỘP MỰC mới; slot_ok cũ = tâm bbox (harness)",
+  "damaged": "chính: slot_ok cũ=1 ∧ slot_ok mới≠1; phụ: độ phủ mực khe người giảm > 0,25 so với crop cũ",
+  "rescued": "B0_crop_old ∧ one_char_ok ∧ ¬tall_new (IHR: thêm ¬damaged)",
+  "ihr_measure": "như TN3 measure_ihr: đúng hai vế = V1+(nhãn, chữ người) ∧ khe=1 (khe của crop đang xét); CI bootstrap cụm trang B=2000",
+  "projection": "6 bộ còn lại: ô giữ + độ chính xác theo bộ ước lượng TN3 với mặt nạ mới (ƯỚC LƯỢNG/SUY ĐOÁN)",
+  "circularity": "tham số cclib không chọn trên IHR hay bộ kiểm; ngưỡng bộ kiểm chọn LOBO trên sách kia"
+ }
+}

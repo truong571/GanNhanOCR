@@ -1,0 +1,65 @@
+# Config RIÊNG SachKinhThayCaBinh (Vatican Borgiano Tonchinese 18 — Sách kinh Thầy cả Bỉnh)
+# GanNhanOCR Pipeline Configuration
+#
+# Sách VĂN XUÔI chép tay chữ Nôm Công giáo Philiphê Bỉnh (529 trang chữ, ~10-11 cột/trang, ~20-22 chữ/cột).
+# Đọc cột PHẢI→TRÁI (RTL truyền thống).
+# Ingest và chuẩn hóa từ data/SachKinhThayCaBinh (ảnh số hóa Thư viện Vatican DigiVatLib + Excel phiên âm).
+# Bố cục: layout: prose, n_columns: auto (số cột theo trang), det_xmargin: 0.05, det_thr: 0.15.
+books:
+  - name: SachKinhThayCaBinh
+    qn_charfix: true
+    layout: prose
+    n_columns: auto
+    det_xmargin: 0.05
+    det_thr: 0.15
+    box_decoder: pitch
+    kim_lang_type: 2
+    detector_resize: linear
+    crop_source: original
+    mechanism_gates: true
+    qn_count_gate: review
+    reocr: false
+
+run:
+  ingest: prose
+  n_columns: 10
+  cross: false
+
+paths:
+  data_dir: prepared
+  output_dir: dataset/SachKinhThayCaBinh
+  dict_dir: Dict
+  qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv
+  similar_dict: Dict/SinoNom_Similar.csv
+  font_path: font_diffusion/fonts/NomNaTong-Regular.ttf
+  fontdiffusion_ckpt: font_diffusion/ckpt/PROD
+  fontdiffusion_phase1_ckpt: font_diffusion/ckpt/PROD
+  fd_cache_universal: gannhanocr-fd
+
+step1:
+  dpi: 300
+  denoise: true
+  crop_size: 64
+  sauvola_k: 0.2
+  sauvola_window: 25
+  min_stroke: 2
+  use_ocr_api: true
+  qn_line_detector: projection_deskew
+
+step2:
+  deletion_cost_small: 0.3
+  deletion_cost_medium: 0.6
+  deletion_cost_normal: 1.2
+  insertion_cost: 1.0
+  crop_pad_frac: 0.12
+  box_overlap_frac: 0.10
+  det_thr: 0.15
+  det_xmargin: 0.05
+
+step3:
+  use_dinov2: false
+  dinov2_model: dinov2_vitb14_reg
+  dinov2_threshold: 0.75
+  classical_threshold: 0.55
+  use_fontdiffusion: true
+  require_fontdiffusion: true

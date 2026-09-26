@@ -1,0 +1,340 @@
+{
+ "key": "TN3_tat_ca_bo",
+ "date": "2026-09-26",
+ "api_calls": 0,
+ "seed": 20260926,
+ "B": {
+  "img": 1000,
+  "ihr": 2000,
+  "tk": 2000
+ },
+ "thresholds": {
+  "C5_T": [
+   0.98744,
+   0.09307
+  ],
+  "C5_L": [
+   0.95369,
+   0.13467
+  ],
+  "C2_T": 0.98835,
+  "C2_L": 0.9745,
+  "stt_q": 0.00015,
+  "tn2_theta": {
+   "T_on_L16": 0.45,
+   "L_on_TK": 0.25,
+   "LOBO": {
+    "LucVanTien1916": [
+     "T",
+     0.25
+    ],
+    "TruyenKieu1872": [
+     "L",
+     0.45
+    ]
+   }
+  }
+ },
+ "far_print_ihr_H1_survivors": {
+  "k": 8,
+  "n": 60,
+  "p": 0.13333333333333333,
+  "by_book": {
+   "L16": [
+    7,
+    55
+   ],
+   "TK": [
+    1,
+    5
+   ]
+  }
+ },
+ "far_hand_borg": {
+  "p": 0.1131,
+  "ci": [
+   0.0683,
+   0.1573
+  ],
+  "nguon": "v3 summary borg_B0_test.realslip.joint_notB0_raw (Borg, LOBO)"
+ },
+ "fix_img_err_L16": {
+  "k_wrong": 2,
+  "n": 55
+ },
+ "stt_slip_pool": [
+  1630,
+  2500
+ ],
+ "hanhoa_lt1": {
+  "point": 750,
+  "lo": 481,
+  "hi": 954,
+  "n_pop": 4750,
+  "nguon": "r4 BAO_CAO_ANH_CHU §1 (mô hình trộn, CÓ THỂ); r5 v2 §1.3"
+ },
+ "q_TK": {
+  "point": 0.26667,
+  "hi": 0.34617,
+  "used": {
+   "L83": 0.34617,
+   "KVK": 0.5725063311,
+   "TK": 0.34617
+  },
+  "d_point": 0.1658
+ },
+ "gate_v2_sigma": 0.39316437496012435,
+ "nod_bound_TK_check": {
+  "H0": {
+   "bound": 4574.3,
+   "measured": 211,
+   "c": 0.16673,
+   "valid": true
+  },
+  "H1": {
+   "bound": 4301.9,
+   "measured": 198,
+   "c": 0.16602,
+   "valid": true
+  },
+  "H2": {
+   "bound": 2636.1,
+   "measured": 113,
+   "c": 0.13736,
+   "valid": true
+  },
+  "H3": {
+   "bound": 1333.7,
+   "measured": 31,
+   "c": 0.16602,
+   "valid": true
+  },
+  "H4": {
+   "bound": 823.3,
+   "measured": 13,
+   "c": 0.13736,
+   "valid": true
+  },
+  "H5": {
+   "bound": 4301.9,
+   "measured": 198,
+   "c": 0.16602,
+   "valid": true
+  },
+  "H6": {
+   "bound": 823.3,
+   "measured": 13,
+   "c": 0.13736,
+   "valid": true
+  },
+  "Rv3": {
+   "bound": 823.3,
+   "measured": 13,
+   "c": 0.13736,
+   "valid": true
+  }
+ },
+ "img_model_backtest_ihr": {
+  "TK|H0": {
+   "du_sum_p": 131.1,
+   "that_U": 94,
+   "that_slot_ne_1": 134
+  },
+  "TK|H1": {
+   "du_sum_p": 46.0,
+   "that_U": 3,
+   "that_slot_ne_1": 5
+  },
+  "TK|H3": {
+   "du_sum_p": 33.7,
+   "that_U": 2,
+   "that_slot_ne_1": 4
+  },
+  "TK|H2(Σp_H1×tỉ lệ nhận)": {
+   "du": 6.1,
+   "that_U": 1,
+   "that_slot_ne_1": 1
+  },
+  "L16|H0": {
+   "du_sum_p": 137.8,
+   "that_U": 202,
+   "that_slot_ne_1": 252
+  },
+  "L16|H1": {
+   "du_sum_p": 13.7,
+   "that_U": 12,
+   "that_slot_ne_1": 55
+  },
+  "L16|H3": {
+   "du_sum_p": 13.7,
+   "that_U": 12,
+   "that_slot_ne_1": 55
+  },
+  "L16|H2(Σp_H1×tỉ lệ nhận)": {
+   "du": 1.8,
+   "that_U": 0,
+   "that_slot_ne_1": 7
+  }
+ },
+ "rank": {
+  "stt2": {
+   "best": null,
+   "best_keep": 0,
+   "dat": [],
+   "max_pess_dir": "H2",
+   "max_pess": 0.96388,
+   "rv3_meets": "khong"
+  },
+  "stt4": {
+   "best": null,
+   "best_keep": 0,
+   "dat": [],
+   "max_pess_dir": "H2",
+   "max_pess": 0.96148,
+   "rv3_meets": "khong"
+  },
+  "stt11": {
+   "best": null,
+   "best_keep": 0,
+   "dat": [],
+   "max_pess_dir": "H2",
+   "max_pess": 0.96457,
+   "rv3_meets": "khong"
+  },
+  "Chr": {
+   "best": null,
+   "best_keep": 0,
+   "dat": [],
+   "max_pess_dir": "H1",
+   "max_pess": 0.97269,
+   "rv3_meets": "khong"
+  },
+  "L83": {
+   "best": null,
+   "best_keep": 0,
+   "dat": [],
+   "max_pess_dir": "H4",
+   "max_pess": 0.94762,
+   "rv3_meets": "khong"
+  },
+  "KVK": {
+   "best": null,
+   "best_keep": 0,
+   "dat": [],
+   "max_pess_dir": "H4",
+   "max_pess": 0.98034,
+   "rv3_meets": "khong"
+  },
+  "L16": {
+   "best": null,
+   "best_keep": 0,
+   "dat": [],
+   "max_pess_dir": "H2",
+   "max_pess": 0.99137,
+   "rv3_meets": "khong"
+  },
+  "TK": {
+   "best": "H3",
+   "best_keep": 12654,
+   "dat": [
+    "H3",
+    "H4",
+    "H6"
+   ],
+   "max_pess_dir": "H4",
+   "max_pess": 0.99799,
+   "rv3_meets": "dat_chac"
+  }
+ },
+ "L16_H1_G7_literal_in_sample": {
+  "n_eval": 10919,
+  "both_pt": 0.9813169704185365,
+  "both_lo": 0.9772801030791908,
+  "both_hi": 0.9849405108987765
+ },
+ "ihr_H6nt_Rv3nt": {
+  "L16|H6nt": {
+   "n_eval": 2784,
+   "both_pt": 0.9942528735632183,
+   "lab_pt": 0.9949712643678161,
+   "lab_lo": 0.9915378079119801,
+   "lab_hi": 0.9977699282569035
+  },
+  "L16|Rv3nt": {
+   "n_eval": 2736,
+   "both_pt": 0.9948830409356725,
+   "lab_pt": 0.9952485380116959,
+   "lab_lo": 0.9917144393226145,
+   "lab_hi": 0.9980983880282889
+  },
+  "TK|H6nt": {
+   "n_eval": 12908,
+   "both_pt": 0.9912457390765417,
+   "lab_pt": 0.9912457390765417,
+   "lab_lo": 0.9895003157509874,
+   "lab_hi": 0.9928226544324157
+  },
+  "TK|Rv3nt": {
+   "n_eval": 12908,
+   "both_pt": 0.9912457390765417,
+   "lab_pt": 0.9912457390765417,
+   "lab_lo": 0.9895003157509874,
+   "lab_hi": 0.9928226544324157
+  }
+ },
+ "invariants": {
+  "sets8_cover_all": true,
+  "bc_T_eq_k06v1": true,
+  "bc_L_eq_k05dxv05": true,
+  "thresholds_eq_v3_prereg": true,
+  "H2_eq_TN1_d_STT": true,
+  "H4_eq_TN1_e_STT": true,
+  "V3_eq_v3_ok_STT": true,
+  "H1_eq_TN1_b_G7_STT": true,
+  "H2_eq_TN1_d_Chr": true,
+  "H4_eq_TN1_e_Chr": true,
+  "V3_eq_v3_ok_Chr": true,
+  "H1_eq_TN1_b_G7_Chr": true,
+  "H2_eq_TN1_d_L83": true,
+  "H4_eq_TN1_e_L83": true,
+  "V3_eq_v3_ok_L83": true,
+  "H1_eq_TN1_b_G7_L83": true,
+  "H2_eq_TN1_d_KVK": true,
+  "H4_eq_TN1_e_KVK": true,
+  "V3_eq_v3_ok_KVK": true,
+  "H1_eq_TN1_b_G7_KVK": true,
+  "H2_eq_TN1_d_L16": true,
+  "H4_eq_TN1_e_L16": true,
+  "V3_eq_v3_ok_L16": true,
+  "H2_eq_TN1_d_TK": true,
+  "H4_eq_TN1_e_TK": true,
+  "V3_eq_v3_ok_TK": true,
+  "H1_eq_TN1_b_G7_TK": true,
+  "H1_L16_eq_ladder_G6": true,
+  "fix_cells_in_gold": true,
+  "ihr_fix_all_have_new_slot": true,
+  "H1g7_L16_eq_ladder_G7": true,
+  "H1_TK_eq_ladder_G7": true,
+  "H2_L16_eq_TN1_d": true,
+  "H4_L16_eq_TN1_e": true,
+  "H0_L16_eq_TN1_a": true,
+  "Rv3_L16_eq_TN1_f": true,
+  "H2_TK_eq_TN1_d": true,
+  "H4_TK_eq_TN1_e": true,
+  "H0_TK_eq_TN1_a": true,
+  "Rv3_TK_eq_TN1_f": true,
+  "stt_pool_is_1630_2500": true,
+  "hanhoa_pop_4750": true,
+  "gate_v2_align": true,
+  "gate_v2_truot_U_reproduce_STT": true,
+  "gate_v2_truot_U_reproduce_Chr": true,
+  "gate_v2_truot_U_reproduce_L83": true,
+  "gate_v2_truot_U_reproduce_KVK": true,
+  "gate_v2_sigma": 0.393,
+  "gate_v2_sigma_eq": true,
+  "nod_bound_valid_on_TK_all_dirs": true,
+  "all_pass": true
+ },
+ "boot_sec": 29.2,
+ "runtime_s": 35.2
+}

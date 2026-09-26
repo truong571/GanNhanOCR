@@ -1,0 +1,30 @@
+{
+ "n_changed": 25,
+ "lines": [
+  "-BIG = REPO / 'measure_out/_thu_nghiem_anh_chu/TN3'; BIG.mkdir(parents=True, exist_ok=True)",
+  "+BIG = REPO / 'measure_out/_thu_nghiem_anh_chu/TN3'",
+  "+sys.path.insert(0, str(HERE))",
+  "+from ver import BIG as TN4BIG, LABOUT, VER  # noqa",
+  "+BIGO = TN4BIG / 'tn3m'; BIGO.mkdir(parents=True, exist_ok=True)",
+  "+# === TN4: mặt nạ crop chuẩn (s06a)",
+  "+_MN = pd.read_pickle(TN4BIG / 'masks_new.pkl'); assert (_MN.cell_uid.values == X.cell_uid.values).all()",
+  "+import os as _os",
+  "+_SIMGC = _os.environ.get('TN4_SIMG', 'SIMGn'); _SUFM = '' if _SIMGC == 'SIMGn' else '_lai'",
+  "+H1 = _MN.H1n.values; SIMG = _MN[_SIMGC].values",
+  "+M['H1'] = H1; M['H2'] = H1 & SIMG; M['H3'] = H1 & TA_OK; M['H4'] = H1 & SIMG & TA_OK; M['H5'] = H1 | FIXOK",
+  "+M['H6'] = M['H4'] | (FIXOK & TA_OK); M['Rv3'] = M['H4'] & ~(AINT | MOCR); M['H6nt'] = M['H2'] | FIXOK",
+  "+M['Rv3nt'] = M['H2'] & ~(AINT | MOCR); M['Rv3nc'] = M['H3'] & ~(AINT | MOCR); M['H1g7'] = H1",
+  "-slot = X.slot_ok.fillna('').astype(str).values",
+  "+slot = _MN.slot_new.astype(str).values   # TN4: khe của crop mới",
+  "-MX.to_csv(HERE / 'matrix.csv', index=False)",
+  "-np.save(BIG / 'boot_img_sums.npy', BI)",
+  "+MX.to_csv(LABOUT / f'tn3m_matrix{_SUFM}.csv', index=False)",
+  "+np.save(BIGO / 'boot_img_sums.npy', BI)",
+  "-CM.to_pickle(BIG / 'cells_masks.pkl')",
+  "+CM.to_pickle(BIGO / 'cells_masks.pkl')",
+  "-           thresholds=dict(C5_T=C5T, C5_L=C5L, C2_T=C2T, C2_L=C2L, stt_q=0.00015, tn2_theta=json.load(open(HERE / 't01_summary.json'))['theta_used']),",
+  "+           thresholds=dict(C5_T=C5T, C5_L=C5L, C2_T=C2T, C2_L=C2L, stt_q=0.00015, tn2_theta=json.load(open(HERE.parent / 'TN3_tat_ca_bo/t01_summary.json'))['theta_used']),",
+  "-json.dump(SUM, open(HERE / 't02_summary.json', 'w'), ensure_ascii=False, indent=1, default=float)",
+  "+json.dump(SUM, open(LABOUT / f'tn3m_summary{_SUFM}.json', 'w'), ensure_ascii=False, indent=1, default=float)"
+ ]
+}

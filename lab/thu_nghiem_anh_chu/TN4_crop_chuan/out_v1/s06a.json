@@ -1,0 +1,144 @@
+{
+ "ver": "v1",
+ "invariants": {
+  "viss_old_join_eq": true,
+  "thresholds_old_reproduce_TN1": true,
+  "H2_old_eq_TN1_d_STT": true,
+  "H4_old_eq_TN1_e_STT": true,
+  "H2_old_eq_TN1_d_Chr": true,
+  "H4_old_eq_TN1_e_Chr": true,
+  "H2_old_eq_TN1_d_L83": true,
+  "H4_old_eq_TN1_e_L83": true,
+  "H2_old_eq_TN1_d_KVK": true,
+  "H4_old_eq_TN1_e_KVK": true,
+  "H2_old_eq_TN1_d_L16": true,
+  "H4_old_eq_TN1_e_L16": true,
+  "H2_old_eq_TN1_d_TK": true,
+  "H4_old_eq_TN1_e_TK": true
+ },
+ "thresholds": {
+  "old_T": {
+   "C5": [
+    0.98744,
+    0.09307
+   ],
+   "C2": 0.98835,
+   "n_tune": 4658
+  },
+  "old_L": {
+   "C5": [
+    0.95369,
+    0.13467
+   ],
+   "C2": 0.9745,
+   "n_tune": 2827
+  },
+  "new_T": {
+   "C5": [
+    0.98736,
+    0.09446
+   ],
+   "C2": 0.98957,
+   "n_tune": 4659
+  },
+  "new_L": {
+   "C5": [
+    0.93877,
+    0.14259
+   ],
+   "C2": 0.97044,
+   "n_tune": 2817
+  }
+ },
+ "counts": {
+  "stt2": {
+   "n": 17678,
+   "H1_cu": 13025,
+   "H1_moi": 12326,
+   "H2_cu": 2400,
+   "H2_moi": 1327,
+   "H4_cu": 2400,
+   "H4_moi": 1327,
+   "SIMG_cu": 3151,
+   "SIMG_moi": 1746
+  },
+  "stt4": {
+   "n": 17440,
+   "H1_cu": 11679,
+   "H1_moi": 11663,
+   "H2_cu": 1428,
+   "H2_moi": 965,
+   "H4_cu": 1428,
+   "H4_moi": 965,
+   "SIMG_cu": 2131,
+   "SIMG_moi": 1375
+  },
+  "stt11": {
+   "n": 17589,
+   "H1_cu": 10407,
+   "H1_moi": 10877,
+   "H2_cu": 2511,
+   "H2_moi": 1644,
+   "H4_cu": 2511,
+   "H4_moi": 1644,
+   "SIMG_cu": 4145,
+   "SIMG_moi": 2423
+  },
+  "Chr": {
+   "n": 4238,
+   "H1_cu": 1794,
+   "H1_moi": 1788,
+   "H2_cu": 309,
+   "H2_moi": 190,
+   "H4_cu": 309,
+   "H4_moi": 190,
+   "SIMG_cu": 653,
+   "SIMG_moi": 376
+  },
+  "L83": {
+   "n": 10910,
+   "H1_cu": 10184,
+   "H1_moi": 10011,
+   "H2_cu": 1858,
+   "H2_moi": 2132,
+   "H4_cu": 648,
+   "H4_moi": 750,
+   "SIMG_cu": 1994,
+   "SIMG_moi": 2319
+  },
+  "KVK": {
+   "n": 19958,
+   "H1_cu": 19506,
+   "H1_moi": 18740,
+   "H2_cu": 4689,
+   "H2_moi": 5334,
+   "H4_cu": 3676,
+   "H4_moi": 4204,
+   "SIMG_cu": 4803,
+   "SIMG_moi": 5660
+  },
+  "L16": {
+   "n": 11587,
+   "H1_cu": 10951,
+   "H1_moi": 10359,
+   "H2_cu": 2737,
+   "H2_moi": 2750,
+   "H4_cu": 2737,
+   "H4_moi": 2750,
+   "SIMG_cu": 2849,
+   "SIMG_moi": 2848
+  },
+  "TK": {
+   "n": 19554,
+   "H1_cu": 18511,
+   "H1_moi": 17828,
+   "H2_cu": 13643,
+   "H2_moi": 14436,
+   "H4_cu": 9766,
+   "H4_moi": 10211,
+   "SIMG_cu": 14312,
+   "SIMG_moi": 15567
+  }
+ },
+ "sec": 1
+}

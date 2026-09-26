@@ -1,0 +1,295 @@
+{
+ "date": "2026-09-26",
+ "api_calls": 0,
+ "grid": [
+  -0.2,
+  -0.15,
+  -0.1,
+  -0.05,
+  -0.0,
+  0.05,
+  0.1,
+  0.15,
+  0.2,
+  0.25,
+  0.3,
+  0.35,
+  0.4,
+  0.45,
+  0.5,
+  0.55,
+  0.6,
+  0.65,
+  0.7,
+  0.75,
+  0.8
+ ],
+ "invariants": {
+  "LucVanTien1916_old_slot_gtimg_reproduce_cells_eval": true,
+  "TruyenKieu1872_old_slot_gtimg_reproduce_cells_eval": true,
+  "LucVanTien1916_flagged_all_have_candidates": true,
+  "TruyenKieu1872_flagged_all_have_candidates": true,
+  "label_never_changed": true,
+  "selector_not_used_for_scoring": true
+ },
+ "dinh_nghia": {
+  "anh_nhan": "CHÍNH: ảnh = nhãn — chữ GT người ở khe mà crop nằm (2 mô hình khe cùng chỉ) tương đương V1+ với nhãn",
+  "khe": "phụ: slot_ok==1 (crop ở đúng khe syl_idx của cột GT)",
+  "hai_ve": "phụ: nhãn ~V1+ chữ GT tại syl_idx VÀ slot_ok==1 (định nghĩa báo cáo v2)",
+  "mau_so": "GOLD trên trang có GT người (geo_status ok); khe chưa xác định tính SAI"
+ },
+ "ngoai_mau_so": {
+  "LucVanTien1916": {
+   "gold_trang_khong_gt": 0,
+   "co_trong_do": 0
+  },
+  "TruyenKieu1872": {
+   "gold_trang_khong_gt": 1004,
+   "co_trong_do": 5
+  }
+ },
+ "lobo": [
+  {
+   "test": "LucVanTien1916",
+   "tune": "TruyenKieu1872",
+   "model": "T",
+   "theta": 0.25,
+   "n_gold": 11587,
+   "n_flag": 234,
+   "n_raw_accept": 99,
+   "n_accept": 55,
+   "huy_trung_hop": 44,
+   "huy_khong_don_dieu": 0,
+   "sua_dung": 47,
+   "sua_sai": 0,
+   "sua_chua_xd": 1,
+   "lam_hong_o_dung": 0,
+   "doi_hop_van_dung": 7,
+   "ha_o_sai": 147,
+   "ha_o_dung": 32,
+   "prec_fix": 0.9818,
+   "khe_sua_dung": 46,
+   "khe_sua_sai": 2,
+   "khe_lam_hong": 0,
+   "khe_doi_van_dung": 7,
+   "khe_ha_o_sai": 143,
+   "khe_ha_o_dung": 36,
+   "prec_fix_khe": 0.9636,
+   "prec_fix_chi_mau": 1.0,
+   "n_P0": 11587,
+   "n_P1": 11353,
+   "n_P2": 11408,
+   "anh_nhan_P0": 0.9638,
+   "anh_nhan_P0_ci": [
+    0.9569,
+    0.9703
+   ],
+   "anh_nhan_P1": 0.9802,
+   "anh_nhan_P1_ci": [
+    0.9759,
+    0.984
+   ],
+   "anh_nhan_P2": 0.9802,
+   "anh_nhan_P2_ci": [
+    0.9759,
+    0.984
+   ],
+   "khe_P0": 0.9781,
+   "khe_P0_ci": [
+    0.9712,
+    0.9843
+   ],
+   "khe_P1": 0.9945,
+   "khe_P1_ci": [
+    0.9911,
+    0.9973
+   ],
+   "khe_P2": 0.9943,
+   "khe_P2_ci": [
+    0.9909,
+    0.9972
+   ],
+   "hai_ve_P0": 0.9638,
+   "hai_ve_P0_ci": [
+    0.9569,
+    0.9703
+   ],
+   "hai_ve_P1": 0.9802,
+   "hai_ve_P1_ci": [
+    0.9759,
+    0.984
+   ],
+   "hai_ve_P2": 0.9801,
+   "hai_ve_P2_ci": [
+    0.9758,
+    0.984
+   ],
+   "prec_fix_ci": [
+    0.9347,
+    1.0
+   ],
+   "kimonly": {
+    "n_accept": 221,
+    "sua_dung": 181,
+    "sua_sai": 2,
+    "sua_chua_xd": 0,
+    "lam_hong": 16,
+    "doi_van_dung": 22,
+    "ha": 13,
+    "prec_fix": 0.9186,
+    "anh_nhan_P2": 0.979,
+    "anh_nhan_P2_ci": [
+     0.9746,
+     0.9829
+    ],
+    "n_P2": 11574
+   },
+   "anh_nhan_P2_minus_P1": 0.0,
+   "anh_nhan_P2_minus_P1_ci": [
+    -0.0002,
+    0.0001
+   ]
+  },
+  {
+   "test": "TruyenKieu1872",
+   "tune": "LucVanTien1916",
+   "model": "L",
+   "theta": 0.45,
+   "n_gold": 18550,
+   "n_flag": 162,
+   "n_raw_accept": 5,
+   "n_accept": 0,
+   "huy_trung_hop": 5,
+   "huy_khong_don_dieu": 0,
+   "sua_dung": 0,
+   "sua_sai": 0,
+   "sua_chua_xd": 0,
+   "lam_hong_o_dung": 0,
+   "doi_hop_van_dung": 0,
+   "ha_o_sai": 103,
+   "ha_o_dung": 59,
+   "prec_fix": null,
+   "khe_sua_dung": 0,
+   "khe_sua_sai": 0,
+   "khe_lam_hong": 0,
+   "khe_doi_van_dung": 0,
+   "khe_ha_o_sai": 100,
+   "khe_ha_o_dung": 62,
+   "prec_fix_khe": null,
+   "prec_fix_chi_mau": null,
+   "n_P0": 18550,
+   "n_P1": 18388,
+   "n_P2": 18388,
+   "anh_nhan_P0": 0.9816,
+   "anh_nhan_P0_ci": [
+    0.9789,
+    0.9843
+   ],
+   "anh_nhan_P1": 0.9871,
+   "anh_nhan_P1_ci": [
+    0.9852,
+    0.9888
+   ],
+   "anh_nhan_P2": 0.9871,
+   "anh_nhan_P2_ci": [
+    0.9852,
+    0.9888
+   ],
+   "khe_P0": 0.9928,
+   "khe_P0_ci": [
+    0.9903,
+    0.995
+   ],
+   "khe_P1": 0.9982,
+   "khe_P1_ci": [
+    0.9971,
+    0.9991
+   ],
+   "khe_P2": 0.9982,
+   "khe_P2_ci": [
+    0.9971,
+    0.9991
+   ],
+   "hai_ve_P0": 0.9816,
+   "hai_ve_P0_ci": [
+    0.9788,
+    0.9843
+   ],
+   "hai_ve_P1": 0.987,
+   "hai_ve_P1_ci": [
+    0.9851,
+    0.9888
+   ],
+   "hai_ve_P2": 0.987,
+   "hai_ve_P2_ci": [
+    0.9851,
+    0.9888
+   ],
+   "kimonly": {
+    "n_accept": 156,
+    "sua_dung": 82,
+    "sua_sai": 3,
+    "sua_chua_xd": 12,
+    "lam_hong": 43,
+    "doi_van_dung": 16,
+    "ha": 6,
+    "prec_fix": 0.6282,
+    "anh_nhan_P2": 0.984,
+    "anh_nhan_P2_ci": [
+     0.982,
+     0.9861
+    ],
+    "n_P2": 18544
+   },
+   "anh_nhan_P2_minus_P1": 0.0,
+   "anh_nhan_P2_minus_P1_ci": [
+    0.0,
+    0.0
+   ]
+  }
+ ],
+ "theta_chosen_on": {
+  "LucVanTien1916": 0.45,
+  "TruyenKieu1872": 0.25
+ },
+ "unlabelled": {
+  "Chrestomathie1872": {
+   "n_gold": 4238,
+   "n_flag": 738,
+   "raw_T": 50,
+   "raw_L": 147,
+   "raw_both_same_cand": 35,
+   "de_xuat_sua": 10,
+   "de_xuat_ha": 728,
+   "huy_trung_hop": 25,
+   "huy_khong_don_dieu": 0,
+   "cand_counts": {
+    "kim": 8,
+    "next": 2
+   },
+   "theta_T": 0.45,
+   "theta_L": 0.25,
+   "muc_chac": "UOC_LUONG_CHUA_KIEM"
+  },
+  "SachThanhTruyen": {
+   "n_gold": 52707,
+   "n_flag": 1562,
+   "raw_T": 88,
+   "raw_L": 312,
+   "raw_both_same_cand": 57,
+   "de_xuat_sua": 25,
+   "de_xuat_ha": 1537,
+   "huy_trung_hop": 32,
+   "huy_khong_don_dieu": 0,
+   "cand_counts": {
+    "kim": 22,
+    "next": 3
+   },
+   "theta_T": 0.45,
+   "theta_L": 0.25,
+   "muc_chac": "UOC_LUONG_CHUA_KIEM"
+  }
+ },
+ "sec": 34,
+ "share_rule": "strict"
+}

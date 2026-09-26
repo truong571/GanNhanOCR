@@ -1,0 +1,244 @@
+{
+ "version": "2026-09-27",
+ "created": "2026-09-27 00:28",
+ "note": "Tài sản gold_exact. Tệp .pt không vào git (.gitignore *.pt); dựng lại: python -m pipeline.gold_exact.export_assets --sp <SP>",
+ "sp": "<SP> = thư mục thử nghiệm phiên 2026-09-25..27 (scratchpad)",
+ "files": {
+  "lexicon.pt": {
+   "sha256": "f01d52b20228c784d104bdc57ab6584027ad5914344bfc789f7c9b58526c0cc3",
+   "bytes": 553773,
+   "kind": "derived",
+   "source": [
+    "<SP>/kim_bottleneck/harness/ext/Unihan_Variants.txt",
+    "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/lab/ocr_compare/ket_hop/t2s_map.json"
+   ],
+   "desc": "biến thể Unihan (5 trường, cạnh trực tiếp) + OpenCC t2s + kJapanese(Old)Variant (V1+)"
+  },
+  "vft_universe.pt": {
+   "sha256": "4fa46fc9896a8b7be0a200d4a1cca4ffb81f8d80b8e81e87d83ffc51af97b3ba",
+   "bytes": 835403,
+   "kind": "derived",
+   "source": [
+    "<SP>/r4/verifier_ft/out/glyph_chars.json",
+    "<SP>/r4/verifier_ft/out/simtop5.json"
+   ],
+   "desc": "vũ trụ chữ ứng viên U + top-5 gần hình (verifier_ft)"
+  },
+  "vft_model_T.pt": {
+   "sha256": "287ff7ee51d4481afb69f75611c97c533369c0bebbdefc7d35e3c3fd9488aacd",
+   "bytes": 25609575,
+   "kind": "copy",
+   "source": [
+    "<SP>/r4/verifier_ft/out/model_T.pt"
+   ],
+   "desc": "CNN verifier_ft mô hình T (tune TruyenKieu1872)"
+  },
+  "vft_tables_T.pt": {
+   "sha256": "aada394a1afa52ab6af585b5f774565da9562dd67142b655415c22a90edd8595",
+   "bytes": 67524235,
+   "kind": "derived",
+   "source": [
+    "<SP>/r4/verifier_ft/out/W_T.f16.npy",
+    "<SP>/r4/verifier_ft/out/emb_T_borg.f16.npy",
+    "<SP>/r4/verifier_ft/out/emb_T_ihr.f16.npy",
+    "<SP>/r4/verifier_ft/out/meta_borg.pkl",
+    "<SP>/r4/verifier_ft/out/meta_ihr.pkl",
+    "<SP>/r4/verifier_ft/out/feat_T_ihr.pkl"
+   ],
+   "desc": "verifier_ft T: W glyph (f16), nguyên mẫu người P/nh (Borg keep fold0-3 + TruyenKieu1872 phần A), logistic wood"
+  },
+  "vft_model_L.pt": {
+   "sha256": "242d3fcedea97b3a357a946de56562d45097a68b59b05d014e98ada6fdc41a4f",
+   "bytes": 25609575,
+   "kind": "copy",
+   "source": [
+    "<SP>/r4/verifier_ft/out/model_L.pt"
+   ],
+   "desc": "CNN verifier_ft mô hình L (tune LucVanTien1916)"
+  },
+  "vft_tables_L.pt": {
+   "sha256": "4b8b4ee79853e165edc2c6b6e9aadb1a9f37afac655c4e62414302913c6cd22d",
+   "bytes": 67239883,
+   "kind": "derived",
+   "source": [
+    "<SP>/r4/verifier_ft/out/W_L.f16.npy",
+    "<SP>/r4/verifier_ft/out/emb_L_borg.f16.npy",
+    "<SP>/r4/verifier_ft/out/emb_L_ihr.f16.npy",
+    "<SP>/r4/verifier_ft/out/meta_borg.pkl",
+    "<SP>/r4/verifier_ft/out/meta_ihr.pkl",
+    "<SP>/r4/verifier_ft/out/feat_L_ihr.pkl"
+   ],
+   "desc": "verifier_ft L: W glyph (f16), nguyên mẫu người P/nh (Borg keep fold0-3 + LucVanTien1916 phần A), logistic wood"
+  },
+  "hand_model_T_Kinh.pt": {
+   "sha256": "4f5e42591d2f462f7deb1dc99d3ee89c7dd3c686b0563cbd1cb015f7b61687a3",
+   "bytes": 25610753,
+   "kind": "copy",
+   "source": [
+    "<SP>/r5/hand_lobo/out/model_T_Kinh.pt"
+   ],
+   "desc": "CNN chữ viết tay LOBO-sách T_Kinh (chỉ học Borg Kinh + IHR tune)"
+  },
+  "hand_tables_T_Kinh.pt": {
+   "sha256": "20c597ce7869a3e80f7000f71342de2820ac35a027c65a54877616d243992ca4",
+   "bytes": 67516271,
+   "kind": "derived",
+   "source": [
+    "<SP>/r5/hand_lobo/out/W_T_Kinh.f16.npy",
+    "<SP>/r5/hand_lobo/out/emb_T_Kinh_all.f16.npy",
+    "<SP>/r5/hand_lobo/out/emb_T_Kinh_ihr.f16.npy",
+    "<SP>/r5/hand_lobo/out/meta_all.pkl",
+    "<SP>/r5/hand_lobo/out/feat_T_Kinh_cal.pkl"
+   ],
+   "desc": "hand T_Kinh: W, nguyên mẫu người P/nh (Borg Kinh keep fold0-3 đơn chữ + TruyenKieu1872 phần A), logistic hand, ngưỡng q"
+  },
+  "hand_model_L_Kinh.pt": {
+   "sha256": "d094969f073b7016930899976eb387a672565ddf3a8c95c8537406ef8e0a7a56",
+   "bytes": 25610753,
+   "kind": "copy",
+   "source": [
+    "<SP>/r5/hand_lobo/out/model_L_Kinh.pt"
+   ],
+   "desc": "CNN chữ viết tay LOBO-sách L_Kinh (chỉ học Borg Kinh + IHR tune)"
+  },
+  "hand_tables_L_Kinh.pt": {
+   "sha256": "dcb0ae96f8e42bc66ccdcfb384e271b44e1c108f560319ce4e6f052a0bf037a3",
+   "bytes": 67203119,
+   "kind": "derived",
+   "source": [
+    "<SP>/r5/hand_lobo/out/W_L_Kinh.f16.npy",
+    "<SP>/r5/hand_lobo/out/emb_L_Kinh_all.f16.npy",
+    "<SP>/r5/hand_lobo/out/emb_L_Kinh_ihr.f16.npy",
+    "<SP>/r5/hand_lobo/out/meta_all.pkl",
+    "<SP>/r5/hand_lobo/out/feat_L_Kinh_cal.pkl"
+   ],
+   "desc": "hand L_Kinh: W, nguyên mẫu người P/nh (Borg Kinh keep fold0-3 đơn chữ + LucVanTien1916 phần A), logistic hand, ngưỡng q"
+  },
+  "viss_params.pt": {
+   "sha256": "406f19d4afd83c58f55033904e4ec82ad5951f99f70980daea5fc3871dd5ac55",
+   "bytes": 3269,
+   "kind": "derived",
+   "source": [
+    "<SP>/kim_bottleneck/rerank/out/cand.pkl",
+    "<SP>/kim_bottleneck/rerank/out/cand_self.pkl",
+    "<SP>/kim_bottleneck/harness/cells_eval.csv"
+   ],
+   "desc": "logit có điều kiện 'viss' (r03_model.fit) — tune TruyenKieu1872 (chấm L16), LucVanTien1916 (chấm TK), IHR2 (chấm L83/KVK)"
+  },
+  "ta_refs.pt": {
+   "sha256": "c6d0e09dc52be7ed02e644a539f73447e598a59113417c8352ce42d5c2e2bcfc",
+   "bytes": 7608493,
+   "kind": "derived",
+   "source": [
+    "<SP>/r5/text_attested/out/ta_cells.csv",
+    "<SP>/r5/text_attested/out/convmap_L16.json",
+    "<SP>/r5/text_attested/out/convmap_TK.json"
+   ],
+   "desc": "chữ người dị bản đã căn theo ô: KVK←Kiều1871 LVD/1872 DMT, L83←LVT1916 NF, TK←Kiều1871 LVD; TK: có GT người IHR"
+  },
+  "mocr_refs.pt": {
+   "sha256": "177a8390fd19aff5193700e6a585659f1e50966025f0b071a3fb8bbb22e42b5c",
+   "bytes": 3068985,
+   "kind": "derived",
+   "source": [
+    "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/measure_out/auto_precision/cross"
+   ],
+   "desc": "chữ dị bản cho đối thủ M-OCR (KVK: Kiều1871/1872, L83: LVT1916 NF)"
+  }
+ },
+ "external": {
+  "nom-embed/best.pt": {
+   "sha256": "eee2f3e706b08622320b3024ce244b9cbf01ed2df5c2f279d2b5c358ce6ee3d0",
+   "bytes": 140727509,
+   "kind": "external_file",
+   "desc": "encoder v1 (ResNet18 ArcFace 1.591 lớp) — score_visual/viss/M-OCR"
+  },
+  "ArcFace/checkpoints/best.pt": {
+   "sha256": "f4dc44eec9b0e9acb5c105d3b2051061069e8c27ceff9c78290bd3d5cdde4104",
+   "bytes": 46930502,
+   "kind": "external_file",
+   "desc": "encoder v2 (ArcFace 1.564 lớp, page-disjoint)"
+  },
+  "fonts/NomNaTong-Regular.ttf": {
+   "sha256": "37bd8506257d0905d499395e7f0bc2b6a2ae619dbb635a82ea0905b75b2ff5f3",
+   "bytes": 15927512,
+   "kind": "external_file",
+   "desc": "font glyph tham chiếu 1"
+  },
+  "fonts/PlangothicP1-Regular.ttf": {
+   "sha256": "550b5d0775b15405946b18f4843df439a51e69508d7e6778d94c1f7a53dc5ad6",
+   "bytes": 20410664,
+   "kind": "external_file",
+   "desc": "font glyph 2"
+  },
+  "fonts/PlangothicP2-Regular.ttf": {
+   "sha256": "681933370adfe0fc7253f77735275a82fea09fe4f8adba907bdeb46c110daf8f",
+   "bytes": 12459248,
+   "kind": "external_file",
+   "desc": "font glyph 3"
+  },
+  "ArcFace/data/glyphs": {
+   "digest": "af825f38f79ad02fbeaca2f9558761d5ecc62ae8d26a8a6755029c30ccebcba7",
+   "kind": "dir_digest",
+   "pattern": "U+*.png",
+   "min_bytes": 1024,
+   "desc": "ảnh glyph FD (score_visual s_fd); digest = sha256(danh sách (đường dẫn, kích thước))"
+  },
+  "gannhanocr-fd": {
+   "digest": "3f9c7b0fa2a0b1523cb21ae0400c2dc3b0ae7c63f6888b5eb720644d40e3e932",
+   "kind": "dir_digest",
+   "pattern": "U+*.png",
+   "min_bytes": 1024,
+   "desc": "ảnh glyph FD (score_visual s_fd); digest = sha256(danh sách (đường dẫn, kích thước))"
+  }
+ },
+ "invariants": {
+  "lexicon_var_eq_harness": true,
+  "vft_T_p_wood_reproduce_maxabs": 0.0,
+  "vft_T_features_port_maxabs_6000": {
+   "sw": 0.0,
+   "mG": 0.0,
+   "mRSN": 0.0,
+   "se": 0.0,
+   "meRSN": 0.0
+  },
+  "vft_L_p_wood_reproduce_maxabs": 0.0,
+  "vft_L_features_port_maxabs_6000": {
+   "sw": 0.0,
+   "mG": 0.0,
+   "mRSN": 0.0,
+   "se": 0.0,
+   "meRSN": 0.0
+  },
+  "hand_T_p_reproduce_maxabs": 0.0,
+  "hand_T_thr_00015": 0.9943327219183888,
+  "hand_L_p_reproduce_maxabs": 0.0,
+  "hand_L_thr_00015": 0.9950360094033931,
+  "hand_cert_00015_reproduce": 1.0,
+  "viss_features_port_maxabs": {
+   "s_font": 0.0,
+   "s_faug": 0.0,
+   "s_fontB": 0.0,
+   "s_faugB": 0.0,
+   "s_oth0": 0.0,
+   "has_oth": 0.0,
+   "s_head0": 0.0,
+   "has_head": 0.0,
+   "has_font": 0.0,
+   "d_faug": 0.0,
+   "d_faugB": 0.0,
+   "d_oth": 0.0,
+   "r1_faug": 0.0,
+   "lp_oth": 0.0,
+   "s_self0": 0.0,
+   "has_self": 0.0,
+   "d_self": 0.0,
+   "lp_self": 0.0
+  },
+  "viss_Tru2Luc_pkim_reproduce_maxabs": 5.960464477539063e-08,
+  "viss_Luc2Tru_pkim_reproduce_maxabs": 5.960464477539063e-08,
+  "viss_LITHO_pkim_reproduce_maxabs": 5.960464477539063e-08,
+  "mocr_refs_eq_m_ocr_inputs": true
+ },
+ "invariants_fail": []
+}

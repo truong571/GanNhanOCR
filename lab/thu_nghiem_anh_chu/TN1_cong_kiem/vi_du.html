@@ -1,0 +1,831 @@
+<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ví dụ công cụ kiểm</title>
+<style>
+:root{--bg:#fafaf7;--fg:#1d1d1b;--mut:#6b6b66;--card:#fff;--bd:#dedbd2;--ok:#1f7a3a;--bad:#b3261e;--warn:#9a6700;--gl:#fff}
+@media (prefers-color-scheme:dark){:root{--bg:#171715;--fg:#ecebe6;--mut:#a3a29c;--card:#22221f;--bd:#3a3935;--ok:#6fcf8a;--bad:#ff8a80;--warn:#e3b341;--gl:#f3f2ee}}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+header,section{max-width:1400px;margin:0 auto;padding:12px 16px}
+h1{font-size:20px;margin:8px 0} h2{font-size:17px;margin:18px 0 4px} .lead{color:var(--mut);margin:0 0 10px}
+nav{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0} nav a{padding:6px 10px;border:1px solid var(--bd);border-radius:6px;color:var(--fg);text-decoration:none;background:var(--card)}
+.n{color:var(--mut);font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:10px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:8px;padding:8px}
+.hd{font-size:12.5px;margin-bottom:6px} .row{display:flex;gap:6px;align-items:flex-start;flex-wrap:wrap}
+.crop{height:104px;max-width:110px;object-fit:contain;border:1px solid var(--bd);background:#fff}
+.g{width:72px;text-align:center} .gl{width:64px;height:64px;border:1px solid var(--bd);background:var(--gl);display:block;margin:0 auto}
+.small .gl{width:40px;height:40px} .small .g{width:64px}
+.gt{font-size:10.5px;color:var(--mut);line-height:1.2;margin-top:2px} .empty{display:flex;align-items:center;justify-content:center;color:var(--mut)}
+.miss{color:var(--warn);margin-left:2px}
+table.sc{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px} table.sc td{border-top:1px solid var(--bd);padding:2px 4px}
+.ek{font-weight:600} .ek.DUN{color:var(--ok)} .ek.anh,.ek.chu{color:var(--bad)}
+.uid{font-size:10px;color:var(--mut);word-break:break-all;margin-top:4px}
+.note{border-left:3px solid var(--warn);padding:6px 10px;background:var(--card);margin:8px 0}
+</style></head><body><header>
+<h1>Công cụ kiểm ảnh ↔ chữ: ví dụ trên 2 sách có nhãn người (THỬ NGHIỆM 1)</h1>
+<p>Cấu hình <b>f</b> (chính sách v3 đầy đủ), mục tiêu đăng ký trước τ = 0,995. Ngưỡng của L16 chọn trên TK, ngưỡng của TK chọn trên L16 (LOBO).
+Sự thật = <b>chữ người IHR</b> (đúng chữ theo quy ước dị thể V1+) và <b>slot_ok</b> (crop nằm đúng khe theo hộp cột người vẽ). Khe chưa xác định tính là sai vế ảnh.</p>
+<div class="note">Công cụ chỉ <b>hạ</b> ô hoặc đưa ô cho người xem, <b>không bao giờ sửa nhãn</b>. Ô "bị hạ" vẫn nằm trong bộ giao nộp là GOLD văn bản; chỉ không được chứng nhận "ảnh + chữ".
+"nhãn ô trước/sau" là nhãn pipeline của ô kề, chỉ để tham khảo, không phải sự thật. Chữ được vẽ bằng NomNaTong; "∅font" = font không có chữ đó.</div>
+<nav><a href="#i">(i) Giữ lại và đúng <span class="n">L16 2.722 · TK 9.753</span></a><a href="#ii">(ii) Bị hạ và thật sự sai (bắt đúng) <span class="n">L16 404 · TK 329</span></a><a href="#iii">(iii) Bị hạ oan <span class="n">L16 8.445 · TK 8.455</span></a><a href="#iv">(iv) Lọt lưới (giữ mà sai) <span class="n">L16 14 · TK 13</span></a></nav></header><section id="i"><h2>(i) Giữ lại và đúng</h2><p class="lead">Công cụ giữ; ảnh đúng khe và nhãn đúng chữ người. Hiển thị 20 ô ngẫu nhiên (seed 20260926).</p><div class="grid"><div class="card">
+ <div class="hd"><b>L16</b> · page_0052 c2 âm #11 «hơn» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/2d84cbe71f798439c4e4f46179cced03.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+6B23.png" alt="欣"><div class="gt">nhãn pipeline ✔<br><code>欣</code> U+6B23</div></div><div class="g"><img class="gl" src="glyph/U+6B23.png" alt="欣"><div class="gt">chữ người (GT)<br><code>欣</code> U+6B23</div></div><div class="g"><img class="gl" src="glyph/U+6B23.png" alt="欣"><div class="gt">chữ người ở khe crop nằm<br><code>欣</code> U+6B23</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+8FB0.png" alt="辰"><div class="gt">GT kề trước<br><code>辰</code> U+8FB0</div></div><div class="g"><img class="gl" src="glyph/U+6CCA.png" alt="泊"><div class="gt">GT kề sau<br><code>泊</code> U+6CCA</div></div><div class="g"><img class="gl" src="glyph/U+8FB0.png" alt="辰"><div class="gt">nhãn ô trước<br><code>辰</code> U+8FB0</div></div><div class="g"><img class="gl" src="glyph/U+6CCA.png" alt="泊"><div class="gt">nhãn ô sau<br><code>泊</code> U+6CCA</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9905</td><td>viss</td><td>0.859</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.01 / 0.03</td><td>vis_z</td><td>2.76</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0052/c2/n11/s11</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0062 c8 âm #8 «tử» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/e2da40b3883e894eba68d821148c4316.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+5B50.png" alt="子"><div class="gt">nhãn pipeline ✔<br><code>子</code> U+5B50</div></div><div class="g"><img class="gl" src="glyph/U+5B50.png" alt="子"><div class="gt">chữ người (GT)<br><code>子</code> U+5B50</div></div><div class="g"><img class="gl" src="glyph/U+5B50.png" alt="子"><div class="gt">chữ người ở khe crop nằm<br><code>子</code> U+5B50</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+738B.png" alt="王"><div class="gt">GT kề trước<br><code>王</code> U+738B</div></div><div class="g"><img class="gl" src="glyph/U+76F4.png" alt="直"><div class="gt">GT kề sau<br><code>直</code> U+76F4</div></div><div class="g"><img class="gl" src="glyph/U+738B.png" alt="王"><div class="gt">nhãn ô trước<br><code>王</code> U+738B</div></div><div class="g"><img class="gl" src="glyph/U+76F4.png" alt="直"><div class="gt">nhãn ô sau<br><code>直</code> U+76F4</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9900</td><td>viss</td><td>0.722</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.22 / 0.03</td><td>vis_z</td><td>1.79</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0062/c8/n8/s8</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0061 c5 âm #11 «càng» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/b76eddd8cc97dfb73d3155fdd25b6e82.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+5F37.png" alt="強"><div class="gt">nhãn pipeline ✔<br><code>強</code> U+5F37</div></div><div class="g"><img class="gl" src="glyph/U+5F37.png" alt="強"><div class="gt">chữ người (GT)<br><code>強</code> U+5F37</div></div><div class="g"><img class="gl" src="glyph/U+5F37.png" alt="強"><div class="gt">chữ người ở khe crop nằm<br><code>強</code> U+5F37</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+226B8.png" alt="𢚸"><div class="gt">GT kề trước<br><code>𢚸</code> U+226B8</div></div><div class="g"><img class="gl" src="glyph/U+6DFB.png" alt="添"><div class="gt">GT kề sau<br><code>添</code> U+6DFB</div></div><div class="g"><img class="gl" src="glyph/U+226B8.png" alt="𢚸"><div class="gt">nhãn ô trước<br><code>𢚸</code> U+226B8</div></div><div class="g"><img class="gl" src="glyph/U+6DFB.png" alt="添"><div class="gt">nhãn ô sau<br><code>添</code> U+6DFB</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9879</td><td>viss</td><td>0.675</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.10 / 0.01</td><td>vis_z</td><td>0.93</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0061/c5/n11/s11</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0016 c5 âm #8 «lại» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/cf51f644b8b120f9c9f23d9bf400781d.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+540F.png" alt="吏"><div class="gt">nhãn pipeline ✔<br><code>吏</code> U+540F</div></div><div class="g"><img class="gl" src="glyph/U+540F.png" alt="吏"><div class="gt">chữ người (GT)<br><code>吏</code> U+540F</div></div><div class="g"><img class="gl" src="glyph/U+540F.png" alt="吏"><div class="gt">chữ người ở khe crop nằm<br><code>吏</code> U+540F</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5858.png" alt="塘"><div class="gt">GT kề trước<br><code>塘</code> U+5858</div></div><div class="g"><img class="gl" src="glyph/U+FA24.png" alt="﨤"><div class="gt">GT kề sau<br><code>﨤</code> U+FA24</div></div><div class="g"><img class="gl" src="glyph/U+5858.png" alt="塘"><div class="gt">nhãn ô trước<br><code>塘</code> U+5858</div></div><div class="g"><img class="gl" src="glyph/U+FA24.png" alt="﨤"><div class="gt">nhãn ô sau<br><code>﨤</code> U+FA24</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9875</td><td>viss</td><td>0.833</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.17 / 0.03</td><td>vis_z</td><td>2.16</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0016/c5/n8/s8</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0091 c10 âm #4 «nói» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/aca0d44df029aef520dcb616eea1048e.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+5450.png" alt="呐"><div class="gt">nhãn pipeline ✔<br><code>呐</code> U+5450</div></div><div class="g"><img class="gl" src="glyph/U+5450.png" alt="呐"><div class="gt">chữ người (GT)<br><code>呐</code> U+5450</div></div><div class="g"><img class="gl" src="glyph/U+5450.png" alt="呐"><div class="gt">chữ người ở khe crop nằm<br><code>呐</code> U+5450</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5E92.png" alt="庒"><div class="gt">GT kề trước<br><code>庒</code> U+5E92</div></div><div class="g"><img class="gl" src="glyph/U+20AFE.png" alt="𠫾"><div class="gt">GT kề sau<br><code>𠫾</code> U+20AFE</div></div><div class="g"><img class="gl" src="glyph/U+5E92.png" alt="庒"><div class="gt">nhãn ô trước<br><code>庒</code> U+5E92</div></div><div class="g"><img class="gl" src="glyph/U+20AFE.png" alt="𠫾"><div class="gt">nhãn ô sau<br><code>𠫾</code> U+20AFE</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9901</td><td>viss</td><td>0.650</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.05 / 0.03</td><td>vis_z</td><td>1.30</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0091/c10/n4/s4</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0102 c6 âm #3 «trước» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/96897f34bdfa074969a150d0e3993a4e.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+7567.png" alt="畧"><div class="gt">nhãn pipeline ✔<br><code>畧</code> U+7567</div></div><div class="g"><img class="gl" src="glyph/U+7567.png" alt="畧"><div class="gt">chữ người (GT)<br><code>畧</code> U+7567</div></div><div class="g"><img class="gl" src="glyph/U+7567.png" alt="畧"><div class="gt">chữ người ở khe crop nằm<br><code>畧</code> U+7567</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5973.png" alt="女"><div class="gt">GT kề trước<br><code>女</code> U+5973</div></div><div class="g"><img class="gl" src="glyph/U+5442.png" alt="呂"><div class="gt">GT kề sau<br><code>呂</code> U+5442</div></div><div class="g"><img class="gl" src="glyph/U+5973.png" alt="女"><div class="gt">nhãn ô trước<br><code>女</code> U+5973</div></div><div class="g"><img class="gl" src="glyph/U+5442.png" alt="呂"><div class="gt">nhãn ô sau<br><code>呂</code> U+5442</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9897</td><td>viss</td><td>0.898</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.03 / 0.06</td><td>vis_z</td><td>2.11</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0102/c6/n3/s3</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0031 c2 âm #0 «ai» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/f0845c00ac3bbbb27beb68d2fe42e630.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+57C3.png" alt="埃"><div class="gt">nhãn pipeline ✔<br><code>埃</code> U+57C3</div></div><div class="g"><img class="gl" src="glyph/U+57C3.png" alt="埃"><div class="gt">chữ người (GT)<br><code>埃</code> U+57C3</div></div><div class="g"><img class="gl" src="glyph/U+57C3.png" alt="埃"><div class="gt">chữ người ở khe crop nằm<br><code>埃</code> U+57C3</div></div></div>
+ <div class="row small"><div class="g"><div class="gl empty">—</div><div class="gt">GT kề trước</div></div><div class="g"><img class="gl" src="glyph/U+5315.png" alt="匕"><div class="gt">GT kề sau<br><code>匕</code> U+5315</div></div><div class="g"><div class="gl empty">—</div><div class="gt">nhãn ô trước</div></div><div class="g"><img class="gl" src="glyph/U+5315.png" alt="匕"><div class="gt">nhãn ô sau<br><code>匕</code> U+5315</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9904</td><td>viss</td><td>0.775</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.18 / 0.04</td><td>vis_z</td><td>2.70</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0031/c2/n0/s0</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0039 c3 âm #3 «ở» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/85527bc4f73d5486a49442ee76f04cb3.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+6275.png" alt="扵"><div class="gt">nhãn pipeline ✔<br><code>扵</code> U+6275</div></div><div class="g"><img class="gl" src="glyph/U+6275.png" alt="扵"><div class="gt">chữ người (GT)<br><code>扵</code> U+6275</div></div><div class="g"><img class="gl" src="glyph/U+6275.png" alt="扵"><div class="gt">chữ người ở khe crop nằm<br><code>扵</code> U+6275</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+6CD5.png" alt="法"><div class="gt">GT kề trước<br><code>法</code> U+6CD5</div></div><div class="g"><img class="gl" src="glyph/U+F0832.png" alt="󰠲"><div class="gt">GT kề sau<br><code>󰠲</code> U+F0832</div></div><div class="g"><img class="gl" src="glyph/U+6CD5.png" alt="法"><div class="gt">nhãn ô trước<br><code>法</code> U+6CD5</div></div><div class="g"><img class="gl" src="glyph/U+515C.png" alt="兜"><div class="gt">nhãn ô sau<br><code>兜</code> U+515C</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9893</td><td>viss</td><td>0.861</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.10 / 0.01</td><td>vis_z</td><td>2.65</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0039/c3/n3/s3</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0042 c3 âm #9 «lại» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/385e37d199304956f89b53564bea1d3b.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+540F.png" alt="吏"><div class="gt">nhãn pipeline ✔<br><code>吏</code> U+540F</div></div><div class="g"><img class="gl" src="glyph/U+540F.png" alt="吏"><div class="gt">chữ người (GT)<br><code>吏</code> U+540F</div></div><div class="g"><img class="gl" src="glyph/U+540F.png" alt="吏"><div class="gt">chữ người ở khe crop nằm<br><code>吏</code> U+540F</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+963B.png" alt="阻"><div class="gt">GT kề trước<br><code>阻</code> U+963B</div></div><div class="g"><img class="gl" src="glyph/U+7B6D.png" alt="筭"><div class="gt">GT kề sau<br><code>筭</code> U+7B6D</div></div><div class="g"><img class="gl" src="glyph/U+963B.png" alt="阻"><div class="gt">nhãn ô trước<br><code>阻</code> U+963B</div></div><div class="g"><img class="gl" src="glyph/U+7B6D.png" alt="筭"><div class="gt">nhãn ô sau<br><code>筭</code> U+7B6D</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9916</td><td>viss</td><td>0.645</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.01 / 0.00</td><td>vis_z</td><td>2.22</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0042/c3/n9/s9</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0042 c8 âm #5 «long» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/861ae53699385374b2197761c827f9fb.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+226B8.png" alt="𢚸"><div class="gt">nhãn pipeline ✔<br><code>𢚸</code> U+226B8</div></div><div class="g"><img class="gl" src="glyph/U+226B8.png" alt="𢚸"><div class="gt">chữ người (GT)<br><code>𢚸</code> U+226B8</div></div><div class="g"><img class="gl" src="glyph/U+226B8.png" alt="𢚸"><div class="gt">chữ người ở khe crop nằm<br><code>𢚸</code> U+226B8</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+82E6.png" alt="苦"><div class="gt">GT kề trước<br><code>苦</code> U+82E6</div></div><div class="g"><div class="gl empty">—</div><div class="gt">GT kề sau</div></div><div class="g"><img class="gl" src="glyph/U+82E6.png" alt="苦"><div class="gt">nhãn ô trước<br><code>苦</code> U+82E6</div></div><div class="g"><img class="gl" src="glyph/U+20C96.png" alt="𠲖"><div class="gt">nhãn ô sau<br><code>𠲖</code> U+20C96</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9903</td><td>viss</td><td>0.776</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.11 / 0.06</td><td>vis_z</td><td>1.54</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0042/c8/n5/s5</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0085 c4 âm #6 «tìm» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/65bd09af4061a43871ab32ecc58ea6ba.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+5C0B.png" alt="尋"><div class="gt">nhãn pipeline ✔<br><code>尋</code> U+5C0B</div></div><div class="g"><img class="gl" src="glyph/U+5C0B.png" alt="尋"><div class="gt">chữ người (GT)<br><code>尋</code> U+5C0B</div></div><div class="g"><img class="gl" src="glyph/U+5C0B.png" alt="尋"><div class="gt">chữ người ở khe crop nằm<br><code>尋</code> U+5C0B</div></div></div>
+ <div class="row small"><div class="g"><div class="gl empty">—</div><div class="gt">GT kề trước</div></div><div class="g"><img class="gl" src="glyph/U+F0832.png" alt="󰠲"><div class="gt">GT kề sau<br><code>󰠲</code> U+F0832</div></div><div class="g"><img class="gl" src="glyph/U+6CC9.png" alt="泉"><div class="gt">nhãn ô trước<br><code>泉</code> U+6CC9</div></div><div class="g"><img class="gl" src="glyph/U+F0832.png" alt="󰠲"><div class="gt">nhãn ô sau<br><code>󰠲</code> U+F0832</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9824</td><td>viss</td><td>0.943</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.27 / 0.01</td><td>vis_z</td><td>1.05</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0085/c4/n6/s6</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0080 c10 âm #4 «rỉ» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/1f1c27930e82ceb9714e972fd3b50131.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+20BC7.png" alt="𠯇"><div class="gt">nhãn pipeline ✔<br><code>𠯇</code> U+20BC7</div></div><div class="g"><img class="gl" src="glyph/U+20BC7.png" alt="𠯇"><div class="gt">chữ người (GT)<br><code>𠯇</code> U+20BC7</div></div><div class="g"><img class="gl" src="glyph/U+20BC7.png" alt="𠯇"><div class="gt">chữ người ở khe crop nằm<br><code>𠯇</code> U+20BC7</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+6562.png" alt="敢"><div class="gt">GT kề trước<br><code>敢</code> U+6562</div></div><div class="g"><img class="gl" src="glyph/U+2A635.png" alt="𪘵"><div class="gt">GT kề sau<br><code>𪘵</code> U+2A635</div></div><div class="g"><img class="gl" src="glyph/U+6562.png" alt="敢"><div class="gt">nhãn ô trước<br><code>敢</code> U+6562</div></div><div class="g"><img class="gl" src="glyph/U+2A635.png" alt="𪘵"><div class="gt">nhãn ô sau<br><code>𪘵</code> U+2A635</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9659</td><td>viss</td><td>0.953</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.03 / 0.01</td><td>vis_z</td><td>2.69</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0080/c10/n4/s4</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0038 c6 âm #10 «có» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/8bef94e1da31d2bc5109c0f300c62460.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+56FA.png" alt="固"><div class="gt">nhãn pipeline ✔<br><code>固</code> U+56FA</div></div><div class="g"><img class="gl" src="glyph/U+56FA.png" alt="固"><div class="gt">chữ người (GT)<br><code>固</code> U+56FA</div></div><div class="g"><img class="gl" src="glyph/U+56FA.png" alt="固"><div class="gt">chữ người ở khe crop nằm<br><code>固</code> U+56FA</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5C3E.png" alt="尾"><div class="gt">GT kề trước<br><code>尾</code> U+5C3E</div></div><div class="g"><img class="gl" src="glyph/U+9280.png" alt="銀"><div class="gt">GT kề sau<br><code>銀</code> U+9280</div></div><div class="g"><img class="gl" src="glyph/U+5C3E.png" alt="尾"><div class="gt">nhãn ô trước<br><code>尾</code> U+5C3E</div></div><div class="g"><img class="gl" src="glyph/U+9280.png" alt="銀"><div class="gt">nhãn ô sau<br><code>銀</code> U+9280</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9735</td><td>viss</td><td>0.932</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.01 / 0.04</td><td>vis_z</td><td>3.93</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0038/c6/n10/s10</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0033 c7 âm #5 «công» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/2116dfa2b223e728d0e467c064c0bd01.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+516C.png" alt="公"><div class="gt">nhãn pipeline ✔<br><code>公</code> U+516C</div></div><div class="g"><img class="gl" src="glyph/U+516C.png" alt="公"><div class="gt">chữ người (GT)<br><code>公</code> U+516C</div></div><div class="g"><img class="gl" src="glyph/U+516C.png" alt="公"><div class="gt">chữ người ở khe crop nằm<br><code>公</code> U+516C</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+7D42.png" alt="終"><div class="gt">GT kề trước<br><code>終</code> U+7D42</div></div><div class="g"><div class="gl empty">—</div><div class="gt">GT kề sau</div></div><div class="g"><img class="gl" src="glyph/U+7D42.png" alt="終"><div class="gt">nhãn ô trước<br><code>終</code> U+7D42</div></div><div class="g"><img class="gl" src="glyph/U+4E5E.png" alt="乞"><div class="gt">nhãn ô sau<br><code>乞</code> U+4E5E</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9556</td><td>viss</td><td>0.956</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.20 / 0.02</td><td>vis_z</td><td>2.17</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0033/c7/n5/s5</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0133 c3 âm #2 «năm» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/3150efc1d0acbeecfae2a65b53415d7f.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+221A5.png" alt="𢆥"><div class="gt">nhãn pipeline ✔<br><code>𢆥</code> U+221A5</div></div><div class="g"><img class="gl" src="glyph/U+221A5.png" alt="𢆥"><div class="gt">chữ người (GT)<br><code>𢆥</code> U+221A5</div></div><div class="g"><img class="gl" src="glyph/U+221A5.png" alt="𢆥"><div class="gt">chữ người ở khe crop nằm<br><code>𢆥</code> U+221A5</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+2013B.png" alt="𠄻"><div class="gt">GT kề trước<br><code>𠄻</code> U+2013B</div></div><div class="g"><img class="gl" src="glyph/U+95ED.png" alt="闭"><div class="gt">GT kề sau<br><code>闭</code> U+95ED</div></div><div class="g"><img class="gl" src="glyph/U+2013B.png" alt="𠄻"><div class="gt">nhãn ô trước<br><code>𠄻</code> U+2013B</div></div><div class="g"><img class="gl" src="glyph/U+95ED.png" alt="闭"><div class="gt">nhãn ô sau<br><code>闭</code> U+95ED</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9777</td><td>viss</td><td>0.779</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.06 / 0.01</td><td>vis_z</td><td>3.71</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0133/c3/n2/s2</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0051 c5 âm #9 «để» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/02f886b19e545e455a23d34852cf20b9.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+5E95.png" alt="底"><div class="gt">nhãn pipeline ✔<br><code>底</code> U+5E95</div></div><div class="g"><img class="gl" src="glyph/U+5E95.png" alt="底"><div class="gt">chữ người (GT)<br><code>底</code> U+5E95</div></div><div class="g"><img class="gl" src="glyph/U+5E95.png" alt="底"><div class="gt">chữ người ở khe crop nằm<br><code>底</code> U+5E95</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+6625.png" alt="春"><div class="gt">GT kề trước<br><code>春</code> U+6625</div></div><div class="g"><img class="gl" src="glyph/U+884C.png" alt="行"><div class="gt">GT kề sau<br><code>行</code> U+884C</div></div><div class="g"><img class="gl" src="glyph/U+6625.png" alt="春"><div class="gt">nhãn ô trước<br><code>春</code> U+6625</div></div><div class="g"><img class="gl" src="glyph/U+5F85.png" alt="待"><div class="gt">nhãn ô sau<br><code>待</code> U+5F85</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9675</td><td>viss</td><td>0.905</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.06 / 0.01</td><td>vis_z</td><td>2.14</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0051/c5/n9/s9</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0163 c7 âm #4 «lòng» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/f8ca4548d8e39764894c3535d0c94dda.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+226B8.png" alt="𢚸"><div class="gt">nhãn pipeline ✔<br><code>𢚸</code> U+226B8</div></div><div class="g"><img class="gl" src="glyph/U+226B8.png" alt="𢚸"><div class="gt">chữ người (GT)<br><code>𢚸</code> U+226B8</div></div><div class="g"><img class="gl" src="glyph/U+226B8.png" alt="𢚸"><div class="gt">chữ người ở khe crop nằm<br><code>𢚸</code> U+226B8</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5728.png" alt="在"><div class="gt">GT kề trước<br><code>在</code> U+5728</div></div><div class="g"><img class="gl" src="glyph/U+4E9B.png" alt="些"><div class="gt">GT kề sau<br><code>些</code> U+4E9B</div></div><div class="g"><img class="gl" src="glyph/U+5728.png" alt="在"><div class="gt">nhãn ô trước<br><code>在</code> U+5728</div></div><div class="g"><img class="gl" src="glyph/U+4E9B.png" alt="些"><div class="gt">nhãn ô sau<br><code>些</code> U+4E9B</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9906</td><td>viss</td><td>0.971</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.00 / 0.02</td><td>vis_z</td><td>2.02</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0163/c7/n4/s4</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0021 c8 âm #5 «ngoài» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/76b09c4066689c1bcdd2220b61f91b27.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+5916.png" alt="外"><div class="gt">nhãn pipeline ✔<br><code>外</code> U+5916</div></div><div class="g"><img class="gl" src="glyph/U+5916.png" alt="外"><div class="gt">chữ người (GT)<br><code>外</code> U+5916</div></div><div class="g"><img class="gl" src="glyph/U+5916.png" alt="外"><div class="gt">chữ người ở khe crop nằm<br><code>外</code> U+5916</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+262E6.png" alt="𦋦"><div class="gt">GT kề trước<br><code>𦋦</code> U+262E6</div></div><div class="g"><div class="gl empty">—</div><div class="gt">GT kề sau</div></div><div class="g"><img class="gl" src="glyph/U+262E6.png" alt="𦋦"><div class="gt">nhãn ô trước<br><code>𦋦</code> U+262E6</div></div><div class="g"><img class="gl" src="glyph/U+209B3.png" alt="𠦳"><div class="gt">nhãn ô sau<br><code>𠦳</code> U+209B3</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9874</td><td>viss</td><td>0.992</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.19 / 0.00</td><td>vis_z</td><td>2.79</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0021/c8/n5/s5</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0001 c7 âm #11 «dòng» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/34a4fedfdbed9919bc19d6b7e72ad7f5.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+23CD4.png" alt="𣳔"><div class="gt">nhãn pipeline ✔<br><code>𣳔</code> U+23CD4</div></div><div class="g"><img class="gl" src="glyph/U+23CD4.png" alt="𣳔"><div class="gt">chữ người (GT)<br><code>𣳔</code> U+23CD4</div></div><div class="g"><img class="gl" src="glyph/U+23CD4.png" alt="𣳔"><div class="gt">chữ người ở khe crop nằm<br><code>𣳔</code> U+23CD4</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+7D8F.png" alt="綏"><div class="gt">GT kề trước<br><code>綏</code> U+7D8F</div></div><div class="g"><img class="gl" src="glyph/U+5112.png" alt="儒"><div class="gt">GT kề sau<br><code>儒</code> U+5112</div></div><div class="g"><img class="gl" src="glyph/U+7D8F.png" alt="綏"><div class="gt">nhãn ô trước<br><code>綏</code> U+7D8F</div></div><div class="g"><img class="gl" src="glyph/U+5112.png" alt="儒"><div class="gt">nhãn ô sau<br><code>儒</code> U+5112</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9694</td><td>viss</td><td>0.966</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.10 / 0.03</td><td>vis_z</td><td>3.42</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0001/c7/n11/s11</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0044 c6 âm #2 «mười» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/b21704035672ed12cb7cfdd3d4b20458.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+2846E.png" alt="𨑮"><div class="gt">nhãn pipeline ✔<br><code>𨑮</code> U+2846E</div></div><div class="g"><img class="gl" src="glyph/U+2846E.png" alt="𨑮"><div class="gt">chữ người (GT)<br><code>𨑮</code> U+2846E</div></div><div class="g"><img class="gl" src="glyph/U+2846E.png" alt="𨑮"><div class="gt">chữ người ở khe crop nằm<br><code>𨑮</code> U+2846E</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5916.png" alt="外"><div class="gt">GT kề trước<br><code>外</code> U+5916</div></div><div class="g"><img class="gl" src="glyph/U+2892E.png" alt="𨤮"><div class="gt">GT kề sau<br><code>𨤮</code> U+2892E</div></div><div class="g"><img class="gl" src="glyph/U+5916.png" alt="外"><div class="gt">nhãn ô trước<br><code>外</code> U+5916</div></div><div class="g"><img class="gl" src="glyph/U+2892E.png" alt="𨤮"><div class="gt">nhãn ô sau<br><code>𨤮</code> U+2892E</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9842</td><td>viss</td><td>0.836</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.00 / 0.03</td><td>vis_z</td><td>1.48</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0044/c6/n2/s2</div></div></div></section><section id="ii"><h2>(ii) Bị hạ và thật sự sai (bắt đúng)</h2><p class="lead">Công cụ hạ; ô sai ảnh (khe) hoặc sai chữ theo nhãn người. Hiển thị 20 ô ngẫu nhiên (seed 20260926).</p><div class="grid"><div class="card">
+ <div class="hd"><b>L16</b> · page_0091 c2 âm #12 «bưng» · <span class="ek anh">ẢNH: khe chưa xác định (tính là sai)</span></div>
+ <div class="row"><img class="crop" src="anh/d5141a98900bee6a4fe524de3cf158fa.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+20CD0.png" alt="𠳐"><div class="gt">nhãn pipeline ✘<br><code>𠳐</code> U+20CD0</div></div><div class="g"><img class="gl" src="glyph/U+262E6.png" alt="𦋦"><div class="gt">chữ người (GT)<br><code>𦋦</code> U+262E6</div></div><div class="g"><div class="gl empty">—</div><div class="gt">chữ người ở khe crop nằm</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+20CD0.png" alt="𠳐"><div class="gt">GT kề trước<br><code>𠳐</code> U+20CD0</div></div><div class="g"><div class="gl empty">—</div><div class="gt">GT kề sau</div></div><div class="g"><img class="gl" src="glyph/U+9404.png" alt="鐄"><div class="gt">nhãn ô trước<br><code>鐄</code> U+9404</div></div><div class="g"><img class="gl" src="glyph/U+262E6.png" alt="𦋦"><div class="gt">nhãn ô sau<br><code>𦋦</code> U+262E6</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>chưa xác định</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9879</td><td>viss</td><td>0.768</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.08 / 0.00</td><td>vis_z</td><td>1.42</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>bleed / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>text_only</b> — B0_muc_chu_ke_bleed</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0091/c2/n12/s12</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0045 c4 âm #12 «mới» · <span class="ek anh">ẢNH: khe chưa xác định (tính là sai)</span></div>
+ <div class="row"><img class="crop" src="anh/26971308b4d49b7408204fe477403732.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+8CB7.png" alt="買"><div class="gt">nhãn pipeline ✔<br><code>買</code> U+8CB7</div></div><div class="g"><img class="gl" src="glyph/U+8CB7.png" alt="買"><div class="gt">chữ người (GT)<br><code>買</code> U+8CB7</div></div><div class="g"><div class="gl empty">—</div><div class="gt">chữ người ở khe crop nằm</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5C3C.png" alt="尼"><div class="gt">GT kề trước<br><code>尼</code> U+5C3C</div></div><div class="g"><img class="gl" src="glyph/U+885D.png" alt="衝"><div class="gt">GT kề sau<br><code>衝</code> U+885D</div></div><div class="g"><img class="gl" src="glyph/U+5C3C.png" alt="尼"><div class="gt">nhãn ô trước<br><code>尼</code> U+5C3C</div></div><div class="g"><img class="gl" src="glyph/U+885D.png" alt="衝"><div class="gt">nhãn ô sau<br><code>衝</code> U+885D</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>chưa xác định</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9526</td><td>viss</td><td>0.229</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.49 / 0.11</td><td>vis_z</td><td>-0.09</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0045/c4/n12/s12</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0027 c6 âm #7 «mình» · <span class="ek anh">LỖI ẢNH: crop nằm sai khe</span></div>
+ <div class="row"><img class="crop" src="anh/5c58258106ce397e3f820ec594dada5f.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+28253.png" alt="𨉓"><div class="gt">nhãn pipeline ✔<br><code>𨉓</code> U+28253</div></div><div class="g"><img class="gl" src="glyph/U+28253.png" alt="𨉓"><div class="gt">chữ người (GT)<br><code>𨉓</code> U+28253</div></div><div class="g"><img class="gl" src="glyph/U+20B20.png" alt="𠬠"><div class="gt">chữ người ở khe crop nằm<br><code>𠬠</code> U+20B20</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+20B20.png" alt="𠬠"><div class="gt">GT kề trước<br><code>𠬠</code> U+20B20</div></div><div class="g"><img class="gl" src="glyph/U+20B20.png" alt="𠬠"><div class="gt">GT kề sau<br><code>𠬠</code> U+20B20</div></div><div class="g"><img class="gl" src="glyph/U+20B20.png" alt="𠬠"><div class="gt">nhãn ô trước<br><code>𠬠</code> U+20B20</div></div><div class="g"><img class="gl" src="glyph/U+20B20.png" alt="𠬠"><div class="gt">nhãn ô sau<br><code>𠬠</code> U+20B20</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>SAI khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9323</td><td>viss</td><td>0.057</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.79 / 0.07</td><td>vis_z</td><td>-0.94</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>text_only</b> — B_hinh_hoc_kim_vis_vong2</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0027/c6/n7/s7</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0003 c7 âm #7 «ra» · <span class="ek anh">LỖI ẢNH: crop nằm sai khe</span></div>
+ <div class="row"><img class="crop" src="anh/ed9c4751278d8662b1109a4565ec8a46.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+206A2.png" alt="𠚢"><div class="gt">nhãn pipeline ✔<br><code>𠚢</code> U+206A2</div></div><div class="g"><img class="gl" src="glyph/U+206A2.png" alt="𠚢"><div class="gt">chữ người (GT)<br><code>𠚢</code> U+206A2</div></div><div class="g"><img class="gl" src="glyph/U+2512D.png" alt="𥄭"><div class="gt">chữ người ở khe crop nằm<br><code>𥄭</code> U+2512D</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+2512D.png" alt="𥄭"><div class="gt">GT kề trước<br><code>𥄭</code> U+2512D</div></div><div class="g"><img class="gl" src="glyph/U+7567.png" alt="畧"><div class="gt">GT kề sau<br><code>畧</code> U+7567</div></div><div class="g"><img class="gl" src="glyph/U+2512D.png" alt="𥄭"><div class="gt">nhãn ô trước<br><code>𥄭</code> U+2512D</div></div><div class="g"><img class="gl" src="glyph/U+7567.png" alt="畧"><div class="gt">nhãn ô sau<br><code>畧</code> U+7567</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>SAI khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9299</td><td>viss</td><td>0.008</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.86 / 0.00</td><td>vis_z</td><td>-0.38</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>text_only</b> — B_hinh_hoc_kim_vis_vong2</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0003/c7/n7/s7</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0099 c8 âm #7 «đem» · <span class="ek anh">LỖI ẢNH: crop nằm sai khe</span></div>
+ <div class="row"><img class="crop" src="anh/f0bff0ac88f8e114bd84b3dc651643a5.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+F0761.png" alt="󰝡"><div class="gt">nhãn pipeline ✔<br><code>󰝡</code> U+F0761</div></div><div class="g"><img class="gl" src="glyph/U+F0761.png" alt="󰝡"><div class="gt">chữ người (GT)<br><code>󰝡</code> U+F0761</div></div><div class="g"><img class="gl" src="glyph/U+4F75.png" alt="併"><div class="gt">chữ người ở khe crop nằm<br><code>併</code> U+4F75</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+4F75.png" alt="併"><div class="gt">GT kề trước<br><code>併</code> U+4F75</div></div><div class="g"><img class="gl" src="glyph/U+9AB8.png" alt="骸"><div class="gt">GT kề sau<br><code>骸</code> U+9AB8</div></div><div class="g"><img class="gl" src="glyph/U+4F75.png" alt="併"><div class="gt">nhãn ô trước<br><code>併</code> U+4F75</div></div><div class="g"><img class="gl" src="glyph/U+9AB8.png" alt="骸"><div class="gt">nhãn ô sau<br><code>骸</code> U+9AB8</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>SAI khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.8431</td><td>viss</td><td>0.080</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.80 / 0.01</td><td>vis_z</td><td>-1.67</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>text_only</b> — B_hinh_hoc_kim_vis_vong2</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0099/c8/n7/s7</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0081 c2 âm #7 «nay» · <span class="ek chu">LỖI CHỮ: mã PUA khác</span></div>
+ <div class="row"><img class="crop" src="anh/cefde6ae1ea0ef0294ebf0ab826c8832.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+2B8A9.png" alt="𫢩"><div class="gt">nhãn pipeline ✘<br><code>𫢩</code> U+2B8A9</div></div><div class="g"><img class="gl" src="glyph/U+F0152.png" alt="󰅒"><div class="gt">chữ người (GT)<br><code>󰅒</code> U+F0152</div></div><div class="g"><img class="gl" src="glyph/U+F0152.png" alt="󰅒"><div class="gt">chữ người ở khe crop nằm<br><code>󰅒</code> U+F0152</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+2784A.png" alt="𧡊"><div class="gt">GT kề trước<br><code>𧡊</code> U+2784A</div></div><div class="g"><img class="gl" src="glyph/U+82B1.png" alt="花"><div class="gt">GT kề sau<br><code>花</code> U+82B1</div></div><div class="g"><img class="gl" src="glyph/U+2784A.png" alt="𧡊"><div class="gt">nhãn ô trước<br><code>𧡊</code> U+2784A</div></div><div class="g"><img class="gl" src="glyph/U+82B1.png" alt="花"><div class="gt">nhãn ô sau<br><code>花</code> U+82B1</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9674</td><td>viss</td><td>0.281</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.25 / 0.01</td><td>vis_z</td><td>1.29</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0081/c2/n7/s7</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0080 c5 âm #2 «chẳng» · <span class="ek chu">LỖI CHỮ: mã PUA khác</span></div>
+ <div class="row"><img class="crop" src="anh/205a83c5314f31a88032c64fb4ea835f.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+5E92.png" alt="庒"><div class="gt">nhãn pipeline ✘<br><code>庒</code> U+5E92</div></div><div class="g"><img class="gl" src="glyph/U+F0778.png" alt="󰝸"><div class="gt">chữ người (GT)<br><code>󰝸</code> U+F0778</div></div><div class="g"><img class="gl" src="glyph/U+F0778.png" alt="󰝸"><div class="gt">chữ người ở khe crop nằm<br><code>󰝸</code> U+F0778</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5C08.png" alt="專"><div class="gt">GT kề trước<br><code>專</code> U+5C08</div></div><div class="g"><img class="gl" src="glyph/U+6562.png" alt="敢"><div class="gt">GT kề sau<br><code>敢</code> U+6562</div></div><div class="g"><img class="gl" src="glyph/U+5C08.png" alt="專"><div class="gt">nhãn ô trước<br><code>專</code> U+5C08</div></div><div class="g"><img class="gl" src="glyph/U+6562.png" alt="敢"><div class="gt">nhãn ô sau<br><code>敢</code> U+6562</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9593</td><td>viss</td><td>0.421</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.04 / 0.03</td><td>vis_z</td><td>0.75</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0080/c5/n2/s2</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0047 c5 âm #9 «dưới» · <span class="ek chu">LỖI CHỮ: mã PUA khác</span></div>
+ <div class="row"><img class="crop" src="anh/d03bae9a457284758d1762776f810bcd.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+20051.png" alt="𠁑"><div class="gt">nhãn pipeline ✘<br><code>𠁑</code> U+20051</div></div><div class="g"><img class="gl" src="glyph/U+F084E.png" alt="󰡎"><div class="gt">chữ người (GT)<br><code>󰡎</code> U+F084E</div></div><div class="g"><img class="gl" src="glyph/U+F084E.png" alt="󰡎"><div class="gt">chữ người ở khe crop nằm<br><code>󰡎</code> U+F084E</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+2029A.png" alt="𠊚"><div class="gt">GT kề trước<br><code>𠊚</code> U+2029A</div></div><div class="g"><img class="gl" src="glyph/U+99AC.png" alt="馬"><div class="gt">GT kề sau<br><code>馬</code> U+99AC</div></div><div class="g"><img class="gl" src="glyph/U+2029A.png" alt="𠊚"><div class="gt">nhãn ô trước<br><code>𠊚</code> U+2029A</div></div><div class="g"><img class="gl" src="glyph/U+99AC.png" alt="馬"><div class="gt">nhãn ô sau<br><code>馬</code> U+99AC</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.8970</td><td>viss</td><td>0.104</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.12 / 0.04</td><td>vis_z</td><td>1.34</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0047/c5/n9/s9</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0101 c8 âm #7 «gương» · <span class="ek chu">LỖI CHỮ: đồng âm (cả hai chữ ∈ R(âm))</span></div>
+ <div class="row"><img class="crop" src="anh/41da9a69990ab6dfdec5bb4c59e8a0ba.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+2639B.png" alt="𦎛"><div class="gt">nhãn pipeline ✘<br><code>𦎛</code> U+2639B</div></div><div class="g"><img class="gl" src="glyph/U+20EC1.png" alt="𠻁"><div class="gt">chữ người (GT)<br><code>𠻁</code> U+20EC1</div></div><div class="g"><img class="gl" src="glyph/U+20EC1.png" alt="𠻁"><div class="gt">chữ người ở khe crop nằm<br><code>𠻁</code> U+20EC1</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+2441D.png" alt="𤐝"><div class="gt">GT kề trước<br><code>𤐝</code> U+2441D</div></div><div class="g"><img class="gl" src="glyph/U+6253.png" alt="打"><div class="gt">GT kề sau<br><code>打</code> U+6253</div></div><div class="g"><img class="gl" src="glyph/U+2441D.png" alt="𤐝"><div class="gt">nhãn ô trước<br><code>𤐝</code> U+2441D</div></div><div class="g"><img class="gl" src="glyph/U+6253.png" alt="打"><div class="gt">nhãn ô sau<br><code>打</code> U+6253</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9850</td><td>viss</td><td>0.134</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.16 / 0.06</td><td>vis_z</td><td>1.43</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0101/c8/n7/s7</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0103 c5 âm #9 «nạn» · <span class="ek chu">LỖI CHỮ: đồng âm (cả hai chữ ∈ R(âm))</span></div>
+ <div class="row"><img class="crop" src="anh/c40436bf3f2559fbd5bbc8a894c2b464.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+96BE.png" alt="难"><div class="gt">nhãn pipeline ✘<br><code>难</code> U+96BE</div></div><div class="g"><img class="gl" src="glyph/U+2E977.png" alt="𮥷"><div class="gt">chữ người (GT)<br><code>𮥷</code> U+2E977</div></div><div class="g"><img class="gl" src="glyph/U+2E977.png" alt="𮥷"><div class="gt">chữ người ở khe crop nằm<br><code>𮥷</code> U+2E977</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+60A3.png" alt="患"><div class="gt">GT kề trước<br><code>患</code> U+60A3</div></div><div class="g"><img class="gl" src="glyph/U+F0803.png" alt="󰠃"><div class="gt">GT kề sau<br><code>󰠃</code> U+F0803</div></div><div class="g"><img class="gl" src="glyph/U+60A3.png" alt="患"><div class="gt">nhãn ô trước<br><code>患</code> U+60A3</div></div><div class="g"><img class="gl" src="glyph/U+F0803.png" alt="󰠃"><div class="gt">nhãn ô sau<br><code>󰠃</code> U+F0803</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9669</td><td>viss</td><td>0.111</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.15 / 0.01</td><td>vis_z</td><td>1.03</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0103/c5/n9/s9</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0084 c1 âm #8 «bụi» · <span class="ek anh">ẢNH: khe chưa xác định (tính là sai)</span></div>
+ <div class="row"><img class="crop" src="anh/9dca1d3d820ec0cf9203d367655ab873.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+84D3.png" alt="蓓"><div class="gt">nhãn pipeline ✔<br><code>蓓</code> U+84D3</div></div><div class="g"><img class="gl" src="glyph/U+84D3.png" alt="蓓"><div class="gt">chữ người (GT)<br><code>蓓</code> U+84D3</div></div><div class="g"><div class="gl empty">—</div><div class="gt">chữ người ở khe crop nằm</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+6E87.png" alt="溇"><div class="gt">GT kề trước<br><code>溇</code> U+6E87</div></div><div class="g"><img class="gl" src="glyph/U+845A.png" alt="葚"><div class="gt">GT kề sau<br><code>葚</code> U+845A</div></div><div class="g"><img class="gl" src="glyph/U+6E87.png" alt="溇"><div class="gt">nhãn ô trước<br><code>溇</code> U+6E87</div></div><div class="g"><img class="gl" src="glyph/U+845A.png" alt="葚"><div class="gt">nhãn ô sau<br><code>葚</code> U+845A</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>chưa xác định</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.6868</td><td>viss</td><td>0.205</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.32 / 0.05</td><td>vis_z</td><td>-0.44</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0084/c1/n8/s8</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0146 c10 âm #4 «lưu» · <span class="ek anh">LỖI ẢNH: crop nằm sai khe</span></div>
+ <div class="row"><img class="crop" src="anh/cb5080ae08d8bde104b94302d0de1965.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+6D41.png" alt="流"><div class="gt">nhãn pipeline ✔<br><code>流</code> U+6D41</div></div><div class="g"><img class="gl" src="glyph/U+6D41.png" alt="流"><div class="gt">chữ người (GT)<br><code>流</code> U+6D41</div></div><div class="g"><img class="gl" src="glyph/U+516D.png" alt="六"><div class="gt">chữ người ở khe crop nằm<br><code>六</code> U+516D</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+516D.png" alt="六"><div class="gt">GT kề trước<br><code>六</code> U+516D</div></div><div class="g"><img class="gl" src="glyph/U+F085E.png" alt="󰡞"><div class="gt">GT kề sau<br><code>󰡞</code> U+F085E</div></div><div class="g"><img class="gl" src="glyph/U+516D.png" alt="六"><div class="gt">nhãn ô trước<br><code>六</code> U+516D</div></div><div class="g"><img class="gl" src="glyph/U+F085E.png" alt="󰡞"><div class="gt">nhãn ô sau<br><code>󰡞</code> U+F085E</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>SAI khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.8398</td><td>viss</td><td>0.083</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>1.12 / 0.03</td><td>vis_z</td><td>-0.19</td></tr>
+ <tr><td>dị bản người</td><td>unattestable</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>text_only</b> — B0_muc_ke_trong_hop_chat</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0146/c10/n4/s4</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0030 c10 âm #4 «vẹn» · <span class="ek anh">ẢNH: khe chưa xác định (tính là sai)</span></div>
+ <div class="row"><img class="crop" src="anh/cc7f7cd8967f6c4efcb2373ce1437200.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+9662.png" alt="院"><div class="gt">nhãn pipeline ✔<br><code>院</code> U+9662</div></div><div class="g"><img class="gl" src="glyph/U+9662.png" alt="院"><div class="gt">chữ người (GT)<br><code>院</code> U+9662</div></div><div class="g"><div class="gl empty">—</div><div class="gt">chữ người ở khe crop nằm</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+8089.png" alt="肉"><div class="gt">GT kề trước<br><code>肉</code> U+8089</div></div><div class="g"><img class="gl" src="glyph/U+5168.png" alt="全"><div class="gt">GT kề sau<br><code>全</code> U+5168</div></div><div class="g"><img class="gl" src="glyph/U+8089.png" alt="肉"><div class="gt">nhãn ô trước<br><code>肉</code> U+8089</div></div><div class="g"><img class="gl" src="glyph/U+5168.png" alt="全"><div class="gt">nhãn ô sau<br><code>全</code> U+5168</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>chưa xác định</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9064</td><td>viss</td><td>0.620</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>1.04 / 0.03</td><td>vis_z</td><td>0.41</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>text_only</b> — B_hinh_hoc_kim_vis_vong2</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0030/c10/n4/s4</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0030 c10 âm #3 «nhục» · <span class="ek anh">ẢNH: khe chưa xác định (tính là sai)</span></div>
+ <div class="row"><img class="crop" src="anh/f184e744a55514adb8325b6222058c0a.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+8089.png" alt="肉"><div class="gt">nhãn pipeline ✔<br><code>肉</code> U+8089</div></div><div class="g"><img class="gl" src="glyph/U+8089.png" alt="肉"><div class="gt">chữ người (GT)<br><code>肉</code> U+8089</div></div><div class="g"><div class="gl empty">—</div><div class="gt">chữ người ở khe crop nằm</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+9AA8.png" alt="骨"><div class="gt">GT kề trước<br><code>骨</code> U+9AA8</div></div><div class="g"><img class="gl" src="glyph/U+9662.png" alt="院"><div class="gt">GT kề sau<br><code>院</code> U+9662</div></div><div class="g"><img class="gl" src="glyph/U+9AA8.png" alt="骨"><div class="gt">nhãn ô trước<br><code>骨</code> U+9AA8</div></div><div class="g"><img class="gl" src="glyph/U+9662.png" alt="院"><div class="gt">nhãn ô sau<br><code>院</code> U+9662</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>chưa xác định</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.7939</td><td>viss</td><td>0.050</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.97 / 0.03</td><td>vis_z</td><td>-0.59</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>text_only</b> — B_hinh_hoc_kim_vis_vong2</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0030/c10/n3/s3</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0157 c1 âm #5 «trinh» · <span class="ek anh">LỖI ẢNH: crop nằm sai khe</span></div>
+ <div class="row"><img class="crop" src="anh/c1e33bdacb383c5e6fbc026215d039ef.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+8C9E.png" alt="貞"><div class="gt">nhãn pipeline ✔<br><code>貞</code> U+8C9E</div></div><div class="g"><img class="gl" src="glyph/U+8C9E.png" alt="貞"><div class="gt">chữ người (GT)<br><code>貞</code> U+8C9E</div></div><div class="g"><img class="gl" src="glyph/U+84D3.png" alt="蓓"><div class="gt">chữ người ở khe crop nằm<br><code>蓓</code> U+84D3</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+722B.png" alt="爫"><div class="gt">GT kề trước<br><code>爫</code> U+722B</div></div><div class="g"><div class="gl empty">—</div><div class="gt">GT kề sau</div></div><div class="g"><div class="gl empty">—</div><div class="gt">nhãn ô trước</div></div><div class="g"><img class="gl" src="glyph/U+84D3.png" alt="蓓"><div class="gt">nhãn ô sau<br><code>蓓</code> U+84D3</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>SAI khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.6392</td><td>viss</td><td>0.297</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>1.16 / 0.03</td><td>vis_z</td><td>0.12</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>text_only</b> — B_hinh_hoc_kim_vis_vong2</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0157/c1/n5/s5</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0075 c9 âm #3 «dỗ» · <span class="ek chu">LỖI CHỮ: đồng âm (cả hai chữ ∈ R(âm))</span></div>
+ <div class="row"><img class="crop" src="anh/126179106b35053f9168841a17437c0b.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+675C.png" alt="杜"><div class="gt">nhãn pipeline ✘<br><code>杜</code> U+675C</div></div><div class="g"><img class="gl" src="glyph/U+20D17.png" alt="𠴗"><div class="gt">chữ người (GT)<br><code>𠴗</code> U+20D17</div></div><div class="g"><img class="gl" src="glyph/U+20D17.png" alt="𠴗"><div class="gt">chữ người ở khe crop nằm<br><code>𠴗</code> U+20D17</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+52F8.png" alt="勸"><div class="gt">GT kề trước<br><code>勸</code> U+52F8</div></div><div class="g"><img class="gl" src="glyph/U+5F9E.png" alt="從"><div class="gt">GT kề sau<br><code>從</code> U+5F9E</div></div><div class="g"><img class="gl" src="glyph/U+52F8.png" alt="勸"><div class="gt">nhãn ô trước<br><code>勸</code> U+52F8</div></div><div class="g"><img class="gl" src="glyph/U+5F9E.png" alt="從"><div class="gt">nhãn ô sau<br><code>從</code> U+5F9E</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9791</td><td>viss</td><td>0.310</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.10 / 0.00</td><td>vis_z</td><td>0.23</td></tr>
+ <tr><td>dị bản người</td><td>unattestable</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_nhan_khong_co_van_ban_nguoi_chung</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0075/c9/n3/s3</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0063 c7 âm #10 «chẳng» · <span class="ek chu">LỖI CHỮ: mã PUA khác</span></div>
+ <div class="row"><img class="crop" src="anh/d6be95afb1b94d580f1671e97e7682cb.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+F0778.png" alt="󰝸"><div class="gt">nhãn pipeline ✘<br><code>󰝸</code> U+F0778</div></div><div class="g"><img class="gl" src="glyph/U+5E84.png" alt="庄"><div class="gt">chữ người (GT)<br><code>庄</code> U+5E84</div></div><div class="g"><img class="gl" src="glyph/U+5E84.png" alt="庄"><div class="gt">chữ người ở khe crop nằm<br><code>庄</code> U+5E84</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+F045A.png" alt="󰑚"><div class="gt">GT kề trước<br><code>󰑚</code> U+F045A</div></div><div class="g"><img class="gl" src="glyph/U+22D0D.png" alt="𢴍"><div class="gt">GT kề sau<br><code>𢴍</code> U+22D0D</div></div><div class="g"><img class="gl" src="glyph/U+F045A.png" alt="󰑚"><div class="gt">nhãn ô trước<br><code>󰑚</code> U+F045A</div></div><div class="g"><img class="gl" src="glyph/U+22D0D.png" alt="𢴍"><div class="gt">nhãn ô sau<br><code>𢴍</code> U+22D0D</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.8754</td><td>viss</td><td>0.233</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.04 / 0.00</td><td>vis_z</td><td>2.35</td></tr>
+ <tr><td>dị bản người</td><td>contradicted</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>human_check</b> — T_di_ban_nguoi_chong_nhan</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0063/c7/n10/s10</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0122 c5 âm #13 «chăng» · <span class="ek chu">LỖI CHỮ: gần hình</span></div>
+ <div class="row"><img class="crop" src="anh/3845549d973c52807a549bc41083407b.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+5E84.png" alt="庄"><div class="gt">nhãn pipeline ✘<br><code>庄</code> U+5E84</div></div><div class="g"><img class="gl" src="glyph/U+5E92.png" alt="庒"><div class="gt">chữ người (GT)<br><code>庒</code> U+5E92</div></div><div class="g"><img class="gl" src="glyph/U+5E92.png" alt="庒"><div class="gt">chữ người ở khe crop nằm<br><code>庒</code> U+5E92</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+7279.png" alt="特"><div class="gt">GT kề trước<br><code>特</code> U+7279</div></div><div class="g"><div class="gl empty">—</div><div class="gt">GT kề sau</div></div><div class="g"><img class="gl" src="glyph/U+7279.png" alt="特"><div class="gt">nhãn ô trước<br><code>特</code> U+7279</div></div><div class="g"><div class="gl empty">—</div><div class="gt">nhãn ô sau</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.8181</td><td>viss</td><td>0.755</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.07 / 0.01</td><td>vis_z</td><td>1.93</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_ung_ho</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0122/c5/n13/s13</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0049 c1 âm #2 «nàng» · <span class="ek chu">LỖI CHỮ: gần hình</span></div>
+ <div class="row"><img class="crop" src="anh/d2c15eb6f4c6b4f5239c4c1be11c72b5.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+6D6A.png" alt="浪"><div class="gt">nhãn pipeline ✘<br><code>浪</code> U+6D6A</div></div><div class="g"><img class="gl" src="glyph/U+5A18.png" alt="娘"><div class="gt">chữ người (GT)<br><code>娘</code> U+5A18</div></div><div class="g"><img class="gl" src="glyph/U+5A18.png" alt="娘"><div class="gt">chữ người ở khe crop nằm<br><code>娘</code> U+5A18</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+26591.png" alt="𦖑"><div class="gt">GT kề trước<br><code>𦖑</code> U+26591</div></div><div class="g"><img class="gl" src="glyph/U+5450.png" alt="呐"><div class="gt">GT kề sau<br><code>呐</code> U+5450</div></div><div class="g"><img class="gl" src="glyph/U+26591.png" alt="𦖑"><div class="gt">nhãn ô trước<br><code>𦖑</code> U+26591</div></div><div class="g"><img class="gl" src="glyph/U+5450.png" alt="呐"><div class="gt">nhãn ô sau<br><code>呐</code> U+5450</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9784</td><td>viss</td><td>0.210</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.14 / 0.02</td><td>vis_z</td><td>0.69</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_nhan_khong_co_van_ban_nguoi_chung</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0049/c1/n2/s2</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0067 c8 âm #13 «đâu» · <span class="ek chu">LỖI CHỮ: mã PUA khác</span></div>
+ <div class="row"><img class="crop" src="anh/8eae66b2aeab5704dd9cab4eaf754703.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+F0832.png" alt="󰠲"><div class="gt">nhãn pipeline ✘<br><code>󰠲</code> U+F0832</div></div><div class="g"><img class="gl" src="glyph/U+F0833.png" alt="󰠳"><div class="gt">chữ người (GT)<br><code>󰠳</code> U+F0833</div></div><div class="g"><img class="gl" src="glyph/U+F0833.png" alt="󰠳"><div class="gt">chữ người ở khe crop nằm<br><code>󰠳</code> U+F0833</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+6613.png" alt="易"><div class="gt">GT kề trước<br><code>易</code> U+6613</div></div><div class="g"><div class="gl empty">—</div><div class="gt">GT kề sau</div></div><div class="g"><img class="gl" src="glyph/U+6613.png" alt="易"><div class="gt">nhãn ô trước<br><code>易</code> U+6613</div></div><div class="g"><div class="gl empty">—</div><div class="gt">nhãn ô sau</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9309</td><td>viss</td><td>0.813</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.15 / 0.04</td><td>vis_z</td><td>1.75</td></tr>
+ <tr><td>dị bản người</td><td>contradicted</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>human_check</b> — T_di_ban_nguoi_chong_nhan</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0067/c8/n13/s13</div></div></div></section><section id="iii"><h2>(iii) Bị hạ oan</h2><p class="lead">Công cụ hạ nhưng ô đúng cả hai vế. Ô vẫn được giao là GOLD văn bản, chỉ không được chứng nhận "ảnh + chữ". Hiển thị 20 ô ngẫu nhiên (seed 20260926).</p><div class="grid"><div class="card">
+ <div class="hd"><b>L16</b> · page_0028 c1 âm #7 «ra» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/57ebf6f84c203f9864db85c3a08348bd.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+206A2.png" alt="𠚢"><div class="gt">nhãn pipeline ✔<br><code>𠚢</code> U+206A2</div></div><div class="g"><img class="gl" src="glyph/U+206A2.png" alt="𠚢"><div class="gt">chữ người (GT)<br><code>𠚢</code> U+206A2</div></div><div class="g"><img class="gl" src="glyph/U+206A2.png" alt="𠚢"><div class="gt">chữ người ở khe crop nằm<br><code>𠚢</code> U+206A2</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+60B6.png" alt="悶"><div class="gt">GT kề trước<br><code>悶</code> U+60B6</div></div><div class="g"><img class="gl" src="glyph/U+57C3.png" alt="埃"><div class="gt">GT kề sau<br><code>埃</code> U+57C3</div></div><div class="g"><img class="gl" src="glyph/U+60B6.png" alt="悶"><div class="gt">nhãn ô trước<br><code>悶</code> U+60B6</div></div><div class="g"><img class="gl" src="glyph/U+57C3.png" alt="埃"><div class="gt">nhãn ô sau<br><code>埃</code> U+57C3</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9555</td><td>viss</td><td>0.017</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.11 / 0.04</td><td>vis_z</td><td>0.48</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0028/c1/n7/s7</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0010 c8 âm #2 «vốn» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/f69b982dd80bc654f6f6534164b64164.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+672C.png" alt="本"><div class="gt">nhãn pipeline ✔<br><code>本</code> U+672C</div></div><div class="g"><img class="gl" src="glyph/U+672C.png" alt="本"><div class="gt">chữ người (GT)<br><code>本</code> U+672C</div></div><div class="g"><img class="gl" src="glyph/U+672C.png" alt="本"><div class="gt">chữ người ở khe crop nằm<br><code>本</code> U+672C</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5A25.png" alt="娥"><div class="gt">GT kề trước<br><code>娥</code> U+5A25</div></div><div class="g"><img class="gl" src="glyph/U+28178.png" alt="𨅸"><div class="gt">GT kề sau<br><code>𨅸</code> U+28178</div></div><div class="g"><img class="gl" src="glyph/U+5A25.png" alt="娥"><div class="gt">nhãn ô trước<br><code>娥</code> U+5A25</div></div><div class="g"><img class="gl" src="glyph/U+28178.png" alt="𨅸"><div class="gt">nhãn ô sau<br><code>𨅸</code> U+28178</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9801</td><td>viss</td><td>0.945</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.17 / 0.06</td><td>vis_z</td><td>1.69</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0010/c8/n2/s2</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0007 c6 âm #11 «hồ» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/f348d541ab1047a60bdff6dd8103b664.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+7CCA.png" alt="糊"><div class="gt">nhãn pipeline ✔<br><code>糊</code> U+7CCA</div></div><div class="g"><img class="gl" src="glyph/U+7CCA.png" alt="糊"><div class="gt">chữ người (GT)<br><code>糊</code> U+7CCA</div></div><div class="g"><img class="gl" src="glyph/U+7CCA.png" alt="糊"><div class="gt">chữ người ở khe crop nằm<br><code>糊</code> U+7CCA</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+6A21.png" alt="模"><div class="gt">GT kề trước<br><code>模</code> U+6A21</div></div><div class="g"><img class="gl" src="glyph/U+5BB3.png" alt="害"><div class="gt">GT kề sau<br><code>害</code> U+5BB3</div></div><div class="g"><img class="gl" src="glyph/U+6A21.png" alt="模"><div class="gt">nhãn ô trước<br><code>模</code> U+6A21</div></div><div class="g"><img class="gl" src="glyph/U+5BB3.png" alt="害"><div class="gt">nhãn ô sau<br><code>害</code> U+5BB3</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9819</td><td>viss</td><td>0.058</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.10 / 0.01</td><td>vis_z</td><td>2.11</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0007/c6/n11/s11</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0004 c10 âm #6 «giữ» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/491a079dd7461486356f024c47ea22a6.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+21A39.png" alt="𡨹"><div class="gt">nhãn pipeline ✔<br><code>𡨹</code> U+21A39</div></div><div class="g"><img class="gl" src="glyph/U+21A39.png" alt="𡨹"><div class="gt">chữ người (GT)<br><code>𡨹</code> U+21A39</div></div><div class="g"><img class="gl" src="glyph/U+21A39.png" alt="𡨹"><div class="gt">chữ người ở khe crop nằm<br><code>𡨹</code> U+21A39</div></div></div>
+ <div class="row small"><div class="g"><div class="gl empty">—</div><div class="gt">GT kề trước</div></div><div class="g"><img class="gl" src="glyph/U+201EE.png" alt="𠇮"><div class="gt">GT kề sau<br><code>𠇮</code> U+201EE</div></div><div class="g"><img class="gl" src="glyph/U+4F86.png" alt="來"><div class="gt">nhãn ô trước<br><code>來</code> U+4F86</div></div><div class="g"><img class="gl" src="glyph/U+201EE.png" alt="𠇮"><div class="gt">nhãn ô sau<br><code>𠇮</code> U+201EE</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9641</td><td>viss</td><td>0.038</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.03 / 0.01</td><td>vis_z</td><td>1.56</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0004/c10/n6/s6</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0076 c9 âm #11 «hừng» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/feed00b49ce8eb215e1c65f13f6539ec.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+2444D.png" alt="𤑍"><div class="gt">nhãn pipeline ✔<br><code>𤑍</code> U+2444D</div></div><div class="g"><img class="gl" src="glyph/U+2444D.png" alt="𤑍"><div class="gt">chữ người (GT)<br><code>𤑍</code> U+2444D</div></div><div class="g"><img class="gl" src="glyph/U+2444D.png" alt="𤑍"><div class="gt">chữ người ở khe crop nằm<br><code>𤑍</code> U+2444D</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+F027A.png" alt="󰉺"><div class="gt">GT kề trước<br><code>󰉺</code> U+F027A</div></div><div class="g"><img class="gl" src="glyph/U+5F59.png" alt="彙"><div class="gt">GT kề sau<br><code>彙</code> U+5F59</div></div><div class="g"><img class="gl" src="glyph/U+F027A.png" alt="󰉺"><div class="gt">nhãn ô trước<br><code>󰉺</code> U+F027A</div></div><div class="g"><img class="gl" src="glyph/U+5F59.png" alt="彙"><div class="gt">nhãn ô sau<br><code>彙</code> U+5F59</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9747</td><td>viss</td><td>0.621</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.04 / 0.03</td><td>vis_z</td><td>2.14</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0076/c9/n11/s11</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0015 c1 âm #5 «chầy» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/91035fad0853414dc6e9bc99cc725bf0.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+9072.png" alt="遲"><div class="gt">nhãn pipeline ✔<br><code>遲</code> U+9072</div></div><div class="g"><img class="gl" src="glyph/U+9072.png" alt="遲"><div class="gt">chữ người (GT)<br><code>遲</code> U+9072</div></div><div class="g"><img class="gl" src="glyph/U+9072.png" alt="遲"><div class="gt">chữ người ở khe crop nằm<br><code>遲</code> U+9072</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+4E4B.png" alt="之"><div class="gt">GT kề trước<br><code>之</code> U+4E4B</div></div><div class="g"><div class="gl empty">—</div><div class="gt">GT kề sau</div></div><div class="g"><img class="gl" src="glyph/U+4E4B.png" alt="之"><div class="gt">nhãn ô trước<br><code>之</code> U+4E4B</div></div><div class="g"><img class="gl" src="glyph/U+23217.png" alt="𣈗"><div class="gt">nhãn ô sau<br><code>𣈗</code> U+23217</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9782</td><td>viss</td><td>0.182</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.06 / 0.09</td><td>vis_z</td><td>0.79</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0015/c1/n5/s5</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0046 c3 âm #7 «sông» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/91a6f290116ef29a105bb7327a91de6e.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+6EDD.png" alt="滝"><div class="gt">nhãn pipeline ✔<br><code>滝</code> U+6EDD</div></div><div class="g"><img class="gl" src="glyph/U+6EDD.png" alt="滝"><div class="gt">chữ người (GT)<br><code>滝</code> U+6EDD</div></div><div class="g"><img class="gl" src="glyph/U+6EDD.png" alt="滝"><div class="gt">chữ người ở khe crop nằm<br><code>滝</code> U+6EDD</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+6CE2.png" alt="波"><div class="gt">GT kề trước<br><code>波</code> U+6CE2</div></div><div class="g"><img class="gl" src="glyph/U+8287.png" alt="芇"><div class="gt">GT kề sau<br><code>芇</code> U+8287</div></div><div class="g"><img class="gl" src="glyph/U+6CE2.png" alt="波"><div class="gt">nhãn ô trước<br><code>波</code> U+6CE2</div></div><div class="g"><img class="gl" src="glyph/U+8287.png" alt="芇"><div class="gt">nhãn ô sau<br><code>芇</code> U+8287</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9736</td><td>viss</td><td>0.943</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.07 / 0.04</td><td>vis_z</td><td>2.28</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0046/c3/n7/s7</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0007 c1 âm #9 «nó» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/4ceb08ac0ec587692e6bec09c06ed9c9.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+5974.png" alt="奴"><div class="gt">nhãn pipeline ✔<br><code>奴</code> U+5974</div></div><div class="g"><img class="gl" src="glyph/U+5974.png" alt="奴"><div class="gt">chữ người (GT)<br><code>奴</code> U+5974</div></div><div class="g"><img class="gl" src="glyph/U+5974.png" alt="奴"><div class="gt">chữ người ở khe crop nằm<br><code>奴</code> U+5974</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5C61.png" alt="屡"><div class="gt">GT kề trước<br><code>屡</code> U+5C61</div></div><div class="g"><img class="gl" src="glyph/U+7FA4.png" alt="群"><div class="gt">GT kề sau<br><code>群</code> U+7FA4</div></div><div class="g"><img class="gl" src="glyph/U+5C61.png" alt="屡"><div class="gt">nhãn ô trước<br><code>屡</code> U+5C61</div></div><div class="g"><img class="gl" src="glyph/U+7FA4.png" alt="群"><div class="gt">nhãn ô sau<br><code>群</code> U+7FA4</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9817</td><td>viss</td><td>0.871</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.17 / 0.04</td><td>vis_z</td><td>1.92</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0007/c1/n9/s9</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0093 c6 âm #13 «viên» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/9718dfc5e83e60bcf7b9695a61835a09.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+54E1.png" alt="員"><div class="gt">nhãn pipeline ✔<br><code>員</code> U+54E1</div></div><div class="g"><img class="gl" src="glyph/U+54E1.png" alt="員"><div class="gt">chữ người (GT)<br><code>員</code> U+54E1</div></div><div class="g"><img class="gl" src="glyph/U+54E1.png" alt="員"><div class="gt">chữ người ở khe crop nằm<br><code>員</code> U+54E1</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+8CB4.png" alt="貴"><div class="gt">GT kề trước<br><code>貴</code> U+8CB4</div></div><div class="g"><div class="gl empty">—</div><div class="gt">GT kề sau</div></div><div class="g"><img class="gl" src="glyph/U+8CB4.png" alt="貴"><div class="gt">nhãn ô trước<br><code>貴</code> U+8CB4</div></div><div class="g"><div class="gl empty">—</div><div class="gt">nhãn ô sau</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9640</td><td>viss</td><td>0.208</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.08 / 0.04</td><td>vis_z</td><td>1.15</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0093/c6/n13/s13</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0042 c7 âm #11 «đi» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/5a8609890990617a875c3a4ea0bf3cc1.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+20AFE.png" alt="𠫾"><div class="gt">nhãn pipeline ✔<br><code>𠫾</code> U+20AFE</div></div><div class="g"><img class="gl" src="glyph/U+20AFE.png" alt="𠫾"><div class="gt">chữ người (GT)<br><code>𠫾</code> U+20AFE</div></div><div class="g"><img class="gl" src="glyph/U+20AFE.png" alt="𠫾"><div class="gt">chữ người ở khe crop nằm<br><code>𠫾</code> U+20AFE</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5439.png" alt="吹"><div class="gt">GT kề trước<br><code>吹</code> U+5439</div></div><div class="g"><img class="gl" src="glyph/U+584A.png" alt="塊"><div class="gt">GT kề sau<br><code>塊</code> U+584A</div></div><div class="g"><img class="gl" src="glyph/U+5439.png" alt="吹"><div class="gt">nhãn ô trước<br><code>吹</code> U+5439</div></div><div class="g"><img class="gl" src="glyph/U+584A.png" alt="塊"><div class="gt">nhãn ô sau<br><code>塊</code> U+584A</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9872</td><td>viss</td><td>0.602</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.00 / 0.02</td><td>vis_z</td><td>1.11</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_ung_ho</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0042/c7/n11/s11</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0143 c7 âm #5 «tơ» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/9103a6e5ecf1e74941830995899ecdaa.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+7D72.png" alt="絲"><div class="gt">nhãn pipeline ✔<br><code>絲</code> U+7D72</div></div><div class="g"><img class="gl" src="glyph/U+7D72.png" alt="絲"><div class="gt">chữ người (GT)<br><code>絲</code> U+7D72</div></div><div class="g"><img class="gl" src="glyph/U+7D72.png" alt="絲"><div class="gt">chữ người ở khe crop nằm<br><code>絲</code> U+7D72</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+35C2.png" alt="㗂"><div class="gt">GT kề trước<br><code>㗂</code> U+35C2</div></div><div class="g"><div class="gl empty">—</div><div class="gt">GT kề sau</div></div><div class="g"><img class="gl" src="glyph/U+35C2.png" alt="㗂"><div class="gt">nhãn ô trước<br><code>㗂</code> U+35C2</div></div><div class="g"><img class="gl" src="glyph/U+6C89.png" alt="沉"><div class="gt">nhãn ô sau<br><code>沉</code> U+6C89</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9631</td><td>viss</td><td>0.634</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.15 / 0.01</td><td>vis_z</td><td>0.43</td></tr>
+ <tr><td>dị bản người</td><td>unattestable</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_nhan_khong_co_van_ban_nguoi_chung</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0143/c7/n5/s5</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0055 c8 âm #9 «thấy» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/1c80f7f4b77b4c1ff2e5b329a10dc7e0.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+4F53.png" alt="体"><div class="gt">nhãn pipeline ✔<br><code>体</code> U+4F53</div></div><div class="g"><img class="gl" src="glyph/U+4F53.png" alt="体"><div class="gt">chữ người (GT)<br><code>体</code> U+4F53</div></div><div class="g"><img class="gl" src="glyph/U+4F53.png" alt="体"><div class="gt">chữ người ở khe crop nằm<br><code>体</code> U+4F53</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5414.png" alt="吔"><div class="gt">GT kề trước<br><code>吔</code> U+5414</div></div><div class="g"><img class="gl" src="glyph/U+695A.png" alt="楚"><div class="gt">GT kề sau<br><code>楚</code> U+695A</div></div><div class="g"><img class="gl" src="glyph/U+5414.png" alt="吔"><div class="gt">nhãn ô trước<br><code>吔</code> U+5414</div></div><div class="g"><img class="gl" src="glyph/U+695A.png" alt="楚"><div class="gt">nhãn ô sau<br><code>楚</code> U+695A</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.8790</td><td>viss</td><td>0.983</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.04 / 0.03</td><td>vis_z</td><td>1.99</td></tr>
+ <tr><td>dị bản người</td><td>contradicted</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>human_check</b> — T_di_ban_nguoi_chong_nhan</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0055/c8/n9/s9</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0159 c2 âm #9 «vững» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/76049fb5936c122bef7462459f2f68d0.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+51ED.png" alt="凭"><div class="gt">nhãn pipeline ✔<br><code>凭</code> U+51ED</div></div><div class="g"><img class="gl" src="glyph/U+51ED.png" alt="凭"><div class="gt">chữ người (GT)<br><code>凭</code> U+51ED</div></div><div class="g"><img class="gl" src="glyph/U+51ED.png" alt="凭"><div class="gt">chữ người ở khe crop nằm<br><code>凭</code> U+51ED</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+6728.png" alt="木"><div class="gt">GT kề trước<br><code>木</code> U+6728</div></div><div class="g"><img class="gl" src="glyph/U+675F.png" alt="束"><div class="gt">GT kề sau<br><code>束</code> U+675F</div></div><div class="g"><img class="gl" src="glyph/U+6731.png" alt="朱"><div class="gt">nhãn ô trước<br><code>朱</code> U+6731</div></div><div class="g"><img class="gl" src="glyph/U+540F.png" alt="吏"><div class="gt">nhãn ô sau<br><code>吏</code> U+540F</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9282</td><td>viss</td><td>0.923</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.01 / 0.02</td><td>vis_z</td><td>3.89</td></tr>
+ <tr><td>dị bản người</td><td>unattestable</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_ung_ho</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0159/c2/n9/s9</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0078 c2 âm #6 «tốt» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/1e8dc92ac064c1645a118c5326998466.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+5352.png" alt="卒"><div class="gt">nhãn pipeline ✔<br><code>卒</code> U+5352</div></div><div class="g"><img class="gl" src="glyph/U+5352.png" alt="卒"><div class="gt">chữ người (GT)<br><code>卒</code> U+5352</div></div><div class="g"><img class="gl" src="glyph/U+5352.png" alt="卒"><div class="gt">chữ người ở khe crop nằm<br><code>卒</code> U+5352</div></div></div>
+ <div class="row small"><div class="g"><div class="gl empty">—</div><div class="gt">GT kề trước</div></div><div class="g"><img class="gl" src="glyph/U+4E4B.png" alt="之"><div class="gt">GT kề sau<br><code>之</code> U+4E4B</div></div><div class="g"><img class="gl" src="glyph/U+2A90D.png" alt="𪤍"><div class="gt">nhãn ô trước<br><code>𪤍</code> U+2A90D</div></div><div class="g"><img class="gl" src="glyph/U+4E4B.png" alt="之"><div class="gt">nhãn ô sau<br><code>之</code> U+4E4B</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9396</td><td>viss</td><td>0.579</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.18 / 0.03</td><td>vis_z</td><td>0.63</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_ung_ho</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0078/c2/n6/s6</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0009 c7 âm #4 «đầy» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/95c57f1ef322d372a3dc7b487540c86d.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+82D4.png" alt="苔"><div class="gt">nhãn pipeline ✔<br><code>苔</code> U+82D4</div></div><div class="g"><img class="gl" src="glyph/U+82D4.png" alt="苔"><div class="gt">chữ người (GT)<br><code>苔</code> U+82D4</div></div><div class="g"><img class="gl" src="glyph/U+82D4.png" alt="苔"><div class="gt">chữ người ở khe crop nằm<br><code>苔</code> U+82D4</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+6C38.png" alt="永"><div class="gt">GT kề trước<br><code>永</code> U+6C38</div></div><div class="g"><img class="gl" src="glyph/U+8525.png" alt="蔥"><div class="gt">GT kề sau<br><code>蔥</code> U+8525</div></div><div class="g"><img class="gl" src="glyph/U+6C38.png" alt="永"><div class="gt">nhãn ô trước<br><code>永</code> U+6C38</div></div><div class="g"><img class="gl" src="glyph/U+8525.png" alt="蔥"><div class="gt">nhãn ô sau<br><code>蔥</code> U+8525</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9621</td><td>viss</td><td>0.860</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.31 / 0.03</td><td>vis_z</td><td>1.08</td></tr>
+ <tr><td>dị bản người</td><td>unattestable</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_cot_so_chu_OCR_khac_so_am_QN_rui_ro_khe</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0009/c7/n5/s4</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0018 c9 âm #11 «thì» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/254e802969a32285a6d66504ef45dba0.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+6642.png" alt="時"><div class="gt">nhãn pipeline ✔<br><code>時</code> U+6642</div></div><div class="g"><img class="gl" src="glyph/U+6642.png" alt="時"><div class="gt">chữ người (GT)<br><code>時</code> U+6642</div></div><div class="g"><img class="gl" src="glyph/U+6642.png" alt="時"><div class="gt">chữ người ở khe crop nằm<br><code>時</code> U+6642</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5373.png" alt="即"><div class="gt">GT kề trước<br><code>即</code> U+5373</div></div><div class="g"><img class="gl" src="glyph/U+22B2D.png" alt="𢬭"><div class="gt">GT kề sau<br><code>𢬭</code> U+22B2D</div></div><div class="g"><img class="gl" src="glyph/U+5373.png" alt="即"><div class="gt">nhãn ô trước<br><code>即</code> U+5373</div></div><div class="g"><img class="gl" src="glyph/U+22B2D.png" alt="𢬭"><div class="gt">nhãn ô sau<br><code>𢬭</code> U+22B2D</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9481</td><td>viss</td><td>0.486</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.08 / 0.01</td><td>vis_z</td><td>2.47</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0018/c9/n11/s11</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0076 c2 âm #4 «xanh» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/5f0f34a4adaa2a256511317c5ec6d565.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+6491.png" alt="撑"><div class="gt">nhãn pipeline ✔<br><code>撑</code> U+6491</div></div><div class="g"><img class="gl" src="glyph/U+6491.png" alt="撑"><div class="gt">chữ người (GT)<br><code>撑</code> U+6491</div></div><div class="g"><img class="gl" src="glyph/U+6491.png" alt="撑"><div class="gt">chữ người ở khe crop nằm<br><code>撑</code> U+6491</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5E26.png" alt="带"><div class="gt">GT kề trước<br><code>带</code> U+5E26</div></div><div class="g"><img class="gl" src="glyph/U+6491.png" alt="撑"><div class="gt">GT kề sau<br><code>撑</code> U+6491</div></div><div class="g"><img class="gl" src="glyph/U+5E26.png" alt="带"><div class="gt">nhãn ô trước<br><code>带</code> U+5E26</div></div><div class="g"><img class="gl" src="glyph/U+6491.png" alt="撑"><div class="gt">nhãn ô sau<br><code>撑</code> U+6491</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9440</td><td>viss</td><td>0.893</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.04 / 0.02</td><td>vis_z</td><td>2.30</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_ung_ho</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0076/c2/n4/s4</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0014 c1 âm #7 «ngâm» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/1d8fb9bff5c4c00984561d587936aa83.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+541F.png" alt="吟"><div class="gt">nhãn pipeline ✔<br><code>吟</code> U+541F</div></div><div class="g"><img class="gl" src="glyph/U+541F.png" alt="吟"><div class="gt">chữ người (GT)<br><code>吟</code> U+541F</div></div><div class="g"><img class="gl" src="glyph/U+541F.png" alt="吟"><div class="gt">chữ người ở khe crop nằm<br><code>吟</code> U+541F</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+6E03.png" alt="渃"><div class="gt">GT kề trước<br><code>渃</code> U+6E03</div></div><div class="g"><img class="gl" src="glyph/U+25A9D.png" alt="𥪝"><div class="gt">GT kề sau<br><code>𥪝</code> U+25A9D</div></div><div class="g"><img class="gl" src="glyph/U+6E03.png" alt="渃"><div class="gt">nhãn ô trước<br><code>渃</code> U+6E03</div></div><div class="g"><img class="gl" src="glyph/U+25A9D.png" alt="𥪝"><div class="gt">nhãn ô sau<br><code>𥪝</code> U+25A9D</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9525</td><td>viss</td><td>0.342</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.11 / 0.03</td><td>vis_z</td><td>1.31</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_khong_ung_ho</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0014/c1/n7/s7</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0145 c6 âm #12 «đưa» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/4b79f55541175ae4da9a2cca74277cfc.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+8FFB.png" alt="迻"><div class="gt">nhãn pipeline ✔<br><code>迻</code> U+8FFB</div></div><div class="g"><img class="gl" src="glyph/U+8FFB.png" alt="迻"><div class="gt">chữ người (GT)<br><code>迻</code> U+8FFB</div></div><div class="g"><img class="gl" src="glyph/U+8FFB.png" alt="迻"><div class="gt">chữ người ở khe crop nằm<br><code>迻</code> U+8FFB</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+4EAC.png" alt="京"><div class="gt">GT kề trước<br><code>京</code> U+4EAC</div></div><div class="g"><img class="gl" src="glyph/U+F0872.png" alt="󰡲"><div class="gt">GT kề sau<br><code>󰡲</code> U+F0872</div></div><div class="g"><img class="gl" src="glyph/U+4EAC.png" alt="京"><div class="gt">nhãn ô trước<br><code>京</code> U+4EAC</div></div><div class="g"><img class="gl" src="glyph/U+F0872.png" alt="󰡲"><div class="gt">nhãn ô sau<br><code>󰡲</code> U+F0872</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9130</td><td>viss</td><td>0.503</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.14 / 0.03</td><td>vis_z</td><td>1.33</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_cot_so_chu_OCR_khac_so_am_QN_rui_ro_khe</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0145/c6/n13/s12</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0088 c10 âm #8 «cái» · <span class="ek DUN">đúng hai vế</span></div>
+ <div class="row"><img class="crop" src="anh/a7e2d02c05f3ea08a65f19547835bf5b.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+4E10.png" alt="丐"><div class="gt">nhãn pipeline ✔<br><code>丐</code> U+4E10</div></div><div class="g"><img class="gl" src="glyph/U+4E10.png" alt="丐"><div class="gt">chữ người (GT)<br><code>丐</code> U+4E10</div></div><div class="g"><img class="gl" src="glyph/U+4E10.png" alt="丐"><div class="gt">chữ người ở khe crop nằm<br><code>丐</code> U+4E10</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+8702.png" alt="蜂"><div class="gt">GT kề trước<br><code>蜂</code> U+8702</div></div><div class="g"><img class="gl" src="glyph/U+8706.png" alt="蜆"><div class="gt">GT kề sau<br><code>蜆</code> U+8706</div></div><div class="g"><img class="gl" src="glyph/U+8702.png" alt="蜂"><div class="gt">nhãn ô trước<br><code>蜂</code> U+8702</div></div><div class="g"><img class="gl" src="glyph/U+8706.png" alt="蜆"><div class="gt">nhãn ô sau<br><code>蜆</code> U+8706</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9512</td><td>viss</td><td>0.841</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.05 / 0.01</td><td>vis_z</td><td>1.11</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>uncertified</b> — U_diem_duoi_nguong__viss_ung_ho</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0088/c10/n8/s8</div></div></div></section><section id="iv"><h2>(iv) Lọt lưới (giữ mà sai)</h2><p class="lead">Công cụ giữ nhưng ô sai. Đây là phần sai số còn lại của tập được chứng nhận. Hiển thị 20 ô ngẫu nhiên (seed 20260926).</p><div class="grid"><div class="card">
+ <div class="hd"><b>L16</b> · page_0041 c6 âm #11 «liền» · <span class="ek anh">ẢNH: khe chưa xác định (tính là sai)</span></div>
+ <div class="row"><img class="crop" src="anh/cf0444f762d55eab3ea9e2d61fbbcb0f.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+9023.png" alt="連"><div class="gt">nhãn pipeline ✘<br><code>連</code> U+9023</div></div><div class="g"><img class="gl" src="glyph/U+7D30.png" alt="細"><div class="gt">chữ người (GT)<br><code>細</code> U+7D30</div></div><div class="g"><div class="gl empty">—</div><div class="gt">chữ người ở khe crop nằm</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+9023.png" alt="連"><div class="gt">GT kề trước<br><code>連</code> U+9023</div></div><div class="g"><img class="gl" src="glyph/U+4F4E.png" alt="低"><div class="gt">GT kề sau<br><code>低</code> U+4F4E</div></div><div class="g"><img class="gl" src="glyph/U+8ABF.png" alt="調"><div class="gt">nhãn ô trước<br><code>調</code> U+8ABF</div></div><div class="g"><img class="gl" src="glyph/U+7D30.png" alt="細"><div class="gt">nhãn ô sau<br><code>細</code> U+7D30</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>chưa xác định</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9896</td><td>viss</td><td>0.397</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.07 / 0.01</td><td>vis_z</td><td>2.09</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0041/c6/n11/s11</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0040 c9 âm #5 «xa» · <span class="ek chu">LỖI CHỮ: gần hình</span></div>
+ <div class="row"><img class="crop" src="anh/e2eee2123c2d95b81366b37f76315034.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+8CD2.png" alt="賒"><div class="gt">nhãn pipeline ✘<br><code>賒</code> U+8CD2</div></div><div class="g"><img class="gl" src="glyph/U+8CD6.png" alt="賖"><div class="gt">chữ người (GT)<br><code>賖</code> U+8CD6</div></div><div class="g"><img class="gl" src="glyph/U+8CD6.png" alt="賖"><div class="gt">chữ người ở khe crop nằm<br><code>賖</code> U+8CD6</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5362.png" alt="卢"><div class="gt">GT kề trước<br><code>卢</code> U+5362</div></div><div class="g"><div class="gl empty">—</div><div class="gt">GT kề sau</div></div><div class="g"><img class="gl" src="glyph/U+5362.png" alt="卢"><div class="gt">nhãn ô trước<br><code>卢</code> U+5362</div></div><div class="g"><img class="gl" src="glyph/U+5362.png" alt="卢"><div class="gt">nhãn ô sau<br><code>卢</code> U+5362</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9877</td><td>viss</td><td>0.164</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.15 / 0.01</td><td>vis_z</td><td>3.09</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0040/c9/n5/s5</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0036 c7 âm #8 «mở» · <span class="ek chu">LỖI CHỮ: mã PUA khác</span></div>
+ <div class="row"><img class="crop" src="anh/82ccfedfb0142699e454e7211b2118f1.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+28DD1.png" alt="𨷑"><div class="gt">nhãn pipeline ✘<br><code>𨷑</code> U+28DD1</div></div><div class="g"><img class="gl" src="glyph/U+F0609.png" alt="󰘉"><div class="gt">chữ người (GT)<br><code>󰘉</code> U+F0609</div></div><div class="g"><img class="gl" src="glyph/U+F0609.png" alt="󰘉"><div class="gt">chữ người ở khe crop nằm<br><code>󰘉</code> U+F0609</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+9404.png" alt="鐄"><div class="gt">GT kề trước<br><code>鐄</code> U+9404</div></div><div class="g"><img class="gl" src="glyph/U+2B2FB.png" alt="𫋻"><div class="gt">GT kề sau<br><code>𫋻</code> U+2B2FB</div></div><div class="g"><img class="gl" src="glyph/U+9404.png" alt="鐄"><div class="gt">nhãn ô trước<br><code>鐄</code> U+9404</div></div><div class="g"><img class="gl" src="glyph/U+2B2FB.png" alt="𫋻"><div class="gt">nhãn ô sau<br><code>𫋻</code> U+2B2FB</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9885</td><td>viss</td><td>0.234</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.21 / 0.03</td><td>vis_z</td><td>2.64</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0036/c7/n8/s8</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0035 c4 âm #2 «tập» · <span class="ek anh">ẢNH: khe chưa xác định (tính là sai)</span></div>
+ <div class="row"><img class="crop" src="anh/eb4fd6e1d4b01a01ff94a3adad3c1fbe.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+96C6.png" alt="集"><div class="gt">nhãn pipeline ✘<br><code>集</code> U+96C6</div></div><div class="g"><img class="gl" src="glyph/U+1EAB.png" alt="ẫ"><div class="gt">chữ người (GT)<br><code>ẫ</code> U+1EAB</div></div><div class="g"><div class="gl empty">—</div><div class="gt">chữ người ở khe crop nằm</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+0067.png" alt="g"><div class="gt">GT kề trước<br><code>g</code> U+0067</div></div><div class="g"><img class="gl" src="glyph/U+006D.png" alt="m"><div class="gt">GT kề sau<br><code>m</code> U+006D</div></div><div class="g"><img class="gl" src="glyph/U+51B2.png" alt="冲"><div class="gt">nhãn ô trước<br><code>冲</code> U+51B2</div></div><div class="g"><img class="gl" src="glyph/U+2986D.png" alt="𩡭"><div class="gt">nhãn ô sau<br><code>𩡭</code> U+2986D</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>chưa xác định</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9876</td><td>viss</td><td>0.252</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.00 / 0.00</td><td>vis_z</td><td>1.72</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0035/c4/n2/s2</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0091 c2 âm #9 «nước» · <span class="ek chu">LỖI CHỮ: nhãn = chữ kề</span></div>
+ <div class="row"><img class="crop" src="anh/57c4abd82bcb2c6e72dd774de63e0c6f.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+6E03.png" alt="渃"><div class="gt">nhãn pipeline ✘<br><code>渃</code> U+6E03</div></div><div class="g"><img class="gl" src="glyph/U+500D.png" alt="倍"><div class="gt">chữ người (GT)<br><code>倍</code> U+500D</div></div><div class="g"><img class="gl" src="glyph/U+500D.png" alt="倍"><div class="gt">chữ người ở khe crop nằm<br><code>倍</code> U+500D</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+6E03.png" alt="渃"><div class="gt">GT kề trước<br><code>渃</code> U+6E03</div></div><div class="g"><img class="gl" src="glyph/U+9404.png" alt="鐄"><div class="gt">GT kề sau<br><code>鐄</code> U+9404</div></div><div class="g"><img class="gl" src="glyph/U+6398.png" alt="掘"><div class="gt">nhãn ô trước<br><code>掘</code> U+6398</div></div><div class="g"><img class="gl" src="glyph/U+500D.png" alt="倍"><div class="gt">nhãn ô sau<br><code>倍</code> U+500D</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9917</td><td>viss</td><td>0.936</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.24 / 0.00</td><td>vis_z</td><td>0.86</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0091/c2/n9/s9</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0059 c7 âm #1 «làm» · <span class="ek chu">LỖI CHỮ: mã PUA khác</span></div>
+ <div class="row"><img class="crop" src="anh/3c4430ea434dd288afdc464738d0568c.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+722B.png" alt="爫"><div class="gt">nhãn pipeline ✘<br><code>爫</code> U+722B</div></div><div class="g"><img class="gl" src="glyph/U+F094E.png" alt="󰥎"><div class="gt">chữ người (GT)<br><code>󰥎</code> U+F094E<span class="miss" title="font NomNaTong không có chữ này">∅font</span></div></div><div class="g"><img class="gl" src="glyph/U+F094E.png" alt="󰥎"><div class="gt">chữ người ở khe crop nằm<br><code>󰥎</code> U+F094E<span class="miss" title="font NomNaTong không có chữ này">∅font</span></div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+28253.png" alt="𨉓"><div class="gt">GT kề trước<br><code>𨉓</code> U+28253</div></div><div class="g"><img class="gl" src="glyph/U+28253.png" alt="𨉓"><div class="gt">GT kề sau<br><code>𨉓</code> U+28253</div></div><div class="g"><img class="gl" src="glyph/U+28253.png" alt="𨉓"><div class="gt">nhãn ô trước<br><code>𨉓</code> U+28253</div></div><div class="g"><img class="gl" src="glyph/U+28253.png" alt="𨉓"><div class="gt">nhãn ô sau<br><code>𨉓</code> U+28253</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9940</td><td>viss</td><td>0.768</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.15 / 0.01</td><td>vis_z</td><td>1.86</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0059/c7/n1/s1</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0007 c3 âm #10 «thơ» · <span class="ek chu">LỖI CHỮ: đồng âm (cả hai chữ ∈ R(âm))</span></div>
+ <div class="row"><img class="crop" src="anh/a37a1714db2864fd3e86a5ad8f0cdfd8.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+4739.png" alt="䜹"><div class="gt">nhãn pipeline ✘<br><code>䜹</code> U+4739</div></div><div class="g"><img class="gl" src="glyph/U+8E08.png" alt="踈"><div class="gt">chữ người (GT)<br><code>踈</code> U+8E08</div></div><div class="g"><img class="gl" src="glyph/U+8E08.png" alt="踈"><div class="gt">chữ người ở khe crop nằm<br><code>踈</code> U+8E08</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+500D.png" alt="倍"><div class="gt">GT kề trước<br><code>倍</code> U+500D</div></div><div class="g"><img class="gl" src="glyph/U+516E.png" alt="兮"><div class="gt">GT kề sau<br><code>兮</code> U+516E</div></div><div class="g"><img class="gl" src="glyph/U+500D.png" alt="倍"><div class="gt">nhãn ô trước<br><code>倍</code> U+500D</div></div><div class="g"><img class="gl" src="glyph/U+516E.png" alt="兮"><div class="gt">nhãn ô sau<br><code>兮</code> U+516E</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9880</td><td>viss</td><td>0.528</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.07 / 0.03</td><td>vis_z</td><td>2.96</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0007/c3/n10/s10</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0097 c8 âm #12 «tính» · <span class="ek anh">ẢNH: khe chưa xác định (tính là sai)</span></div>
+ <div class="row"><img class="crop" src="anh/1041aa020710b874cf0688d58640ee84.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+4F75.png" alt="併"><div class="gt">nhãn pipeline ✔<br><code>併</code> U+4F75</div></div><div class="g"><img class="gl" src="glyph/U+4F75.png" alt="併"><div class="gt">chữ người (GT)<br><code>併</code> U+4F75</div></div><div class="g"><div class="gl empty">—</div><div class="gt">chữ người ở khe crop nằm</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+2029A.png" alt="𠊚"><div class="gt">GT kề trước<br><code>𠊚</code> U+2029A</div></div><div class="g"><img class="gl" src="glyph/U+7262.png" alt="牢"><div class="gt">GT kề sau<br><code>牢</code> U+7262</div></div><div class="g"><img class="gl" src="glyph/U+2029A.png" alt="𠊚"><div class="gt">nhãn ô trước<br><code>𠊚</code> U+2029A</div></div><div class="g"><img class="gl" src="glyph/U+7262.png" alt="牢"><div class="gt">nhãn ô sau<br><code>牢</code> U+7262</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>chưa xác định</td><td>vế chữ (V1+)</td><td>✔</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9913</td><td>viss</td><td>0.487</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.46 / 0.04</td><td>vis_z</td><td>1.30</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0097/c8/n12/s12</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0091 c2 âm #10 «vội» · <span class="ek chu">LỖI CHỮ: nhãn = chữ kề</span></div>
+ <div class="row"><img class="crop" src="anh/ddd94dab5f51a44071fc470bf515cd79.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+500D.png" alt="倍"><div class="gt">nhãn pipeline ✘<br><code>倍</code> U+500D</div></div><div class="g"><img class="gl" src="glyph/U+9404.png" alt="鐄"><div class="gt">chữ người (GT)<br><code>鐄</code> U+9404</div></div><div class="g"><img class="gl" src="glyph/U+9404.png" alt="鐄"><div class="gt">chữ người ở khe crop nằm<br><code>鐄</code> U+9404</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+500D.png" alt="倍"><div class="gt">GT kề trước<br><code>倍</code> U+500D</div></div><div class="g"><img class="gl" src="glyph/U+20CD0.png" alt="𠳐"><div class="gt">GT kề sau<br><code>𠳐</code> U+20CD0</div></div><div class="g"><img class="gl" src="glyph/U+6E03.png" alt="渃"><div class="gt">nhãn ô trước<br><code>渃</code> U+6E03</div></div><div class="g"><img class="gl" src="glyph/U+9404.png" alt="鐄"><div class="gt">nhãn ô sau<br><code>鐄</code> U+9404</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9904</td><td>viss</td><td>0.902</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.24 / 0.01</td><td>vis_z</td><td>1.04</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0091/c2/n10/s10</div></div><div class="card">
+ <div class="hd"><b>L16</b> · page_0035 c4 âm #5 «phương» · <span class="ek anh">ẢNH: khe chưa xác định (tính là sai)</span></div>
+ <div class="row"><img class="crop" src="anh/d2c5c0a67759866f211e88fbab76e892.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+65B9.png" alt="方"><div class="gt">nhãn pipeline ✘<br><code>方</code> U+65B9</div></div><div class="g"><img class="gl" src="glyph/U+0072.png" alt="r"><div class="gt">chữ người (GT)<br><code>r</code> U+0072</div></div><div class="g"><div class="gl empty">—</div><div class="gt">chữ người ở khe crop nằm</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+0074.png" alt="t"><div class="gt">GT kề trước<br><code>t</code> U+0074</div></div><div class="g"><img class="gl" src="glyph/U+006F.png" alt="o"><div class="gt">GT kề sau<br><code>o</code> U+006F</div></div><div class="g"><img class="gl" src="glyph/U+826F.png" alt="良"><div class="gt">nhãn ô trước<br><code>良</code> U+826F</div></div><div class="g"><img class="gl" src="glyph/U+62F1.png" alt="拱"><div class="gt">nhãn ô sau<br><code>拱</code> U+62F1</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>chưa xác định</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình TK)</td><td>0.9880</td><td>viss</td><td>0.764</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.11 / 0.03</td><td>vis_z</td><td>1.62</td></tr>
+ <tr><td>dị bản người</td><td>na</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">LucVanTien1916/lucvantien1916/page_0035/c4/n5/s5</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0136 c9 âm #8 «cũng» · <span class="ek chu">LỖI CHỮ: gần hình</span></div>
+ <div class="row"><img class="crop" src="anh/f86ba72359ffdc38558edf4b0e4c907f.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+62F1.png" alt="拱"><div class="gt">nhãn pipeline ✘<br><code>拱</code> U+62F1</div></div><div class="g"><img class="gl" src="glyph/U+4F9B.png" alt="供"><div class="gt">chữ người (GT)<br><code>供</code> U+4F9B</div></div><div class="g"><img class="gl" src="glyph/U+4F9B.png" alt="供"><div class="gt">chữ người ở khe crop nằm<br><code>供</code> U+4F9B</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5C3C.png" alt="尼"><div class="gt">GT kề trước<br><code>尼</code> U+5C3C</div></div><div class="g"><img class="gl" src="glyph/U+4E15.png" alt="丕"><div class="gt">GT kề sau<br><code>丕</code> U+4E15</div></div><div class="g"><img class="gl" src="glyph/U+5C3C.png" alt="尼"><div class="gt">nhãn ô trước<br><code>尼</code> U+5C3C</div></div><div class="g"><img class="gl" src="glyph/U+4E15.png" alt="丕"><div class="gt">nhãn ô sau<br><code>丕</code> U+4E15</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9763</td><td>viss</td><td>0.980</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.10 / 0.03</td><td>vis_z</td><td>2.14</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0136/c9/n8/s8</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0106 c3 âm #8 «thân» · <span class="ek chu">LỖI CHỮ: đồng âm (cả hai chữ ∈ R(âm))</span></div>
+ <div class="row"><img class="crop" src="anh/3bb7049c7bd1210b90a61580482b7a4c.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+89AA.png" alt="親"><div class="gt">nhãn pipeline ✘<br><code>親</code> U+89AA</div></div><div class="g"><img class="gl" src="glyph/U+8EAB.png" alt="身"><div class="gt">chữ người (GT)<br><code>身</code> U+8EAB</div></div><div class="g"><img class="gl" src="glyph/U+8EAB.png" alt="身"><div class="gt">chữ người ở khe crop nằm<br><code>身</code> U+8EAB</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+51B2.png" alt="冲"><div class="gt">GT kề trước<br><code>冲</code> U+51B2</div></div><div class="g"><img class="gl" src="glyph/U+621A.png" alt="戚"><div class="gt">GT kề sau<br><code>戚</code> U+621A</div></div><div class="g"><img class="gl" src="glyph/U+51B2.png" alt="冲"><div class="gt">nhãn ô trước<br><code>冲</code> U+51B2</div></div><div class="g"><img class="gl" src="glyph/U+621A.png" alt="戚"><div class="gt">nhãn ô sau<br><code>戚</code> U+621A</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9807</td><td>viss</td><td>0.957</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.01 / 0.02</td><td>vis_z</td><td>2.69</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0106/c3/n8/s8</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0036 c3 âm #2 «duyên» · <span class="ek chu">LỖI CHỮ: gần hình</span></div>
+ <div class="row"><img class="crop" src="anh/d1eb89b3b745100f97b29d3500ab59ff.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+7DE3.png" alt="緣"><div class="gt">nhãn pipeline ✘<br><code>緣</code> U+7DE3</div></div><div class="g"><img class="gl" src="glyph/U+7DA0.png" alt="綠"><div class="gt">chữ người (GT)<br><code>綠</code> U+7DA0</div></div><div class="g"><img class="gl" src="glyph/U+7DA0.png" alt="綠"><div class="gt">chữ người ở khe crop nằm<br><code>綠</code> U+7DA0</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5305.png" alt="包"><div class="gt">GT kề trước<br><code>包</code> U+5305</div></div><div class="g"><img class="gl" src="glyph/U+5973.png" alt="女"><div class="gt">GT kề sau<br><code>女</code> U+5973</div></div><div class="g"><img class="gl" src="glyph/U+5305.png" alt="包"><div class="gt">nhãn ô trước<br><code>包</code> U+5305</div></div><div class="g"><img class="gl" src="glyph/U+5973.png" alt="女"><div class="gt">nhãn ô sau<br><code>女</code> U+5973</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9552</td><td>viss</td><td>0.688</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.09 / 0.03</td><td>vis_z</td><td>2.42</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0036/c3/n2/s2</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0150 c7 âm #10 «nhớ» · <span class="ek chu">LỖI CHỮ: đồng âm (cả hai chữ ∈ R(âm))</span></div>
+ <div class="row"><img class="crop" src="anh/4f0ed023f84005bad7e120705f3d2a9b.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+5973.png" alt="女"><div class="gt">nhãn pipeline ✘<br><code>女</code> U+5973</div></div><div class="g"><img class="gl" src="glyph/U+225B5.png" alt="𢖵"><div class="gt">chữ người (GT)<br><code>𢖵</code> U+225B5</div></div><div class="g"><img class="gl" src="glyph/U+225B5.png" alt="𢖵"><div class="gt">chữ người ở khe crop nằm<br><code>𢖵</code> U+225B5</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+5171.png" alt="共"><div class="gt">GT kề trước<br><code>共</code> U+5171</div></div><div class="g"><img class="gl" src="glyph/U+8339.png" alt="茹"><div class="gt">GT kề sau<br><code>茹</code> U+8339</div></div><div class="g"><img class="gl" src="glyph/U+5171.png" alt="共"><div class="gt">nhãn ô trước<br><code>共</code> U+5171</div></div><div class="g"><img class="gl" src="glyph/U+8339.png" alt="茹"><div class="gt">nhãn ô sau<br><code>茹</code> U+8339</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9601</td><td>viss</td><td>0.988</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.06 / 0.03</td><td>vis_z</td><td>2.64</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0150/c7/n10/s10</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0078 c4 âm #9 «cũng» · <span class="ek chu">LỖI CHỮ: gần hình</span></div>
+ <div class="row"><img class="crop" src="anh/c5a401d976053c05448cb1f1e08dce45.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+62F1.png" alt="拱"><div class="gt">nhãn pipeline ✘<br><code>拱</code> U+62F1</div></div><div class="g"><img class="gl" src="glyph/U+5171.png" alt="共"><div class="gt">chữ người (GT)<br><code>共</code> U+5171</div></div><div class="g"><img class="gl" src="glyph/U+5171.png" alt="共"><div class="gt">chữ người ở khe crop nằm<br><code>共</code> U+5171</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+4E9B.png" alt="些"><div class="gt">GT kề trước<br><code>些</code> U+4E9B</div></div><div class="g"><img class="gl" src="glyph/U+6599.png" alt="料"><div class="gt">GT kề sau<br><code>料</code> U+6599</div></div><div class="g"><img class="gl" src="glyph/U+4E9B.png" alt="些"><div class="gt">nhãn ô trước<br><code>些</code> U+4E9B</div></div><div class="g"><img class="gl" src="glyph/U+6599.png" alt="料"><div class="gt">nhãn ô sau<br><code>料</code> U+6599</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9819</td><td>viss</td><td>0.982</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.03 / 0.01</td><td>vis_z</td><td>1.86</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0078/c4/n9/s9</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0118 c9 âm #0 «dưới» · <span class="ek chu">LỖI CHỮ: mã PUA khác</span></div>
+ <div class="row"><img class="crop" src="anh/d176d2d45d175a44c4c59dd00fbfbd8e.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+20051.png" alt="𠁑"><div class="gt">nhãn pipeline ✘<br><code>𠁑</code> U+20051</div></div><div class="g"><img class="gl" src="glyph/U+F084E.png" alt="󰡎"><div class="gt">chữ người (GT)<br><code>󰡎</code> U+F084E</div></div><div class="g"><img class="gl" src="glyph/U+F084E.png" alt="󰡎"><div class="gt">chữ người ở khe crop nằm<br><code>󰡎</code> U+F084E</div></div></div>
+ <div class="row small"><div class="g"><div class="gl empty">—</div><div class="gt">GT kề trước</div></div><div class="g"><img class="gl" src="glyph/U+65D7.png" alt="旗"><div class="gt">GT kề sau<br><code>旗</code> U+65D7</div></div><div class="g"><div class="gl empty">—</div><div class="gt">nhãn ô trước</div></div><div class="g"><img class="gl" src="glyph/U+65D7.png" alt="旗"><div class="gt">nhãn ô sau<br><code>旗</code> U+65D7</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9612</td><td>viss</td><td>0.147</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.20 / 0.01</td><td>vis_z</td><td>2.77</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0118/c9/n0/s0</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0132 c9 âm #10 «giữa» · <span class="ek chu">LỖI CHỮ: gần hình</span></div>
+ <div class="row"><img class="crop" src="anh/921ff5cf25217de80551cb76372d0f8e.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+219F2.png" alt="𡧲"><div class="gt">nhãn pipeline ✘<br><code>𡧲</code> U+219F2</div></div><div class="g"><img class="gl" src="glyph/U+21A0C.png" alt="𡨌"><div class="gt">chữ người (GT)<br><code>𡨌</code> U+21A0C</div></div><div class="g"><img class="gl" src="glyph/U+21A0C.png" alt="𡨌"><div class="gt">chữ người ở khe crop nằm<br><code>𡨌</code> U+21A0C</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+2BD0B.png" alt="𫴋"><div class="gt">GT kề trước<br><code>𫴋</code> U+2BD0B</div></div><div class="g"><img class="gl" src="glyph/U+23CD4.png" alt="𣳔"><div class="gt">GT kề sau<br><code>𣳔</code> U+23CD4</div></div><div class="g"><img class="gl" src="glyph/U+2BD0B.png" alt="𫴋"><div class="gt">nhãn ô trước<br><code>𫴋</code> U+2BD0B</div></div><div class="g"><img class="gl" src="glyph/U+23CD4.png" alt="𣳔"><div class="gt">nhãn ô sau<br><code>𣳔</code> U+23CD4</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9590</td><td>viss</td><td>0.760</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.07 / 0.03</td><td>vis_z</td><td>3.07</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0132/c9/n10/s10</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0058 c1 âm #3 «phục» · <span class="ek chu">LỖI CHỮ: đồng âm (cả hai chữ ∈ R(âm))</span></div>
+ <div class="row"><img class="crop" src="anh/a354408695582e9568797ec5b2de4af6.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+670D.png" alt="服"><div class="gt">nhãn pipeline ✘<br><code>服</code> U+670D</div></div><div class="g"><img class="gl" src="glyph/U+8179.png" alt="腹"><div class="gt">chữ người (GT)<br><code>腹</code> U+8179</div></div><div class="g"><img class="gl" src="glyph/U+8179.png" alt="腹"><div class="gt">chữ người ở khe crop nằm<br><code>腹</code> U+8179</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+9996.png" alt="首"><div class="gt">GT kề trước<br><code>首</code> U+9996</div></div><div class="g"><img class="gl" src="glyph/U+61C7.png" alt="懇"><div class="gt">GT kề sau<br><code>懇</code> U+61C7</div></div><div class="g"><img class="gl" src="glyph/U+9996.png" alt="首"><div class="gt">nhãn ô trước<br><code>首</code> U+9996</div></div><div class="g"><img class="gl" src="glyph/U+61C7.png" alt="懇"><div class="gt">nhãn ô sau<br><code>懇</code> U+61C7</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9836</td><td>viss</td><td>0.748</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.08 / 0.03</td><td>vis_z</td><td>1.54</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0058/c1/n3/s3</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0152 c7 âm #11 «người» · <span class="ek chu">LỖI CHỮ: đồng âm (cả hai chữ ∈ R(âm))</span></div>
+ <div class="row"><img class="crop" src="anh/b8ff5eb4959b814a3e232454975b6a1c.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+2029B.png" alt="𠊛"><div class="gt">nhãn pipeline ✘<br><code>𠊛</code> U+2029B</div></div><div class="g"><img class="gl" src="glyph/U+3775.png" alt="㝵"><div class="gt">chữ người (GT)<br><code>㝵</code> U+3775</div></div><div class="g"><img class="gl" src="glyph/U+3775.png" alt="㝵"><div class="gt">chữ người ở khe crop nằm<br><code>㝵</code> U+3775</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+226B8.png" alt="𢚸"><div class="gt">GT kề trước<br><code>𢚸</code> U+226B8</div></div><div class="g"><img class="gl" src="glyph/U+6148.png" alt="慈"><div class="gt">GT kề sau<br><code>慈</code> U+6148</div></div><div class="g"><img class="gl" src="glyph/U+226B8.png" alt="𢚸"><div class="gt">nhãn ô trước<br><code>𢚸</code> U+226B8</div></div><div class="g"><img class="gl" src="glyph/U+6148.png" alt="慈"><div class="gt">nhãn ô sau<br><code>慈</code> U+6148</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9876</td><td>viss</td><td>0.925</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.01 / 0.03</td><td>vis_z</td><td>2.22</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0152/c7/n11/s11</div></div><div class="card">
+ <div class="hd"><b>TK</b> · page_0095 c5 âm #11 «xa» · <span class="ek chu">LỖI CHỮ: đồng âm (cả hai chữ ∈ R(âm))</span></div>
+ <div class="row"><img class="crop" src="anh/009759a60c98b158aa6068c19faba554.png" alt="crop">
+  <div class="g"><img class="gl" src="glyph/U+8ECA.png" alt="車"><div class="gt">nhãn pipeline ✘<br><code>車</code> U+8ECA</div></div><div class="g"><img class="gl" src="glyph/U+8CD2.png" alt="賒"><div class="gt">chữ người (GT)<br><code>賒</code> U+8CD2</div></div><div class="g"><img class="gl" src="glyph/U+8CD2.png" alt="賒"><div class="gt">chữ người ở khe crop nằm<br><code>賒</code> U+8CD2</div></div></div>
+ <div class="row small"><div class="g"><img class="gl" src="glyph/U+3915.png" alt="㤕"><div class="gt">GT kề trước<br><code>㤕</code> U+3915</div></div><div class="g"><img class="gl" src="glyph/U+6D7D.png" alt="浽"><div class="gt">GT kề sau<br><code>浽</code> U+6D7D</div></div><div class="g"><img class="gl" src="glyph/U+3915.png" alt="㤕"><div class="gt">nhãn ô trước<br><code>㤕</code> U+3915</div></div><div class="g"><img class="gl" src="glyph/U+6D7D.png" alt="浽"><div class="gt">nhãn ô sau<br><code>浽</code> U+6D7D</div></div></div>
+ <table class="sc"><tr><td>vế ảnh (slot_ok)</td><td>đúng khe</td><td>vế chữ (V1+)</td><td>✘</td></tr>
+ <tr><td>p_wood (mô hình L16)</td><td>0.9831</td><td>viss</td><td>0.973</td></tr>
+ <tr><td>lệch dọc/ngang hộp kim</td><td>0.12 / 0.00</td><td>vis_z</td><td>3.34</td></tr>
+ <tr><td>dị bản người</td><td>attested</td><td>cờ crop / seg</td><td>ok / ok</td></tr>
+ <tr><td colspan="4">quyết định v3: <b>ok</b> — (ok)</td></tr></table>
+ <div class="uid">TruyenKieu1872/truyenkieu1872/page_0095/c5/n11/s11</div></div></div></section>
+<header><p class="lead">Sinh bởi t02_vi_du.py (0 API). Số ô mỗi nhóm trên nhãn đầu trang tính trên toàn bộ ô GOLD có nhãn người của từng sách.</p></header>
+</body></html>

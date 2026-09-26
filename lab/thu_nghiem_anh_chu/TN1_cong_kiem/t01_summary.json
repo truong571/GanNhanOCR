@@ -1,0 +1,292 @@
+{
+ "key": "TN1_cong_kiem",
+ "date": "2026-09-26",
+ "api_calls": 0,
+ "repo_writes_outside_lab_measure_out": 0,
+ "truth": "V1+(nhãn, chữ người IHR) ∧ slot_ok==1; khe chưa xác định = sai vế ảnh",
+ "taus": [
+  0.98,
+  0.985,
+  0.99,
+  0.9925,
+  0.995,
+  0.9975,
+  0.999
+ ],
+ "prereg": 0.995,
+ "boot": {
+  "B": 2000,
+  "cluster": "page",
+  "seed": 20260926
+ },
+ "ladder": [
+  [
+   "G0",
+   "không cổng"
+  ],
+  [
+   "G1",
+   "A0: crop rỗng/cắt nét, 1 hộp 2 cột, ảnh ô khác"
+  ],
+  [
+   "G2",
+   "G1 + B0: mực chữ kề (bleed/tight_nb), hộp chồng nặng, hộp cao \"tall\""
+  ],
+  [
+   "G3",
+   "G2 + cột có số chữ OCR ≠ số âm QN"
+  ],
+  [
+   "G4",
+   "G3 + lệch dọc hộp kim > 1,0 bước"
+  ],
+  [
+   "G5",
+   "G3 + lệch dọc > 0,75 ∨ vis_z ≤ −1"
+  ],
+  [
+   "G6",
+   "G3 + lệch dọc > 0,6 ∨ vis_z ≤ −1 (cờ vòng 2 chọn trên TK)"
+  ],
+  [
+   "G7",
+   "G3 + lệch dọc/ngang > 0,5 ∨ vis_z ≤ −0,5 (cờ vòng 2 chọn trên L16)"
+  ]
+ ],
+ "g_strict_for_projection": "G7",
+ "thresholds": {
+  "T_0.98": {
+   "G": 0,
+   "G_reached": true,
+   "C6": 0.06109,
+   "C5nr": [
+    0.06109,
+    0.00728
+   ],
+   "C5": [
+    0.06109,
+    0.00728
+   ],
+   "C2": -Infinity
+  },
+  "T_0.985": {
+   "G": 0,
+   "G_reached": true,
+   "C6": 0.06109,
+   "C5nr": [
+    0.06109,
+    0.00728
+   ],
+   "C5": [
+    0.06109,
+    0.00728
+   ],
+   "C2": -Infinity
+  },
+  "T_0.99": {
+   "G": 7,
+   "G_reached": false,
+   "C6": 0.95236,
+   "C5nr": [
+    0.95314,
+    0.00728
+   ],
+   "C5": [
+    0.95314,
+    0.00728
+   ],
+   "C2": 0.95236
+  },
+  "T_0.9925": {
+   "G": 7,
+   "G_reached": false,
+   "C6": 0.97825,
+   "C5nr": [
+    0.97807,
+    0.09307
+   ],
+   "C5": [
+    0.97807,
+    0.09307
+   ],
+   "C2": 0.97825
+  },
+  "T_0.995": {
+   "G": 7,
+   "G_reached": false,
+   "C6": 0.98725,
+   "C5nr": [
+    0.98744,
+    0.09307
+   ],
+   "C5": [
+    0.98744,
+    0.09307
+   ],
+   "C2": 0.98835
+  },
+  "T_0.9975": {
+   "G": 7,
+   "G_reached": false,
+   "C6": 0.99512,
+   "C5nr": [
+    0.9903,
+    0.09307
+   ],
+   "C5": [
+    0.9903,
+    0.09307
+   ],
+   "C2": 0.99512
+  },
+  "T_0.999": {
+   "G": 7,
+   "G_reached": false,
+   "C6": 0.99512,
+   "C5nr": [
+    Infinity,
+    Infinity
+   ],
+   "C5": [
+    Infinity,
+    Infinity
+   ],
+   "C2": 0.99512
+  },
+  "L_0.98": {
+   "G": 5,
+   "G_reached": true,
+   "C6": 0.026,
+   "C5nr": [
+    0.00328,
+    0.0455
+   ],
+   "C5": [
+    0.00328,
+    0.0028
+   ],
+   "C2": -Infinity
+  },
+  "L_0.985": {
+   "G": 6,
+   "G_reached": true,
+   "C6": 0.34302,
+   "C5nr": [
+    0.76228,
+    0.0028
+   ],
+   "C5": [
+    0.00328,
+    0.0028
+   ],
+   "C2": -Infinity
+  },
+  "L_0.99": {
+   "G": 7,
+   "G_reached": false,
+   "C6": 0.76025,
+   "C5nr": [
+    0.76228,
+    0.0028
+   ],
+   "C5": [
+    0.76228,
+    0.0028
+   ],
+   "C2": 0.56622
+  },
+  "L_0.9925": {
+   "G": 7,
+   "G_reached": false,
+   "C6": 0.8576,
+   "C5nr": [
+    0.89278,
+    0.0028
+   ],
+   "C5": [
+    0.89278,
+    0.0028
+   ],
+   "C2": 0.83008
+  },
+  "L_0.995": {
+   "G": 7,
+   "G_reached": false,
+   "C6": 0.9745,
+   "C5nr": [
+    0.95369,
+    0.13467
+   ],
+   "C5": [
+    0.95369,
+    0.13467
+   ],
+   "C2": 0.9745
+  },
+  "L_0.9975": {
+   "G": 7,
+   "G_reached": false,
+   "C6": 0.98021,
+   "C5nr": [
+    0.94235,
+    0.554
+   ],
+   "C5": [
+    0.94235,
+    0.554
+   ],
+   "C2": 0.98021
+  },
+  "L_0.999": {
+   "G": 7,
+   "G_reached": false,
+   "C6": 0.9861,
+   "C5nr": [
+    0.98231,
+    0.45372
+   ],
+   "C5": [
+    0.98231,
+    0.45372
+   ],
+   "C2": 0.9861
+  }
+ },
+ "invariants": {
+  "bc_T_equals_bc_k06v1": true,
+  "bc_L_equals_bc_k05dxv05": true,
+  "ladder_nested": true,
+  "n_gold_with_gt": {
+   "LucVanTien1916": 11585,
+   "TruyenKieu1872": 18550
+  },
+  "reproduce_p02b_thresholds": {
+   "T_0.99": true,
+   "T_0.9925": true,
+   "T_0.995": true,
+   "T_0.9975": true,
+   "L_0.99": true,
+   "L_0.9925": true,
+   "L_0.995": true,
+   "L_0.9975": true
+  },
+  "f_equals_v3_ok_all_gold_L16": true,
+  "f_n_ok_all_gold_L16": 2737,
+  "f_prec_matches_v3_L16": true,
+  "a_prec_matches_v3_pipeline_L16": true,
+  "f_equals_v3_ok_all_gold_TK": true,
+  "f_n_ok_all_gold_TK": 9766,
+  "f_prec_matches_v3_TK": true,
+  "a_prec_matches_v3_pipeline_TK": true,
+  "all_pass": true,
+  "proj_f_matches_v3_per_set": {
+   "Chr": true,
+   "KVK": true,
+   "L83": true,
+   "L16": true,
+   "STT": true,
+   "TK": true
+  }
+ },
+ "runtime_s": 2.2
+}

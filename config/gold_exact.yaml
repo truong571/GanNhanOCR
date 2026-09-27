@@ -1,0 +1,124 @@
+# config/gold_exact.yaml — ngưỡng / cờ của pipeline.gold_exact (cấu hình "lai" TN4 + luật A/M-OCR chính sách v3;
+# core_loss chỉ còn là cột thông tin — gate: false, xem khối core_loss).
+# QUY TẮC: mọi số dưới đây lấy NGUYÊN từ phép đo đã có (ghi nguồn); KHÔNG dò lại trên dữ liệu đo. Tham số crop chuẩn v2 đóng băng
+# trong pipeline/gold_exact/crop_chuan.py (PARAMS = cclib_v2.PARAMS, md5 d818443449); đổi = phải đo lại TN4.
+# <SP> = thư mục thử nghiệm phiên 25–27/09/2026 (scratchpad); bản lưu một phần ở measure_out/_audit_2026-09-25/, _audit_2026-09-26/.
+# version = policy_version ghi vào mỗi dòng gold_exact.csv. "2026-09-27" = lượt run1 (core_loss là cổng);
+# "2026-09-27.2" = bỏ core_loss khỏi cổng (quyết định 27/09, xem core_loss.gate).
+# "2026-09-28" = sửa rò rỉ N6: TA của TK không còn nhìn GT người IHR (mọi ô TK căn được với Kiều 1871 LVD đều được chấm TA).
+version: "2026-09-28"
+
+# Thiết bị nhúng mặc định (--device ghi đè). Kết quả TẤT ĐỊNH trên MPS (lượt lặp trùng byte gold_exact.csv); CPU cho điểm
+# nhúng lệch ở chữ số cuối -> có thể lật vài cờ sát ngưỡng. Thiết bị thực dùng ghi vào cột `device` của gold_exact.csv.
+device: mps
+
+# Độ phủ tham chiếu (invariant MỀM — chỉ cảnh báo, không là cổng): tỉ lệ ô GOLD có ≥ 1 chữ người dị bản cùng âm (ta_refs)
+# / có chữ dị bản cho M-OCR (mocr_refs). Sàn = số đo 28/09 (TK 0,8996 · KVK 0,8128 · L83 0,3580; mocr KVK 0,8128 · L83 0,2915)
+# làm tròn xuống ≈ 1–2 điểm. Rơi dưới sàn = bảng căn dị bản / tài sản đã trôi so với bộ dữ liệu -> dựng lại tài sản.
+ref_coverage_min:
+  ta:   {TruyenKieu1872: 0.88, KimVanKieu1884: 0.80, LucVanTien1883: 0.34}
+  mocr: {KimVanKieu1884: 0.80, LucVanTien1883: 0.28}
+
+thresholds:
+  # TN1 (lab/thu_nghiem_anh_chu/TN1_cong_kiem/t01_sweep.py -> t01_summary.json thresholds.{T,L}_0.995), τ = 0,995 đăng ký trước,
+  # LOBO trên IHR: old_T chọn trên TK -> chấm L16; old_L chọn trên L16 -> chấm TK; L83/KVK: AND hai hướng + viss_X ≥ max(t2);
+  # Chr: C2 (p_wood hai hướng). Bộ kiểm chấm CROP CŨ (cấu hình "lai", TN4 §5/§7: KHÔNG chấm crop chuẩn).
+  C5_T: [0.98744, 0.09307]     # (p_wood_T, viss_T)
+  C2_T: 0.98835
+  C5_L: [0.95369, 0.13467]     # (p_wood_L, viss_L)
+  C2_L: 0.9745
+  # STT: bộ kiểm chữ viết tay LOBO-sách (<SP>/r5/hand_lobo, mô hình + nguyên mẫu + hiệu chuẩn chỉ Borg Kinh), mức q = 0,00015
+  # (chính sách v3: FAR ≤ 0,5 % cổng đầy đủ, hướng Kinh→DungLy); ngưỡng t_T/t_L không làm tròn nằm trong hand_tables_*.pt.
+  stt_q: 0.00015
+  stt_n_hum_min: 3             # lobo_nh ≥ 3 nguyên mẫu người của nhãn (v3 U_STT_nhan_thieu_nguyen_mau_nguoi)
+
+# Cờ trượt BC (TN3 t02_matrix / TN1 thang G): cấu hình chọn NGOÀI sách
+bc_T: {ady: 0.6, vis_z: -1.0}              # bc_k06v1 (G6, chọn trên TK) — dùng cho L16
+bc_L: {ady: 0.5, adx: 0.5, vis_z: -0.5}    # bc_k05dxv05 (G7, chọn trên L16) — mọi bộ khác
+
+# vis_z = (m_win_glyph − t_mod)/(t_mod − t_cons) — <SP>/gold_img_audit/measure/out/calib.json (m02_calib.py)
+vis_calib:
+  SachThanhTruyen:   {t_mod: -0.1258474700152874, t_cons: -0.4208173006772995}
+  Chrestomathie1872: {t_mod: -0.0633720733225345, t_cons: -0.3731391103938222}
+  LucVanTien1883:    {t_mod: -0.22382727814838285, t_cons: -0.4445947762578726}
+  KimVanKieu1884:    {t_mod: -0.270755343697965, t_cons: -0.4780108262784779}
+  LucVanTien1916:    {t_mod: -0.10250438014045354, t_cons: -0.299876612611115}
+  TruyenKieu1872:    {t_mod: -0.1362790524959563, t_cons: -0.34591016825288534}
+  # 2026-09-27: 2 bản chép tay Borg (tập đánh giá) CHƯA có hiệu chuẩn riêng (m02_calib chưa chạy trên Borg) -> dùng NGUYÊN hiệu
+  # chuẩn STT (chữ viết tay Công giáo, chọn NGOÀI sách, không dò trên Borg). vis_z chỉ vào cờ BC (trượt) của Borg.
+  SachKinhThayCaBinh: {t_mod: -0.1258474700152874, t_cons: -0.4208173006772995}
+  SachDungLyHoThan:   {t_mod: -0.1258474700152874, t_cons: -0.4208173006772995}
+
+# M-OCR: cờ t50 = m_hom ≤ t50 của bộ — <SP>/gold_img_audit/m_ocr/out/thresholds.json (h03_calib.py, m_hom.t50)
+mocr_t50:
+  SachThanhTruyen: -0.22572900354862213
+  Chrestomathie1872: -0.20333627797663212
+  LucVanTien1883: -0.24690037965774536
+  KimVanKieu1884: -0.2586190835572779
+  LucVanTien1916: -0.17829009145498276
+  TruyenKieu1872: -0.2109576314687729
+
+# Cấu hình cổng ảnh vòng 2 khuyến nghị theo bộ (<SP>/gold_img_audit/gate_v2/out/gate_v2.json recommended) — chỉ dùng để
+# tái lập r2_reason == 'M_ocr_t50' (thứ tự gate_assign: A0a, A1, A2a, A0c, A0b, kim, vis, A2b, mocr). Chr/L16/TK: không có mocr.
+gate_v2:
+  SachThanhTruyen:   {kim: "0.5dx", vis: -0.5, mocr: true}
+  Chrestomathie1872: {kim: "0.5dx", vis: -0.5, mocr: false}
+  LucVanTien1883:    {kim: "0.5dx", vis: -0.5, mocr: true}
+  KimVanKieu1884:    {kim: "0.5dx", vis: -0.5, mocr: true}
+  LucVanTien1916:    {kim: 0.6, vis: -1.0, mocr: false}
+  TruyenKieu1872:    {kim: "0.5dx", vis: -0.5, mocr: false}
+
+# CHỐT AN TOÀN MỚI — ĐĂNG KÝ TRƯỚC khi đo (27/09/2026, trước lượt chạy measure_out/_gold_exact_run1; bản đăng ký kèm sha256 mã
+# ghi vào <out>/prereg_core_loss.json TRƯỚC khi tính). Không dò ngưỡng: 0,3 bước và 25 % là số tự nhiên đặt trước.
+# Định nghĩa (signals_geom.core_loss_of): mực của CROP CŨ (khung save_crop: pad 0,12 + carve láng giềng + tighten; mực = xám < T,
+# T = ngưỡng Otsu cục bộ của crop chuẩn; bỏ vùng carve) nằm trong LÕI = |y − tâm hộp cũ| ≤ 0,3·p (p = bước cột của crop chuẩn) ×
+# x ∈ [xa, xb) (dải cột của crop chuẩn); core_loss = tỉ lệ mực lõi đó KHÔNG thuộc mặt nạ mực của crop chuẩn; > 0,25 -> text_only.
+# Lõi không có mực -> core_loss = 0 (không cờ). Crop chuẩn không ra ảnh (status ≠ ok) -> không tính (ô đã text_only vì ¬one_char_ok).
+# Đo (không dùng để chọn): trên L16/TK — bắt bao nhiêu trong 61 + 2 ô "mất > 25 % mực lõi khe người" của TN4 (cov_core.pkl
+# core_drop) và mất bao nhiêu ô đúng hai vế.
+core_loss:
+  band_pitch: 0.3
+  max_loss: 0.25
+  registered: "2026-09-27"
+  # Bản đăng ký gốc (lượt measure_out/_gold_exact_run1/prereg_core_loss.json, ghi TRƯỚC khi tính); lượt sau so sha mã với đây.
+  prereg: {registered_at: "2026-09-27 00:39:49", code_sha256: "de81acb40e834111326251735d182ce219e4a18dbcc71425c2a860afee2b276a"}
+  # QUYẾT ĐỊNH 27/09 (sau phép đo đăng ký trước, không dò lại): KẾT QUẢ ÂM -> BỎ KHỎI CỔNG, chỉ giữ cột thông tin.
+  # Đo trên nhãn người IHR (run1): chốt làm mất 46 ô "lai" ngoài luật A/M-OCR (L16 20 + TK 26), CẢ 46 đều đúng hai vế
+  # (0 ô sai); chỉ bắt 6/61 ô 'damaged' TN4 của L16 (TK 1/2) và 0/8 ô damaged nằm trong "lai" của L16.
+  # gate: true = tái lập đúng lượt run1 (policy 2026-09-27).
+  gate: false
+
+# Cấu hình pipeline dùng để dựng lại hộp kim (align_production._detect, 0 API) — = crop_geometry/kim_vs_box.py CFG
+kim_cfg:
+  SachThanhTruyen: config/pipeline.yaml
+  LucVanTien1883: config/pipeline_LucVanTien1883.yaml
+  KimVanKieu1884: config/pipeline_KimVanKieu1884_b1.yaml
+  Chrestomathie1872: config/pipeline_Chrestomathie1872.yaml
+  LucVanTien1916: config/pipeline_LucVanTien1916.yaml
+  TruyenKieu1872: config/pipeline_TruyenKieu1872.yaml
+  SachKinhThayCaBinh: config/pipeline_SachKinhThayCaBinh.yaml   # 27/09 (Borg; chỉ dùng khi có trong bộ gộp)
+  SachDungLyHoThan: config/pipeline_SachDungLyHoThan.yaml
+
+# Mức chắc của số đo theo bộ (KET_QUA TN4): đo trên nhãn người IHR / ước lượng (bộ ước lượng TN3) / suy đoán
+evidence_level:
+  L16: do_tren_nhan_nguoi
+  TK: do_tren_nhan_nguoi
+  KVK: uoc_luong
+  L83: uoc_luong
+  stt2: suy_doan
+  stt4: suy_doan
+  stt11: suy_doan
+  Chr: suy_doan
+  # 27/09: Borg chép tay = tập đánh giá có nhãn người (đo: scripts/measure/borg_endtoend_eval.py). Bộ kiểm chữ viết tay LOBO-SÁCH:
+  # B18 (SachKinhThayCaBinh) chấm bằng mô hình/nguyên mẫu/hiệu chuẩn học trên DungLy, B34 (SachDungLyHoThan) bằng bản học trên Kinh
+  # (common.HAND_VARIANT; tài sản hand_*_DungLy.pt, MANIFEST kiểm nguyên mẫu/hiệu chuẩn chỉ từ sách học). Cùng stt_q, stt_n_hum_min.
+  # Không M-OCR, không TA (không có dị bản), không p_wood/viss (nguyên mẫu verifier_ft chứa crop Borg -> để trống).
+  B18: do_tren_nhan_nguoi
+  B34: do_tren_nhan_nguoi
+
+# Đo trên nhãn người IHR (eval_ihr): mẫu vị trí khe theo syl_idx (harness build_summary.json mau_khe_t, <SP>/kim_bottleneck/harness)
+ihr_slot_template:
+  LucVanTien1916: [0.035, 0.1028, 0.1723, 0.2422, 0.3125, 0.3843, 0.5115, 0.5807, 0.6464, 0.7125, 0.7768, 0.8424, 0.9072, 0.9686]
+  TruyenKieu1872: [0.0323, 0.0974, 0.1627, 0.2271, 0.2909, 0.3536, 0.5148, 0.5788, 0.6432, 0.7074, 0.7725, 0.838, 0.9031, 0.969]
+ihr_bootstrap: {B: 2000, seed: 20260926}
+workers_max: 4

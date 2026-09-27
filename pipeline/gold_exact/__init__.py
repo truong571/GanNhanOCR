@@ -6,12 +6,16 @@ chính sách v3 (luật A + M-OCR). Gói CHỈ HẠ ô / gắn trạng thái —
 
 Trạng thái (luật đầu tiên khớp thắng):
   review       luật A (ảnh của ô khác, rescue, cầu tự dạng, văn bản yếu) + M-OCR t50 (như policy v3)
-  text_only    ảnh không phải đúng một chữ / lệch khe: A0_new ∪ B0_new (crop chuẩn) ∪ CNT ∪ BC ∪ core_loss
+  text_only    ảnh không phải đúng một chữ / lệch khe: A0_new ∪ B0_new (crop chuẩn) ∪ CNT ∪ BC
+               (core_loss chỉ là cột thông tin từ 27/09 — đăng ký trước cho kết quả âm; config core_loss.gate)
   uncertified  không qua bộ kiểm ảnh↔chữ (ngưỡng TN1, chấm crop CŨ) hoặc thiếu chứng dị bản người (TA)
   ok           còn lại — ảnh giao = CROP CHUẨN v2
 
 Mô-đun: common (đường dẫn, tài sản + sha256, cache, từ điển V1+), crop_chuan (port nguyên cclib_v2),
 signals_geom, signals_img, signals_text, policy, eval_ihr (đo trên nhãn người IHR), compare_ref (đối chiếu
-số tham chiếu TN4), export_assets (dựng models/gold_exact từ thư mục thử nghiệm), selftest, __main__ (CLI).
-Chạy: .venv/bin/python -m pipeline.gold_exact --all-dir dataset/_ALL --out <dir> [--device mps] [--selftest]
+số tham chiếu TN4), export_assets (dựng models/gold_exact từ thư mục thử nghiệm), publish (ghi vào dataset/_ALL + bộ nguồn),
+doc_text (khối README/DATASHEET), per_book (bản lọc dataset/<Bộ>/gold_exact.csv: dọn + tài liệu), selftest, __main__ (CLI).
+Tài sản models/gold_exact/ dựng lại từ kho nguồn bền measure_out/_gold_exact_assets_src/ (SHA256SUMS; xem export_assets).
+Chạy: .venv/bin/python -m pipeline.gold_exact --all-dir dataset/_ALL --out <dir> [--device mps] [--publish] [--selftest]
+Trong pipeline: ./run_pipeline.sh --book all --yes (bước gold_exact sau bước gộp; --gold-exact off để bỏ).
 """

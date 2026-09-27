@@ -17,7 +17,6 @@ from __future__ import annotations
 import hashlib
 import inspect
 import json
-import pickle
 from collections import defaultdict
 from multiprocessing import Pool
 from pathlib import Path
@@ -27,12 +26,16 @@ import numpy as np
 import pandas as pd
 
 from . import crop_chuan as CC
-from .common import ORIGINAL, PREP_DIR, REPO, md5_bytes, page_dir, rd, uid_path
+from .common import (AUTO_PREP, ORIGINAL, PREP_DIR, REPO, dump_pickle_atomic, load_pickle_safe, md5_bytes, page_dir,
+                     prep_root, rd, uid_path)
 
+# prep_root: sách mới -> prepared/<S>; Borg (27/09) -> prepared/_auto/<S> (đường tự động, không phải thư mục nhãn người)
 BUILD = {"SachThanhTruyen": REPO / "dataset_out/labels.csv",
-         **{s: REPO / "prepared" / s / "dataset_out/labels.csv" for s in ORIGINAL}}
+         **{s: prep_root(s) / "dataset_out/labels.csv" for s in sorted(ORIGINAL)}}
 RAW = {"SachThanhTruyen": REPO / "dataset_out/labels_final.csv",
-       **{s: REPO / f"prepared/{s}/dataset_out/labels_gated.csv" for s in ORIGINAL}}
+       **{s: prep_root(s) / "dataset_out/labels_gated.csv" for s in sorted(ORIGINAL)}}
+_RAW_ORDER = ["SachThanhTruyen", "LucVanTien1883", "KimVanKieu1884", "Chrestomathie1872", "LucVanTien1916", "TruyenKieu1872",
+              *sorted(AUTO_PREP)]   # thứ tự nối cố định; mọi phép dùng bản ghi thô tra theo khoá nên thứ tự không đổi kết quả
 LITHO4 = {"LucVanTien1883", "KimVanKieu1884", "LucVanTien1916", "TruyenKieu1872"}
 
 
@@ -44,10 +47,35 @@ def _stat_sig(paths):
     return out
 
 
+# Mã pipeline mà crop chuẩn / hộp kim GỌI (chỉ đọc, không sửa): sha256 nội dung tệp vào khoá cache -> đổi mã = cache vô hiệu.
+CROP_DEPS = ("pipeline/align_engine/bbox_fix.py", "pipeline/align_engine/build_dataset.py",
+             "pipeline/align_engine/crop_quality.py")
+
+
+def files_sha(rels) -> str:
+    h = hashlib.sha256()
+    for r in sorted(rels):
+        p = REPO / r
+        h.update(r.encode()); h.update(p.read_bytes() if p.is_file() else b"<missing>")
+    return h.hexdigest()
+
+
+def kim_deps() -> list[str]:
+    """Toàn bộ gói pipeline/align_engine (_detect + book_layout và mọi mô-đun chúng nạp trong gói) — bảo thủ."""
+    return sorted(str(p.relative_to(REPO)) for p in (REPO / "pipeline/align_engine").rglob("*.py"))
+
+
 def code_sig() -> str:
-    """md5 mã crop chuẩn + hàm trang + PARAMS: đổi mã = cache trang vô hiệu."""
+    """md5 mã crop chuẩn + hàm trang + PARAMS + sha mã align_engine được gọi (bbox_fix, build_dataset, crop_quality):
+    đổi mã = cache trang vô hiệu."""
     src = inspect.getsource(CC) + inspect.getsource(_page_worker) + inspect.getsource(core_loss_of) + json.dumps(CC.PARAMS)
-    return hashlib.md5(src.encode()).hexdigest()
+    return hashlib.md5((src + files_sha(CROP_DEPS)).encode()).hexdigest()
+
+
+def kim_code_sig(cfg_files) -> str:
+    """sha mã dựng hộp kim (_kim_page/_kim_init + gói align_engine) + NỘI DUNG các tệp cấu hình dùng."""
+    src = inspect.getsource(_kim_page) + inspect.getsource(_kim_init)
+    return hashlib.sha256((src + files_sha(kim_deps()) + files_sha(list(cfg_files))).encode()).hexdigest()
 
 
 # ================================================================================================ chốt core_loss
@@ -181,12 +209,12 @@ def run_crop_chuan(G: pd.DataFrame, cache_dir: Path, workers=4, recompute=False,
                                              {c: v for c, v in sorted(colrows.items())}], default=str).encode()).hexdigest()
             pf = pg_root / bs / bk / f"{pg}.pkl"
             if not recompute and pf.exists():
+                z = load_pickle_safe(pf, log)
                 try:
-                    z = pickle.load(open(pf, "rb"))
-                    if z["key"] == key and all((sq_root / uid_path(r["cell_uid"])).exists() for r in z["recs"]
-                                               if r.get("status") == "ok"):
+                    if z is not None and z["key"] == key and all((sq_root / uid_path(r["cell_uid"])).exists()
+                                                                 for r in z["recs"] if r.get("status") == "ok"):
                         cached.extend(z["recs"]); continue
-                except Exception:  # noqa: BLE001
+                except Exception:  # noqa: BLE001 — bản ghi cache sai dạng -> tính lại
                     pass
             tasks.append(((bs, bk, pg, str(pdir), bs in ORIGINAL, rows, dict(colrows), str(sq_root), str(s128_root), band), key, pf))
     log(f"crop chuẩn: {len(tasks)} trang cần tính, {len(cached)} ô lấy từ cache")
@@ -194,8 +222,7 @@ def run_crop_chuan(G: pd.DataFrame, cache_dir: Path, workers=4, recompute=False,
     if tasks:
         with Pool(workers, initializer=_init) as pool:
             for k, (res, (t, key, pf)) in enumerate(zip(pool.imap(_page_worker, [t[0] for t in tasks], chunksize=2), tasks)):
-                pf.parent.mkdir(parents=True, exist_ok=True)
-                pickle.dump(dict(key=key, recs=res), open(pf, "wb"))
+                dump_pickle_atomic(dict(key=key, recs=res), pf)
                 recs.extend(res)
                 if k % 200 == 0:
                     log(f"  trang {k}/{len(tasks)}")
@@ -239,10 +266,14 @@ def crop_flags(G: pd.DataFrame, D: pd.DataFrame, core_thr=0.25) -> pd.DataFrame:
 
 
 # ================================================================================================ cờ hình học thô (geom_flags)
-def load_raw() -> pd.DataFrame:
+def load_raw(sets=None) -> pd.DataFrame:
+    """Bản ghi thô mọi tầng của các book_set `sets` (None = 6 bộ cũ). Chỉ đọc bộ CÓ trong bộ gộp -> vắng Borg thì y hệt cũ."""
     parts = []
-    for bs, p in RAW.items():
-        d = rd(p); d["book_set"] = bs; parts.append(d)
+    want = set(sets) if sets is not None else set(_RAW_ORDER) - set(AUTO_PREP)
+    for bs in _RAW_ORDER:
+        if bs not in want:
+            continue
+        d = rd(RAW[bs]); d["book_set"] = bs; parts.append(d)
     d = pd.concat(parts, ignore_index=True)
     d["key"] = (d.book_set + "/" + d.book + "/" + d.page + "/c" + d.column.astype(str) + "/n" + d.nom_idx.astype(str)
                 + "/s" + d.syl_idx.astype(str))
@@ -348,27 +379,28 @@ def kim_vs_box(G: pd.DataFrame, raw: pd.DataFrame, geo: pd.DataFrame, cfg_map: d
     need = G.groupby(["book_set", "book"]).page.apply(lambda s: sorted(set(s))).to_dict()
     root = Path(cache_dir) / "kim_pages"
     res = {}
+    ksig = kim_code_sig(["config/pipeline.yaml"] + list(cfg_map.values()))
     for bs, cfgf in cfg_map.items():
         cfg = load_config(str(REPO / cfgf))
         for b in cfg["books"]:
             code = _book_code(b["name"]); code2[(bs, code)] = b["name"]
+            psub = AUTO_PREP.get(b["name"], b["name"])      # Borg: prepared/_auto/<Sách> (27/09)
             for pg in need.get((bs, code), []):
-                dd = REPO / "prepared" / b["name"]
+                dd = REPO / "prepared" / psub
                 sig = _stat_sig(sorted(p for sub in ("pages", "pages_denoised", "detected", "transcriptions", "labeled")
                                        for p in (dd / sub).glob(f"{pg}*")))
-                key = hashlib.sha256(json.dumps([sig, b, cfgf], default=str).encode()).hexdigest()
+                key = hashlib.sha256(json.dumps([sig, b, cfgf, ksig], default=str).encode()).hexdigest()
                 pf = root / b["name"] / f"{pg}.pkl"
                 if not recompute and pf.exists():
-                    z = pickle.load(open(pf, "rb"))
-                    if z["key"] == key:
+                    z = load_pickle_safe(pf, log)
+                    if isinstance(z, dict) and z.get("key") == key and "out" in z:
                         res[(bs, b["name"], pg)] = z["out"]; continue
-                jobs.append(((b["name"], pg, b), (bs, b["name"], pg), key, pf))
+                jobs.append(((psub, pg, b), (bs, b["name"], pg), key, pf))
     log(f"hộp kim: {len(jobs)} trang cần _detect, {len(res)} trang từ cache")
     if jobs:
         with Pool(workers, initializer=_kim_init, initargs=(qn_path,)) as pool:
             for k, (out, (_, rk, key, pf)) in enumerate(zip(pool.imap(_kim_page, [j[0] for j in jobs], chunksize=4), jobs)):
-                pf.parent.mkdir(parents=True, exist_ok=True)
-                pickle.dump(dict(key=key, out=out), open(pf, "wb"))
+                dump_pickle_atomic(dict(key=key, out=out), pf)
                 res[rk] = out
                 if k % 200 == 0:
                     log(f"  _detect {k}/{len(jobs)}")

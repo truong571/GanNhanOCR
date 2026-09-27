@@ -1,3 +1,6 @@
+# ⚠️ 2026-09-27: BÍ DANH TRÙNG của config/pipeline_SachKinhThayCaBinh.yaml (cùng sách, cùng ảnh qua symlink prepared/MSS_Borg_tonch_18).
+# ./run_pipeline.sh --book MSS_Borg_tonch_18 bị TỪ CHỐI (run.alias_of) để không chạy trùng; dùng --book SachKinhThayCaBinh.
+# Giữ tệp để không phá lịch sử commit; không dùng tệp này với build_dataset (data_dir trỏ thư mục nhãn người).
 # Config RIÊNG MSS_Borg_tonch_18 (Vatican Borgiano Tonchinese 18 — Sách kinh Thầy cả Bỉnh)
 # GanNhanOCR Pipeline Configuration
 #
@@ -21,6 +24,7 @@ books:
     reocr: false
 
 run:
+  alias_of: SachKinhThayCaBinh   # run_pipeline.sh book_profile -> BK_ERR (không chạy trùng)
   ingest: prose
   n_columns: 10
   cross: false

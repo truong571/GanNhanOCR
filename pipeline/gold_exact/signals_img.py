@@ -33,10 +33,14 @@ from .common import REPO, EmbCache, R_of, f16, md5_bytes, simp, variants_of
 SZ = 64
 
 
+class MissingImageError(RuntimeError):
+    """Ảnh của ô GOLD thiếu / rỗng / không giải mã được — DỪNG (không bao giờ thay bằng ảnh trắng: điểm sẽ sai lặng lẽ)."""
+
+
 def prep64(gray):
-    """== r4/verifier_ft/p01_prep.prep (cũng là hand_lobo/hlib.prep)."""
+    """== r4/verifier_ft/p01_prep.prep (cũng là hand_lobo/hlib.prep). Ảnh None/rỗng -> MissingImageError (N5)."""
     if gray is None or gray.size == 0:
-        gray = np.full((8, 8), 255, np.uint8)
+        raise MissingImageError("prep64: ảnh rỗng/không giải mã được (không thay bằng ảnh trắng)")
     lo, hi = np.percentile(gray, 2), np.percentile(gray, 98)
     if hi - lo > 10:
         gray = np.clip((gray.astype(np.float32) - lo) * 255.0 / (hi - lo), 0, 255).astype(np.uint8)
@@ -337,8 +341,27 @@ def augs(im):
 
 # ================================================================================================ nạp ảnh + nhúng (cache)
 def read_crop(path):
-    b = Path(path).read_bytes() if Path(path).exists() else b""
+    """(md5, bytes) của tệp ảnh ô. Thiếu / rỗng -> MissingImageError (N5: trước đây trả md5 của b"" rồi nhúng ảnh trắng)."""
+    p = Path(path)
+    if not p.is_file():
+        raise MissingImageError(f"thiếu tệp ảnh ô GOLD: {p}")
+    b = p.read_bytes()
+    if not b:
+        raise MissingImageError(f"tệp ảnh ô GOLD rỗng: {p}")
     return md5_bytes(b), b
+
+
+def check_images(paths) -> list[str]:
+    """Danh sách tệp ảnh thiếu/rỗng (kiểm trước khi tính; rỗng = đủ)."""
+    bad = []
+    for p in paths:
+        q = Path(p)
+        try:
+            if q.stat().st_size == 0:
+                bad.append(str(q))
+        except OSError:
+            bad.append(str(q))
+    return bad
 
 
 def decode_gray(b):
@@ -375,25 +398,35 @@ class Scorers:
         return self._gl
 
     # ---------------------------------------------------------------- nhúng crop giao nộp (6 mô hình, một lượt đọc ảnh)
-    def embed_crops(self, keys, paths, need_enc=True, need_vft=True, need_hand_mask=None):
-        """keys = md5 tệp; trả dict tên -> mảng (N, d) theo thứ tự keys (float32, CHƯA làm tròn f16)."""
+    def embed_crops(self, keys, paths, need_enc=True, need_vft=True, need_hand_mask=None, need_hand=None):
+        """keys = md5 tệp; trả dict tên -> mảng (N, d) theo thứ tự keys (float32, CHƯA làm tròn f16).
+        need_hand = {biến thể ('Kinh'|'DungLy'): mặt nạ ô} (27/09, Borg LOBO-sách); need_hand_mask (cũ) = {'Kinh': mặt nạ}.
+        Tên khoá ra: 'hand_T'/'hand_L' cho Kinh (như cũ), 'hand_T_DungLy'/… cho biến thể khác."""
         C = {}
         specs = []
+        masks = {}
         if need_vft:
             for t in "TL":
                 C[f"vft_{t}"] = EmbCache(self.cache_dir, f"vft_{t}", self.A.sha(f"vft_model_{t}.pt"), recompute=self.recompute)
                 specs.append((f"vft_{t}", f"vft_model_{t}.pt", None))
-        if need_hand_mask is not None and need_hand_mask.any():
+        hv = dict(need_hand or {})
+        if need_hand_mask is not None:
+            hv.setdefault("Kinh", need_hand_mask)
+        for var, hm in hv.items():
+            if hm is None or not np.asarray(hm).any():
+                continue
             for t in "TL":
-                C[f"hand_{t}"] = EmbCache(self.cache_dir, f"hand_{t}_Kinh", self.A.sha(f"hand_model_{t}_Kinh.pt"), recompute=self.recompute)
-                specs.append((f"hand_{t}", f"hand_model_{t}_Kinh.pt", need_hand_mask))
+                nm = f"hand_{t}" if var == "Kinh" else f"hand_{t}_{var}"
+                C[nm] = EmbCache(self.cache_dir, f"hand_{t}_{var}", self.A.sha(f"hand_model_{t}_{var}.pt"), recompute=self.recompute)
+                specs.append((nm, f"hand_model_{t}_{var}.pt", hm))
+                masks[nm] = np.asarray(hm, bool)
         if need_enc:
             C["enc"] = EmbCache(self.cache_dir, "enc_v1v2_norm", self.enc_sha(), recompute=self.recompute)
         keys = list(keys)
         kset = {}
         for name, cache in C.items():
             if name.startswith("hand_"):
-                sub = [k for k, m in zip(keys, need_hand_mask) if m]
+                sub = [k for k, m in zip(keys, masks[name]) if m]
                 kset[name] = set(cache.missing(sub))
             else:
                 kset[name] = set(cache.missing(keys))
@@ -411,9 +444,11 @@ class Scorers:
             for s in range(0, len(todo), CH):
                 part = todo[s:s + CH]
                 with ThreadPoolExecutor(8) as ex:
-                    grays = list(ex.map(lambda k: decode_gray(Path(path_of[k]).read_bytes()) if Path(path_of[k]).exists() else None,
-                                        part))
-                g8 = [x if x is not None else np.full((8, 8), 255, np.uint8) for x in grays]
+                    grays = list(ex.map(lambda k: decode_gray(read_crop(path_of[k])[1]), part))
+                bad = [path_of[k] for k, x in zip(part, grays) if x is None]
+                if bad:
+                    raise MissingImageError(f"{len(bad)} ảnh ô GOLD không giải mã được (vd {bad[0]}) — không thay bằng ảnh trắng")
+                g8 = grays
                 need64 = [n for n in nets if any(k in kset[n] for k in part)]
                 if need64:
                     X64 = np.stack([prep64(x) for x in grays])
@@ -430,11 +465,53 @@ class Scorers:
         out = {}
         for name, cache in C.items():
             if name.startswith("hand_"):
-                sub = [k for k, m in zip(keys, need_hand_mask) if m]
+                sub = [k for k, m in zip(keys, masks[name]) if m]
                 out[name] = cache.get(sub)
             else:
                 out[name] = cache.get(keys)
         return out
+
+    # ---------------------------------------------------------------- view B (cắt bbox trên trang ĐÃ XỬ LÝ, r01_embed)
+    def embed_viewB(self, G, idx):
+        """Nhúng v1+v2 (norm=True) của vùng bbox cắt thẳng trên prepared/<book>/pages (không pad, không tighten) — r01 view B."""
+        from .common import page_dir
+        cache = EmbCache(self.cache_dir, "enc_viewB", self.enc_sha(), recompute=self.recompute)
+        keys, sig = [], {}
+        for i in idx:
+            bs, bk, pg, bb = G.book_set.iat[i], G.book.iat[i], G.page.iat[i], G.bbox.iat[i]
+            f = page_dir(bs, bk) / "pages" / f"{pg}.png"
+            if f not in sig:
+                st = f.stat() if f.exists() else None
+                sig[f] = f"{f}|{st.st_size if st else -1}|{st.st_mtime_ns if st else -1}"
+            keys.append(md5_bytes(f"{sig[f]}|{bb}".encode()))
+        miss = [(i, k) for i, k in zip(idx, keys) if k not in cache.d]
+        self.log(f"view B: {len(idx)} ô, cần tính {len(miss)}")
+        if miss:
+            enc = self.enc()
+            by_page = defaultdict(list)
+            for i, k in miss:
+                by_page[(G.book_set.iat[i], G.book.iat[i], G.page.iat[i])].append((i, k))
+            grays, ks = [], []
+            for (bs, bk, pg), lst in by_page.items():
+                pf = page_dir(bs, bk) / "pages" / f"{pg}.png"
+                P = cv2.imread(str(pf), cv2.IMREAD_GRAYSCALE)
+                if P is None:
+                    raise MissingImageError(f"view B: thiếu/không đọc được trang {pf} ({len(lst)} ô GOLD)")
+                for i, k in lst:
+                    cb = None
+                    if P is not None:
+                        x0, y0, x1, y1 = [int(round(float(v))) for v in json.loads(G.bbox.iat[i])]
+                        x0, y0 = max(0, x0), max(0, y0)
+                        x1, y1 = min(P.shape[1], x1), min(P.shape[0], y1)
+                        if x1 - x0 >= 4 and y1 - y0 >= 4:
+                            cb = P[y0:y1, x0:x1].copy()
+                    grays.append(cb if cb is not None else np.full((8, 8), 255, np.uint8)); ks.append(k)
+                if len(grays) >= 8192:
+                    cache.put(ks, enc.embed(grays)); grays, ks = [], []
+            if grays:
+                cache.put(ks, enc.embed(grays))
+            cache.save()
+        return {i: cache.d[k] for i, k in zip(idx, keys)}
 
     # ---------------------------------------------------------------- glyph font / FD (nhúng norm=False)
     def glyph_emb(self, chars, with_aug=False, with_fd=False):
@@ -504,14 +581,15 @@ def score_vft(S: Scorers, G, E, uni, log):
     return res
 
 
-def score_hand(S: Scorers, G, E, uni, q, log):
-    """STT: chứng nhận chữ viết tay LOBO (Kinh) ở mức q; trả lobo_pT, lobo_pL, lobo_nh (= n_hum mô hình T), cert."""
+def score_hand(S: Scorers, G, E, uni, q, log, variant="Kinh"):
+    """Chữ viết tay: chứng nhận LOBO-sách ở mức q bằng biến thể `variant` (Kinh: STT + Borg DungLy; DungLy: Borg Kinh);
+    trả lobo_pT, lobo_pL, lobo_nh (= n_hum mô hình T), cert. G = đúng các ô đã nhúng bằng biến thể này (thứ tự mặt nạ)."""
     ps, nh_T = {}, None
     thr = {}
     for t in "TL":
-        tb = S.A.load(f"hand_tables_{t}_Kinh.pt")
+        tb = S.A.load(f"hand_tables_{t}_{variant}.pt")
         W = np.asarray(tb["W"], np.float32); P = np.asarray(tb["P"], np.float32); nh = np.asarray(tb["nh"])
-        Z = f16(E[f"hand_{t}"])
+        Z = f16(E[f"hand_{t}" if variant == "Kinh" else f"hand_{t}_{variant}"])
         Fs = features(uni, Z, W, P, nh, np.arange(len(G)), G.label.values, G.syllable.values, G.nb_prev.values,
                       G.nb_next.values)
         m = Logit(tb["hand"]["mu"], tb["hand"]["sd"], tb["hand"]["b"], clip=True)
@@ -519,7 +597,7 @@ def score_hand(S: Scorers, G, E, uni, q, log):
         thr[t] = float(tb["thr"][str(q)])
         if t == "T":
             nh_T = Fs.n_hum.values
-        log(f"hand_{t} xong")
+        log(f"hand_{t} ({variant}) xong")
     cert = (ps["T"] >= thr["T"]) & (ps["L"] >= thr["L"])
     return dict(lobo_pT=ps["T"], lobo_pL=ps["L"], lobo_nh=nh_T, lobo_cert=cert.astype(np.int8), thr=thr)
 
@@ -527,9 +605,10 @@ def score_hand(S: Scorers, G, E, uni, q, log):
 # ================================================================================================ vis_z (score_visual)
 def build_ctx(G):
     """(book, page, column, nom_idx) -> (ocr_char, label) từ bảng build ĐẦY ĐỦ (mọi tầng) — sv_lib.load_context."""
+    from .common import BORG, prep_root
     FULLSEQ = {"SachThanhTruyen": REPO / "dataset_out" / "labels.csv"}
-    for s in ("LucVanTien1883", "KimVanKieu1884", "Chrestomathie1872", "LucVanTien1916", "TruyenKieu1872"):
-        FULLSEQ[s] = REPO / "prepared" / s / "dataset_out" / "labels.csv"
+    for s in ("LucVanTien1883", "KimVanKieu1884", "Chrestomathie1872", "LucVanTien1916", "TruyenKieu1872") + BORG:
+        FULLSEQ[s] = prep_root(s) / "dataset_out" / "labels.csv"
     ctx = {}
     for s in sorted(G.book_set.unique()):
         t = pd.read_csv(FULLSEQ[s], dtype=str, keep_default_na=False, usecols=["book", "page", "column", "nom_idx", "ocr_char", "label"])
@@ -608,7 +687,7 @@ def score_mocr(S: Scorers, G, Eenc, refs, t50, sets, log):
         C0 = (Rl[j] | set(refs.get(G.cell_uid.iat[i], []))) - {L}
         mL = rmd5.get(L)
         same = {c for c in C0 if mL is not None and rmd5.get(c) == mL}
-        cf = [c for c in C0 - same if c in FE]
+        cf = sorted(c for c in C0 - same if c in FE)      # thứ tự cố định: tích vô hướng BLAS lệch ulp theo vị trí hàng
         if cf and L in FE:
             e = f16(Eenc[i])                         # h02 đọc lại E_crops.f16.npy (t_emb = 0)
             sL = float(e @ FE[L])

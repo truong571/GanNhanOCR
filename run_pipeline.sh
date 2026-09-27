@@ -25,6 +25,9 @@
 # SÁCH MỚI (thạch bản/văn xuôi, 2026-09-22 — xem khối "SÁCH MỚI" dưới, đường STT trên KHÔNG đổi):
 #   ./run_pipeline.sh --book LucVanTien1883 | KimVanKieu1884 | Chrestomathie1872 | all-new
 #                            | LucVanTien1916 | TruyenKieu1872 | all-ihr   (tập ĐÁNH GIÁ, có nhãn người)
+#                            | SachKinhThayCaBinh | SachDungLyHoThan | all-borg  (2026-09-27: TẬP ĐÁNH GIÁ CHỮ VIẾT
+#                              TAY Vatican Borg.Tonch.18/34 — ingest_borg_book -> prepared/_auto/<Sách>/; gọi kim
+#                              CHỈ khi thiếu cache và CÓ xác nhận (--yes); docs/BORG_DANH_GIA_2026-09-27.md)
 #       [--dry-run] [--skip-ingest] [--no-api] [--no-auto-precision] [--suffix _rp]
 #   ./run_pipeline.sh --dry-run        # STT: chỉ in chuỗi lệnh 6 bước, không chạy
 #
@@ -32,9 +35,20 @@
 #   ./run_pipeline.sh --book all --yes     # = --all --yes: 8 bộ (3 STT + all-new + all-ihr), KHÔNG hỏi,
 #                                          #   log riêng mỗi bộ trong logs/, bảng tóm tắt, rồi --verify
 #   ./run_pipeline.sh --book all --dry-run # in đủ chuỗi lệnh của cả 8 bộ + chuỗi nghiệm thu, không chạy
+#   (2026-09-27) + 2 bộ Borg (tập đánh giá chữ viết tay) theo --borg auto|require|off (mặc định auto): cache kim
+#   ĐỦ -> chạy từ cache (0 API) + gộp; CHƯA có trang nào -> bỏ kèm cảnh báo; THIẾU MỘT PHẦN (hoặc --borg require
+#   mà thiếu) -> DỪNG CỨNG như cache STT. --book all KHÔNG BAO GIỜ tự gọi API cho Borg.
 #   ./run_pipeline.sh --summary-only       # chỉ in lại bảng 8 bộ từ bản dựng đang có trên đĩa
 #   ./run_pipeline.sh --verify             # chỉ chạy nghiệm thu (align_audit · ihr_endtoend · auto_precision
-#                                          #   cross · measure --all --report-only) trên bản dựng đang có
+#                                          #   cross · gold_exact_eval · measure --all --report-only) trên bản dựng đang có
+#
+# GOLD CHÍNH XÁC (2026-09-27, docs/GOLD_CHINH_XAC_2026-09-27.md): ngay SAU bước gộp, `python -m pipeline.gold_exact
+#   --publish` gắn cho mỗi ô GOLD 1 trong 4 trạng thái ok/text_only/uncertified/review (0 API, cache prepared/_gold_exact)
+#   -> dataset/_ALL/{gold_exact.csv,GOLD_EXACT.md,crops_chuan/,crops_chuan_128/} + dataset/<Bộ>/gold_exact.csv.
+#   KHÔNG đổi labels.csv. Tắt: --gold-exact off. Log: logs/run_GOLD_EXACT_<thời điểm>.log.
+#   CHỈ chạy khi bước gộp chạy TRONG CÙNG LƯỢT (--book all không --no-merge, hoặc --merge): --book all --no-merge và
+#   --book <Bộ> KHÔNG chạy gold_exact (bộ gộp có thể lệch bộ nguồn). Sau --book <Bộ>, dataset/<Bộ>/gold_exact.csv bị bước
+#   export xoá -> nghiệm thu chỉ CẢNH BÁO (mềm) và gợi ý `./run_pipeline.sh --merge` (gộp lại + gold_exact).
 #
 # Viết cho bash 3.2 (bash mặc định của macOS).
 # =============================================================================
@@ -464,11 +478,22 @@ NEW_BOOKS_ALL="LucVanTien1883 KimVanKieu1884 Chrestomathie1872"
 # 2026-09-23: 2 bộ IHR-NomDB (tập ĐÁNH GIÁ, có nhãn người) chạy riêng, KHÔNG gộp vào all-new
 # để không lẫn vào bộ giao nộp: ./run_pipeline.sh --book LucVanTien1916|TruyenKieu1872
 EVAL_BOOKS_IHR="LucVanTien1916 TruyenKieu1872"
+# 2026-09-27: 2 bản CHÉP TAY Vatican Borgiano Tonchinese (TẬP ĐÁNH GIÁ chữ viết tay, có nhãn người Excel).
+# Adapter riêng pipeline.tools.ingest_borg_book (KHÔNG ingest_prose_book — adapter đó viết cho Chrestomathie) ->
+# prepared/_auto/<Sách>/ (thư mục prepared/<Sách>/ của ingest_borg_tonch giữ nhãn người để ĐO, không bị ghi).
+# config/pipeline_MSS_Borg_tonch_{18,34}.yaml là BÍ DANH trùng -> run_pipeline từ chối (run.alias_of).
+EVAL_BOOKS_BORG="SachKinhThayCaBinh SachDungLyHoThan"
+BORG_MODE="auto"      # --borg auto|require|off: có đưa Borg vào --book all / bộ gộp không (xem đầu tệp)
+BORG_CACHE_ONLY=0     # = 1 trong --book all: ingest Borg chỉ đọc cache kim (thiếu -> dừng cứng, không gọi API)
+BORG_IN_ALL=""         # danh sách Borg được đưa vào --book all trong lượt này (borg_books_for_all)
 NEW_BOOKS=""
 RUN_ALL=0
 DO_MERGE=1            # B7 gộp bộ chung (tắt bằng --no-merge)
 MERGE_ONLY=0
 MERGE_MODE="copy"     # copy (bàn giao độc lập) | link | symlink | none
+DO_GOLD_EXACT=1       # B8 gold_exact sau bước gộp (tắt bằng --gold-exact off)
+GOLD_EXACT_WORK="${GOLD_EXACT_WORK:-measure_out/_gold_exact}"   # thư mục làm việc (summary.json, pkl) — không commit
+GOLD_EXACT_CACHE="${GOLD_EXACT_CACHE:-prepared/_gold_exact}"   # cache crop chuẩn + nhúng (dựng lại được, ~3,8 GB)
 DO_PRUNE=0
 DO_CLEAN=0
 KEEP_OLD=0
@@ -496,6 +521,10 @@ run_pipeline.sh — GanNhanOCR
   --book <Book> [--book <Book>…]  sách mới (config/pipeline_<Book>.yaml): LucVanTien1883 | KimVanKieu1884 | Chrestomathie1872
   --book all-new                  cả 3 sách mới (bộ giao nộp)
   --book all-ihr                  2 bộ IHR-NomDB có nhãn người (TẬP ĐÁNH GIÁ, không giao nộp)
+  --book all-borg                 2 bản chép tay Vatican Borg.Tonch.18/34 (TẬP ĐÁNH GIÁ chữ viết tay; thiếu cache kim
+                                  -> hỏi xác nhận gọi API, --yes = đồng ý; --no-api = chỉ cache)
+  --borg auto|require|off         Borg trong --book all / bộ gộp: auto (mặc định: đủ cache -> vào, chưa có -> bỏ +
+                                  cảnh báo, thiếu một phần -> dừng) · require (thiếu -> dừng) · off (không bao giờ)
     --dry-run                     chỉ in lệnh B0→B6
     --skip-ingest                 bỏ bước ingest (dùng prepared*/<Book> đã có)
     --no-api                      ingest --ocr none (không gọi kim; --verse-map content -> formula)
@@ -504,10 +533,14 @@ run_pipeline.sh — GanNhanOCR
   --summary-only                  chỉ IN LẠI bảng 8 bộ (ô · GOLD ảnh · text_only · SYLLABLE · REVIEW · ảnh
                                   export) từ bản dựng trên đĩa — không chạy gì
   --verify                        chỉ chạy nghiệm thu: align_audit · ihr_endtoend_eval · auto_precision
-                                  cross · measure.py --all --report-only · bộ gộp --check  (0 token, 0 API)
+                                  cross · gold_exact_eval · measure.py --all --report-only · bộ gộp --check
+                                  (0 token, 0 API)
   --merge                         chỉ dựng lại BỘ GỘP dataset/_ALL/ từ các bộ đang có trên đĩa
     --merge-mode copy|link|symlink|none   cách đem ảnh sang bộ gộp (mặc định copy = bàn giao độc lập)
-  --no-merge                      (đi với --book all) bỏ bước B7 gộp bộ chung
+  --no-merge                      (đi với --book all) bỏ bước B7 gộp bộ chung — KÉO THEO bỏ B8 gold_exact
+  --gold-exact on|off             B8 GOLD chính xác sau bước gộp (mặc định on; chạy cả với --merge; CHỈ chạy khi
+                                  bước gộp chạy cùng lượt): dataset/_ALL/{gold_exact.csv,GOLD_EXACT.md,crops_chuan*/}
+                                  + dataset/<Bộ>/gold_exact.csv
   --prune [--keep-old N]          CHUYỂN bản dựng cũ (dataset/<Bộ>_v*, *probe, prepared/*/dataset_out_*)
                                   vào archive/ — in danh sách + dung lượng rồi hỏi (--yes bỏ hỏi);
                                   N = số bản mới nhất được giữ lại (mặc định 0 = dọn hết)
@@ -558,6 +591,9 @@ p = Path("config") / f"pipeline_{book}.yaml"
 if not p.exists():
     emit("BK_ERR", f"không thấy {p} — sách mới cần config riêng (HUONG_DAN_CHAY_SACH_MOI §2 B0)"); sys.exit(0)
 cfg = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+alias = (cfg.get("run") or {}).get("alias_of")
+if alias:                                      # 2026-09-27: config bí danh trùng (MSS_Borg_tonch_*) -> không chạy trùng
+    emit("BK_ERR", f"{p} là BÍ DANH của {alias} (cùng sách, cùng ảnh) — chạy: ./run_pipeline.sh --book {alias}"); sys.exit(0)
 if cfg.get("run_config"):                      # config chính trỏ sang config chính thức (KVK -> _b1)
     p = Path(str(cfg["run_config"]))
     if not p.exists():
@@ -595,6 +631,45 @@ emit("BK_REF_FUZZY", rf.get("fuzzy_min") or "")
 emit("BK_REF_RESTRICT", "1" if rf.get("only_invalid_or_tone") else "")
 emit("BK_MEASURE_STEPS", run.get("measure_steps") or ("layout,qn_ocr" if layout == "lithograph" else "chresto_map"))
 PYEOF
+}
+
+borg_status() {   # borg_status <Book> -> "<số trang có cache> <tổng trang>" (0 API; lỗi -> "0 0")
+  local s
+  s=$("$PY" -m pipeline.tools.ingest_borg_book --book "$1" --status 2>/dev/null | sed -n 's/.*cache kim \([0-9]*\)\/\([0-9]*\) trang.*/\1 \2/p' | head -1)
+  [[ -n "$s" ]] || s="0 0"
+  printf '%s' "$s"
+}
+
+borg_merge_ready() {   # borg_merge_ready <Book>: 0 = đưa vào bộ gộp (bộ đã xuất + đóng dấu đánh giá + cache kim đủ)
+  local b="$1"
+  [[ "$BORG_MODE" != "off" ]] || return 1
+  [[ -f "$DATASET_ROOT/$b/labels.csv" && -f "$DATASET_ROOT/$b/evaluation_only.json" ]] || return 1
+  "$PY" - "$b" <<'PYB' 2>/dev/null
+import json, sys
+from pathlib import Path
+m = Path("prepared/_auto") / sys.argv[1] / "manifest.json"
+try:
+    g = json.loads(m.read_text(encoding="utf-8"))
+except Exception:
+    sys.exit(1)
+sys.exit(0 if g.get("evaluation_only") is True and (g.get("gates") or {}).get("kim_cache_complete") is True else 1)
+PYB
+}
+
+borg_books_for_all() {   # in danh sách Borg được đưa vào --book all theo BORG_MODE (0 API); die khi phải chặn cứng
+  local b st have tot out=""
+  [[ "$BORG_MODE" == "off" ]] && return 0
+  for b in $EVAL_BOOKS_BORG; do
+    st=$(borg_status "$b"); have=${st% *}; tot=${st#* }
+    if (( tot > 0 && have == tot )); then
+      out="$out $b"
+    elif [[ "$BORG_MODE" == "require" ]] || (( have > 0 )); then
+      die "--book all: cache kim của $b chưa đủ ($have/$tot trang) — KHÔNG gọi API tự động. Chạy trước (có xác nhận): ./run_pipeline.sh --book $b --yes  (hoặc --borg off để bỏ Borg)."
+    else
+      printf '%s[CẢNH BÁO]%s %s\n' "$YEL" "$RST" "Borg $b: chưa có cache kim (0/$tot trang) -> KHÔNG đưa vào --book all/bộ gộp (--borg auto). Chạy ./run_pipeline.sh --book $b --yes khi API kim dùng được." >&2
+    fi
+  done
+  printf '%s' "$out"
 }
 
 run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
@@ -645,6 +720,9 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
   elif [[ "$BK_INGEST" == "ihr" ]]; then
     # IHR-NomDB: bố cục nằm sẵn trong data/<book>/pages/bboxes.json; bộ đo chỉ để KIỂM + lấy số
     [[ -f "measure_out/$book/ihr_layout/summary.json" ]] || need_measure=1
+  elif [[ "$BK_INGEST" == "borg" ]]; then
+    # Borg: bố cục cột dựng thẳng từ hộp kim trong adapter; không có bộ đo tiền xử lý (phép đo chạy ở B6)
+    need_measure=0
   else
     [[ -f "measure_out/$book/layout/layout_pages.csv" && -f "measure_out/$book/qn_ocr/verses.tsv" ]] || need_measure=1
   fi
@@ -687,6 +765,31 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
       # KHÔNG đọc nhãn chữ Nôm. Bộ ra là TẬP ĐÁNH GIÁ (manifest.evaluation_only = true).
       cmd=("$PY" -m pipeline.tools.ingest_ihr_book --book "$book" --ocr "$ocr" --out "$BK_DATA_DIR"
            --kim-config "$BK_CONFIG")
+    elif [[ "$BK_INGEST" == "borg" ]]; then
+      # Borg (2026-09-27): ảnh gốc + kim TOÀN TRANG (books[].kim_* của config) + QN người theo trang; KHÔNG đọc cột
+      # Nôm người. Cache đủ -> --ocr cache (0 API). Thiếu -> CHỈ gọi API khi người chạy xác nhận (--yes / gõ GOI_KIM),
+      # ngân sách = số trang thiếu; --book all (BORG_CACHE_ONLY=1) và --no-api KHÔNG BAO GIỜ gọi API.
+      local bst bhave btot bocr="cache" bbudget=0
+      bst=$(borg_status "$book"); bhave=${bst% *}; btot=${bst#* }
+      if (( bhave < btot )) || (( btot == 0 )); then
+        if (( BORG_CACHE_ONLY )) || (( NO_API )); then
+          info "Borg $book: cache kim $bhave/$btot — chỉ đọc cache (không gọi API) -> ingest sẽ DỪNG nếu thiếu"
+        else
+          bbudget=$((btot - bhave))
+          info "Borg $book: cache kim $bhave/$btot -> cần gửi kim $bbudget trang (ngân sách đúng bằng số trang thiếu)"
+          if (( DRY_RUN )); then
+            bocr="kim"
+          elif [[ "$NONINTERACTIVE" == "1" ]]; then
+            bocr="kim"; info "--yes: đồng ý gọi API kim cho $bbudget trang"
+          else
+            local typed=""; read -r -p "Gõ GOI_KIM để gửi $bbudget trang lên API kim (Enter = chỉ dùng cache): " typed || true
+            if [[ "$typed" == "GOI_KIM" ]]; then bocr="kim"; else warn "không gọi API — ingest chỉ dùng cache"; fi
+          fi
+        fi
+      fi
+      cmd=("$PY" -m pipeline.tools.ingest_borg_book --book "$book" --ocr "$bocr" --out "$BK_DATA_DIR"
+           --kim-config "$BK_CONFIG")
+      [[ "$bocr" == "kim" ]] && cmd+=(--budget "$bbudget")
     else
       if (( NO_API )) && [[ " $ingest_args " == *" content "* ]]; then
         warn "--no-api: --verse-map content cần kim -> thay bằng formula (kết quả KHÁC bản chốt)"
@@ -760,13 +863,20 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
   if [[ "$BK_INGEST" == "ihr" ]]; then
     R "$PY" -m pipeline.tools.mark_eval_dataset --dataset "$final_dir" --book "$book" \
         --gt "data/$book/manifest.tsv"
+  elif [[ "$BK_INGEST" == "borg" ]]; then
+    # Borg: bản chép tay có nhãn Nôm người (Excel) -> TẬP ĐÁNH GIÁ chữ viết tay (bộ gộp: evaluation_only=1, split_hint=eval)
+    R "$PY" -m pipeline.tools.mark_eval_dataset --dataset "$final_dir" --book "$book" --kind borg \
+        --gt "data/$book/$book.xlsx"
   fi
   (( DRY_RUN )) || checkpoint export "$final_dir/labels.csv"
   bk_tick "export"
 
   # ---- 6/6 measure (B6) -----------------------------------------------------
   banner_bk 6 measure "auto_precision cross trên labels_gated (B6, 0 API) -> $ap_post"
-  if [[ "$BK_CROSS" == "1" ]] && (( ! NO_AUTO_PRECISION )); then
+  if [[ "$BK_INGEST" == "borg" ]]; then
+    # Borg: đo nhãn máy vs chữ Nôm NGƯỜI (0 API) -> measure_out/<Sách>/borg_endtoend/summary.json
+    R "$PY" scripts/measure/borg_endtoend_eval.py --book "$book" --labels "$labels_gated"
+  elif [[ "$BK_CROSS" == "1" ]] && (( ! NO_AUTO_PRECISION )); then
     R "$PY" scripts/measure/auto_precision.py --steps cross --books "$book" \
         --labels "$labels_gated" --trans "$trans_dir" --out "$ap_post"
   else
@@ -803,7 +913,12 @@ stt_dry_run() {   # STT --dry-run: in đúng chuỗi 6 bước cũ; X/die/assert
 ALL_SETS="$STT_SET $NEW_BOOKS_ALL $EVAL_BOOKS_IHR"
 
 run_merge() {   # run_merge [chế-độ-ảnh]  (copy mặc định)
-  local mode="${1:-copy}" out="$DATASET_ROOT/$MERGED_SET" rc=0 lf=/dev/null
+  local mode="${1:-copy}" out="$DATASET_ROOT/$MERGED_SET" rc=0 lf=/dev/null b ALL_SETS="$ALL_SETS"
+  # 2026-09-27: 2 bộ Borg (tập đánh giá chữ viết tay) nối SAU 8 bộ cũ (thứ tự dòng của 8 bộ không đổi), CHỈ khi
+  # bộ đã xuất + đóng dấu evaluation_only + cache kim đủ (borg_merge_ready) và --borg ≠ off.
+  for b in $EVAL_BOOKS_BORG; do
+    if borg_merge_ready "$b" || { (( DRY_RUN )) && [[ " $BORG_IN_ALL " == *" $b "* ]]; }; then ALL_SETS="$ALL_SETS $b"; fi
+  done
   log ""
   log "${BLD}================================================================${RST}"
   printf '%s>>> [bộ gộp] %s — hợp nhất %s bộ%s\n' "$BLD" "$out" "$(printf '%s' "$ALL_SETS" | wc -w | tr -d ' ')" "$RST"
@@ -811,6 +926,7 @@ run_merge() {   # run_merge [chế-độ-ảnh]  (copy mặc định)
   if (( DRY_RUN )); then
     printf '    %s$%s %s\n' "$CYA" "$RST" \
       "$PY -m pipeline.tools.merge_datasets --root $DATASET_ROOT --books $ALL_SETS --out $out --mode $mode"
+    MERGED_THIS_RUN=1
     return 0
   fi
   mkdir -p logs "$out"
@@ -820,8 +936,63 @@ run_merge() {   # run_merge [chế-độ-ảnh]  (copy mặc định)
   # shellcheck disable=SC2086  # ALL_SETS cố ý tách theo khoảng trắng
   if "$PY" -m pipeline.tools.merge_datasets --root "$DATASET_ROOT" --books $ALL_SETS \
         --out "$out" --mode "$mode" 2>&1 | tee -a "$lf"; then rc=0; else rc=$?; fi
-  if (( rc == 0 )); then ALL_OK="$ALL_OK _ALL"; else ALL_FAILED="$ALL_FAILED _ALL"; fi
+  if (( rc == 0 )); then ALL_OK="$ALL_OK _ALL"; MERGED_THIS_RUN=1; else ALL_FAILED="$ALL_FAILED _ALL"; fi
   bk_tick "merge"
+  return 0
+}
+
+# ===================== B8: GOLD CHÍNH XÁC (gold_exact) =======================
+# Chạy NGAY SAU run_merge: đọc dataset/_ALL/labels.csv (chỉ ĐỌC — sha256 phải trùng dòng labels.csv
+# trong CHECKSUMS.txt do bước gộp ghi), gắn 4 trạng thái cho mọi ô GOLD, ghi bản giao vào dataset/_ALL/
+# + dataset/<Bộ>/gold_exact.csv, sinh lại CHECKSUMS.txt. 0 API; cache prepared/_gold_exact (crop chuẩn +
+# nhúng) -> lượt lặp ≈ 3 phút. Bước gộp dọn đầu ra gold_exact cũ (SINH_BOI_BUOC_NAY), nên --gold-exact off
+# = bộ gộp KHÔNG có gold_exact.csv (không bao giờ để bản cũ lệch labels.csv).
+run_gold_exact() {
+  local all="$DATASET_ROOT/$MERGED_SET" rc=0 lf t0=$SECONDS
+  local cmd=("$PY" -m pipeline.gold_exact --all-dir "$all" --out "$GOLD_EXACT_WORK"
+             --cache-dir "$GOLD_EXACT_CACHE" --dataset-root "$DATASET_ROOT" --publish)
+  [[ -n "${GOLD_EXACT_DEVICE:-}" ]] && cmd+=(--device "$GOLD_EXACT_DEVICE")
+  # N3: chỉ chạy NGAY sau bước gộp CÙNG lượt (bộ gộp vừa dựng từ đúng các bộ nguồn trên đĩa)
+  if (( ! MERGED_THIS_RUN )); then
+    warn "bỏ gold_exact: bước gộp không chạy trong lượt này (dùng ./run_pipeline.sh --merge)"
+    return 0
+  fi
+  log ""
+  log "${BLD}================================================================${RST}"
+  printf '%s>>> [GOLD chính xác] %s — 4 trạng thái cho mọi ô GOLD (0 API)%s\n' "$BLD" "$all" "$RST"
+  log "${BLD}================================================================${RST}"
+  if (( DRY_RUN )); then
+    printf '    %s$%s %s\n' "$CYA" "$RST" "${cmd[*]}"
+    return 0
+  fi
+  if [[ " $ALL_FAILED " == *" _ALL "* ]]; then
+    warn "bỏ gold_exact: bước gộp lỗi (bộ gộp không tin được)"
+    ALL_FAILED="$ALL_FAILED GOLD_EXACT"
+    return 0
+  fi
+  if [[ ! -f "$all/labels.csv" ]]; then
+    warn "bỏ gold_exact: chưa có $all/labels.csv (chạy ./run_pipeline.sh --merge)"
+    ALL_FAILED="$ALL_FAILED GOLD_EXACT"
+    return 0
+  fi
+  mkdir -p logs
+  lf="logs/run_GOLD_EXACT_$(date +%Y%m%d_%H%M%S).log"
+  info "log: $lf"
+  {
+    printf '# run_pipeline.sh (gold_exact)  %s\n' "$(date +%Y-%m-%dT%H:%M:%S)"
+    printf '# git HEAD %s · config config/gold_exact.yaml · work %s · cache %s\n' \
+        "$(git rev-parse --short HEAD 2>/dev/null || echo '?')" "$GOLD_EXACT_WORK" "$GOLD_EXACT_CACHE"
+    printf '\n%s  $ %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" "${cmd[*]}"
+  } >> "$lf"
+  if "${cmd[@]}" 2>&1 | tee -a "$lf"; then rc=0; else rc=$?; fi
+  printf '# mã thoát %s · %ss\n' "$rc" "$((SECONDS - t0))" >> "$lf"
+  if (( rc == 0 )); then
+    ALL_OK="$ALL_OK GOLD_EXACT"
+    ok "gold_exact: $((SECONDS - t0))s -> $all/gold_exact.csv"
+  else
+    ALL_FAILED="$ALL_FAILED GOLD_EXACT"
+    printf '%s[LỖI]%s gold_exact mã thoát %s — xem %s\n' "$RED" "$RST" "$rc" "$lf" >&2
+  fi
   return 0
 }
 
@@ -1022,16 +1193,37 @@ for book in books:
     rows.append((book, sum(c.values()), c["GOLD"], c["GOLD_text_only"],
                  c["SYLLABLE"], c["REVIEW"], n_img))
 
-hdr = ("bộ", "ô", "GOLD ảnh", "text_only", "SYLLABLE", "REVIEW", "ảnh export")
-tot = [sum(r[i] for r in rows if r[i] is not None) for i in range(1, 7)]
+# --- GOLD chính xác (dataset/_ALL/gold_exact.csv, bước gold_exact sau gộp): 4 cột GX theo bộ ---
+GX = ("ok", "text_only", "uncertified", "review")
+S8 = {"STT2": "stt2", "STT4": "stt4", "STT11": "stt11", "LucVanTien1883": "L83", "KimVanKieu1884": "KVK",
+      "Chrestomathie1872": "Chr", "LucVanTien1916": "L16", "TruyenKieu1872": "TK"}
+gx, gx_pol = {}, None
+gp = Path(merged) / "gold_exact.csv"
+if gp.exists():
+    with open(gp, encoding="utf-8") as f:
+        for r in csv.DictReader(f):
+            gx.setdefault(r["set8"], Counter())[r["gold_exact"]] += 1
+            gx_pol = gx_pol or (r.get("policy_version"), r.get("config_sha16"))
+rows = [r + tuple((gx[S8[r[0]]][k] if S8.get(r[0]) in gx else None) for k in GX) for r in rows]
+
+hdr = ("bộ", "ô", "GOLD ảnh", "text_only", "SYLLABLE", "REVIEW", "ảnh export",
+       "GX ok", "GX text_only", "GX uncert.", "GX review")
+nc = len(hdr)
+tot = [sum(r[i] for r in rows if r[i] is not None) for i in range(1, nc)]
+tot = [t if any(r[i] is not None for r in rows) else None for i, t in zip(range(1, nc), tot)]
 tbl = [hdr] + [(r[0],) + tuple(fmt(x) for x in r[1:]) for r in rows] \
     + [("TỔNG 8 bộ",) + tuple(fmt(x) for x in tot)]
-w = [max(len(r[i]) for r in tbl) for i in range(7)]
+w = [max(len(r[i]) for r in tbl) for i in range(nc)]
 for k, r in enumerate(tbl):
     print("| " + " | ".join(r[i].ljust(w[i]) if i == 0 else r[i].rjust(w[i])
-                            for i in range(7)) + " |")
+                            for i in range(nc)) + " |")
     if k == 0:
-        print("|" + "|".join("-" * (w[i] + 2) for i in range(7)) + "|")
+        print("|" + "|".join("-" * (w[i] + 2) for i in range(nc)) + "|")
+if gx:
+    print(f"GX = GOLD chính xác ({merged}/gold_exact.csv · policy {gx_pol[0]} · config {gx_pol[1]}): "
+          "ok+text_only+uncertified+review = GOLD ảnh của bộ gộp; độ chính xác chỉ ĐO ở L16/TK (GOLD_EXACT.md §2).")
+else:
+    print(f"GX: chưa có {merged}/gold_exact.csv (bước gold_exact chưa chạy hoặc --gold-exact off)")
 
 # --- BỘ GỘP CHUNG dataset/_ALL (đọc SOURCES.json do merge_datasets ghi) ---
 import json
@@ -1058,7 +1250,9 @@ PYSUM
 #   1 align_audit --book all        (căn chỉnh/quy hoạch gán 8 bộ; FAIL = hồ sơ đã biết, chỉ BÁO)
 #   2 ihr_endtoend_eval --book all  (precision trên NHÃN NGƯỜI, 2 bộ IHR)        -> FAIL CỨNG
 #   3 auto_precision --steps cross  (khớp dị bản LVT1883/KVK1884 trên labels_gated) -> FAIL CỨNG
-#   4 measure.py --all --report-only (gom invariants của bộ đo)                  -> FAIL CỨNG
+#   3b gold_exact_eval              (invariant bản giao dataset/_ALL/gold_exact.csv; độ chính xác
+#                                    IHR chỉ BÁO) -> FAIL CỨNG; bỏ qua (cảnh báo) khi chưa có gold_exact.csv
+#   4 measure.py --all --report-only (gom invariants của bộ đo, kể cả gold_exact)  -> FAIL CỨNG
 VERIFY_LOG=""
 VERIFY_FAIL=0
 VERIFY_LINES=""
@@ -1099,6 +1293,10 @@ verify_all() {
 
   V "align_audit --book all"        0 "$PY" scripts/measure/align_audit.py --book all
   V "ihr_endtoend_eval --book all"  1 "$PY" scripts/measure/ihr_endtoend_eval.py --book all
+  # 2026-09-27: Borg (chữ viết tay) — thiếu nhãn máy/cache kim thì mọi bất biến SKIP (mã 0); FAIL chỉ khi có bản dựng sai
+  if [[ "$BORG_MODE" != "off" ]]; then
+    V "borg_endtoend_eval --book all" 1 "$PY" scripts/measure/borg_endtoend_eval.py --book all
+  fi
 
   # auto_precision cross: CROSS_BOOKS khai đường dẫn labels CŨ (dataset_out_<Book>/) nên phải
   # trỏ thẳng labels_gated.csv của bản dựng hiện tại — đúng bộ số "dị bản" của bảng chốt.
@@ -1109,6 +1307,15 @@ verify_all() {
         --books "$b" --labels "$ds/labels_gated.csv" --trans "prepared/$b/transcriptions" \
         --out "$ds/auto_precision_verify"
   done
+
+  # GOLD chính xác: invariant của bản giao (trạng thái, ok ⊂ GOLD, crop + md5, labels.csv không đổi từ lúc gộp,
+  # ngưỡng khớp config) -> measure_out/gold_exact/summary.json; measure.py --report-only gom lại ngay sau.
+  if (( DRY_RUN )) || [[ -f "$DATASET_ROOT/$MERGED_SET/gold_exact.csv" ]]; then
+    V "gold_exact_eval (dataset/_ALL/gold_exact.csv)" 1 "$PY" scripts/measure/gold_exact_eval.py \
+        --all-dir "$DATASET_ROOT/$MERGED_SET" --out measure_out/gold_exact
+  else
+    warn "chưa có $DATASET_ROOT/$MERGED_SET/gold_exact.csv — bỏ gold_exact_eval (--gold-exact off hoặc chưa chạy)"
+  fi
 
   V "measure.py --all --report-only" 1 "$PY" scripts/measure/measure.py --all --report-only
 
@@ -1147,6 +1354,18 @@ if f.exists():
     m = json.loads(f.read_text(encoding="utf-8"))
     print(f"\n  bộ gộp dataset/_ALL: {m['n_dong']:,} dòng · {m['n_tep_crop']:,} tệp crop · "
           f"{m['eval_only_dong']:,} dòng evaluation_only ({m['n_bo']} bộ)")
+
+f = Path("measure_out/gold_exact/summary.json")
+if f.exists() and Path("dataset/_ALL/gold_exact.csv").exists():
+    s = json.loads(f.read_text(encoding="utf-8"))
+    n_fail = sum(1 for iv in s["invariants"] if iv["pass"] is False)
+    t = s.get("totals", {})
+    print(f"\n  GOLD chính xác (dataset/_ALL/gold_exact.csv, policy {s.get('policy_version')}): "
+          f"ok {t.get('ok', 0):,} / GOLD {t.get('gold', 0):,} · bất biến FAIL {n_fail}/{len(s['invariants'])}")
+    for b, r in (s.get("ihr") or {}).items():
+        if "both_pt" in r:
+            print(f"    {b:4s} ô ok có GT {r['n_eval']:6d} · đúng hai vế V1+ {100*r['both_pt']:.2f} % "
+                  f"[{100*r['both_lo']:.2f}–{100*r['both_hi']:.2f}] (chỉ báo)")
 
 f = Path("measure_out/align_audit/SUMMARY.json")
 if f.exists():
@@ -1228,6 +1447,7 @@ stt_pipeline() {
 # Một bộ lỗi KHÔNG dừng các bộ sau; mã thoát cuối ≠ 0 nếu có bất kỳ bộ nào lỗi.
 ALL_FAILED=""
 ALL_OK=""
+MERGED_THIS_RUN=0     # = 1 khi run_merge thành công trong lượt này (điều kiện chạy run_gold_exact — N3)
 
 run_unit_stt() {
   local lf rc=0
@@ -1265,9 +1485,17 @@ run_unit_book() {   # run_unit_book <Book> <i> <n>
 
 run_all() {
   local books="$NEW_BOOKS_ALL $EVAL_BOOKS_IHR" b i=1 n=8
+  # 2026-09-27: + Borg (tập đánh giá chữ viết tay) theo --borg (0 API để quyết; thiếu một phần -> dừng cứng ở đây)
+  BORG_IN_ALL=$(borg_books_for_all) || exit 1
+  BORG_IN_ALL="${BORG_IN_ALL# }"
+  if [[ -n "$BORG_IN_ALL" ]]; then
+    books="$books $BORG_IN_ALL"
+    n=$((n + $(printf '%s' "$BORG_IN_ALL" | wc -w | tr -d ' ')))
+    BORG_CACHE_ONLY=1
+  fi
   log "${BLD}================================================================${RST}"
-  log "${BLD}  GanNhanOCR — CHẠY TẤT CẢ 8 BỘ (bản chốt docs/CHOT_CUOI_2026-09-23.md)${RST}"
-  log "${BLD}  1 STT (3 bộ, config/pipeline.yaml) + all-new (3) + all-ihr (2)${RST}"
+  log "${BLD}  GanNhanOCR — CHẠY TẤT CẢ $n BỘ (bản chốt docs/CHOT_CUOI_2026-09-23.md)${RST}"
+  log "${BLD}  1 STT (3 bộ, config/pipeline.yaml) + all-new (3) + all-ihr (2)${BORG_IN_ALL:+ + Borg: $BORG_IN_ALL (chỉ cache kim)}${RST}"
   log "${BLD}================================================================${RST}"
   for b in $books; do
     [[ -f "config/pipeline_${b}.yaml" ]] || die "không thấy config/pipeline_${b}.yaml (sách: $b)"
@@ -1301,10 +1529,17 @@ run_all() {
   else
     info "--no-merge: bỏ bước gộp bộ chung"
   fi
+  if (( DO_GOLD_EXACT )) && (( DO_MERGE )); then
+    run_gold_exact
+  elif (( DO_GOLD_EXACT )); then
+    info "--no-merge: bỏ luôn bước GOLD chính xác (chỉ chạy ngay sau bước gộp cùng lượt; sau đó: ./run_pipeline.sh --merge)"
+  else
+    info "--gold-exact off: bỏ bước GOLD chính xác"
+  fi
 
   log ""
   log "${BLD}================================================================${RST}"
-  log "${BLD}  BẢNG TÓM TẮT 8 BỘ${RST}"
+  log "${BLD}  BẢNG TÓM TẮT $n BỘ${RST}"
   log "${BLD}================================================================${RST}"
   if (( DRY_RUN )); then
     info "(dry-run) sẽ đọc dataset_out/labels_final.csv + <dataset_out sách>/labels_gated.csv và in bảng"
@@ -1330,11 +1565,11 @@ run_all() {
     return 1
   fi
   if (( VERIFY_FAIL )); then
-    printf '%s[LỖI]%s 8/8 bộ chạy xong nhưng NGHIỆM THU có %s phép FAIL cứng · tổng %ss\n' \
-        "$RED$BLD" "$RST" "$VERIFY_FAIL" "$SECONDS" >&2
+    printf '%s[LỖI]%s %s/%s bộ chạy xong nhưng NGHIỆM THU có %s phép FAIL cứng · tổng %ss\n' \
+        "$RED$BLD" "$RST" "$n" "$n" "$VERIFY_FAIL" "$SECONDS" >&2
     return 1
   fi
-  log "${GRN}${BLD}  XONG 8/8 bộ + nghiệm thu 0 FAIL cứng · tổng ${SECONDS}s${RST}"
+  log "${GRN}${BLD}  XONG $n/$n bộ + nghiệm thu 0 FAIL cứng · tổng ${SECONDS}s${RST}"
   log "${BLD}================================================================${RST}"
   return 0
 }
@@ -1356,10 +1591,20 @@ while (( $# )); do
     --merge)      MERGE_ONLY=1; shift ;;
     --no-merge)   DO_MERGE=0; shift ;;
     --merge-mode) [[ $# -ge 2 ]] || die "--merge-mode cần copy|link|symlink|none"; MERGE_MODE="$2"; shift 2 ;;
+    --gold-exact|--gold-exact=*)
+                  if [[ "$1" == --gold-exact=* ]]; then _ge="${1#--gold-exact=}"; shift
+                  else [[ $# -ge 2 ]] || die "--gold-exact cần on|off"; _ge="$2"; shift 2; fi
+                  case "$_ge" in on) DO_GOLD_EXACT=1 ;; off) DO_GOLD_EXACT=0 ;;
+                    *) die "--gold-exact cần on|off (nhận: $_ge)" ;; esac ;;
     --prune)      DO_PRUNE=1; shift ;;
     --clean)      DO_CLEAN=1; shift ;;
     --keep-old)   [[ $# -ge 2 ]] || die "--keep-old cần một số"; KEEP_OLD="$2"; shift 2 ;;
     --keep-old=*) KEEP_OLD="${1#--keep-old=}"; shift ;;
+    --borg|--borg=*)
+                  if [[ "$1" == --borg=* ]]; then _bm="${1#--borg=}"; shift
+                  else [[ $# -ge 2 ]] || die "--borg cần auto|require|off"; _bm="$2"; shift 2; fi
+                  case "$_bm" in auto|require|off) BORG_MODE="$_bm" ;;
+                    *) die "--borg cần auto|require|off (nhận: $_bm)" ;; esac ;;
     --suffix)     [[ $# -ge 2 ]] || die "--suffix cần giá trị"; OUT_SUFFIX="$2"; shift 2 ;;
     --suffix=*)   OUT_SUFFIX="${1#--suffix=}"; shift ;;
     -h|--help)    usage; exit 0 ;;
@@ -1381,6 +1626,8 @@ if (( DO_PRUNE )); then prune_old; exit 0; fi
 # --merge đứng một mình: chỉ dựng lại bộ gộp từ các bộ đang có trên đĩa
 if (( MERGE_ONLY )); then
   run_merge "$MERGE_MODE"
+  # bước gộp vừa dọn gold_exact cũ -> dựng lại ngay (trừ --gold-exact off)
+  if (( DO_GOLD_EXACT )); then run_gold_exact; else info "--gold-exact off: bỏ bước GOLD chính xác"; fi
   [[ -z "$ALL_FAILED" ]] || exit 1
   if (( DO_VERIFY == 1 )); then verify_all; exit $(( VERIFY_FAIL ? 1 : 0 )); fi
   exit 0
@@ -1390,6 +1637,9 @@ fi
 if (( SUMMARY_ONLY )); then
   _sum_books="$NEW_BOOKS"
   [[ -n "$_sum_books" ]] || _sum_books="$NEW_BOOKS_ALL $EVAL_BOOKS_IHR"
+  if [[ -z "$NEW_BOOKS" ]]; then   # 2026-09-27: + Borg đã dựng (tập đánh giá chữ viết tay)
+    for _b in $EVAL_BOOKS_BORG; do if borg_merge_ready "$_b"; then _sum_books="$_sum_books $_b"; fi; done
+  fi
   log "${BLD}BẢNG TÓM TẮT (đọc bản dựng trên đĩa, không chạy gì)${RST}"
   if print_summary $_sum_books; then exit 0; fi
   exit 1
@@ -1416,6 +1666,7 @@ if [[ -n "$NEW_BOOKS" ]]; then
   for _b in $NEW_BOOKS; do
     if [[ "$_b" == "all-new" ]]; then _books="$_books $NEW_BOOKS_ALL"
     elif [[ "$_b" == "all-ihr" ]]; then _books="$_books $EVAL_BOOKS_IHR"
+    elif [[ "$_b" == "all-borg" ]]; then _books="$_books $EVAL_BOOKS_BORG"
     else _books="$_books $_b"; fi
   done
   log "${BLD}================================================================${RST}"
@@ -1436,6 +1687,8 @@ if [[ -n "$NEW_BOOKS" ]]; then
   log "${BLD}================================================================${RST}"
   log "${GRN}${BLD}  Hoàn tất sách mới:${_books} · tổng ${SECONDS}s${RST}"
   log "${BLD}================================================================${RST}"
+  info "bộ gộp $DATASET_ROOT/$MERGED_SET + gold_exact CHƯA cập nhật theo:${_books} (dataset/<Bộ>/gold_exact.csv đã bị export xoá)"
+  info "  -> chạy ./run_pipeline.sh --merge (gộp lại + gold_exact, 0 API) trước khi dùng bộ gộp / gold_exact.csv"
   if (( DO_VERIFY == 1 )); then
     verify_all
     exit $(( VERIFY_FAIL ? 1 : 0 ))

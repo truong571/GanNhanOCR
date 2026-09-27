@@ -68,6 +68,10 @@ CROPS = "crops"
 SINH_BOI_BUOC_NAY = {CROPS, "labels.csv", "labels_trace.csv", "columns.csv", "labels.xlsx",
                      "SOURCES.json", "CHECKSUMS.txt", "README.md", "DATASHEET.md",
                      "TAP_DANH_GIA.md", "TRUNG_ANH.csv", "THOI_GIAN.txt"}
+# Đầu ra của bước gold_exact (chạy NGAY SAU bước gộp, `python -m pipeline.gold_exact --publish`): phụ thuộc labels.csv của
+# lần gộp trước -> gộp lại là PHẢI dọn, kẻo gold_exact.csv cũ nằm cạnh labels.csv mới. Bước gold_exact sinh lại chúng.
+SINH_BOI_GOLD_EXACT = {"gold_exact.csv", "GOLD_EXACT.md", "crops_chuan", "crops_chuan_128"}
+SINH_BOI_BUOC_NAY |= SINH_BOI_GOLD_EXACT
 
 
 # --------------------------------------------------------------------------- #
@@ -184,6 +188,11 @@ def gop(root: Path, bo_list: list[str], out: Path, che_do: str = "copy",
             shutil.rmtree(m) if m.is_dir() else m.unlink()
         else:
             on_log(f"[gộp] GIỮ LẠI (không do bước này sinh): {m.name}")
+    # N2: bản lọc theo bộ <root>/<Bộ>/gold_exact.csv trỏ crops_chuan của bộ gộp vừa bị dọn (và lệch labels.csv mới) -> xoá theo,
+    # khối gold_exact trong README/DATASHEET của bộ về trạng thái "không có tệp". Bước gold_exact sau gộp sinh lại.
+    from pipeline.gold_exact.per_book import clean_per_book
+    for g in clean_per_book(root, out, bo_list):
+        on_log(f"[gộp] dọn bản lọc gold_exact cũ: {g}")
 
     n_copy = n_thieu = 0
     if che_do != "none":
@@ -401,6 +410,7 @@ Tầng: {tiers}.
 `columns.csv` = một dòng mỗi cột trang, thêm `book_set`.
 
 {khoi_trung}
+{_khoi_gold_exact()}
 ## Tái lập
 
 ```bash
@@ -408,6 +418,12 @@ Tầng: {tiers}.
 ./run_pipeline.sh --verify        # kiểm lại bất biến của bộ gộp
 ```
 """
+
+
+def _khoi_gold_exact() -> str:
+    """Khối mô tả gold_exact.csv (tệp do bước gold_exact sinh SAU bước gộp — văn bản tĩnh, dùng chung với make_dataset_docs)."""
+    from pipeline.gold_exact.doc_text import block_md
+    return block_md("all")
 
 
 def _datasheet(t: dict) -> str:
@@ -446,7 +462,14 @@ Tầng: {' · '.join(f'{k} {_n(v)}' for k, v in t['tiers'].items())}
 Chỉ {2} trong {t['n_bo']} bộ có **nhãn người từng chữ** (IHR-NomDB). Các bộ còn lại
 chưa có chuẩn người; số precision của chúng là khớp dị bản hoặc không có chuẩn nào —
 xem `DATASHEET.md` của từng bộ nguồn và `docs/CHOT_CUOI_2026-09-23.md` §6.
+
+{_datasheet_gold_exact()}
 """
+
+
+def _datasheet_gold_exact() -> str:
+    from pipeline.gold_exact.doc_text import datasheet_line
+    return "- " + datasheet_line()
 
 
 def _canh_bao(t: dict) -> str:
@@ -583,6 +606,38 @@ def selftest() -> int:
         gop(root, ["BoA"], out, che_do="none", xlsx=False, on_log=lambda *a: None)
         chk("tệp lạ trong --out được GIỮ LẠI",
             (out / "VIEC_CUA_NGUOI_KHAC.txt").exists())
+        # đầu ra CŨ của bước gold_exact (phụ thuộc labels.csv lần gộp trước) -> gộp lại phải dọn sạch
+        (out / "gold_exact.csv").write_text("cell_uid\n", encoding="utf-8")
+        (out / "GOLD_EXACT.md").write_text("# cũ", encoding="utf-8")
+        for sub in ("crops_chuan", "crops_chuan_128"):
+            (out / sub / "BoA").mkdir(parents=True, exist_ok=True); (out / sub / "BoA" / "x.png").write_bytes(b"x")
+        gop(root, ["BoA"], out, che_do="none", xlsx=False, on_log=lambda *a: None)
+        chk("gộp lại dọn đầu ra gold_exact cũ (csv, md, crops_chuan{,_128})",
+            not any((out / n).exists() for n in ("gold_exact.csv", "GOLD_EXACT.md", "crops_chuan", "crops_chuan_128"))
+            and (out / "VIEC_CUA_NGUOI_KHAC.txt").exists())
+        # N2: bản lọc theo bộ cũ (trỏ crops_chuan của bộ gộp) phải bị xoá khi gộp lại; tệp cùng tên KHÔNG trỏ bộ gộp ở thư mục
+        # không phải bộ nguồn được giữ; khối README cũ của bộ đổi sang "không có tệp"
+        rel = os.path.relpath(out, root / "BoA").replace(os.sep, "/")
+        for bo in ("BoA", "BoB"):
+            (root / bo / "gold_exact.csv").write_text(
+                f"cell_uid,gold_exact,crop_chuan\nx,ok,{rel}/crops_chuan/{bo}/x.png\n", encoding="utf-8")
+        (root / "BoA" / "README.md").write_text("# BoA\n\n## GOLD chính xác — `gold_exact.csv` (bước sau khi gộp, 0 API)\n\n"
+                                              "mô tả cũ\n\n## Tái lập\n\nx\n", encoding="utf-8")
+        (root / "Khac").mkdir(exist_ok=True)
+        (root / "Khac" / "gold_exact.csv").write_text("cell_uid,gold_exact,crop_chuan\nx,ok,../noi_khac/y.png\n", encoding="utf-8")
+        (root / "BoEval" / "gold_exact.csv").write_text(
+            f"cell_uid,gold_exact,crop_chuan\nx,ok,{rel}/crops_chuan/BoEval/x.png\n", encoding="utf-8")
+        gop(root, ["BoA", "BoB"], out, che_do="none", xlsx=False, on_log=lambda *a: None)
+        rd_ = (root / "BoA" / "README.md").read_text(encoding="utf-8")
+        chk("gộp lại xoá dataset/<Bộ>/gold_exact.csv của bộ nguồn + bộ khác trỏ crops_chuan bộ gộp (N2)",
+            not any((root / b / "gold_exact.csv").exists() for b in ("BoA", "BoB", "BoEval"))
+            and (root / "Khac" / "gold_exact.csv").exists())
+        chk("README bộ nguồn: khối gold_exact cũ -> 'không có gold_exact.csv' (marker), phần sau giữ nguyên",
+            "không có** `gold_exact.csv`" in rd_ and "mô tả cũ" not in rd_ and "## Tái lập" in rd_
+            and "<!-- gold_exact:begin -->" in rd_)
+        chk("README bộ gộp mô tả gold_exact.csv + 4 trạng thái + mức chắc",
+            all(k in (out / "README.md").read_text(encoding="utf-8")
+                for k in ("gold_exact.csv", "`uncertified`", "evidence_level", "suy_doan")))
         # thiếu cột giao nộp -> raise trước khi xoá gì
         (root / "BoHong").mkdir()
         (root / "BoHong" / "labels.csv").write_text("image,book\nx,y\n", encoding="utf-8")

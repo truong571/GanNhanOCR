@@ -226,6 +226,19 @@ def _khoi_text_only(s: dict) -> str:
         "Huấn luyện mô hình ẢNH: lọc `tier == \"GOLD\"`; thống kê văn bản/tần suất chữ: dùng cả hai tầng.", ""])
 
 
+def _khoi_gold_exact(s: dict) -> str:
+    """Tệp `gold_exact.csv` của bộ này do bước gold_exact sinh SAU bước gộp (run_pipeline.sh). CHỈ mô tả tệp khi nó có mặt
+    lúc sinh README (bước export xoá *.csv cũ nên thường là KHÔNG); khối bọc marker để bước gold_exact (publish) đổi sang bản
+    mô tả đầy đủ khi ghi tệp, và bước gộp đổi lại khi xoá tệp (pipeline/gold_exact/doc_text.py)."""
+    from pipeline.gold_exact.doc_text import book_section
+    return book_section(bool(s.get("gold_exact_present")))
+
+
+def _gold_exact_line(s: dict) -> str:
+    from pipeline.gold_exact.doc_text import datasheet_block
+    return datasheet_block(bool(s.get("gold_exact_present")))
+
+
 def readme(s: dict) -> str:
     return f"""# Bộ dữ liệu gán nhãn chữ Nôm — Sách Thánh Truyện
 
@@ -250,6 +263,7 @@ def readme(s: dict) -> str:
 
 {_khoi_khong_chia(s)}
 
+{_khoi_gold_exact(s)}
 ## Ảnh hỏng và trang thiếu cột
 
 - **{s['anh_hong']} ô** có ảnh trắng hoặc bị cắt mất nét (`crop_quality_flag` = `blank`/`truncated`
@@ -363,6 +377,8 @@ Toàn bộ **tất định tới từng byte**; chạy lại hai lần cho kết
    **trang** (`book` + `page`) bằng công thức ghi trong README, rồi tự tính lớp chữ có mặt
    trong train của phép chia đó.
 {_datasheet_text_only(s)}
+{_gold_exact_line(s)}
+
 ## Khuyến nghị dùng
 Dùng được: huấn luyện mô hình, thăm dò, làm điểm khởi đầu để chấm tay.
 **Chưa dùng được**: trích dẫn như dữ liệu đã kiểm chứng, hoặc làm chuẩn đánh giá.
@@ -394,6 +410,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     s = stats(lab, args.n_columns)
+    s["gold_exact_present"] = (root / "gold_exact.csv").exists()
     for name, body in (("README.md", readme(s)), ("DATASHEET.md", datasheet(s)),
                        ("NGUON_THU_TICH.md", nguon(s))):
         (root / name).write_text(body, encoding="utf-8")

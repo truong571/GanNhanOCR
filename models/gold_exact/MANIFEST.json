@@ -1,16 +1,23 @@
 {
- "version": "2026-09-27",
- "created": "2026-09-27 00:28",
- "note": "Tài sản gold_exact. Tệp .pt không vào git (.gitignore *.pt); dựng lại: python -m pipeline.gold_exact.export_assets --sp <SP>",
- "sp": "<SP> = thư mục thử nghiệm phiên 2026-09-25..27 (scratchpad)",
+ "version": "2026-09-28",
+ "created": "2026-09-27 14:18",
+ "note": "Tài sản gold_exact. Tệp .pt không vào git (.gitignore *.pt); dựng lại (0 API, ≈ 30 s): python -m pipeline.gold_exact.export_assets (đọc kho nguồn bền source_store, tự kiểm SHA256SUMS)",
+ "sp": "<SRC> = source_store.path (bản chép bền của thư mục thử nghiệm 2026-09-25..27)",
+ "source_store": {
+  "path": "measure_out/_gold_exact_assets_src",
+  "n_files": 68,
+  "bytes": 1678997131,
+  "sha256sums_sha256": "6b646d457c1aa331082078036fee73d79d41cb3f0c5f925672e1f413f6902879",
+  "backup": "Kho nguồn bền của tài sản gold_exact (không vào git). Sao lưu: chép NGUYÊN thư mục này (kèm SHA256SUMS) sang đĩa ngoài / kho lưu trữ riêng; KHÔNG đẩy lên mạng công khai (có mô hình + nhãn người IHR-NomDB). Khôi phục: chép về measure_out/_gold_exact_assets_src/ rồi `.venv/bin/python -m pipeline.gold_exact.export_assets` (tự kiểm SHA256SUMS)."
+ },
  "files": {
   "lexicon.pt": {
    "sha256": "f01d52b20228c784d104bdc57ab6584027ad5914344bfc789f7c9b58526c0cc3",
    "bytes": 553773,
    "kind": "derived",
    "source": [
-    "<SP>/kim_bottleneck/harness/ext/Unihan_Variants.txt",
-    "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/lab/ocr_compare/ket_hop/t2s_map.json"
+    "<SRC>/kim_bottleneck/harness/ext/Unihan_Variants.txt",
+    "lab/ocr_compare/ket_hop/t2s_map.json"
    ],
    "desc": "biến thể Unihan (5 trường, cạnh trực tiếp) + OpenCC t2s + kJapanese(Old)Variant (V1+)"
   },
@@ -19,8 +26,8 @@
    "bytes": 835403,
    "kind": "derived",
    "source": [
-    "<SP>/r4/verifier_ft/out/glyph_chars.json",
-    "<SP>/r4/verifier_ft/out/simtop5.json"
+    "<SRC>/r4/verifier_ft/out/glyph_chars.json",
+    "<SRC>/r4/verifier_ft/out/simtop5.json"
    ],
    "desc": "vũ trụ chữ ứng viên U + top-5 gần hình (verifier_ft)"
   },
@@ -29,7 +36,7 @@
    "bytes": 25609575,
    "kind": "copy",
    "source": [
-    "<SP>/r4/verifier_ft/out/model_T.pt"
+    "<SRC>/r4/verifier_ft/out/model_T.pt"
    ],
    "desc": "CNN verifier_ft mô hình T (tune TruyenKieu1872)"
   },
@@ -38,12 +45,12 @@
    "bytes": 67524235,
    "kind": "derived",
    "source": [
-    "<SP>/r4/verifier_ft/out/W_T.f16.npy",
-    "<SP>/r4/verifier_ft/out/emb_T_borg.f16.npy",
-    "<SP>/r4/verifier_ft/out/emb_T_ihr.f16.npy",
-    "<SP>/r4/verifier_ft/out/meta_borg.pkl",
-    "<SP>/r4/verifier_ft/out/meta_ihr.pkl",
-    "<SP>/r4/verifier_ft/out/feat_T_ihr.pkl"
+    "<SRC>/r4/verifier_ft/out/W_T.f16.npy",
+    "<SRC>/r4/verifier_ft/out/emb_T_borg.f16.npy",
+    "<SRC>/r4/verifier_ft/out/emb_T_ihr.f16.npy",
+    "<SRC>/r4/verifier_ft/out/meta_borg.pkl",
+    "<SRC>/r4/verifier_ft/out/meta_ihr.pkl",
+    "<SRC>/r4/verifier_ft/out/feat_T_ihr.pkl"
    ],
    "desc": "verifier_ft T: W glyph (f16), nguyên mẫu người P/nh (Borg keep fold0-3 + TruyenKieu1872 phần A), logistic wood"
   },
@@ -52,7 +59,7 @@
    "bytes": 25609575,
    "kind": "copy",
    "source": [
-    "<SP>/r4/verifier_ft/out/model_L.pt"
+    "<SRC>/r4/verifier_ft/out/model_L.pt"
    ],
    "desc": "CNN verifier_ft mô hình L (tune LucVanTien1916)"
   },
@@ -61,12 +68,12 @@
    "bytes": 67239883,
    "kind": "derived",
    "source": [
-    "<SP>/r4/verifier_ft/out/W_L.f16.npy",
-    "<SP>/r4/verifier_ft/out/emb_L_borg.f16.npy",
-    "<SP>/r4/verifier_ft/out/emb_L_ihr.f16.npy",
-    "<SP>/r4/verifier_ft/out/meta_borg.pkl",
-    "<SP>/r4/verifier_ft/out/meta_ihr.pkl",
-    "<SP>/r4/verifier_ft/out/feat_L_ihr.pkl"
+    "<SRC>/r4/verifier_ft/out/W_L.f16.npy",
+    "<SRC>/r4/verifier_ft/out/emb_L_borg.f16.npy",
+    "<SRC>/r4/verifier_ft/out/emb_L_ihr.f16.npy",
+    "<SRC>/r4/verifier_ft/out/meta_borg.pkl",
+    "<SRC>/r4/verifier_ft/out/meta_ihr.pkl",
+    "<SRC>/r4/verifier_ft/out/feat_L_ihr.pkl"
    ],
    "desc": "verifier_ft L: W glyph (f16), nguyên mẫu người P/nh (Borg keep fold0-3 + LucVanTien1916 phần A), logistic wood"
   },
@@ -75,7 +82,7 @@
    "bytes": 25610753,
    "kind": "copy",
    "source": [
-    "<SP>/r5/hand_lobo/out/model_T_Kinh.pt"
+    "<SRC>/r5/hand_lobo/out/model_T_Kinh.pt"
    ],
    "desc": "CNN chữ viết tay LOBO-sách T_Kinh (chỉ học Borg Kinh + IHR tune)"
   },
@@ -84,11 +91,11 @@
    "bytes": 67516271,
    "kind": "derived",
    "source": [
-    "<SP>/r5/hand_lobo/out/W_T_Kinh.f16.npy",
-    "<SP>/r5/hand_lobo/out/emb_T_Kinh_all.f16.npy",
-    "<SP>/r5/hand_lobo/out/emb_T_Kinh_ihr.f16.npy",
-    "<SP>/r5/hand_lobo/out/meta_all.pkl",
-    "<SP>/r5/hand_lobo/out/feat_T_Kinh_cal.pkl"
+    "<SRC>/r5/hand_lobo/out/W_T_Kinh.f16.npy",
+    "<SRC>/r5/hand_lobo/out/emb_T_Kinh_all.f16.npy",
+    "<SRC>/r5/hand_lobo/out/emb_T_Kinh_ihr.f16.npy",
+    "<SRC>/r5/hand_lobo/out/meta_all.pkl",
+    "<SRC>/r5/hand_lobo/out/feat_T_Kinh_cal.pkl"
    ],
    "desc": "hand T_Kinh: W, nguyên mẫu người P/nh (Borg Kinh keep fold0-3 đơn chữ + TruyenKieu1872 phần A), logistic hand, ngưỡng q"
   },
@@ -97,7 +104,7 @@
    "bytes": 25610753,
    "kind": "copy",
    "source": [
-    "<SP>/r5/hand_lobo/out/model_L_Kinh.pt"
+    "<SRC>/r5/hand_lobo/out/model_L_Kinh.pt"
    ],
    "desc": "CNN chữ viết tay LOBO-sách L_Kinh (chỉ học Borg Kinh + IHR tune)"
   },
@@ -106,42 +113,88 @@
    "bytes": 67203119,
    "kind": "derived",
    "source": [
-    "<SP>/r5/hand_lobo/out/W_L_Kinh.f16.npy",
-    "<SP>/r5/hand_lobo/out/emb_L_Kinh_all.f16.npy",
-    "<SP>/r5/hand_lobo/out/emb_L_Kinh_ihr.f16.npy",
-    "<SP>/r5/hand_lobo/out/meta_all.pkl",
-    "<SP>/r5/hand_lobo/out/feat_L_Kinh_cal.pkl"
+    "<SRC>/r5/hand_lobo/out/W_L_Kinh.f16.npy",
+    "<SRC>/r5/hand_lobo/out/emb_L_Kinh_all.f16.npy",
+    "<SRC>/r5/hand_lobo/out/emb_L_Kinh_ihr.f16.npy",
+    "<SRC>/r5/hand_lobo/out/meta_all.pkl",
+    "<SRC>/r5/hand_lobo/out/feat_L_Kinh_cal.pkl"
    ],
    "desc": "hand L_Kinh: W, nguyên mẫu người P/nh (Borg Kinh keep fold0-3 đơn chữ + LucVanTien1916 phần A), logistic hand, ngưỡng q"
+  },
+  "hand_model_T_DungLy.pt": {
+   "sha256": "8f0b808c1f18cc612fbf0a639f063cd23d852c05021e752f35fbda065ff7b0e4",
+   "bytes": 25611045,
+   "kind": "copy",
+   "source": [
+    "<SRC>/r5/hand_lobo/out/model_T_DungLy.pt"
+   ],
+   "desc": "CNN chữ viết tay LOBO-sách T_DungLy (chỉ học Borg DungLy + IHR tune)"
+  },
+  "hand_tables_T_DungLy.pt": {
+   "sha256": "9affa19dd60eb2ed657b20a18b0b80f19d707b4e537232d95104a8d6c009fb6a",
+   "bytes": 67509819,
+   "kind": "derived",
+   "source": [
+    "<SRC>/r5/hand_lobo/out/W_T_DungLy.f16.npy",
+    "<SRC>/r5/hand_lobo/out/emb_T_DungLy_all.f16.npy",
+    "<SRC>/r5/hand_lobo/out/emb_T_DungLy_ihr.f16.npy",
+    "<SRC>/r5/hand_lobo/out/meta_all.pkl",
+    "<SRC>/r5/hand_lobo/out/feat_T_DungLy_cal.pkl"
+   ],
+   "desc": "hand T_DungLy: W, nguyên mẫu người P/nh (Borg DungLy keep fold0-3 đơn chữ + TruyenKieu1872 phần A), logistic hand, ngưỡng q"
+  },
+  "hand_model_L_DungLy.pt": {
+   "sha256": "5bb0981d069937e8461935f8c246351672461476561201167403051ceb1783c9",
+   "bytes": 25611045,
+   "kind": "copy",
+   "source": [
+    "<SRC>/r5/hand_lobo/out/model_L_DungLy.pt"
+   ],
+   "desc": "CNN chữ viết tay LOBO-sách L_DungLy (chỉ học Borg DungLy + IHR tune)"
+  },
+  "hand_tables_L_DungLy.pt": {
+   "sha256": "f44ef7dfc5e26eed4fb0cb3ee1dc93dafc2121f65a455f3f30f3a42bac852a99",
+   "bytes": 67147067,
+   "kind": "derived",
+   "source": [
+    "<SRC>/r5/hand_lobo/out/W_L_DungLy.f16.npy",
+    "<SRC>/r5/hand_lobo/out/emb_L_DungLy_all.f16.npy",
+    "<SRC>/r5/hand_lobo/out/emb_L_DungLy_ihr.f16.npy",
+    "<SRC>/r5/hand_lobo/out/meta_all.pkl",
+    "<SRC>/r5/hand_lobo/out/feat_L_DungLy_cal.pkl"
+   ],
+   "desc": "hand L_DungLy: W, nguyên mẫu người P/nh (Borg DungLy keep fold0-3 đơn chữ + LucVanTien1916 phần A), logistic hand, ngưỡng q"
   },
   "viss_params.pt": {
    "sha256": "406f19d4afd83c58f55033904e4ec82ad5951f99f70980daea5fc3871dd5ac55",
    "bytes": 3269,
    "kind": "derived",
    "source": [
-    "<SP>/kim_bottleneck/rerank/out/cand.pkl",
-    "<SP>/kim_bottleneck/rerank/out/cand_self.pkl",
-    "<SP>/kim_bottleneck/harness/cells_eval.csv"
+    "<SRC>/kim_bottleneck/rerank/out/cand.pkl",
+    "<SRC>/kim_bottleneck/rerank/out/cand_self.pkl",
+    "<SRC>/kim_bottleneck/harness/cells_eval.csv"
    ],
    "desc": "logit có điều kiện 'viss' (r03_model.fit) — tune TruyenKieu1872 (chấm L16), LucVanTien1916 (chấm TK), IHR2 (chấm L83/KVK)"
   },
   "ta_refs.pt": {
-   "sha256": "c6d0e09dc52be7ed02e644a539f73447e598a59113417c8352ce42d5c2e2bcfc",
-   "bytes": 7608493,
+   "sha256": "6d3d7039b2accd92b8fed8f3f5bc7837942f1b103f0fba8b2be0ef80891f4d63",
+   "bytes": 7488877,
    "kind": "derived",
    "source": [
-    "<SP>/r5/text_attested/out/ta_cells.csv",
-    "<SP>/r5/text_attested/out/convmap_L16.json",
-    "<SP>/r5/text_attested/out/convmap_TK.json"
+    "<SRC>/r5/text_attested/out/ta_cells.csv",
+    "<SRC>/r5/text_attested/out/convmap_L16.json",
+    "<SRC>/r5/text_attested/out/convmap_TK.json"
    ],
-   "desc": "chữ người dị bản đã căn theo ô: KVK←Kiều1871 LVD/1872 DMT, L83←LVT1916 NF, TK←Kiều1871 LVD; TK: có GT người IHR"
+   "desc": "chữ người dị bản đã căn theo ô: KVK←Kiều1871 LVD/1872 DMT, L83←LVT1916 NF, TK←Kiều1871 LVD (mọi ô căn được; KHÔNG chứa GT người IHR)"
   },
   "mocr_refs.pt": {
    "sha256": "177a8390fd19aff5193700e6a585659f1e50966025f0b071a3fb8bbb22e42b5c",
    "bytes": 3068985,
    "kind": "derived",
    "source": [
-    "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/measure_out/auto_precision/cross"
+    "<SRC>/measure_out_auto_precision_cross/KimVanKieu1884/cells.csv",
+    "<SRC>/measure_out_auto_precision_cross/LucVanTien1883/cells.csv",
+    "dataset/_ALL/labels.csv"
    ],
    "desc": "chữ dị bản cho đối thủ M-OCR (KVK: Kiều1871/1872, L83: LVT1916 NF)"
   }
@@ -210,11 +263,40 @@
    "se": 0.0,
    "meRSN": 0.0
   },
+  "hand_T_Kinh_proto_books": [
+   "SachKinhThayCaBinh"
+  ],
+  "hand_T_Kinh_cal_books": [
+   "SachKinhThayCaBinh"
+  ],
   "hand_T_p_reproduce_maxabs": 0.0,
   "hand_T_thr_00015": 0.9943327219183888,
+  "hand_L_Kinh_proto_books": [
+   "SachKinhThayCaBinh"
+  ],
+  "hand_L_Kinh_cal_books": [
+   "SachKinhThayCaBinh"
+  ],
   "hand_L_p_reproduce_maxabs": 0.0,
   "hand_L_thr_00015": 0.9950360094033931,
+  "hand_T_DungLy_proto_books": [
+   "SachDungLyHoThan"
+  ],
+  "hand_T_DungLy_cal_books": [
+   "SachDungLyHoThan"
+  ],
+  "hand_T_DungLy_p_reproduce_maxabs": 0.0,
+  "hand_T_DungLy_thr_00015": 0.9984777651064203,
+  "hand_L_DungLy_proto_books": [
+   "SachDungLyHoThan"
+  ],
+  "hand_L_DungLy_cal_books": [
+   "SachDungLyHoThan"
+  ],
+  "hand_L_DungLy_p_reproduce_maxabs": 0.0,
+  "hand_L_DungLy_thr_00015": 0.9993832651440975,
   "hand_cert_00015_reproduce": 1.0,
+  "hand_cert_00015_reproduce_DungLy": 1.0,
   "viss_features_port_maxabs": {
    "s_font": 0.0,
    "s_faug": 0.0,
@@ -238,6 +320,8 @@
   "viss_Tru2Luc_pkim_reproduce_maxabs": 5.960464477539063e-08,
   "viss_Luc2Tru_pkim_reproduce_maxabs": 5.960464477539063e-08,
   "viss_LITHO_pkim_reproduce_maxabs": 5.960464477539063e-08,
+  "ta_refs_no_ihr_gt": true,
+  "ta_refs_tk_rev_h71_frac": 0.89537,
   "mocr_refs_eq_m_ocr_inputs": true
  },
  "invariants_fail": []

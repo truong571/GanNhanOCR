@@ -54,6 +54,23 @@
   "box_rule": "syl_index",
   "detector_thr": 0.2,
   "detector_xmargin": 0.25,
+  "detector_params_by_book": {
+    "SachThanhTruyen2": {
+      "det_thr": 0.2,
+      "det_xmargin": 0.25,
+      "box_decoder": "legacy"
+    },
+    "SachThanhTruyen4": {
+      "det_thr": 0.2,
+      "det_xmargin": 0.25,
+      "box_decoder": "legacy"
+    },
+    "SachThanhTruyen11": {
+      "det_thr": 0.2,
+      "det_xmargin": 0.25,
+      "box_decoder": "legacy"
+    }
+  },
   "n_locked_cols_qd01": 0,
   "lock_scope": "col",
   "lock_shift": {},

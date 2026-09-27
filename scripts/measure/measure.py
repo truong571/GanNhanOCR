@@ -16,6 +16,8 @@ Bố cục đầu ra (quy ước: mỗi phép đo một thư mục con, không �
     measure_out/detector_transfer/        detector_transfer.py   (liên sách: LVT+KVK+STT đối chứng)
     measure_out/box_ref/                  box_ref_eval.py        (hộp legacy vs pitch_decode so ô tham chiếu, LVT+KVK)
     measure_out/code_facts/               code_facts.py → docs/PIPELINE_FACTS.json
+    measure_out/gold_exact/               gold_exact_eval.py     (bản giao dataset/_ALL/gold_exact.csv, khi đã có)
+    measure_out/borg_human/               borg_human_eval.py     (bộ crop nhãn người dataset/_BORG_NHAN_NGUOI, khi đã có)
     measure_out/SUMMARY.json, REPORT.md, logs/<step>.log
 
 Mã thoát: 0 = mọi invariant cứng PASS; 1 = có invariant cứng FAIL; 2 = có bước chạy lỗi / thiếu summary.
@@ -46,9 +48,12 @@ IHR_BOOKS = ["LucVanTien1916", "TruyenKieu1872"]
 # QN chỉ có dị bản 1871/1872. Vì vậy PTCL KHÔNG còn trong ALL_BOOKS/ALL_STEPS; `ptcl_layout.py`
 # giữ lại làm hồ sơ lịch sử và vẫn chạy được bằng tay nếu có ai đặt lại thư mục data/.
 PTCL_BOOK = "TruyenKieuPhongTinhCoLuc"
-ALL_BOOKS = LITHO_BOOKS + ["Chrestomathie1872"] + IHR_BOOKS
+# 2026-09-27: 2 bản CHÉP TAY Vatican Borgiano Tonchinese (TẬP ĐÁNH GIÁ chữ viết tay của đường TỰ ĐỘNG, nhãn người Excel) —
+# borg_endtoend_eval.py (0 API): phía người luôn đo được; nhãn máy / kim thô chỉ khi đã có prepared/_auto/<Sách>/ (thiếu -> SKIP).
+BORG_BOOKS = ["SachKinhThayCaBinh", "SachDungLyHoThan"]
+ALL_BOOKS = LITHO_BOOKS + ["Chrestomathie1872"] + IHR_BOOKS + BORG_BOOKS
 ALL_STEPS = ["code_facts", "layout", "qn_ocr", "chresto_map", "detector_transfer", "box_ref",
-             "ihr_layout", "ihr_endtoend"]
+             "ihr_layout", "ihr_endtoend", "gold_exact", "borg_human", "borg_endtoend"]
 
 # Invariant FAIL được xếp "mềm" (không đổi mã thoát) — chỉ khi có lý do đo đạc rõ ràng.
 SOFT_INVARIANTS: dict[str, dict[str, str]] = {
@@ -67,6 +72,11 @@ SOFT_INVARIANTS: dict[str, dict[str, str]] = {
             "trong pipeline. Kết quả 70–89 % trên 27–81 cột là số đo thật, không phải lỗi mô-đun.",
         "stt_control_pct_cols_eq_N_verified":
             "Cùng lý do; n cột có N kim == chiếu mực rất nhỏ (16–50) nên 1 cột lệch đã đổi vài pp.",
+    },
+    "borg_human": {
+        "tai_lap_r4_r5":
+            "So từng ô với bản lưu vòng 4/5 (measure_out/_audit_2026-09-26): chỉ báo độ trung thành của bản port; "
+            "các bất biến cứng của bản giao (luật keep tính lại, md5, θ trong khoảng) đã kiểm riêng.",
     },
 }
 
@@ -179,6 +189,48 @@ KEY_METRICS: dict[str, list[tuple[str, str]]] = {
         ("nền dị bản 1871↔1872", "reference.rate"),
         ("lượt kim mới", "kim.api_calls"),
     ],
+    "borg_endtoend": [
+        ("câu người đếm bằng (tỉ lệ âm)", "human.frac_syll_eq"),
+        ("chữ người ∈ R(âm) (trần luật GOLD)", "human.pair_char_in_R"),
+        ("kim thô: trang có cache", "kim_vs_human_page.n_pages"),
+        ("kim thô precision strict", "kim_vs_human_page.strict.precision"),
+        ("kim thô precision V1+", "kim_vs_human_page.v1p.precision"),
+        ("kim thô precision V1+ +4 cặp", "kim_vs_human_page.p4.precision"),
+        ("kim thô recall V1+", "kim_vs_human_page.v1p.recall"),
+        ("GOLD có chữ người", "tiers.GOLD.n_eval"),
+        ("GOLD strict", "tiers.GOLD.strict.pt"),
+        ("GOLD V1+", "tiers.GOLD.v1p.pt"),
+        ("GOLD V1+ CI cụm trang", "tiers.GOLD.v1p.ci_page"),
+        ("GOLD V1+ +4 cặp", "tiers.GOLD.p4.pt"),
+        ("gold_exact ok có chữ người", "gold_exact.ok.n_eval"),
+        ("gold_exact ok V1+", "gold_exact.ok.v1p.pt"),
+        ("gold_exact ok CI", "gold_exact.ok.v1p.ci_page"),
+    ],
+    "gold_exact": [
+        ("policy_version", "policy_version"),
+        ("ô GOLD", "totals.gold"),
+        ("ok", "totals.ok"),
+        ("text_only", "totals.text_only"),
+        ("uncertified", "totals.uncertified"),
+        ("review", "totals.review"),
+        ("ok mang cờ core_loss (không là cổng)", "totals.ok_core_loss_flag"),
+        ("L16 ô ok có GT", "ihr.L16.n_eval"),
+        ("L16 đúng hai vế V1+ (chỉ báo)", "ihr.L16.both_pt"),
+        ("L16 CI95", "ihr.L16.ci95"),
+        ("TK ô ok có GT", "ihr.TK.n_eval"),
+        ("TK đúng hai vế V1+ (chỉ báo)", "ihr.TK.both_pt"),
+        ("TK CI95", "ihr.TK.ci95"),
+        ("thời gian s", "runtime_s"),
+    ],
+    "borg_human": [
+        ("ô chữ người", "n_cells"),
+        ("keep_v5 / keep / keep_high (luỹ kế)", "cumulative"),
+        ("ô có ảnh", "with_image"),
+        ("one_char_ok", "one_char_ok"),
+        ("θ trượt ±1 keep (Paddle)", "theta_paddle_keep"),
+        ("dung lượng MB", "size_mb"),
+        ("thời gian s", "runtime_s"),
+    ],
     "code_facts": [
         ("git HEAD", "git_head"),
         ("tệp FACTS", "facts_file"),
@@ -271,6 +323,11 @@ def plan_steps(books: list[str], steps: list[str], a) -> list[dict]:
                 out = root / b / "ihr_endtoend"
                 cli = [PY, str(HERE / "ihr_endtoend_eval.py"), "--book", b, "--out", str(out)]
                 plan.append(dict(step="ihr_endtoend", book=b, out=out, cli=cli, summary=out / "summary.json"))
+        elif b in BORG_BOOKS:
+            if "borg_endtoend" in steps:
+                out = root / b / "borg_endtoend"
+                cli = [PY, str(HERE / "borg_endtoend_eval.py"), "--book", b, "--out", str(root)]
+                plan.append(dict(step="borg_endtoend", book=b, out=out, cli=cli, summary=out / "summary.json"))
         elif b == PTCL_BOOK and "ptcl_layout" in steps and (REPO / "data" / PTCL_BOOK).is_dir():
             out = root / b / "ptcl_layout"
             cli = [PY, str(HERE / "ptcl_layout.py"), "--out", str(out), *w, *lim,
@@ -288,6 +345,16 @@ def plan_steps(books: list[str], steps: list[str], a) -> list[dict]:
         cli = [PY, str(HERE / "box_ref_eval.py"), "--book", "all", "--out", str(out), *w, *lim,
                "--pages", str(a.det_pages)]
         plan.append(dict(step="box_ref", book="LVT+KVK", out=out, cli=cli, summary=out / "summary.json"))
+    if "gold_exact" in steps and (REPO / "dataset" / "_ALL" / "gold_exact.csv").exists():
+        # (2026-09-27) nghiệm thu bản giao GOLD chính xác (bước gold_exact sau gộp); không có tệp = bước chưa chạy -> không lập
+        out = root / "gold_exact"
+        cli = [PY, str(HERE / "gold_exact_eval.py"), "--all-dir", str(REPO / "dataset" / "_ALL"), "--out", str(out), *lim]
+        plan.append(dict(step="gold_exact", book="(_ALL)", out=out, cli=cli, summary=out / "summary.json"))
+    if "borg_human" in steps and (REPO / "dataset" / "_BORG_NHAN_NGUOI" / "labels.csv").exists():
+        # (2026-09-27) nghiệm thu bộ crop NHÃN NGƯỜI Borg (python -m pipeline.borg_human); không có bản giao -> không lập
+        out = root / "borg_human"
+        cli = [PY, str(HERE / "borg_human_eval.py"), "--out", str(out), *lim]
+        plan.append(dict(step="borg_human", book="Borg18+34", out=out, cli=cli, summary=out / "summary.json"))
     return plan
 
 
@@ -403,7 +470,7 @@ def write_report(recs: list[dict], root: Path, args_text: str, total_s: float, e
             L.append("Tệp chi tiết: " + ", ".join(f"`{p}`" for p in r["outputs"]) + f" · log `{r['log']}`\n")
     L.append("## 4. Bố cục đầu ra\n")
     L.append("```\nmeasure_out/<book>/layout/ · measure_out/<book>/qn_ocr/ · measure_out/Chrestomathie1872/chresto_map/\n"
-             "measure_out/detector_transfer/ · measure_out/code_facts/ (+ docs/PIPELINE_FACTS.json)\n"
+             "measure_out/detector_transfer/ · measure_out/code_facts/ (+ docs/PIPELINE_FACTS.json) · measure_out/gold_exact/\n"
              "measure_out/SUMMARY.json · measure_out/REPORT.md · measure_out/logs/*.log · measure_out/_cache/ (OCR cache theo md5 ảnh)\n```\n")
     p = root / "REPORT.md"
     p.write_text("\n".join(L), encoding="utf-8")

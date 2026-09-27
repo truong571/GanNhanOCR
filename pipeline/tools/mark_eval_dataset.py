@@ -54,19 +54,57 @@ với nhãn người; nó **không** phải nguồn dữ liệu huấn luyện.
 """
 
 
-def mark(dataset: Path, book: str, gt: str, reason: str = "") -> dict:
-    """Ghi TAP_DANH_GIA.md + evaluation_only.json vào thư mục export. Trả bản ghi JSON đã ghi."""
+# 2026-09-27: bản chép tay Vatican Borgiano Tonchinese (--kind borg) — cùng ba điều cấm, khác nguồn/adapter/phép đo.
+TEMPLATE_BORG = """# ⚠️ TẬP ĐÁNH GIÁ — KHÔNG TRỘN VÀO TẬP HUẤN LUYỆN
+
+Bộ dữ liệu trong thư mục này sinh từ **{book}**, một bản **CHÉP TAY** chữ Nôm Công giáo (Vatican, Borgiano
+Tonchinese) **đã có nhãn chữ Nôm do NGƯỜI phiên** (`{gt}`, cột `SinoNom_Char`). Pipeline chạy lên bản này
+**chỉ để ĐO độ đúng trên chữ viết tay** bằng cách so nhãn máy với nhãn người; nó **không** phải nguồn dữ liệu huấn luyện.
+
+## Ba điều cấm
+
+1. **KHÔNG** đưa bất kỳ dòng nào của `labels.csv` này vào tập train/val của mô hình nào
+   (nhận diện chữ, S3/ArcFace, detector, bộ kiểm chữ viết tay). Nếu trộn, mọi phép đo "độ đúng so nhãn người" về sau
+   đều vô nghĩa vì mô hình đã thấy đáp án.
+2. **KHÔNG** ghi đè hay sửa `{gt}` (hay `prepared/{book}/`) bằng nhãn máy. Adapter sinh ra bộ này
+   (`pipeline/tools/ingest_borg_book.py`) không đọc cột chữ Nôm người — phép đo chỉ độc lập khi điều đó còn đúng.
+3. **KHÔNG** trích con số của bộ này làm "độ đúng của pipeline" nói chung: quốc ngữ đầu vào ở đây là **phiên âm
+   của người** (không phải OCR quốc ngữ), nên đó là **cận trên của phương pháp trên chữ viết tay**.
+
+## Dùng đúng cách
+
+- Báo cáo số: `measure_out/{book}/borg_endtoend/summary.json`
+  (`.venv/bin/python scripts/measure/borg_endtoend_eval.py --book {book}`).
+- Diễn giải + giới hạn: `docs/BORG_DANH_GIA_2026-09-27.md`.
+
+Đóng dấu ngày {today} bởi `pipeline/tools/mark_eval_dataset.py`.
+"""
+KINDS = {
+    "ihr": dict(template=TEMPLATE, report="docs/CHAY_3_BO_CON_LAI_2026-09-23.md", metrics="measure_out/{book}/ihr_endtoend/summary.json",
+                reason="Bản in có nhãn chữ Nôm do người gán; bộ này chỉ dùng để đo độ đúng end-to-end, không được đưa vào tập huấn luyện."),
+    "borg": dict(template=TEMPLATE_BORG, report="docs/BORG_DANH_GIA_2026-09-27.md",
+                 metrics="measure_out/{book}/borg_endtoend/summary.json",
+                 reason="Bản chép tay có nhãn chữ Nôm do người phiên (Excel SinoNom_Char); bộ này chỉ dùng để đo độ đúng "
+                        "trên chữ viết tay, không được đưa vào tập huấn luyện."),
+}
+
+
+def mark(dataset: Path, book: str, gt: str, reason: str = "", kind: str = "ihr") -> dict:
+    """Ghi TAP_DANH_GIA.md + evaluation_only.json vào thư mục export. Trả bản ghi JSON đã ghi.
+    kind = ihr (mặc định, y hệt trước 27/09) | borg (bản chép tay Vatican)."""
     dataset = Path(dataset)
     if not dataset.is_dir():
         raise FileNotFoundError(f"không thấy thư mục export {dataset}")
+    k = KINDS[kind]
     today = date.today().isoformat()
-    (dataset / MARK_MD).write_text(TEMPLATE.format(book=book, gt=gt, today=today), encoding="utf-8")
+    (dataset / MARK_MD).write_text(k["template"].format(book=book, gt=gt, today=today), encoding="utf-8")
     rec = dict(evaluation_only=True, book=book, ground_truth_file=gt, marked_on=today,
                marked_by="pipeline/tools/mark_eval_dataset.py",
-               reason=reason or ("Bản in có nhãn chữ Nôm do người gán; bộ này chỉ dùng để đo độ đúng "
-                                 "end-to-end, không được đưa vào tập huấn luyện."),
-               report="docs/CHAY_3_BO_CON_LAI_2026-09-23.md",
-               metrics=f"measure_out/{book}/ihr_endtoend/summary.json")
+               reason=reason or k["reason"],
+               report=k["report"],
+               metrics=k["metrics"].format(book=book))
+    if kind != "ihr":
+        rec["kind"] = kind
     (dataset / MARK_JSON).write_text(json.dumps(rec, ensure_ascii=False, indent=1), encoding="utf-8")
     return rec
 
@@ -113,6 +151,13 @@ def selftest() -> int:
         chk("đóng dấu lại thì cập nhật tên sách",
             json.loads((d / MARK_JSON).read_text(encoding="utf-8"))["book"] == "B2")
         chk("json hỏng -> is_marked False", _corrupt_then_check(d))
+        d2 = Path(td) / "dataset_borg"; d2.mkdir()
+        rb = mark(d2, "SachDungLyHoThan", "data/SachDungLyHoThan/SachDungLyHoThan.xlsx", kind="borg")
+        tb = (d2 / MARK_MD).read_text(encoding="utf-8")
+        chk("borg: cờ + kind + đường đo borg_endtoend", rb["evaluation_only"] and rb["kind"] == "borg"
+            and rb["metrics"].endswith("borg_endtoend/summary.json") and is_marked(d2))
+        chk("borg: md nêu CHÉP TAY + 3 điều cấm", "CHÉP TAY" in tb and tb.count("**KHÔNG**") >= 3)
+        chk("ihr mặc định không có khoá kind", "kind" not in mark(d, "LucVanTien1916", "g"))
     print(f"mark_eval_dataset selftest: {ok}/{n}")
     return 0 if ok == n else 1
 
@@ -138,6 +183,7 @@ def main(argv=None) -> int:
     ap.add_argument("--book", default="")
     ap.add_argument("--gt", default="", help="tệp nhãn người, vd data/<book>/manifest.tsv")
     ap.add_argument("--reason", default="")
+    ap.add_argument("--kind", default="ihr", choices=sorted(KINDS), help="ihr (mặc định) | borg (bản chép tay Vatican)")
     ap.add_argument("--selftest", action="store_true")
     a = ap.parse_args(argv)
     if a.selftest:
@@ -145,7 +191,7 @@ def main(argv=None) -> int:
     if not a.dataset or not a.book:
         ap.error("cần --dataset và --book (hoặc --selftest)")
     gt = a.gt or f"data/{a.book}/manifest.tsv"
-    rec = mark(Path(a.dataset), a.book, gt, a.reason)
+    rec = mark(Path(a.dataset), a.book, gt, a.reason, kind=a.kind)
     print(f"[mark] {a.dataset}: đóng dấu TẬP ĐÁNH GIÁ ({MARK_MD}, {MARK_JSON}) — GT {rec['ground_truth_file']}")
     return 0
 

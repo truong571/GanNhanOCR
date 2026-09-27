@@ -24,7 +24,7 @@ cd <thư mục gốc repo GanNhanOCR>
 .venv/bin/python scripts/measure/measure.py --all --dry-run            # in kế hoạch lệnh, không chạy
 ```
 
-Tuỳ chọn: `--steps code_facts,layout,qn_ocr,chresto_map,detector_transfer,box_ref,ihr_layout,ihr_endtoend,ptcl_layout`
+Tuỳ chọn: `--steps code_facts,layout,qn_ocr,chresto_map,detector_transfer,box_ref,ihr_layout,ihr_endtoend,gold_exact,borg_human,borg_endtoend,ptcl_layout`
 · `--ihr-kim-pages N` / `--ptcl-kim-pages N` (số trang gọi kim; cache theo md5 → chạy lại 0 lượt) · `--workers N` · `--out DIR` ·
 `--qn-engine vietocr` (chậm ~20 s/trang, chỉ để so sánh) · `--nomna-pages 0` (bỏ NomNaOCR, cần venv có TensorFlow) ·
 `--det-pages 27 --stt-pages 3` (detector; 27 trang/sách → CI ≈ ±3,5 điểm; `detector_transfer.py --page-ids 'LucVanTien1883:010,030;KimVanKieu1884:0020'` chạy đúng một mẫu trang cố định để tái lập số cũ) · `--layout-detector` (CenterNet làm phương pháp 2 cho layout, ~0,5 s/trang).
@@ -51,6 +51,11 @@ Invariant "mềm" (bảng `SOFT_INVARIANTS` trong `measure.py`, mỗi mục có 
 
 | `align_audit.py` | **(23/09) RÀ CHUẨN CĂN CHỈNH trên CẢ 8 BỘ** (0 API): 13 bất biến gán ô↔âm (ô duy nhất, âm đúng vị trí, đơn điệu `nom_idx`/`syl_idx`, cột phải→trái, tầng 6⧺8, không xuyên tầng, parity + duy nhất số câu, span truyện liền mạch) + **TRÔI CĂN CHỈNH** (nhãn đúng chữ nhưng lệch ô ±1/±2) đo bằng nhãn người IHR và bằng dị bản | 8 bộ | 10 s | `SUMMARY.json`, `REPORT.md`, `<Book>_{invariants,violations,drift}.csv` — kết luận ở `docs/RA_SOAT_CAN_CHINH_2026-09-23.md` |
 
+| `gold_exact_eval.py` | **(27/09) NGHIỆM THU BẢN GIAO "GOLD CHÍNH XÁC"** `dataset/_ALL/gold_exact.csv` (bước `python -m pipeline.gold_exact --publish` sau bộ gộp): 25 bất biến (28/09) KHÔNG khoá số đếm — số dòng = số GOLD, mỗi ô đúng 1 trạng thái (ok/text_only/uncertified/review), ok ⊂ GOLD, không ô luật A (rescue / cầu tự dạng / văn bản yếu, tính lại từ `rule`) nào ok, crop chuẩn ô ok tồn tại + md5 khớp, `labels.csv` không đổi từ lúc gộp (sha == CHECKSUMS), policy_version + config sha khớp `config/gold_exact.yaml`, trạng thái tái lập từ cột cờ + config, bộ kiểm ảnh tái lập ĐÚNG từ điểm + ngưỡng (CSV %.17g, dung sai 0), ok = lai − luật A − M-OCR, bản lọc theo bộ khớp + tập GOLD `dataset/<Bộ>/labels.csv` == dòng bản lọc (N3), cột `device` một giá trị; bộ thiếu bản lọc (vừa `--book <Bộ>`) = SKIP + gợi ý `--merge` (N4). Độ chính xác trên nhãn người IHR (L16/TK, V1+, CI bootstrap cụm trang) **chỉ báo**, không là cổng. Chỉ lập kế hoạch khi đã có `gold_exact.csv` | `_ALL` (8 bộ) | 12 s | `measure_out/gold_exact/summary.json` |
+
+| `borg_human_eval.py` | **(27/09) NGHIỆM THU BỘ CROP NHÃN NGƯỜI** `dataset/_BORG_NHAN_NGUOI/` (dựng bằng `python -m pipeline.borg_human --stage all`, gióng chữ người phiên Borg.tonch 18 + 34 với hộp chữ): số dòng = số chữ người (đếm lại từ prepared), nhãn == chữ người tại idx, khoá duy nhất, luật keep TÍNH LẠI từ cột == keep, keep_v5 = keep − Paddle lệch − chuẩn hoá (⇒ keep_v5 ⊆ keep ⊆ keep_high), mọi ảnh tồn tại + md5 khớp, θ trượt ±1 (Paddle) tính lại từ `paddle_test` ∈ [0,94; 1,69] % (vòng 5), split theo trang, CHECKSUMS, không lọt vào `_ALL`, ≤ 1 GB; MỀM: tái lập từng ô r4/r5 | Borg (2 sách) | 30 s | `measure_out/borg_human/summary.json` |
+
+| `borg_endtoend_eval.py` | **(27/09) ĐỘ ĐÚNG TRÊN CHỮ VIẾT TAY của đường TỰ ĐỘNG** (2 bản chép tay Vatican Borg.Tonch.18/34, adapter `pipeline/tools/ingest_borg_book.py` → `prepared/_auto/<Sách>/`, KHÔNG đọc cột Nôm người): nhãn máy `labels_gated.csv` ↔ chữ Nôm NGƯỜI (Excel `SinoNom_Char`) ghép qua VỊ TRÍ ÂM TIẾT (cột `syl_span` của adapter + `syl_idx`; chỉ câu đếm bằng #chữ = #âm) — strict / V1+ / V1+ + 4 cặp quy ước người phiên (𠸜/先, 𢧚/年, 𠀧/巴, 𧘇/意) / + 11 cặp, CI bootstrap cụm trang, theo tầng + ô `gold_exact = ok`; kim thô vs chữ người cả trang (căn LCS: precision/recall); trần luật GOLD = tỉ lệ cặp người có chữ ∈ R(âm). Bất biến: ánh xạ trang == ingest_borg_tonch, adapter không đọc cột Nôm, manifest evaluation_only; thiếu nhãn máy / cache kim → SKIP | Borg (2 sách) | 3 s (không kim) | `measure_out/<Sách>/borg_endtoend/{summary.json,cells.csv,errors.csv}` |
 | `crop_source_samples.py` | **(23/09, vòng 7)** ảnh mẫu TRƯỚC/SAU của `books[].crop_source`: ghép crop đã xử lý (`<build>/crops_bin/`) cạnh crop giao nộp cắt từ ảnh quét gốc; 2 bất biến (cùng kích thước · tương quan mức xám ≥ `--min-corr`) | build bất kỳ có `crops_bin/` | 2 s | `measure_out/crop_source/{*.png,samples.csv,summary.json}` |
 
 Mỗi mô-đun cũng chạy độc lập: `--book`, `--out`, `--limit N`, `--workers N` (xem `--help`).
@@ -64,6 +69,7 @@ measure_out/
   logs/<bước>_<sách>.log  stdout/stderr từng bước
   <book>/layout/          <book>/qn_ocr/          Chrestomathie1872/chresto_map/
   detector_transfer/      code_facts/             _cache/ (OCR cache theo md5 ảnh — xoá được)
+  gold_exact/             (bản giao dataset/_ALL/gold_exact.csv — chỉ khi bước gold_exact đã chạy)
 ```
 
 Quy ước thư mục: **mỗi phép đo ghi vào `measure_out/<book>/<phép đo>/`** (không đè `summary.json` của phép đo khác).

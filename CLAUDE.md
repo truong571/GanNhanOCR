@@ -24,3 +24,22 @@
 - Log riêng mỗi bộ trong `logs/`; mã thoát ≠ 0 nếu bất kỳ bộ nào lỗi hoặc có FAIL cứng khi nghiệm thu.
 - **Tài liệu chốt cuối** (mọi quyết định + bảng 8 bộ + giới hạn): `docs/CHOT_CUOI_2026-09-23.md`;
   cách chạy chi tiết: `docs/HUONG_DAN_CHAY_SACH_MOI_2026-09-21.md` §2.0.
+
+## GOLD chính xác — ảnh + chữ (2026-09-27)
+- Bước tự động SAU gộp trong `run_pipeline.sh` (`run_gold_exact`, cờ `--gold-exact on|off`, mặc định on; chỉ chạy khi có
+  gộp trong cùng lượt; 0 API). Ghi tệp phụ `dataset/_ALL/gold_exact.csv` (ok / text_only / uncertified / review +
+  `evidence_level`) và `crops_chuan/` cho ô ok; **KHÔNG đổi `labels.csv`** (mốc md5 STT giữ nguyên).
+- Mã `pipeline/gold_exact/`, ngưỡng `config/gold_exact.yaml`, tài sản `models/gold_exact/` (.pt không commit; nguồn dựng
+  lại bền ở `measure_out/_gold_exact_assets_src/`). Nghiệm thu `scripts/measure/gold_exact_eval.py` (trong `measure.py --all`).
+- Độ chính xác chỉ ĐO được ở LVT1916/TK1872 (nhãn người IHR); KVK/L83 ước lượng; STT/Chr suy đoán. Chi tiết + giới hạn:
+  `docs/GOLD_CHINH_XAC_2026-09-27.md`; thử nghiệm nền `lab/thu_nghiem_anh_chu/TN1–TN4`.
+
+## Borg.Tonch.18/34 — chữ viết tay Công giáo có nhãn người (2026-09-27)
+- Sách `SachKinhThayCaBinh` (Borg.18) và `SachDungLyHoThan` (Borg.34); `data/MSS_Borg.tonch.*` là symlink, config
+  `pipeline_MSS_Borg_tonch_*` bị `run_pipeline.sh` từ chối (dùng tên Sach*).
+- Tập ĐÁNH GIÁ tự động: `./run_pipeline.sh --book all-borg --yes` (adapter `pipeline/tools/ingest_borg_book.py`, QN người,
+  Nôm người GIẤU, kim lt2; cần API kim — 641 lượt, cache `prepared/_auto/`), rồi `--merge --yes --verify`; đo
+  `scripts/measure/borg_endtoend_eval.py`; gold_exact trên Borg LOBO theo sách. Cờ `--borg auto|require|off`.
+- Bộ crop NHÃN NGƯỜI (0 API, tách khỏi GOLD tự động): `dataset/_BORG_NHAN_NGUOI/` (`python -m pipeline.borg_human
+  --stage all`; đo `scripts/measure/borg_human_eval.py`). Tài liệu: `docs/BORG_DANH_GIA_2026-09-27.md`,
+  `docs/BORG_NHAN_NGUOI_2026-09-27.md`.

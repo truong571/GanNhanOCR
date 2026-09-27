@@ -5,6 +5,14 @@
 # Đọc cột PHẢI→TRÁI (RTL truyền thống).
 # Ingest và chuẩn hóa từ data/SachKinhThayCaBinh (ảnh số hóa Thư viện Vatican DigiVatLib + Excel phiên âm).
 # Bố cục: layout: prose, n_columns: auto (số cột theo trang), det_xmargin: 0.05, det_thr: 0.15.
+#
+# 2026-09-27 (docs/BORG_DANH_GIA_2026-09-27.md): TẬP ĐÁNH GIÁ CHỮ VIẾT TAY (như 2 bộ IHR). Ingest bằng adapter RIÊNG
+# pipeline.tools.ingest_borg_book (KHÔNG ingest_prose_book — adapter đó viết cho Chrestomathie): ảnh gốc 720 px,
+# kim TOÀN TRANG lang_type 2 (×1, cache prepared/_auto/SachKinhThayCaBinh/kim_raw/*_lt2.json), QN = âm tiết NGƯỜI của trang (Excel
+# ChuQN_txt), ghép chữ kim ↔ âm bằng DP đơn điệu. Adapter KHÔNG đọc cột SinoNom_Char (nhãn người chỉ để ĐO:
+# scripts/measure/borg_endtoend_eval.py). Đầu ra prepared/_auto/SachKinhThayCaBinh/ — prepared/SachKinhThayCaBinh/ (ingest_borg_tonch, nhãn người)
+# không bị ghi. Bộ xuất đóng dấu evaluation_only (mark_eval_dataset --kind borg) -> bộ gộp evaluation_only=1, split_hint=eval.
+# config/pipeline_MSS_Borg_tonch_18.yaml = BÍ DANH trùng (run.alias_of) — run_pipeline từ chối chạy nó.
 books:
   - name: SachKinhThayCaBinh
     qn_charfix: true
@@ -21,12 +29,13 @@ books:
     reocr: false
 
 run:
-  ingest: prose
-  n_columns: 10
-  cross: false
+  ingest: borg                  # pipeline.tools.ingest_borg_book (kim lt2 toàn trang + QN người theo trang)
+  dataset_out: prepared/_auto/SachKinhThayCaBinh/dataset_out   # mọi thứ của đường tự động dưới prepared/_auto/SachKinhThayCaBinh/
+  n_columns: 10                 # số cột phổ biến (chỉ sửa LOG/README "trang không đủ N cột"; thực tế ~10–11)
+  cross: false                  # không có dị bản số hoá; độ đúng đo bằng NHÃN NGƯỜI (borg_endtoend_eval)
 
 paths:
-  data_dir: prepared
+  data_dir: prepared/_auto      # adapter ghi prepared/_auto/<Sách>/ (KHÔNG đè prepared/<Sách>/ chứa nhãn người)
   output_dir: dataset/SachKinhThayCaBinh
   dict_dir: Dict
   qn_to_nom_dict: Dict/QuocNgu_SinoNom.csv

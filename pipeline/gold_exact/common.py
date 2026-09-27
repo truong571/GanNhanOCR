@@ -26,20 +26,55 @@ CONFIG = REPO / "config" / "gold_exact.yaml"
 
 SETS8 = ["stt2", "stt4", "stt11", "Chr", "L83", "KVK", "L16", "TK"]
 AB = {"Chrestomathie1872": "Chr", "LucVanTien1883": "L83", "KimVanKieu1884": "KVK",
-      "LucVanTien1916": "L16", "TruyenKieu1872": "TK"}
+      "LucVanTien1916": "L16", "TruyenKieu1872": "TK",
+      "SachKinhThayCaBinh": "B18", "SachDungLyHoThan": "B34"}
 BOOK_SETS = ["SachThanhTruyen", "Chrestomathie1872", "LucVanTien1883", "KimVanKieu1884", "LucVanTien1916",
              "TruyenKieu1872"]
-PREP_DIR = {"stt2": "SachThanhTruyen2", "stt4": "SachThanhTruyen4", "stt11": "SachThanhTruyen11"}
-# 5 sách khai crop_source: original (ảnh giao = điểm ảnh trang GỐC); STT: trang đã xử lý như pipeline
-ORIGINAL = {"LucVanTien1883", "KimVanKieu1884", "Chrestomathie1872", "LucVanTien1916", "TruyenKieu1872"}
+# 2026-09-27: 2 bản CHÉP TAY Vatican (Borg.Tonch.18 = B18, Borg.Tonch.34 = B34) — TẬP ĐÁNH GIÁ chữ viết tay (có nhãn người
+# Excel). Chỉ tham gia khi CÓ trong bộ gộp (evaluation_only); mọi đường riêng của Borg chỉ kích hoạt theo tập bộ có trong G, nên
+# 8 bộ cũ chạy y hệt khi vắng Borg. Thư mục prepared của đường TỰ ĐỘNG = prepared/_auto/<Sách> (prepared/<Sách> giữ nhãn người).
+BORG = ("SachKinhThayCaBinh", "SachDungLyHoThan")
+BORG8 = ("B18", "B34")
+AUTO_PREP = {b: f"_auto/{b}" for b in BORG}
+PREP_DIR = {"stt2": "SachThanhTruyen2", "stt4": "SachThanhTruyen4", "stt11": "SachThanhTruyen11",
+            **{b.lower(): AUTO_PREP[b] for b in BORG}}
+# 5 sách khai crop_source: original (ảnh giao = điểm ảnh trang GỐC); STT: trang đã xử lý như pipeline; Borg cũng original
+ORIGINAL = {"LucVanTien1883", "KimVanKieu1884", "Chrestomathie1872", "LucVanTien1916", "TruyenKieu1872", *BORG}
 IHR = ("LucVanTien1916", "TruyenKieu1872")
 EVIDENCE = {"L16": "do_tren_nhan_nguoi", "TK": "do_tren_nhan_nguoi", "KVK": "uoc_luong", "L83": "uoc_luong",
-            "stt2": "suy_doan", "stt4": "suy_doan", "stt11": "suy_doan", "Chr": "suy_doan"}
+            "stt2": "suy_doan", "stt4": "suy_doan", "stt11": "suy_doan", "Chr": "suy_doan",
+            "B18": "do_tren_nhan_nguoi", "B34": "do_tren_nhan_nguoi"}
+# Bộ kiểm chữ viết tay (r5/hand_lobo) theo bộ — LOBO THEO SÁCH: mô hình + nguyên mẫu + hiệu chuẩn học trên MỘT sách Borg;
+# sách Borg đang đánh giá luôn dùng bản học trên sách KIA (B18 Kinh -> DungLy; B34 DungLy -> Kinh). STT dùng Kinh (như cũ).
+HAND_VARIANT = {"stt2": "Kinh", "stt4": "Kinh", "stt11": "Kinh", "B34": "Kinh", "B18": "DungLy"}
+HAND_TRAIN_BOOK = {"Kinh": "SachKinhThayCaBinh", "DungLy": "SachDungLyHoThan"}
+HANDWRITTEN = ("stt2", "stt4", "stt11") + BORG8
+
+
+def prep_root(book_set: str) -> Path:
+    """Thư mục prepared của MỘT book_set sách mới (Borg -> prepared/_auto/<Sách>)."""
+    return REPO / "prepared" / AUTO_PREP.get(book_set, book_set)
+
+
+def sets_in(S8) -> list:
+    """8 bộ cũ (thứ tự cố định, luôn có mặt trong bảng) + bộ Borg nào CÓ trong dữ liệu."""
+    have = set(S8)
+    return SETS8 + [s for s in BORG8 if s in have]
 
 
 def rd(path, **k) -> pd.DataFrame:
     """Đọc CSV giữ nguyên chuỗi: `nan` là một âm tiếng Việt (難), ô rỗng giữ ''."""
     return pd.read_csv(path, dtype=str, keep_default_na=False, **k)
+
+
+def to_float(x) -> np.ndarray:
+    """Chuỗi số của CSV -> float64 ĐÚNG bit ('' -> nan). pd.to_numeric có thể lệch 1 ulp với chuỗi 17 chữ số; astype(float) thì
+    làm tròn đúng (cần để tái lập cờ so ngưỡng từ gold_exact.csv %.17g)."""
+    s = pd.Series(x, dtype=object).replace("", np.nan)
+    try:
+        return s.astype(float).values
+    except (TypeError, ValueError):
+        return pd.to_numeric(s, errors="coerce").values.astype(float)
 
 
 def load_cfg(path: Path | str = CONFIG) -> dict:
@@ -59,7 +94,7 @@ def uid_path(uid: str) -> str:
 
 
 def page_dir(book_set: str, book: str) -> Path:
-    return REPO / "prepared" / PREP_DIR.get(book, book_set)
+    return REPO / "prepared" / PREP_DIR.get(book, AUTO_PREP.get(book_set, book_set))
 
 
 def md5_bytes(b: bytes) -> str:
@@ -86,6 +121,34 @@ class Log:
             print(f"[gold_exact {time.time() - self.t0:6.0f}s] {msg}", flush=True)
 
 
+def load_pickle_safe(pf: Path, log=print):
+    """pickle.load cache; hỏng/không đọc được -> None (người gọi tính lại và ghi đè)."""
+    import pickle
+    try:
+        with open(pf, "rb") as f:
+            return pickle.load(f)
+    except Exception as e:  # noqa: BLE001
+        log(f"cache hỏng {pf} ({type(e).__name__}) -> tính lại")
+        return None
+
+
+def dump_pickle_atomic(obj, pf: Path):
+    """Ghi cache qua tệp tạm rồi đổi tên (không để lại tệp ghi dở khi bị ngắt)."""
+    import pickle
+    pf = Path(pf)
+    pf.parent.mkdir(parents=True, exist_ok=True)
+    tmp = pf.with_name(pf.name + ".tmp")
+    with open(tmp, "wb") as f:
+        pickle.dump(obj, f)
+    tmp.replace(pf)
+
+
+def is_inside(p: Path, d: Path) -> bool:
+    """p nằm trong (hoặc là) thư mục d — so theo thành phần đường dẫn, KHÔNG theo tiền tố chuỗi (dataset_out ≠ dataset)."""
+    p, d = Path(p).resolve(), Path(d).resolve()
+    return p == d or d in p.parents
+
+
 def load_gold(all_dir: Path) -> pd.DataFrame:
     """Mọi ô GOLD của bộ giao nộp (thứ tự hàng giữ như labels.csv)."""
     L = rd(Path(all_dir) / "labels.csv")
@@ -110,7 +173,7 @@ class Assets:
         self.root = Path(root)
         mf = self.root / "MANIFEST.json"
         if not mf.exists():
-            raise AssetError(f"Thiếu {mf}. Dựng tài sản: .venv/bin/python -m pipeline.gold_exact.export_assets --sp <thư mục thử nghiệm>")
+            raise AssetError(f"Thiếu {mf}. Dựng tài sản: .venv/bin/python -m pipeline.gold_exact.export_assets (kho nguồn measure_out/_gold_exact_assets_src/)")
         self.man = json.load(open(mf, encoding="utf-8"))
         self.verify = verify
         self._ok = {}
@@ -145,6 +208,30 @@ class Assets:
             raise AssetError(f"MANIFEST không có tệp ngoài '{rel}'.")
         return self._check("ext:" + rel, REPO / rel, ent)
 
+    def verify_all(self) -> dict:
+        """Kiểm sha256/kích thước/digest TOÀN BỘ MANIFEST (tài sản + tệp ngoài) một lượt, NGAY khi khởi động — trước mọi
+        phép tính. Gom mọi lỗi rồi AssetError một lần (không dừng ở tệp hỏng đầu tiên)."""
+        t = time.time()
+        bad = []
+        for n in self.man.get("files", {}):
+            try:
+                self.path(n)
+            except AssetError as e:
+                bad.append(str(e))
+        for n in self.man.get("external", {}):
+            try:
+                self.ext(n)
+            except AssetError as e:
+                bad.append(str(e))
+        if self.man.get("invariants_fail"):
+            bad.append(f"MANIFEST invariants_fail = {self.man['invariants_fail']}")
+        if bad:
+            raise AssetError(f"{len(bad)} tài sản hỏng/thiếu (kiểm lúc khởi động, chưa tính gì):\n  - " + "\n  - ".join(bad)
+                             + "\nDựng lại: .venv/bin/python -m pipeline.gold_exact.export_assets (kho nguồn "
+                             + str((self.man.get("source_store") or {}).get("path", "measure_out/_gold_exact_assets_src")) + ")")
+        return dict(n_files=len(self.man.get("files", {})), n_external=len(self.man.get("external", {})),
+                    seconds=round(time.time() - t, 1), verified=self.verify)
+
     def sha(self, name: str) -> str:
         ent = self.man["files"].get(name) or self.man["external"].get(name)
         return ent.get("sha256") or ent.get("digest")
@@ -167,11 +254,16 @@ class EmbCache:
     def __init__(self, cache_dir: Path | None, tag: str, model_sha: str, dim: int | None = None, recompute=False):
         self.f = (Path(cache_dir) / f"{tag}_{model_sha[:16]}.npz") if cache_dir else None
         self.d = {}
-        if self.f is not None and self.f.exists() and not recompute:
-            z = np.load(self.f, allow_pickle=False)
-            for k, v in zip(z["keys"], z["E"]):
-                self.d[str(k)] = v
         self.dirty = False
+        if self.f is not None and self.f.exists() and not recompute:
+            try:
+                z = np.load(self.f, allow_pickle=False)
+                for k, v in zip(z["keys"], z["E"]):
+                    self.d[str(k)] = v
+            except Exception as e:  # noqa: BLE001 — cache hỏng (ghi dở, đĩa đầy…) -> bỏ, tính lại, ghi đè khi save()
+                print(f"[gold_exact] cache hỏng {self.f.name} ({type(e).__name__}: {e}) -> tính lại", flush=True)
+                self.d = {}
+                self.dirty = True
 
     def missing(self, keys):
         return [k for k in dict.fromkeys(keys) if k not in self.d]

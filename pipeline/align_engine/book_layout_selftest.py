@@ -653,10 +653,36 @@ def test_crop_source():
           and all(BL.book_layout(b).crop_source == "processed" for b in stt))
 
 
+def test_visual_dp():
+    """(2026-09-28, TN6) box_decoder visual_dp: nhận giá trị mới; mặc định vẫn legacy; STT không khai; engine nối đúng."""
+    import yaml
+    b = BL.book_layout({"name": "X", "layout": "prose", "box_decoder": "visual_dp"})
+    check("book_layout nhận box_decoder: visual_dp", b.box_decoder == "visual_dp")
+    check("mặc định box_decoder vẫn legacy (book_layout({}))", BL.book_layout({}).box_decoder == "legacy")
+    try:
+        BL.book_layout({"name": "X", "box_decoder": "visual"})
+        check("box_decoder sai -> ValueError", False)
+    except ValueError:
+        check("box_decoder sai -> ValueError", True)
+    stt = yaml.safe_load((REPO / "config" / "pipeline.yaml").read_text(encoding="utf-8"))["books"]
+    check("config/pipeline.yaml (STT): KHÔNG sách nào khai box_decoder -> legacy (md5 STT giữ)",
+          all("box_decoder" not in x for x in stt) and all(BL.book_layout(x) is BL.DEFAULT_LAYOUT for x in stt))
+    src = inspect.getsource(AP.align_page)
+    check("align_page: visual_dp chạy PASS 1 như pitch + ghi rec['vdp_page']",
+          'visual_dp_on = box_decoder in ("visual_dp", "visual_dp_hybrid")' in src and 'rec["vdp_page"] = vdp_page' in src)
+    G = [[0, 0, 10, 10, 1.0], [0, 10, 10, 20, 1.0]]
+    ops = [{"op": "match", "nom_idx": 0, "syl_idx": 1}]
+    rb, bs, cs = AP.assign_boxes_pitch(G, ["vdp_det", "vdp_low"], ops, 1, 2, mode="visual_dp")
+    check("assign_boxes_pitch mode=visual_dp: theo syl_idx, count_source visual_dp",
+          rb == [[0, 10, 10, 20]] and bs == ["vdp_low"] and cs == "visual_dp", (rb, bs, cs))
+    rb2, _, cs2 = AP.assign_boxes_pitch(G, ["detector", "detector"], ops, 1, 2)
+    check("assign_boxes_pitch mode rỗng: count_source pitch (cũ)", cs2 == "pitch")
+
+
 def main():
     for t in (test_book_layout, test_det_params, test_gate, test_get_qn_lines, test_detect,
               test_signatures, test_prose, test_detector_ckpt, test_kim_and_tier_dp,
-              test_crop_source, test_gate_tier_rule):
+              test_crop_source, test_gate_tier_rule, test_visual_dp):
         try:
             t()
         except Exception as e:      # noqa: BLE001

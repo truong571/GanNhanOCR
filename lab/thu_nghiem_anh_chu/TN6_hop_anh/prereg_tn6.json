@@ -1,0 +1,20 @@
+{
+ "registered_at": "2026-09-28 20:20:37",
+ "visual_dp_sha256": "0564eb418f26a35ac4af998c15bfc6d5bda58e11fd397bc04128f313e2ab1759",
+ "ghi_chu": "Đăng ký TRƯỚC khi xem kết quả bản dựng visual_dp v1 (quy tắc vdp_agree) của 4 bộ có sự thật và mọi số Chr/STT. Đã xem: thử nghiệm ngoại tuyến x02 (Borg), bản v0 (không quy tắc agree) của 4 bộ.",
+ "tieu_chi_bo_co_su_that (Borg Kinh/DungLy: hộp người keep_high+; IHR L16/TK: mô hình khe người)": {
+  "C1_vi_tri": "tỉ lệ đúng vị trí trên MỌI ô có sự thật (mọi tầng) của visual_dp ≥ của cách hiện hành (pitch) − 0,1 điểm",
+  "C2_nhan": "độ đúng nhãn V1+ của GOLD không giảm quá 0,5 điểm",
+  "C3_hai_ve": "tỉ lệ GOLD đúng hai vế (V1+ ∧ đúng vị trí) tăng",
+  "C4_san_luong": "số ô GOLD đúng hai vế ƯỚC LƯỢNG (= số GOLD có ảnh × tỉ lệ hai vế) không giảm quá 2 %",
+  "quyet_dinh": "đổi box_decoder của bộ sang visual_dp khi đạt cả C1–C4; ngược lại giữ nguyên"
+ },
+ "tieu_chi_bo_khong_su_that (Chrestomathie1872, STT — SUY ĐOÁN)": {
+  "loai_sach": "chỉ xét đổi khi CÙNG LOẠI với một bộ có sự thật đã thắng (Chr = văn xuôi, cột âm do adapter ghép như Borg); STT (9 cột, âm QN OCR theo cột, luật legacy) chỉ đổi khi thắng RÕ",
+  "G1": "m_win > 0 (bộ kiểm thị giác, thiên về visual_dp) tăng ≥ 1 điểm trên mọi ô VÀ trên GOLD",
+  "G2": "tỉ lệ bbox trùng (cùng trang) không tăng; QUARANTINE (F1 cross-col) không tăng",
+  "G3": "số GOLD (có ảnh) không giảm quá 5 %",
+  "STT_thang_ro": "G1 ≥ 3 điểm + G2 + G3; thiếu một điều kiện -> giữ legacy",
+  "Chr": "G1 + G2 + G3 -> đổi; độ tin của m_win kiểm trên Borg (AUC m_win↔đúng vị trí) và ghi SUY ĐOÁN"
+ }
+}

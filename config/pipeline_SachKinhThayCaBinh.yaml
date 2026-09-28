@@ -20,7 +20,7 @@ books:
     n_columns: auto
     det_xmargin: 0.05
     det_thr: 0.15
-    box_decoder: pitch
+    box_decoder: visual_dp        # 2026-09-28 TN6 (docs/HOP_ANH_TN6_2026-09-28.md): đúng vị trí vs hộp người 61,5 → 99,4 % (Kinh), 58,6 → 99,8 % (DungLy); trước: pitch
     kim_lang_type: 2
     detector_resize: linear
     crop_source: original

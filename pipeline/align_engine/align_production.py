@@ -669,7 +669,9 @@ def assign_boxes_pitch(G, G_src, ops, n_ocr, n_qn, mode: str = ""):
                 if 0 <= i < n_ocr and 0 <= j < n_qn:
                     boxes[i] = [int(v) for v in G[j][:4]]
                     src[i] = G_src[j]
-        return boxes, src, "pitch"
+        # (2026-09-28, TN6) box_decoder=visual_dp dùng CÙNG phép gán theo syl_idx (hộp theo âm do
+        # pipeline.align_engine.visual_dp giải) nhưng ghi count_source riêng để đếm/soát được.
+        return boxes, src, ("visual_dp" if mode == "visual_dp" else "pitch")
     if len(G) == n_ocr:
         # mode='pitch_rule' (2026-09-23): cùng phép gán theo nom_idx, nhưng N đến từ LUẬT 6/8
         # chứ không từ `n_det == n_ocr` — ghi count_source riêng để đếm/soát được.
@@ -869,6 +871,12 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
     tier_dp = bool(getattr(layout, "tier_dp", False)) if layout is not None else False
     seg_backend_suffix = ""
     box_decoder = getattr(layout, "box_decoder", "legacy") if layout is not None else "legacy"
+    # (2026-09-28, TN6) visual_dp: PASS 1 chạy y hệt pitch (hộp dự phòng + ứng viên detector ≥ 0,05), rồi build_dataset
+    # giải hộp CẢ SÁCH bằng pipeline.align_engine.visual_dp.apply_book trên rec["vdp_page"] (đơn vị + nhúng) trước PASS 1b.
+    visual_dp_on = box_decoder in ("visual_dp", "visual_dp_hybrid")
+    if visual_dp_on:
+        box_decoder = "pitch"
+    vdp_page = None
     # (2026-09-24) L3 sửa lỗi ký tự OCR quốc ngữ trước align — books[].qn_charfix, mặc định TẮT
     qn_charfix_on = bool(getattr(layout, "qn_charfix", False)) if layout is not None else False
     locked_columns = set(locked_columns or ())
@@ -892,6 +900,10 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
             page_boxes = [b for b in page_boxes_low if b[4] >= thr]
             tier_n_by_line = expected_tier_counts(data_dir, page_name, tier_rule=tier_rule)
             seg_backend_suffix = "+pitch"
+            if visual_dp_on:
+                from pipeline.align_engine import visual_dp as _vdp
+                vdp_page = _vdp.page_units(page_boxes_low, detector._gray)
+                seg_backend_suffix = "+visual_dp"
         else:
             detector = _get_detector(strict=True, thr=thr)   # thiếu ckpt -> ném lỗi, KHÔNG rơi ngầm
             page_boxes = detector.boxes_for_page(page_bgr)   # all char boxes, once per page
@@ -999,4 +1011,6 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
            "col_states": col_states}
     if layout_gate:
         rec["layout_gate"] = layout_gate      # chỉ có với layout=lithograph|prose
+    if visual_dp_on:
+        rec["vdp_page"] = vdp_page            # (TN6) None nếu trang không có hộp detector -> mọi âm dùng hộp dự phòng
     return rec

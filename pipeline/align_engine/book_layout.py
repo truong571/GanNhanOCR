@@ -22,6 +22,16 @@ Khoá tuỳ chọn trong `books:` của config/pipeline.yaml (vắng = hành vi 
                                     # --reseg detector). n_det trong labels.csv VẪN là số hộp thô ở
                                     # det_thr (I5 không thành hằng đúng); box_source ghi
                                     # detector | detector_low | ink_cut; count_source = 'pitch'.
+                                    # (2026-09-28, TN6) "visual_dp" = pipeline/align_engine/visual_dp.py:
+                                    # PASS 1 chạy y như pitch (hộp dự phòng), rồi CẢ SÁCH: đơn vị trang
+                                    # (hộp detector ≥ 0,05 gom cột phải→trái + ô ảo) gióng với chuỗi ÂM QN
+                                    # của trang bằng DP đơn điệu, phát xạ thị giác theo R(âm) (glyph font/FD
+                                    # + nguyên mẫu âm tự học từ khối trang khác), tiên nghiệm mềm dải x cột
+                                    # kim. count_source = 'visual_dp'; box_source vdp_det | vdp_merge |
+                                    # vdp_low | vdp_virtual | vdp_fallback (3 giá trị cuối = hộp không tự tin,
+                                    # cổng (a') hạ GOLD_text_only). Cần --two-pass. Đo: docs/HOP_ANH_TN6_2026-09-28.md.
+                                    # "visual_dp_hybrid" = như visual_dp nhưng ô hậu nghiệm thấp/ảo LỆCH pitch và
+                                    # mục DP bỏ lấy HỘP PITCH (box_source vdp_pitch_<nguồn pitch>).
     detector_ckpt: train_crop/detector_r34_v2_litho.pt
                                     # (2026-09-22, tuỳ chọn) checkpoint CenterNet RIÊNG cho sách này
                                     # (lab/i5_detector_v2: v2 fine-tune thạch bản). Vắng = None = ckpt
@@ -113,7 +123,9 @@ N_COLUMNS_AUTO = "auto"           # chỉ layout=prose: số cột theo trang = 
 PROSE_DET_XMARGIN = LITHO_DET_XMARGIN   # văn xuôi in đá: hộp kim cũng rộng so với bước cột
 BOX_DECODER_LEGACY = "legacy"
 BOX_DECODER_PITCH = "pitch"
-BOX_DECODERS = (BOX_DECODER_LEGACY, BOX_DECODER_PITCH)
+BOX_DECODER_VISUAL_DP = "visual_dp"   # (2026-09-28, TN6) pipeline/align_engine/visual_dp.py
+BOX_DECODER_VISUAL_DP_HYBRID = "visual_dp_hybrid"   # (TN6) như visual_dp; ô DP không tự tin lệch pitch -> hộp pitch
+BOX_DECODERS = (BOX_DECODER_LEGACY, BOX_DECODER_PITCH, BOX_DECODER_VISUAL_DP, BOX_DECODER_VISUAL_DP_HYBRID)
 KIM_LANG_TYPES = (0, 1, 2)        # 0 Tự động · 1 Hán (mặc định = bộ cũ) · 2 Nôm
 KIM_OCR_IDS = (-1, 1, 2, 3, 4, 5, 6)
 KIM_FONT_TYPES = (0, 1, 2)        # 0 Tự động · 1 In (mặc định) · 2 Viết tay
@@ -136,7 +148,7 @@ class BookLayout:
     qn_per_column: int = 0        # 0 = không kiểm số âm tiết mỗi cột
     det_xmargin: float | None = None   # None = step2.det_xmargin toàn cục (STT: 0,25)
     det_thr: float | None = None       # None = step2.det_thr toàn cục (STT: 0,2)
-    box_decoder: str = BOX_DECODER_LEGACY   # "legacy" | "pitch" (pitch_decode, tuỳ chọn)
+    box_decoder: str = BOX_DECODER_LEGACY   # "legacy" | "pitch" (pitch_decode) | "visual_dp" (visual_dp, TN6)
     detector_ckpt: str | None = None   # None = ckpt toàn cục (v1); chuỗi = ckpt riêng sách (v2)
     detector_resize: str = DETECTOR_RESIZE_LINEAR   # "linear" (v1) | "area" (khử răng cưa)
     crop_source: str = CROP_SOURCE_PROCESSED        # "processed" (cũ) | "original" (ảnh quét gốc)

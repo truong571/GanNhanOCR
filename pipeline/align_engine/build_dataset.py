@@ -1305,7 +1305,10 @@ def main():
                 det_params_by_book[book]["detector_resize"] = ap_mod.DETECTOR_RESIZE
                 print(f"[align] {book}: detector ckpt = {ap_mod.DETECTOR_CKPT or '(toàn cục v1)'} | resize = "
                       f"{ap_mod.DETECTOR_RESIZE} -> seg_backend {ap_mod.detector_backend_name()}", flush=True)
-            if lay.box_decoder != "legacy":
+            if lay.box_decoder in ("visual_dp", "visual_dp_hybrid"):
+                print(f"[align] {book}: box_decoder = {lay.box_decoder} (PASS 1 = pitch làm dự phòng; sau PASS 1: DP trang âm QN ↔ "
+                      f"đơn vị detector, phát xạ thị giác R(âm) + nguyên mẫu âm; n_det vẫn = hộp thô ở det_thr)", flush=True)
+            elif lay.box_decoder != "legacy":
                 print(f"[align] {book}: box_decoder = {lay.box_decoder} (pitch_decode: ứng viên ≥ 0,05 + ô ảo "
                       f"chiếu mực, DP theo bước cột; n_det vẫn = hộp thô ở det_thr)", flush=True)
         trans = sorted(glob.glob(str(data_dir / "transcriptions" / "page_*.json")))
@@ -1367,6 +1370,17 @@ def main():
                                    qn_to_nom, similar, s3=s3, anchored=p.get("anchored", False))
                 records.append(_record(_book_code(book), page, page_png, idx, p, dec, s3,
                                        rec.get("seg_backend", "")))
+        # (2026-09-28, TN6) box_decoder=visual_dp: giải hộp CẢ SÁCH (DP trang + phát xạ thị giác R(âm) + nguyên mẫu
+        # âm từ khối trang khác) trên đơn vị/nhúng PASS 1 đã gom, ghi đè G/G_src/box_rule='pitch'/count_source của
+        # trạng thái cột -> PASS 1b gán lại theo syl_idx của ops lượt 2. Sách khác: không chạm.
+        if lay.box_decoder in ("visual_dp", "visual_dp_hybrid") and args.box_rule == "syl_index" and args.reseg == "detector":
+            if not args.two_pass:
+                raise SystemExit(f"books[{book}].box_decoder = visual_dp cần --two-pass (hộp gán ở PASS 1b)")
+            from pipeline.align_engine import visual_dp as _vdp
+            _st = _vdp.apply_book([r for bc, _pg, _png, r in page_states if bc == _book_code(book)],
+                                  qn_to_nom, log=lambda m: print(m, flush=True),
+                                  hybrid=(lay.box_decoder == "visual_dp_hybrid"))
+            det_params_by_book.setdefault(book, {})["visual_dp"] = {k: v for k, v in _st.items() if k != "seconds_glyph"}
 
     if args.box_rule == "syl_index":
         ap_mod.DETECTOR_THR, ap_mod.DETECTOR_XMARGIN = det_thr_global, det_xmargin_global

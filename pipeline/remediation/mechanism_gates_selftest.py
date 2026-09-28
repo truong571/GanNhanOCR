@@ -246,6 +246,15 @@ def test_pitch(tmp: Path) -> None:
     sm.write_text('{"detector_params_by_book": {"B": {"det_thr": 0.15, "box_decoder": "legacy"}}}', encoding="utf-8")
     check("detect: summary.json legacy thắng labels pitch → legacy/summary",
           mg.detect_pitch_mode(dfp, {"name": "B"}, sm, "B") == (False, "summary"))
+    # (2026-09-28, TN6) box_decoder visual_dp = chế độ theo ô như pitch; hộp không tự tin của visual_dp vào BOX_LOW_CONF
+    check("detect: config box_decoder visual_dp → pitch-mode/config",
+          mg.detect_pitch_mode(dfl, {"name": "x", "layout": "prose", "box_decoder": "visual_dp"}) == (True, "config"))
+    sm.write_text('{"detector_params_by_book": {"B": {"det_thr": 0.15, "box_decoder": "visual_dp"}}}', encoding="utf-8")
+    check("detect: summary.json box_decoder visual_dp → pitch-mode/summary",
+          mg.detect_pitch_mode(dfl, {"name": "B"}, sm, "B") == (True, "summary"))
+    check("BOX_LOW_CONF ⊇ {vdp_low, vdp_virtual, vdp_fallback}; vdp_det/vdp_agree/vdp_merge KHÔNG thuộc",
+          {"vdp_low", "vdp_virtual", "vdp_fallback"} <= set(mg.BOX_LOW_CONF)
+          and not ({"vdp_det", "vdp_agree", "vdp_merge"} & set(mg.BOX_LOW_CONF)))
     try:
         mg.detect_pitch_mode(dfl, {"name": "x", "box_decoder": "xyz"})
         check("detect: config box_decoder sai → ValueError", False)

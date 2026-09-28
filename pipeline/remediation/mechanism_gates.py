@@ -72,8 +72,12 @@ TIER_TEXT_ONLY = "GOLD_text_only"
 IMAGE_TIERS = ("GOLD", "SILVER", "SYLLABLE")          # tầng có ảnh crop được export
 BAD_CROP = ("blank", "truncated")
 BOX_NOT_DETECTOR = ("midpoint", "split")
-BOX_LOW_CONF = ("ink_cut", "detector_low")        # (a') pitch_decode: ô detector không tự tin
-COUNT_SOURCE_PITCH = ("pitch", "pitch_ocr", "pitch_rule")   # count_source do assign_boxes_pitch ghi
+# (a') pitch_decode: ô detector không tự tin; (2026-09-28, TN6) box_decoder visual_dp: hậu nghiệm DP < 0,95 / ô ảo /
+# mục DP bỏ (hộp dự phòng) — pipeline/align_engine/visual_dp.BOX_LOW_CONF
+BOX_LOW_CONF = ("ink_cut", "detector_low", "vdp_low", "vdp_virtual", "vdp_fallback",
+                "vdp_pitch_detector_low", "vdp_pitch_ink_cut", "vdp_pitch_split", "vdp_pitch_midpoint")   # + biến thể lai
+COUNT_SOURCE_PITCH = ("pitch", "pitch_ocr", "pitch_rule", "visual_dp")   # count_source do assign_boxes_pitch ghi
+PITCH_LIKE_DECODERS = ("pitch", "visual_dp", "visual_dp_hybrid")      # (a') theo ô: cả hai giải hộp THEO Ô, n_det ≠ N chỉ là cờ
                                                   # ("pitch_rule" 2026-09-23: N lấy từ luật 6/8)
 BOX_DECODER_MODES = ("auto", "legacy", "pitch")
 COL_NDET_MISMATCH = "n_det_mismatch"              # cờ (a') thay cho hạ theo cột
@@ -165,9 +169,9 @@ def detect_pitch_mode(df: pd.DataFrame | None, book_cfg: dict | None, summary_pa
         return box_decoder == "pitch", "cli"
     if book_cfg and "box_decoder" in book_cfg:
         v = book_cfg.get("box_decoder")
-        if v not in ("legacy", "pitch"):
-            raise ValueError(f"books[{book_cfg.get('name')}].box_decoder = {v!r}; chỉ nhận legacy|pitch")
-        return v == "pitch", "config"
+        if v not in ("legacy", *PITCH_LIKE_DECODERS):
+            raise ValueError(f"books[{book_cfg.get('name')}].box_decoder = {v!r}; chỉ nhận legacy|pitch|visual_dp|visual_dp_hybrid")
+        return v in PITCH_LIKE_DECODERS, "config"
     if summary_path and Path(summary_path).exists():
         try:
             sm = json.loads(Path(summary_path).read_text(encoding="utf-8"))
@@ -175,7 +179,7 @@ def detect_pitch_mode(df: pd.DataFrame | None, book_cfg: dict | None, summary_pa
             for k, v in params.items():
                 if book is None or str(k).lower() == str(book).lower():
                     if isinstance(v, dict) and "box_decoder" in v:
-                        return v["box_decoder"] == "pitch", "summary"
+                        return v["box_decoder"] in PITCH_LIKE_DECODERS, "summary"
         except (OSError, ValueError):
             pass
     if df is not None:

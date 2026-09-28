@@ -28,7 +28,7 @@ books:
     # nguyên bộ tham số detector đã hiệu chuẩn cho thạch bản thay vì đặt lại từ đầu.
     det_xmargin: 0.05
     det_thr: 0.15
-    box_decoder: pitch
+    box_decoder: visual_dp_hybrid # 2026-09-28 TN6 (docs/HOP_ANH_TN6_2026-09-28.md): khe người mọi ô 95,77 → 96,65 %, GOLD hai vế 96,39 → 97,29 % (visual_dp thuần THUA: 91,20 %); trước: pitch
     # 2026-09-23 (vòng 10, ƯU TIÊN PRECISION): detector v2 (+ resize `area`). Vòng 9 TỪ CHỐI v2 ở sách
     # này vì chỉ số hộp I5 sụp 21,5 → 1,5 % (v2 sinh 390 hộp NGOÀI hai tầng). I5 là CHỈ SỐ THAY THẾ;
     # bộ này có NHÃN NGƯỜI nên đo thẳng: precision GOLD-ảnh 97,96 % (n 8.629) → 98,04 % (n 11.496),

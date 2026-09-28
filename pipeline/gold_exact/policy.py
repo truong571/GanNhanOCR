@@ -17,6 +17,10 @@ PROFILE (28/09, TN5 — lab/thu_nghiem_anh_chu/TN5_viet_tay, đăng ký trước
   - `slot_gate`          cổng khe thay cho BC: bc (= BC cũ) | none | vis0 (vis_z < 0 hoặc thiếu -> text_only `HW_vis_z_duoi_0`);
   - `hand_q`, `n_hum_min` mức q của bộ kiểm viết tay (khoá của thang hand_tables) + số nguyên mẫu người tối thiểu.
 Mọi bộ KHÔNG nằm trong `sets` (6 bộ in/khắc) = profile "printed" = hành vi cũ từng ô. Vắng khoá `profiles` = hành vi cũ cho mọi bộ.
+
+LẦN ĐỌC THỨ HAI STT (28/09, `profiles.handwriting.second_read`, signals_lt2): tín hiệu `lt2_dis` (nhãn ≠ chữ kim lt2, V1+) và
+`lt2_unm` (trang có lt2 nhưng không ghép được chữ) — CHỈ HẠ ô sẽ-là-ok xuống uncertified (luật CUỐI nhóm uncertified, lý do
+riêng); không đổi nhãn, không đụng ô không ok. Vắng khoá trong `sig` (hoặc bộ chưa đủ cache lt2) = mảng 0 = hành vi cũ.
 """
 from __future__ import annotations
 
@@ -122,10 +126,20 @@ def core_loss_gate(cfg: dict) -> bool:
     return bool((cfg.get("core_loss") or {}).get("gate", False))
 
 
-def decomposition(ok, lai, aint, mocr, core_flag, gate: bool) -> bool:
-    """ok = lai − luật A − M-OCR (− core_loss nếu là cổng), từng ô."""
+def decomposition(ok, lai, aint, mocr, core_flag, gate: bool, lt2=None) -> bool:
+    """ok = lai − luật A − M-OCR (− core_loss nếu là cổng) (− lt2: lt2_dis ∪ lt2_unm, 28/09), từng ô."""
     ok, lai, aint, mocr, core_flag = (np.asarray(x, bool) for x in (ok, lai, aint, mocr, core_flag))
-    return bool((ok == (lai & ~aint & ~mocr & ~(core_flag & gate))).all())
+    lt2 = np.zeros(len(ok), bool) if lt2 is None else np.asarray(lt2, bool)
+    return bool((ok == (lai & ~aint & ~mocr & ~(core_flag & gate) & ~lt2)).all())
+
+
+LT2_REASONS = ("U_STT_lt2_khac_lt1", "U_STT_lt2_khong_ghep_duoc")
+
+
+def lt2_masks(sig: dict, n: int):
+    """(lt2_dis, lt2_unm) từ sig; vắng khoá -> 0 (hành vi cũ)."""
+    g = lambda k: np.asarray(sig[k], bool) if k in sig else np.zeros(n, bool)
+    return g("lt2_dis"), g("lt2_unm")
 
 
 def decide(S8: np.ndarray, sig: dict, cfg: dict):
@@ -175,6 +189,10 @@ def decide(S8: np.ndarray, sig: dict, cfg: dict):
     put(BORG & ~SIMG, "uncertified", "U_Borg_bo_kiem_viet_tay_LOBO_khong_chung_nhan")
     put(PRINT & ~SIMG, "uncertified", "U_bo_kiem_anh_duoi_nguong_TN1")
     put(TA_SETS & (ta != "attested"), "uncertified", "U_khong_co_van_ban_nguoi_chung")
+    # lần đọc thứ hai STT (28/09): CHỈ HẠ ô sẽ-là-ok; đặt CUỐI nhóm uncertified -> mọi ô khác giữ nguyên trạng thái + lý do
+    l2d, l2u = lt2_masks(sig, n)
+    put(STT & l2d, "uncertified", LT2_REASONS[0])
+    put(STT & l2u, "uncertified", LT2_REASONS[1])
     put(np.ones(n, bool), "ok", "")
     assert (dec != "").all()
     A0n = b("int_foreign") | b("dup_bbox") | b("f_blank") | b("f_cut")
@@ -182,7 +200,7 @@ def decide(S8: np.ndarray, sig: dict, cfg: dict):
     H1n = ~(A0n | B0n | cnt_e | bc_e | vis_e)          # printed: = ~(A0 | B0 | cnt | bc) như cũ
     TA_OK = ~TA_SETS | (ta == "attested")
     masks = dict(A0_new=A0n, B0_new=B0n, H1_new=H1n, SIMG=SIMG, TA_OK=TA_OK, lai=H1n & SIMG & TA_OK,
-                 AINT=b("int_foreign") | b("rescue") | b("similar") | b("weak_text"))
+                 AINT=b("int_foreign") | b("rescue") | b("similar") | b("weak_text"), LT2=STT & (l2d | l2u))
     return dec, why, masks
 
 

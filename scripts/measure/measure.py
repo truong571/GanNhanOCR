@@ -18,6 +18,7 @@ Bố cục đầu ra (quy ước: mỗi phép đo một thư mục con, không �
     measure_out/code_facts/               code_facts.py → docs/PIPELINE_FACTS.json
     measure_out/gold_exact/               gold_exact_eval.py     (bản giao dataset/_ALL/gold_exact.csv, khi đã có)
     measure_out/borg_human/               borg_human_eval.py     (bộ crop nhãn người dataset/_BORG_NHAN_NGUOI, khi đã có)
+    measure_out/stt_lt2/                  stt_lt2_eval.py        (lần đọc thứ hai kim lt2 cho STT; chỉ khi đã có cache kim_raw_lt2)
     measure_out/SUMMARY.json, REPORT.md, logs/<step>.log
 
 Mã thoát: 0 = mọi invariant cứng PASS; 1 = có invariant cứng FAIL; 2 = có bước chạy lỗi / thiếu summary.
@@ -53,7 +54,7 @@ PTCL_BOOK = "TruyenKieuPhongTinhCoLuc"
 BORG_BOOKS = ["SachKinhThayCaBinh", "SachDungLyHoThan"]
 ALL_BOOKS = LITHO_BOOKS + ["Chrestomathie1872"] + IHR_BOOKS + BORG_BOOKS
 ALL_STEPS = ["code_facts", "layout", "qn_ocr", "chresto_map", "detector_transfer", "box_ref",
-             "ihr_layout", "ihr_endtoend", "gold_exact", "borg_human", "borg_endtoend"]
+             "ihr_layout", "ihr_endtoend", "gold_exact", "borg_human", "borg_endtoend", "stt_lt2"]
 
 # Invariant FAIL được xếp "mềm" (không đổi mã thoát) — chỉ khi có lý do đo đạc rõ ràng.
 SOFT_INVARIANTS: dict[str, dict[str, str]] = {
@@ -231,6 +232,23 @@ KEY_METRICS: dict[str, list[tuple[str, str]]] = {
         ("dung lượng MB", "size_mb"),
         ("thời gian s", "runtime_s"),
     ],
+    "stt_lt2": [
+        ("phạm vi", "scope"),
+        ("trang lt2 / 448", "coverage.pages_lt2"),
+        ("ô STT trên trang có lt2", "coverage.cells_on_lt2_pages"),
+        ("tỉ lệ ô ghép được chữ lt2", "coverage.match_rate"),
+        ("lt1==lt2 V1+ (line, chính)", "per_book.total.methods.line.eq_v1p"),
+        ("lt1==lt2 V1+ (geom, cận dưới)", "per_book.total.methods.geom.eq_v1p"),
+        ("lt1==lt2 V1+ dòng cùng số chữ", "per_book.total.methods.same_count.eq_v1p"),
+        ("ứng viên cứu (lt1∉R, lt2∈R)", "per_book.total.rescue_cand"),
+        ("xung đột trong R", "per_book.total.conflict_inR"),
+        ("Nôm riêng ô lt1 / lt2", "per_book.total.nom_rieng_cells"),
+        ("hiệu chuẩn thạch bản P(đúng khi đồng ý, lt1∈R)", "calibration.pooled.lt1_inR.p_ok_agree.p"),
+        ("hiệu chuẩn thạch bản P(đúng khi lệch, lt1∈R)", "calibration.pooled.lt1_inR.p_ok_disagree.p"),
+        ("cổng ok⇔lt1==lt2: ô ok giữ", "gate_ok_iff_lt1_eq_lt2.total.ok_keep"),
+        ("cổng: tỉ lệ giữ (trang có lt2)", "gate_ok_iff_lt1_eq_lt2.total.keep_rate"),
+        ("thời gian s", "runtime_s"),
+    ],
     "code_facts": [
         ("git HEAD", "git_head"),
         ("tệp FACTS", "facts_file"),
@@ -355,6 +373,11 @@ def plan_steps(books: list[str], steps: list[str], a) -> list[dict]:
         out = root / "borg_human"
         cli = [PY, str(HERE / "borg_human_eval.py"), "--out", str(out), *lim]
         plan.append(dict(step="borg_human", book="Borg18+34", out=out, cli=cli, summary=out / "summary.json"))
+    if "stt_lt2" in steps and any((REPO / "prepared").glob("SachThanhTruyen*/kim_raw_lt2/page_*_lt2.json")):
+        # (2026-09-28) lần đọc thứ hai kim lt2 cho STT (pipeline/tools/stt_reocr_lt2.py); chưa có cache lt2 -> không lập (SKIP)
+        out = root / "stt_lt2"
+        cli = [PY, str(HERE / "stt_lt2_eval.py"), "--out", str(out), *lim]
+        plan.append(dict(step="stt_lt2", book="STT", out=out, cli=cli, summary=out / "summary.json"))
     return plan
 
 

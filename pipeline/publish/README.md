@@ -28,6 +28,8 @@ $PY -m pipeline.publish metadata       # datapackage.json + croissant.json + car
 $PY -m pipeline.publish datasheet      # DATASHEET.md
 $PY -m pipeline.publish export --sample 200   # smoke parquet; bỏ --sample = full 82k
 $PY -m pipeline.publish validate       # CI gate (exit 1 nếu fail)
+$PY -m pipeline.publish gold-exact     # 28/09: bộ gộp dataset/_ALL — tập ẢNH = ô gold_exact ok (crop chuẩn),
+                                      # tập VĂN BẢN = phần còn lại + lý do -> dataset/_ALL/cong_bo/ (gold_exact_release.py)
 ```
 
 Đầu vào mặc định: `dataset_out/labels_remediated.csv` (Giai đoạn 1), fallback

@@ -11,13 +11,15 @@
 #
 # 10 BỘ: 3 STT (SachThanhTruyen2/4/11, config/pipeline.yaml) + 3 sách giao nộp (LucVanTien1883, KimVanKieu1884,
 # Chrestomathie1872) + 2 IHR đánh giá (LucVanTien1916, TruyenKieu1872) + 2 Borg đánh giá (SachKinhThayCaBinh,
-# SachDungLyHoThan). Chạy lại = `./run_pipeline.sh --book all --yes --borg require --no-verify` (gộp dataset/_ALL,
-# GOLD chính xác) -> `python -m pipeline.borg_human --stage all` -> `scripts/measure/measure.py --all` ->
+# SachDungLyHoThan). Chạy lại = `./run_pipeline.sh --book all --yes --borg require --no-verify --publish` (gộp dataset/_ALL,
+# GOLD chính xác — kèm lần đọc thứ hai STT kim lt2 cho bộ STT có ĐỦ cache kim_raw_lt2/ —, tập công bố dataset/_ALL/cong_bo/)
+# -> `python -m pipeline.borg_human --stage all` -> `scripts/measure/measure.py --all` ->
 # `./run_pipeline.sh --verify` -> `scripts/bao_cao_tong_hop.py` (docs/BAO_CAO_TONG_HOP_<ngày>.md). Log: logs/clean_rebuild_<thời điểm>_*.
 #
 # RANH GIỚI (xác định bằng MÃ, không đoán — xem khối Python bên dưới, hàm protected_roots/targets):
 #   GIỮ, KHÔNG BAO GIỜ XOÁ (kiểm kê sha256 trước/sau khi xoá -> measure_out/_clean_manifest/<ts>.txt):
-#     prepared/<sách>/ trừ dataset_out/ — cache kim thô kim_raw/ (+ prepared/_auto/<Borg>/kim_raw/, kim_calls.json:
+#     prepared/<sách>/ trừ dataset_out/ — cache kim thô kim_raw/ (+ prepared/_auto/<Borg>/kim_raw/, kim_calls.json;
+#       28/09: lần đọc thứ hai STT prepared/SachThanhTruyenN/kim_raw_lt2/ + kim_calls_lt2.json — cũng từ API, cũng khoá sha256;
 #       641 lượt API ~2 giờ), cache OCR trang detected/*_ocr_cache.json, cache QN transcriptions/*qn*cache*, ảnh trang
 #       pages/ mà image_hash của cache neo vào (PNG ghi lại có thể KHÁC byte -> trượt cache -> GỌI API), bản nạp người
 #       Borg prepared/SachKinhThayCaBinh|SachDungLyHoThan; data/; models/; measure_out/_* (kho nguồn gold_exact,
@@ -295,6 +297,8 @@ def category(r: str) -> str:
     if r.startswith("prepared/"):
         if "/kim_raw/" in r:
             return "A1 cache kim thô (prepared/**/kim_raw/)"
+        if "/kim_raw_lt2/" in r:
+            return "A1b cache kim lt2 STT (prepared/SachThanhTruyenN/kim_raw_lt2/, lần đọc thứ hai)"
         if n == "kim_calls.json":
             return "A2 sổ lượt gọi kim (prepared/_auto/*/kim_calls.json)"
         if "/detected/" in r and n.endswith("_ocr_cache.json"):
@@ -720,7 +724,7 @@ def cmd_delete(a) -> int:
 def api_derived(r: str) -> bool:
     n = r.rsplit("/", 1)[-1]
     if r.startswith("prepared/"):
-        if "/kim_raw/" in r or n == "kim_calls.json":
+        if "/kim_raw/" in r or n == "kim_calls.json" or "/kim_raw_lt2/" in r:   # 28/09: + lt2 STT (sổ kim_calls_lt2.json nằm trong)
             return True
         stt = r.split("/")[1] in STT_BOOKS
         return stt and (("/detected/" in r and n.endswith("_ocr_cache.json"))
@@ -816,7 +820,7 @@ fi
 ok "đã dọn dẫn xuất; phần GIỮ nguyên vẹn (kiểm kê ${MAN#$ROOT/})"
 
 if (( ! RUN )); then
-  printf '\n%sĐã dọn xong (không --run).%s Chạy lại toàn bộ:\n    ./run_pipeline.sh --book all --yes --borg require --no-verify\n' "$GRN$BLD" "$RST"
+  printf '\n%sĐã dọn xong (không --run).%s Chạy lại toàn bộ:\n    ./run_pipeline.sh --book all --yes --borg require --no-verify --publish\n' "$GRN$BLD" "$RST"
   printf '    .venv/bin/python -m pipeline.borg_human --stage all\n    .venv/bin/python scripts/measure/measure.py --all\n'
   printf '    ./run_pipeline.sh --verify\n    .venv/bin/python scripts/bao_cao_tong_hop.py\n'
   exit 0
@@ -915,7 +919,7 @@ step() {   # step <số> <tên> <lệnh…>
 }
 # THỨ TỰ (sửa 2026-09-28): nghiệm thu --verify chỉ ĐỌC kết quả đo (measure.py --all --report-only) mà bước dọn đã
 # xoá -> phải chạy measure.py --all TRƯỚC rồi mới nghiệm thu, nếu không code_facts/detector_transfer/box_ref báo ERR.
-step 1 run_pipeline_all  env GANNHANOCR_ROOT="$ROOT" bash "$FROZEN" --book all --yes --borg require --no-verify
+step 1 run_pipeline_all  env GANNHANOCR_ROOT="$ROOT" bash "$FROZEN" --book all --yes --borg require --no-verify --publish
 step 2 borg_human        "$PY" -m pipeline.borg_human --stage all
 step 3 measure_all       "$PY" scripts/measure/measure.py --all
 step 4 nghiem_thu        env GANNHANOCR_ROOT="$ROOT" bash "$FROZEN" --verify

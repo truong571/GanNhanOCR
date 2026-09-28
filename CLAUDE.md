@@ -34,6 +34,14 @@
 - Độ chính xác chỉ ĐO được ở LVT1916/TK1872 (nhãn người IHR); KVK/L83 ước lượng; STT/Chr suy đoán. Chi tiết + giới hạn:
   `docs/GOLD_CHINH_XAC_2026-09-27.md`; thử nghiệm nền `lab/thu_nghiem_anh_chu/TN1–TN4`.
 
+## Đường chạy tốt nhất theo nghiên cứu (2026-09-28)
+- `./run_pipeline.sh --book all --yes [--publish]` in bảng ĐƯỜNG CHẠY (pipeline/tools/duong_chay.py) — đường lấy từ config:
+  hộp ảnh `box_decoder` theo TN6 (docs/HOP_ANH_TN6_2026-09-28.md): visual_dp cho 2 Borg + TK + Chr, visual_dp_hybrid cho L16,
+  pitch cho L83/KVK(_b1), legacy cho STT; gold_exact profile handwriting (STT+Borg) + lần đọc thứ hai STT lt2
+  (`pipeline/tools/stt_reocr_lt2.py`, cache `kim_raw_lt2/`, tự bật khi đủ trang); công bố `--publish` → `dataset/_ALL/cong_bo/`
+  (ảnh chỉ ô ok). Bảng kết quả nghiên cứu → đã/không áp dụng: `docs/DIEU_HUONG_PIPELINE_2026-09-28.md`.
+- Dọn + dựng lại toàn bộ đúng thứ tự: `bash scripts/clean_rebuild_all.sh --yes --run` (giữ cache OCR/lt2, chặn API, đo, nghiệm thu, báo cáo).
+
 ## Borg.Tonch.18/34 — chữ viết tay Công giáo có nhãn người (2026-09-27)
 - Sách `SachKinhThayCaBinh` (Borg.18) và `SachDungLyHoThan` (Borg.34); `data/MSS_Borg.tonch.*` là symlink, config
   `pipeline_MSS_Borg_tonch_*` bị `run_pipeline.sh` từ chối (dùng tên Sach*).

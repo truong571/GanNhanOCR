@@ -8,6 +8,16 @@ Tích hợp vào pipeline (sau bước confusion_fix, trước export):
   1. Thăng cấp ô thành tier GOLD với rule 'self_training_rescue'.
   2. Xuất ảnh crop từ crops.npz ra dataset_out/gold/ để phục vụ bước export.
   3. Cập nhật nhãn và mã Unicode.
+
+SỬA GỐC VA TÊN TỆP (28/09): trước đây crop giải cứu đặt tên `<book>_<page>_c<cột>_<nom_idx>.png` — TRÙNG khuôn tên
+`<book>_<page>_c<cột>_<chỉ số>.png` mà build_dataset dùng cho crop gold/ của ô KHÁC, và mã TÁI DÙNG tệp có sẵn
+(`elif crop_abs_path.exists()`) -> 22 ô rescue STT mang ảnh của ô khác (dataset/_ALL/TRUNG_ANH.csv 42 dòng, 21 đường dẫn
+dùng chung giữa hai nhãn khác nhau). Nay:
+  * tên theo KHOÁ RIÊNG của ô, không thể va với build: `rescue_<book>_<page>_c<cột>_n<nom_idx>_s<syl_idx>.png` (rescue_name);
+  * KHÔNG BAO GIỜ tái dùng/ghi đè tệp có sẵn: tệp đã có mà khác byte -> RescueFileConflict (dừng); trùng byte (chạy lại
+    trên cùng DS_OUT) -> dùng, ghi nhận `tep_da_co_trung_byte`;
+  * ô không có crop trong crops.npz -> KHÔNG giải cứu (GOLD phải có ảnh của CHÍNH ô đó), đếm `bo_qua_khong_co_anh`.
+Nhãn/dự đoán/ngưỡng giữ nguyên; chỉ đổi đường ảnh + image_md5 của dòng rescue.
 """
 
 from __future__ import annotations
@@ -27,6 +37,37 @@ from PIL import Image
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[1]
+
+
+RESCUE_PREFIX = "rescue_"
+
+
+class RescueFileConflict(RuntimeError):
+    """Tệp crop giải cứu đã tồn tại với nội dung KHÁC — không bao giờ ghi đè/tái dùng."""
+
+
+def rescue_name(book, page, column, nom_idx, syl_idx=None) -> str:
+    """Tên crop giải cứu theo khoá riêng của ô (không va khuôn `<book>_<page>_c<cột>_<idx>.png` của build_dataset)."""
+    try:
+        s = f"s{int(syl_idx):03d}"
+    except (TypeError, ValueError):
+        s = "sx"
+    return f"{RESCUE_PREFIX}{book}_{page}_c{int(column):02d}_n{int(nom_idx):03d}_{s}.png"
+
+
+def write_rescue_png(path: Path, png_bytes: bytes) -> tuple[str, bool]:
+    """Ghi crop giải cứu; tệp có sẵn: trùng byte -> (md5, True), khác byte -> RescueFileConflict. Trả (md5, đã_có)."""
+    md5_hex = hashlib.md5(png_bytes).hexdigest()
+    if path.exists():
+        old = path.read_bytes()
+        if old != png_bytes:
+            raise RescueFileConflict(f"{path} đã tồn tại với nội dung KHÁC (md5 {hashlib.md5(old).hexdigest()} ≠ {md5_hex}) "
+                                     "— từ chối ghi đè/tái dùng ảnh (gốc lỗi 22 ô mang ảnh của ô khác). Dựng lại DS_OUT (build --force).")
+        return md5_hex, True
+    tmp = path.with_suffix(".png.tmp")
+    tmp.write_bytes(png_bytes)
+    os.replace(tmp, path)
+    return md5_hex, False
 
 
 def load_dict(dict_path: Path) -> dict[str, Set[str]]:
@@ -226,6 +267,8 @@ def run_rescue(
     rescued_rv_count = 0
     rescued_syl_count = 0
     rescued_details = []
+    n_skip_no_img = 0          # đủ điều kiện nhãn nhưng không có crop của CHÍNH ô trong crops.npz -> không giải cứu
+    n_same_bytes = 0           # tệp đã có, trùng byte (chạy lại trên cùng DS_OUT)
 
     target_tiers = {"REVIEW"}
     if rescue_syllable:
@@ -250,23 +293,18 @@ def run_rescue(
         # 2. Xác suất độ tin cậy >= tau
         cand_dict = qn_to_nom.get(syl, set())
         if pred_c and (pred_c in cand_dict) and (prob >= tau):
-            crop_filename = f"{row['book']}_{row['page']}_c{int(row['column']):02d}_{int(row['nom_idx']):03d}.png"
+            # 28/09: tên theo khoá riêng của ô + không bao giờ tái dùng tệp có sẵn của ô khác (docstring đầu tệp)
+            if X_crops is None or k not in crop_lookup:
+                n_skip_no_img += 1
+                continue
+            crop_filename = rescue_name(row["book"], row["page"], row["column"], row["nom_idx"], row.get("syl_idx"))
             crop_rel_path = f"gold/{crop_filename}"
             crop_abs_path = gold_dir / crop_filename
-
-            md5_hex = ""
-            if not crop_abs_path.exists() and (k in crop_lookup) and (X_crops is not None):
-                arr = X_crops[crop_lookup[k]]
-                im = Image.fromarray(arr)
-                buf = io.BytesIO()
-                im.save(buf, format="PNG")
-                png_bytes = buf.getvalue()
-                md5_hex = hashlib.md5(png_bytes).hexdigest()
-                with open(crop_abs_path, "wb") as f:
-                    f.write(png_bytes)
-            elif crop_abs_path.exists():
-                with open(crop_abs_path, "rb") as f:
-                    md5_hex = hashlib.md5(f.read()).hexdigest()
+            im = Image.fromarray(X_crops[crop_lookup[k]])
+            buf = io.BytesIO()
+            im.save(buf, format="PNG")
+            md5_hex, existed = write_rescue_png(crop_abs_path, buf.getvalue())
+            n_same_bytes += int(existed)
 
             rule_name = "self_training_rescue" if orig_tier == "REVIEW" else "self_training_syllable_upgrade"
 
@@ -315,6 +353,7 @@ def run_rescue(
         print(f"  - Tập GOLD sau giải cứu:     {n_gold_after:,} (tăng +{total_rescued:,})")
         print(f"  - Tập SYLLABLE sau giải cứu: {n_syl_after:,}")
         print(f"  - Tập REVIEW sau giải cứu:   {n_rv_after:,} (giảm -{rescued_rv_count:,})")
+        print(f"  - Bỏ qua (không có crop của chính ô trong crops.npz): {n_skip_no_img:,} ô · tệp đã có trùng byte: {n_same_bytes:,}")
         print(f"✓ Đã cập nhật tệp nhãn: {out_csv}")
 
     # Báo cáo JSON
@@ -331,6 +370,9 @@ def run_rescue(
             "syllable_sau": int(n_syl_after),
             "review_truoc": int(n_rv_before),
             "review_sau": int(n_rv_after),
+            "ten_tep": "gold/rescue_<book>_<page>_c<cột>_n<nom_idx>_s<syl_idx>.png (28/09: không va tên build, không tái dùng tệp)",
+            "bo_qua_khong_co_anh": int(n_skip_no_img),
+            "tep_da_co_trung_byte": int(n_same_bytes),
             "mau_giai_cuu_dau_tien": rescued_details[:30],
         }
         with open(report_path, "w", encoding="utf-8") as f:
@@ -352,7 +394,10 @@ def main():
     parser.add_argument("--tau", type=float, default=0.70, help="Ngưỡng xác suất tin cậy (mặc định 0.70)")
     parser.add_argument("--rescue-syllable", action="store_true", help="Nâng cấp cả các ô SYLLABLE có độ tin cậy cao lên GOLD")
     parser.add_argument("--report", default="dataset_out/self_training_rescue_report.json", help="Báo cáo JSON")
+    parser.add_argument("--selftest", action="store_true", help="kiểm tên tệp không va + chặn ghi đè (thư mục tạm, 0 dữ liệu thật)")
     args = parser.parse_args()
+    if args.selftest:
+        sys.exit(selftest())
 
     ret = run_rescue(
         in_csv=Path(args.in_csv),
@@ -366,6 +411,64 @@ def main():
         report_path=Path(args.report) if args.report else None,
     )
     sys.exit(ret)
+
+
+def selftest() -> int:
+    """Thư mục tạm: crop giải cứu KHÔNG va tên build, KHÔNG tái dùng tệp build có sẵn, từ chối ghi đè khác byte, chạy lại trùng
+    byte thì dùng, ô không có crop thì không giải cứu. In `RESULT:`."""
+    import tempfile
+    ok, fail = 0, []
+
+    def chk(name, cond):
+        nonlocal ok
+        if cond:
+            ok += 1
+        else:
+            fail.append(name)
+    chk("ten_khong_va_build", rescue_name("stt2", "page_0012", 3, 5, 0) == "rescue_stt2_page_0012_c03_n005_s000.png"
+        and not rescue_name("stt2", "page_0012", 3, 5, 0).startswith("stt2_page_0012_c03_005")
+        and rescue_name("stt2", "page_0012", 3, 5, None).endswith("_sx.png"))
+    with tempfile.TemporaryDirectory() as td:
+        td = Path(td)
+        gold = td / "gold"; gold.mkdir()
+        # tệp build của ô KHÁC mang đúng tên khuôn cũ (va) -> mã mới không được đụng/tái dùng
+        build_png = gold / "stt2_page_0001_c01_002.png"
+        build_png.write_bytes(b"BUILD-OTHER-CELL")
+        X = np.stack([np.full((8, 8), v, np.uint8) for v in (10, 200, 90)])
+        np.savez(td / "crops.npz", X=X, book=np.array(["stt2"] * 3), page=np.array(["page_0001"] * 3),
+                 column=np.array([1, 1, 1]), nom_idx=np.array([2, 3, 4]))
+        (td / "dict.csv").write_text("syllable,nom\nthì,時\nlà,羅\n", encoding="utf-8")
+        pd.DataFrame(dict(book="stt2", page="page_0001", column=1, nom_idx=[2, 3, 4, 9], syl_idx=[0, 1, 2, 3],
+                          predicted_nom=["時", "羅", "時", "時"], prob=0.99)).to_csv(td / "pseudo.csv", index=False)
+        lab = pd.DataFrame(dict(image="review/x.png", book="stt2", page="page_0001", column=1, nom_idx=[2, 3, 4, 9],
+                                syl_idx=[0, 1, 2, 3], syllable=["thì", "là", "thì", "thì"], ocr_char="?", label="?", unicode="U+003F",
+                                label_level="char", tier="REVIEW", rule="goc", image_md5="abc123def456"))
+        lab.to_csv(td / "labels.csv", index=False)
+        args = dict(crops_path=td / "crops.npz", dict_path=td / "dict.csv", pseudo_csv=[td / "pseudo.csv"], verbose=False,
+                    report_path=td / "rep.json")
+        run_rescue(in_csv=td / "labels.csv", out_csv=td / "out.csv", **args)
+        out = pd.read_csv(td / "out.csv", keep_default_na=False)
+        rep = json.loads((td / "rep.json").read_text(encoding="utf-8"))
+        g = out[out.tier == "GOLD"]
+        chk("giai_cuu_3_o_co_crop", len(g) == 3 and rep["bo_qua_khong_co_anh"] == 1)
+        chk("anh_moi_tep_rieng", g.image.is_unique and all(i.startswith("gold/rescue_") for i in g.image))
+        chk("khong_dung_tep_build", build_png.read_bytes() == b"BUILD-OTHER-CELL"
+            and "gold/stt2_page_0001_c01_002.png" not in set(out.image))
+        chk("md5_la_cua_crop_o", all(hashlib.md5((td / i).read_bytes()).hexdigest() == m for i, m in zip(g.image, g.image_md5)))
+        # chạy lại trên cùng thư mục (trùng byte) -> dùng lại, không lỗi
+        run_rescue(in_csv=td / "labels.csv", out_csv=td / "out2.csv", **args)
+        chk("chay_lai_trung_byte", json.loads((td / "rep.json").read_text(encoding="utf-8"))["tep_da_co_trung_byte"] == 3
+            and pd.read_csv(td / "out2.csv", keep_default_na=False).image.tolist() == out.image.tolist())
+        # tệp đích có sẵn KHÁC byte -> từ chối ghi đè
+        (td / g.image.iloc[0]).write_bytes(b"KHAC")
+        try:
+            run_rescue(in_csv=td / "labels.csv", out_csv=td / "out3.csv", **args)
+            chk("tu_choi_ghi_de_khac_byte", False)
+        except RescueFileConflict:
+            chk("tu_choi_ghi_de_khac_byte", (td / g.image.iloc[0]).read_bytes() == b"KHAC")
+    print(json.dumps(dict(passed=ok, failed=fail), ensure_ascii=False))
+    print(f"RESULT: {ok} passed, {len(fail)} failed")
+    return 0 if not fail else 1
 
 
 if __name__ == "__main__":

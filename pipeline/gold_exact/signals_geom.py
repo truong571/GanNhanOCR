@@ -406,9 +406,9 @@ def kim_vs_box(G: pd.DataFrame, raw: pd.DataFrame, geo: pd.DataFrame, cfg_map: d
                     log(f"  _detect {k}/{len(jobs)}")
     rk = raw.set_index("key")
     pit = geo.pitch
-    dys, dxs, oks = [], [], []
+    dys, dxs, oks, kcs, kbs = [], [], [], [], []
     for u, bs, bk in zip(G.cell_uid, G.book_set, G.book):
-        dy = dx = np.nan; cok = np.nan
+        dy = dx = np.nan; cok = np.nan; kch = ""; kbox = None
         if u in rk.index:
             r = rk.loc[u]
             cols = res.get((bs, code2.get((bs, bk)), r.page))
@@ -425,8 +425,9 @@ def kim_vs_box(G: pd.DataFrame, raw: pd.DataFrame, geo: pd.DataFrame, cfg_map: d
                 dx = ((b[0] + b[2]) / 2 - (kb[0] + kb[2]) / 2) / max(1.0, (kb[2] - kb[0]))
                 dy = round(dy, 3) if dy == dy else dy; dx = round(dx, 3)
                 cok = int(kc == r.ocr_char)
-        dys.append(dy); dxs.append(dx); oks.append(cok)
-    return pd.DataFrame(dict(cell_uid=G.cell_uid.values, dy_kim=dys, dx_kim=dxs, kim_char_ok=oks))
+                kch, kbox = kc, kb          # 28/09: hộp + chữ kim lt1 của ô (tín hiệu lt2_agree — signals_lt2)
+        dys.append(dy); dxs.append(dx); oks.append(cok); kcs.append(kch); kbs.append(kbox)
+    return pd.DataFrame(dict(cell_uid=G.cell_uid.values, dy_kim=dys, dx_kim=dxs, kim_char_ok=oks, kim_char=kcs, kim_box=kbs))
 
 
 # ================================================================================================ ảnh của ô khác (rescue)

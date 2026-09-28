@@ -161,7 +161,8 @@ MODULES=(
   pipeline.lab.selftest
   pipeline.align_engine.visual_emission_selftest
   pipeline.tools.visual_syl_gate_selftest
-  pipeline.gold_exact.selftest          # 27–28/09: GOLD chính xác (62 phép; chưa tính vào BASELINE_PASS bên dưới)
+  pipeline.gold_exact.selftest          # 27–28/09: GOLD chính xác (97 phép từ 28/09 kèm lt2; chưa tính vào BASELINE_PASS bên dưới)
+  pipeline.align_engine.visual_dp       # 28/09 TN6: box_decoder visual_dp (13 phép; chưa tính vào BASELINE_PASS bên dưới)
 )
 
 total_pass=0

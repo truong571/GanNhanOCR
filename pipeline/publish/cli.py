@@ -6,6 +6,9 @@
     .venv/bin/python -m pipeline.publish datasheet
     .venv/bin/python -m pipeline.publish export --sample 200
     .venv/bin/python -m pipeline.publish validate
+    .venv/bin/python -m pipeline.publish gold-exact [--all-dir dataset/_ALL] [--out <dir>] [--no-files]
+        # 28/09: tập công bố theo GOLD chính xác trên bộ gộp — TẬP ẢNH chỉ ô gold_exact = ok (ảnh = crop chuẩn), mọi dòng khác
+        # vào TẬP VĂN BẢN kèm trạng thái/lý do; page-disjoint + LOBO; in số đếm theo lý do loại -> dataset/_ALL/cong_bo/
 """
 from __future__ import annotations
 
@@ -179,6 +182,17 @@ def cmd_all(args) -> None:
     print("[all] release artifacts ready in", RELEASE)
 
 
+def cmd_gold_exact(args) -> None:
+    """Tập công bố theo GOLD chính xác (dataset/_ALL/{labels,gold_exact}.csv -> cong_bo/). Bất biến FAIL -> exit 1."""
+    from . import gold_exact_release as GR
+    try:
+        GR.run(Path(args.all_dir), Path(args.out) if args.out else None, check_files=not args.no_files,
+               seed=args.seed)
+    except GR.ReleaseError as e:
+        print(f"[công bố] LỖI: {e}")
+        raise SystemExit(1)
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="pipeline.publish",
                                 description="Giai đoạn 3 — Công bố đạt chuẩn quốc tế")
@@ -194,6 +208,12 @@ def build_parser() -> argparse.ArgumentParser:
     v = sub.add_parser("validate")
     v.add_argument("--no-files", action="store_true", help="skip on-disk crop check")
     v.set_defaults(func=cmd_validate)
+    g = sub.add_parser("gold-exact", help="tập công bố theo GOLD chính xác (tập ảnh = ô ok; văn bản = phần còn lại)")
+    g.add_argument("--all-dir", default=str(REPO / "dataset" / "_ALL"))
+    g.add_argument("--out", default=None, help="mặc định <all-dir>/cong_bo")
+    g.add_argument("--no-files", action="store_true", help="không kiểm tệp crop chuẩn trên đĩa")
+    g.add_argument("--seed", type=int, default=42)
+    g.set_defaults(func=cmd_gold_exact)
     a = sub.add_parser("all")
     a.add_argument("--sample", type=int, default=0, help="export only N crops (smoke)")
     a.set_defaults(func=cmd_all)

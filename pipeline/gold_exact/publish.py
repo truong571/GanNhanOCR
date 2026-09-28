@@ -26,7 +26,8 @@ import pandas as pd
 
 from .common import sha256_file, uid_path
 
-OUTPUTS = ("gold_exact.csv", "GOLD_EXACT.md", "crops_chuan", "crops_chuan_128")
+# "cong_bo" = tập công bố (pipeline.publish gold-exact, 28/09) — dựng từ gold_exact.csv nên bị dọn cùng (không để bản cũ lệch)
+OUTPUTS = ("gold_exact.csv", "GOLD_EXACT.md", "crops_chuan", "crops_chuan_128", "cong_bo")
 CROPS_DIRS = ("crops_chuan", "crops_chuan_128")
 
 

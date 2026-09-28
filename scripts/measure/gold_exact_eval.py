@@ -46,6 +46,7 @@ RULE_A = {"self_training_rescue": "rescue", "s1_inter_s2_similar": "similar",
 BOOL_COLS = ["one_char_ok", "core_loss_flag", "f_blank", "f_cut", "f_two", "f_ink", "bleed_new", "trunc_new", "tall_new",
              "mocr", "simg", "H1_new", "lai", "AINT", "cnt", "bc", "dup_bbox", "ov_heavy", "int_foreign", "rescue", "similar",
              "weak_text"]
+LT2_COLS = ["lt2_dis", "lt2_unm"]   # 28/09: lần đọc thứ hai STT (cột có từ policy 2026-09-28.3; tệp cũ vắng -> 0)
 EPS_OLD = 1e-6      # CSV cũ ghi %.6g
 
 
@@ -174,6 +175,7 @@ def main(argv=None) -> int:
     S8 = G.set8.values
     num = lambda c: to_float(E[c])          # đúng bit (pd.to_numeric có thể lệch 1 ulp với %.17g)
     sig = {k: (E[k].values == "1") for k in BOOL_COLS}
+    sig.update({k: (E[k].values == "1") if k in E else np.zeros(len(E), bool) for k in LT2_COLS})
     sig["ta"] = E.ta.values.astype(object); sig["lobo_nh"] = num("lobo_nh"); sig["vis_z"] = num("vis_z")
     dec, why, M = POL.decide(S8, sig, cfg)
     n_dec = int((dec != st).sum()); n_why = int((why != E.reason.values).sum())
@@ -219,9 +221,17 @@ def main(argv=None) -> int:
     add("thiet_bi_mot_gia_tri", "1 thiết bị (mps)", dv, len(dv) == 1 and dv[0] not in ("", "(không có cột)"),
         "cột device (thiết bị nhúng) có đúng một giá trị trong bản giao")
     CLF = sig["core_loss_flag"]
-    dec_ok = POL.decomposition(okm, sig["lai"], sig["AINT"], sig["mocr"], CLF, gate)
+    dec_ok = POL.decomposition(okm, sig["lai"], sig["AINT"], sig["mocr"], CLF, gate, M.get("LT2"))
     add("ok_bang_lai_tru_luatA_tru_MOCR", True, dec_ok, dec_ok,
-        "ok = lai ∧ ¬luật A ∧ ¬M-OCR" + (" ∧ ¬core_loss (cổng bật)" if gate else " (core_loss KHÔNG là cổng)"))
+        "ok = lai ∧ ¬luật A ∧ ¬M-OCR ∧ ¬lt2" + (" ∧ ¬core_loss (cổng bật)" if gate else " (core_loss KHÔNG là cổng)"))
+    # 28/09: lần đọc thứ hai STT — lý do lt2 chỉ ở ô STT, chỉ ở ô mang cờ lt2 tương ứng
+    lr = np.isin(E.reason.values, list(POL.LT2_REASONS))
+    stt = np.isin(S8, ["stt2", "stt4", "stt11"])
+    bad_lt2 = int((lr & ~stt).sum() + ((E.reason.values == POL.LT2_REASONS[0]) & ~sig["lt2_dis"]).sum()
+                  + ((E.reason.values == POL.LT2_REASONS[1]) & ~sig["lt2_unm"]).sum())
+    add("lt2_chi_ha_o_STT_co_co", 0, dict(sai=bad_lt2, o_ha=int(lr.sum()),
+                                          theo_bo={b: int((lr & (S8 == b)).sum()) for b in ("stt2", "stt4", "stt11")}),
+        bad_lt2 == 0, "lý do U_STT_lt2_* chỉ ở ô STT mang cờ lt2_dis/lt2_unm (luật chỉ hạ ok -> uncertified)")
     n_core_reason = int((E.reason.values == "core_loss_crop_chuan_cat_vao_chu").sum())
     add("core_loss_theo_config", "cổng" if gate else "0 ô lý do core_loss", n_core_reason,
         True if gate else n_core_reason == 0, "config core_loss.gate = false ⇒ không ô nào bị hạ vì core_loss")

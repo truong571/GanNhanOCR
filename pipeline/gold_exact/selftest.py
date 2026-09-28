@@ -158,6 +158,7 @@ def run() -> int:
     _robust_tests(check)
     _borg_tests(check, POL)
     _profile_tests(check, POL)
+    _lt2_tests(check, POL)
     # ---- khối tài liệu README/DATASHEET: mức chắc trùng common.EVIDENCE, không đụng chuỗi tầng text-only của bộ giao nộp
     from . import doc_text as DT
     from .common import EVIDENCE
@@ -472,6 +473,109 @@ def _profile_tests(check, POL):
     v3 = md5_tn4_verdict({"B18": dict(n=0, eq=0)})
     check("md5_tn4_na_not_fail", v1["PASS"] is True and v1["na"] == ["B18", "B34"] and v2["PASS"] is False and v3["PASS"] is None
           and md5_tn4_text(v1).startswith("PASS") and "N/A" in md5_tn4_text(v1) and md5_tn4_text(v2).startswith("FAIL"))
+
+
+
+def _lt2_tests(check, POL):
+    """28/09: lần đọc thứ hai STT (signals_lt2). Config (vắng = off, sai = ValueError, config thật = auto + 3 bộ STT); luật CHỈ HẠ
+    (vắng khoá = mảng 0 = y hệt; bật: chỉ ok -> uncertified với lý do lt2, chỉ ô STT; phân rã ok có − lt2); ghép `line` TƯƠNG ĐƯƠNG
+    từng kết quả với scripts/measure/stt_lt2_eval.py trên trang ngẫu nhiên; signal() trên trang tổng hợp (khớp/lệch/khoảng trống/
+    trang chưa có lt2) + chỉ trang lt2 mới bị xét; activation auto: bộ thiếu trang = TẮT."""
+    import importlib.util
+    import numpy as np
+    import pandas as pd
+    from . import signals_lt2 as SL
+    from .common import REPO, SETS8, load_cfg
+    # ---- config
+    base = dict(thresholds=dict(stt_q=0.00015, stt_n_hum_min=3), core_loss=dict(gate=False))
+    hw = lambda **k: dict(base, profiles=dict(handwriting=dict(sets=["stt2", "stt4", "stt11", "B18", "B34"], drop_gates=["cnt"],
+                                                                   slot_gate="bc", **k)))
+    check("lt2_cfg_absent_off", SL.second_read_cfg(base)["mode"] == "off" and SL.second_read_cfg(hw())["mode"] == "off")
+    for nm, bad in (("mode", dict(mode="partial")), ("sets", dict(mode="auto", sets=["B18"])), ("unm", dict(mode="auto", unmatched="x"))):
+        try:
+            SL.second_read_cfg(hw(second_read=bad)); check(f"lt2_cfg_reject_{nm}", False)
+        except ValueError:
+            check(f"lt2_cfg_reject_{nm}", True)
+    rc = SL.second_read_cfg(load_cfg())
+    check("lt2_config_real", rc["mode"] in SL.MODES and rc["sets"] == list(SL.STT_SETS) and rc["unmatched"] in SL.UNMATCHED)
+    # ---- luật: vắng khoá = y hệt; bật = chỉ ok -> uncertified (lý do lt2), chỉ STT
+    rng = np.random.default_rng(20260929)
+    N = 4000
+    S8 = rng.choice(np.array(SETS8 + ["B18", "B34"], dtype=object), N)
+    keys = ("int_foreign", "rescue", "similar", "weak_text", "mocr", "f_blank", "f_cut", "dup_bbox", "ov_heavy", "f_two", "f_ink",
+            "bleed_new", "trunc_new", "tall_new", "bc", "core_loss_flag", "cnt")
+    sg = {k: rng.random(N) < 0.1 for k in keys}
+    sg.update(one_char_ok=~(sg["f_blank"] | sg["f_cut"] | sg["f_two"] | sg["f_ink"] | sg["bleed_new"] | sg["trunc_new"]),
+              simg=rng.random(N) < 0.7, lobo_nh=rng.integers(0, 6, N).astype(float), vis_z=rng.normal(0, 1, N),
+              ta=rng.choice(np.array(["attested", "contradicted", "na"], dtype=object), N))
+    cfg = hw(second_read=dict(mode="auto"))
+    d0, w0, _ = POL.decide(S8, sg, cfg)
+    dz, wz, _ = POL.decide(S8, dict(sg, lt2_dis=np.zeros(N, bool), lt2_unm=np.zeros(N, bool)), cfg)
+    check("lt2_rule_zero_identical", (d0 == dz).all() and (w0 == wz).all())
+    dis, unm = rng.random(N) < 0.2, rng.random(N) < 0.1
+    d1, w1, M1 = POL.decide(S8, dict(sg, lt2_dis=dis, lt2_unm=unm), cfg)
+    chg = (d1 != d0) | (w1 != w0)
+    stt = np.isin(S8, list(SL.STT_SETS))
+    check("lt2_rule_only_demotes", bool(chg.any()) and bool(((d0 == "ok") & (d1 == "uncertified") & np.isin(w1, POL.LT2_REASONS))[chg].all())
+          and not (chg & ~stt).any() and set(w1[chg & dis]) <= {POL.LT2_REASONS[0]}
+          and set(w1[chg & ~dis]) <= {POL.LT2_REASONS[1]})
+    check("lt2_rule_all_ok_dis_demoted", not ((d0 == "ok") & stt & (dis | unm) & (d1 == "ok")).any())
+    check("lt2_rule_decomposition", POL.decomposition(d1 == "ok", M1["lai"], M1["AINT"], sg["mocr"], sg["core_loss_flag"], False, M1["LT2"])
+          and not POL.decomposition(d1 == "ok", M1["lai"], M1["AINT"], sg["mocr"], sg["core_loss_flag"], False))
+    # ---- ghép `line`: tương đương bản đo stt_lt2_eval.py (trang ngẫu nhiên, cùng V1+)
+    f = REPO / "scripts/measure/stt_lt2_eval.py"
+    same = f.is_file()
+    if same:
+        spec = importlib.util.spec_from_file_location("_stt_lt2_eval_ref", f)
+        EV = importlib.util.module_from_spec(spec); spec.loader.exec_module(EV)
+        alpha = list("天地人水火山日月木金土石田")
+        n_cmp = 0
+        for t in range(60):
+            nl = int(rng.integers(1, 4))
+            b1, b2 = [], []
+            for li in range(nl):
+                x = 100 * li; n1 = int(rng.integers(2, 12)); n2 = max(1, n1 - int(rng.integers(0, 4)))
+                s1 = "".join(rng.choice(alpha, n1)); s2 = "".join(c if rng.random() < 0.7 else rng.choice(alpha) for c in s1[:n2])
+                dy = float(rng.normal(0, 3))
+                b1.append(dict(points=[[x, 0], [x + 40, 0], [x + 40, 30 * n1], [x, 30 * n1]], transcription=s1))
+                b2.append(dict(points=[[x + 1, dy], [x + 41, dy], [x + 41, 30 * n1 + dy], [x + 1, 30 * n1 + dy]], transcription=s2))
+            mine, ref = SL.PagePair(b1, b2), EV.PagePair(b1, b2)
+            for L in SL.raw_lines(b1):
+                for i, c in enumerate(L["s"]):
+                    bb = SL.sub_box(L, i)
+                    a_, r_ = mine.by_line(c, bb), ref.by_line(c, bb)
+                    n_cmp += 1
+                    same &= a_.get("st_line") == r_.get("st_line") and a_.get("oth_line") == r_.get("oth_line")
+            s1, s2 = list("".join(rng.choice(alpha, 9))), list("".join(rng.choice(alpha, 7)))
+            same &= SL.align(s1, s2) == EV.align(s1, s2)
+        same &= n_cmp > 100
+    check("lt2_match_eq_stt_lt2_eval", bool(same))
+    # ---- signal() trên trang tổng hợp (activation giả: bộ stt2, trang p1 có lt2, trang p2 chưa có)
+    L1 = dict(points=[[0, 0], [40, 0], [40, 120], [0, 120]], transcription="天地人水")
+    L2 = dict(points=[[0, 0], [40, 0], [40, 120], [0, 120]], transcription="天石人")        # 地≠石, 水 -> khoảng trống
+    r1 = dict(boxes_raw=[L1]); r2 = dict(boxes_raw=[L2])
+    ln = SL.raw_lines([L1])[0]
+    G = pd.DataFrame(dict(cell_uid=[f"u{i}" for i in range(6)], set8=["stt2"] * 4 + ["stt2", "L16"],
+                          page=["p1"] * 4 + ["p2", "p1"], ocr_char=list("天地人水") + ["天", "天"], label=list("天地人水") + ["天", "天"]))
+    KB = pd.DataFrame(dict(cell_uid=G.cell_uid, kim_char=list("天地人水") + ["天", "天"],
+                           kim_box=[SL.sub_box(ln, i) for i in range(4)] + [SL.sub_box(ln, 0)] * 2))
+    real = SL.activation
+    try:
+        SL.activation = lambda present, cfg, override=None: (
+            SL.second_read_cfg(cfg), {"stt2": dict(mode="auto", active=True, why="giả", pages_lt1=2, pages_lt2=1)},
+            {"stt2": dict(lt1=["p1", "p2"], lt2={"p1": (r1, r2)}, bad=[])})
+        out = SL.signal(G, KB, hw(second_read=dict(mode="auto")), log=lambda *_: None)
+        out_k = SL.signal(G, KB, hw(second_read=dict(mode="auto", unmatched="keep")), log=lambda *_: None)
+    finally:
+        SL.activation = real
+    check("lt2_signal_synthetic", list(out["lt2_match"]) == ["ok", "ok", "ok", "gap", "no_lt2_page", ""]
+          and list(out["lt2_dis"]) == [False, True, False, False, False, False]
+          and list(out["lt2_unm"]) == [False, False, False, True, False, False]
+          and not out_k["lt2_unm"].any() and out["record"]["self_control_pass"] is True)
+    # ---- activation thật (0 API, chỉ đọc prepared/): partial không bao giờ bật bộ chưa có trang lt2; auto chỉ bật bộ đủ trang
+    _, recs, pages = SL.activation(list(SL.STT_SETS), load_cfg())
+    check("lt2_activation_auto_full_only", all((r["active"] == (r["pages_lt1"] > 0 and r["pages_lt2"] == r["pages_lt1"]
+                                                                and r["n_bad"] == 0)) for r in recs.values() if r["mode"] == "auto"))
 
 
 if __name__ == "__main__":   # cuối tệp: mọi hàm phụ (_ta_tests, _robust_tests, _borg_tests) đã được định nghĩa

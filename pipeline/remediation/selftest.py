@@ -820,6 +820,18 @@ def test_glyph_fix_kiem_khoa() -> None:
             check("thật: mọi `quyet` đã điền đều hợp lệ + có xuất xứ", False, str(e)[:120])
 
 
+def test_rescue_ten_tep_khong_va() -> None:
+    """28/09: self_training_rescue đặt tên crop theo khoá riêng (rescue_…), không tái dùng tệp build, từ chối ghi đè khác
+    byte, bỏ ô không có crop (7 phép con trong self_training_rescue.selftest, thư mục tạm)."""
+    import contextlib
+    import io
+    from pipeline.remediation import self_training_rescue as STR
+    buf = io.StringIO()
+    with contextlib.redirect_stdout(buf):
+        rc = STR.selftest()
+    check("rescue: tên tệp không va build + chặn ghi đè + bỏ ô không crop", rc == 0, buf.getvalue()[-300:])
+
+
 def main() -> int:
     print("=" * 64)
     print("REMEDIATION SELFTEST")
@@ -837,6 +849,7 @@ def main() -> int:
     test_measure_chi_nhan_verdict_nguoi()
     test_glyph_fix_quyet_dinh_nguoi()
     test_glyph_fix_kiem_khoa()
+    test_rescue_ten_tep_khong_va()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

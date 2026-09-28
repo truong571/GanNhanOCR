@@ -7,7 +7,9 @@
 # "2026-09-27.2" = bỏ core_loss khỏi cổng (quyết định 27/09, xem core_loss.gate).
 # "2026-09-28" = sửa rò rỉ N6: TA của TK không còn nhìn GT người IHR (mọi ô TK căn được với Kiều 1871 LVD đều được chấm TA).
 # "2026-09-28.2" = thêm profile handwriting (khối `profiles` bên dưới; 6 bộ in/khắc giữ nguyên quyết định từng ô).
-version: "2026-09-28.2"
+# "2026-09-28.3" = thêm lần đọc thứ hai STT (`profiles.handwriting.second_read`, luật CHỈ HẠ ok -> uncertified); chưa đủ cache lt2
+#                  -> tắt -> mọi ô y hệt "2026-09-28.2" (invariant lt2_chi_ha so từng cell_uid).
+version: "2026-09-28.3"
 
 # PROFILE theo loại chữ (28/09, TN5 — lab/thu_nghiem_anh_chu/TN5_viet_tay, docs/GOLD_CHINH_XAC_2026-09-27.md §11).
 # handwriting: bộ CHỮ VIẾT TAY (STT chép tay + 2 bản chép tay Borg có nhãn người). Hiệu chuẩn trên nhãn người Borg (CHỈ để đo):
@@ -28,6 +30,17 @@ profiles:
     source: "lab/thu_nghiem_anh_chu/TN5_viet_tay/h04_select.py -> measure_out/_thu_nghiem_anh_chu/TN5/select.json"
     prereg: {registered_at: "2026-09-28 15:17:45", file: lab/thu_nghiem_anh_chu/TN5_viet_tay/prereg_handwriting.json,
              code_sha256: "158708e6e4e2bb8ec8ad6317dba44152259226e8cfb3ce0519fdfd7c04cf4f8d"}
+    # LẦN ĐỌC THỨ HAI STT (28/09; pipeline/gold_exact/signals_lt2.py; docs/STT_LT2_2026-09-28.md): kim lang_type=2 trên ĐÚNG ảnh STT
+    # (pipeline/tools/stt_reocr_lt2.py -> prepared/SachThanhTruyenN/kim_raw_lt2/, cần API). Luật CHỈ HẠ ô sẽ-là-ok -> uncertified:
+    # nhãn ≠ chữ lt2 (V1+) = U_STT_lt2_khac_lt1; trang có lt2 mà không ghép được chữ (unmatched: demote) = U_STT_lt2_khong_ghep_duoc.
+    # KHÔNG đổi nhãn. mode auto = bật cho MỘT bộ chỉ khi MỌI trang lt1 của bộ có cache lt2 hợp lệ (thiếu -> TẮT cả bộ, ghi rõ trong
+    # GOLD_EXACT.md); off = tắt. Hiệu chuẩn (thạch bản LVT1883/KVK1884 so dị bản, ƯỚC LƯỢNG cận dưới — với STT chép tay là SUY ĐOÁN):
+    # P(nhãn đúng | lt1 = lt2) 89,8 % [89,3; 90,3] vs 11,3 % khi lệch, nền 81,8 % (stt_lt2_eval.py, 267 trang, n 15.059).
+    second_read:
+      mode: auto               # auto | off   (CLI --second-read partial = bật trên trang đã có lt2, CHỈ ĐỂ ĐO, cấm --publish)
+      sets: [stt2, stt4, stt11]
+      unmatched: demote        # demote | keep — ô trên trang lt2 không ghép được chữ lt2 (bảo thủ như đề xuất cổng của bản đo)
+      calib: "docs/STT_LT2_2026-09-28.md §4 — P(đúng|lt1=lt2) 0,898 vs 0,113 (thạch bản so dị bản, cận dưới)"
 
 # Thiết bị nhúng mặc định (--device ghi đè). Kết quả TẤT ĐỊNH trên MPS (lượt lặp trùng byte gold_exact.csv); CPU cho điểm
 # nhúng lệch ở chữ số cuối -> có thể lật vài cờ sát ngưỡng. Thiết bị thực dùng ghi vào cột `device` của gold_exact.csv.

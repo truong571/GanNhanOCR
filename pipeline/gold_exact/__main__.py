@@ -2,6 +2,7 @@
 
     .venv/bin/python -m pipeline.gold_exact --all-dir dataset/_ALL --out measure_out/_gold_exact \\
         [--publish] [--device mps] [--cache-dir prepared/_gold_exact] [--recompute] [--workers 4] [--selftest]
+        [--second-read auto|off|partial]      # lần đọc thứ hai STT (lt2): mặc định theo config; partial = CHỈ ĐO
         [--ref-base <base_v2.pkl> --ref-masks <masks_new.pkl> --ref-tn4 <gold_tn4.pkl> --ref-cov-core <cov_core.pkl>]
 
 Ra (<out>/, thư mục làm việc — không được nằm trong dataset/): gold_exact.csv (1 dòng/ô GOLD, cùng định dạng bản giao),
@@ -32,6 +33,7 @@ from . import policy as POL
 from .doc_text import GIOI_HAN
 from . import signals_geom as SG
 from . import signals_img as SI
+from . import signals_lt2 as SL
 from . import signals_text as ST
 from .common import (BORG8, CONFIG, HAND_VARIANT, MODELS, REPO, SETS8, Assets, Log, is_inside, load_cfg, load_gold,
                      set_lexicon, sets_in, sha256_file, uid_path)
@@ -59,7 +61,7 @@ CSV_COLS = ["cell_uid", "book_set", "book", "set8", "label", "gold_exact", "reas
             "f_two", "f_ink", "bleed_new", "trunc_new", "tall_new", "ink_ratio", "p_wood_T", "p_wood_L", "viss_T", "viss_L",
             "viss_X", "lobo_pT", "lobo_pL", "lobo_nh", "lobo_cert", "vis_z", "vis_m_win_glyph", "ady", "adx", "m_hom",
             "mocr_cons", "mocr", "ta", "ta_sub", "simg", "H1_new", "lai", "AINT", "cnt", "bc", "dup_bbox", "ov_heavy",
-            "int_foreign", "rescue", "similar", "weak_text"]
+            "int_foreign", "rescue", "similar", "weak_text", "lt2_char", "lt2_match", "lt2_dis", "lt2_unm"]
 
 
 def csv_frame(X: pd.DataFrame, G: pd.DataFrame, md5_sq: dict, md5_128: dict, policy_version: str, cfg_sha: str,
@@ -195,6 +197,9 @@ def main(argv=None):
     ap.add_argument("--dataset-root", default=None, help="thư mục chứa các bộ nguồn (mặc định: cha của --all-dir)")
     ap.add_argument("--ref-base"); ap.add_argument("--ref-masks"); ap.add_argument("--ref-tn4"); ap.add_argument("--ref-cov-core")
     ap.add_argument("--ref-harness", help="cells_eval.csv của harness: kiểm gt_char/khe cũ của bản chép eval_ihr")
+    ap.add_argument("--second-read", choices=("auto", "off", "partial"), default=None,
+                    help="lần đọc thứ hai STT (kim lt2): mặc định = config profiles.handwriting.second_read.mode; "
+                         "partial = bật trên trang ĐÃ có lt2 (CHỈ ĐỂ ĐO, cấm với --publish)")
     a = ap.parse_args(argv)
     if a.selftest:
         from .selftest import run
@@ -203,6 +208,8 @@ def main(argv=None):
     all_dir, out, cache = Path(a.all_dir).resolve(), Path(a.out).resolve(), Path(a.cache_dir).resolve()
     if is_inside(out, REPO / "dataset"):   # so theo thành phần đường dẫn: dataset_out/ KHÔNG bị chặn nhầm
         raise SystemExit("--out không được nằm trong dataset/ (thư mục làm việc; bản giao vào dataset/ đi bằng --publish).")
+    if a.publish and a.second_read == "partial":
+        raise SystemExit("--second-read partial chỉ để ĐO (bật trên một phần trang) — không được đi với --publish.")
     if a.publish:
         PUB.check_labels(all_dir)          # fail fast: labels.csv phải còn nguyên như lúc merge
     log = Log()
@@ -264,6 +271,10 @@ def main(argv=None):
     KB = SG.kim_vs_box(G, raw, geo, kim_cfg, cache, workers, a.recompute, log)
     ady = np.abs(pd.to_numeric(KB.dy_kim, errors="coerce").values); adx = np.abs(pd.to_numeric(KB.dx_kim, errors="coerce").values)
     T["geom_other_s"] = round(time.time() - t)
+    # lần đọc thứ hai STT (28/09): chỉ bật cho bộ có ĐỦ cache lt2 (mode auto); thiếu -> tắt, ghi rõ vào summary/GOLD_EXACT.md
+    t = time.time()
+    L2 = SL.signal(G, KB, cfg, a.second_read, log)
+    T["lt2_s"] = round(time.time() - t)
 
     # ------------------------------------------------------------------ văn bản
     t = time.time()
@@ -338,7 +349,18 @@ def main(argv=None):
               one_char_ok=CF.one_char_ok.values, dup_bbox=dup, ov_heavy=ovh, cnt=cnt, bc=bc,
               core_loss_flag=CF.core_loss_flag.values, ta=ta, lobo_nh=sig["lobo_nh"], vis_z=sig["vis_z"])
     sg["simg"] = POL.simg(S8, sig, cfg["thresholds"], cfg)
+    dec0, why0, _ = POL.decide(S8, sg, cfg)             # KHÔNG lt2 = hành vi trước 28/09 (đối chứng invariant lt2_chi_ha)
+    sg.update(lt2_dis=L2["lt2_dis"], lt2_unm=L2["lt2_unm"])
     dec, why, M = POL.decide(S8, sg, cfg)
+    lt2_chg = (dec != dec0) | (why != why0)
+    lt2_only_down = bool(((~lt2_chg) | ((dec0 == "ok") & (dec == "uncertified") & np.isin(why, POL.LT2_REASONS))).all())
+    lt2_inv = dict(changed=int(lt2_chg.sum()), only_ok_to_uncertified=lt2_only_down,
+                   identical_when_off=(not L2["record"]["active_sets"]) <= (not lt2_chg.any()),
+                   by_reason={r: int((lt2_chg & (why == r)).sum()) for r in POL.LT2_REASONS},
+                   by_set={s: int((lt2_chg & (S8 == s)).sum()) for s in sorted(set(S8[lt2_chg]))})
+    lt2_inv["PASS"] = lt2_inv["only_ok_to_uncertified"] and lt2_inv["identical_when_off"] and L2["record"]["self_control_pass"] is not False
+    log(f"lt2: {lt2_inv['changed']} ô ok -> uncertified ({lt2_inv['by_reason']}) · chỉ hạ {lt2_inv['only_ok_to_uncertified']} · "
+        f"bộ bật {L2['record']['active_sets'] or '—'}")
 
     X = pd.DataFrame(dict(cell_uid=G.cell_uid, book_set=G.book_set, book=G.book, set8=S8, label=G.label, gold_exact=dec,
                           reason=why, evidence_level=POL.evidence(S8)))
@@ -353,9 +375,10 @@ def main(argv=None):
     X["ady"], X["adx"] = ady, adx
     for k, v in (("int_foreign", intf), ("rescue", rules["rescue"]), ("similar", rules["similar"]), ("weak_text", rules["weak_text"]),
                  ("mocr", mocr), ("dup_bbox", dup), ("ov_heavy", ovh), ("cnt", cnt), ("bc", bc), ("ta", ta), ("ta_sub", ta_sub),
-                 ("simg", sg["simg"])):
+                 ("simg", sg["simg"]), ("lt2_char", L2["lt2_char"]), ("lt2_match", L2["lt2_match"]),
+                 ("lt2_dis", L2["lt2_dis"]), ("lt2_unm", L2["lt2_unm"])):
         X[k] = v
-    for k in ("A0_new", "B0_new", "H1_new", "SIMG", "TA_OK", "lai", "AINT"):
+    for k in ("A0_new", "B0_new", "H1_new", "SIMG", "TA_OK", "lai", "AINT", "LT2"):
         X[k] = M[k]
     X["img_md5"] = G.img_md5.values
 
@@ -450,8 +473,10 @@ def main(argv=None):
         r["lai_tinh_lai"] = int((M["lai"] & m).sum()); r["lai_TN4"] = TN4_LAI.get(s, 0)   # Borg: không có mốc TN4 (0)
         r["lai_tru_luatA"] = int((M["lai"] & M["AINT"] & m).sum())
         r["lai_tru_MOCR"] = int((M["lai"] & ~M["AINT"] & mocr & m).sum())
+        r["lai_tru_lt2"] = int((M["lai"] & ~M["AINT"] & ~mocr & ~(CLF & gate) & M["LT2"] & m).sum())   # 28/09 lần đọc lt2
         # core_loss: cổng (gate) -> số ô lai mất; không cổng -> số ô ok MANG cờ (thông tin, không trừ)
-        cl_n = int((M["lai"] & ~M["AINT"] & ~mocr & CLF & m).sum())
+        cl_n = int((M["lai"] & ~M["AINT"] & ~mocr & CLF & m).sum()) if gate else \
+            int((M["lai"] & ~M["AINT"] & ~mocr & ~M["LT2"] & CLF & m).sum())
         r["lai_tru_core_loss"] = cl_n if gate else 0
         r["ok_co_core_loss"] = 0 if gate else cl_n
         rows.append(r)
@@ -464,8 +489,9 @@ def main(argv=None):
                ok_implies_crop=bool((X.crop_chuan[X.gold_exact == "ok"] != "").all()),
                ok_implies_one_char_ok=bool(X.one_char_ok[X.gold_exact == "ok"].all()),
                ok_subset_lai=bool((~(X.gold_exact == "ok") | X.lai).all()),
-               decomposition_ok=POL.decomposition(dec == "ok", M["lai"], M["AINT"], mocr, CLF, gate)
-               and bool((TB.ok == TB.lai_tinh_lai - TB.lai_tru_luatA - TB.lai_tru_MOCR - TB.lai_tru_core_loss).all()),
+               decomposition_ok=POL.decomposition(dec == "ok", M["lai"], M["AINT"], mocr, CLF, gate, M["LT2"])
+               and bool((TB.ok == TB.lai_tinh_lai - TB.lai_tru_luatA - TB.lai_tru_MOCR - TB.lai_tru_lt2
+                         - TB.lai_tru_core_loss).all()),
                crops_copied=n_copied, crop_md5_cache_eq_build=bool(rec_eq), crop_md5_dest_verify=crop_verify,
                ctx_ocr_match=int(V["ctx_ok"]),
                kim_char_ok=float(pd.to_numeric(KB.kim_char_ok, errors="coerce").mean()),
@@ -473,7 +499,7 @@ def main(argv=None):
                assets_manifest_verified=asset_check, device=dev,
                all_gold_images_present=True, crop_no_page=no_page, crop_src_original_fallback=crop_src_fallback,
                ta_refs_no_ihr_gt="has_gt" not in z_ta and "gt_char" not in z_ta,
-               ref_coverage=cov, profile_handwriting=prof)
+               ref_coverage=cov, profile_handwriting=prof, second_read=L2["record"], lt2_chi_ha=lt2_inv)
     pub_plan = None
     if a.publish:
         root = Path(a.dataset_root).resolve() if a.dataset_root else all_dir.parent
@@ -484,7 +510,7 @@ def main(argv=None):
     reasons.to_csv(out / "reasons.csv", index=False)
     write_md(out / "GOLD_EXACT.md", TB, reasons, ihr, cl, inv, T, cmp, prereg, a, pub_plan)
     good = (inv["labels_sha256_unchanged"] and inv["uid_unique"] and inv["ok_implies_crop"] and inv["ok_subset_lai"]
-            and inv["decomposition_ok"] and inv["crop_md5_cache_eq_build"] and inv["ta_refs_no_ihr_gt"]
+            and inv["decomposition_ok"] and inv["crop_md5_cache_eq_build"] and inv["ta_refs_no_ihr_gt"] and lt2_inv["PASS"]
             and all(v["PASS"] for v in crop_verify.values()))
     pub = None
     if a.publish and not good:
@@ -508,6 +534,7 @@ def main(argv=None):
             log(f"publish: {pub['rows']} dòng, {pub['ok']} ô ok -> {all_dir}; theo bộ: "
                 + ", ".join(f"{k} {v['rows']}" for k, v in pub["per_book"].items()))
     summ = dict(version=cfg["version"], policy_version=policy_version, config_sha256=cfg_sha, api_calls=0, device=dev, profiles=prof,
+                second_read=L2["record"],
                 cache_dir=str(cache), timings=T, table=rows, ihr=ihr, core_loss=dict(prereg=prereg, by_book=cl),
                 invariants=inv, compare_ref=cmp, thresholds=cfg["thresholds"], hand_thr=hand_thr.get("Kinh"), publish=pub)
     if borg.any():
@@ -515,13 +542,37 @@ def main(argv=None):
         summ["hand_variant"] = {s: HAND_VARIANT[s] for s in BORG8 if (G.set8 == s).any()}
     json.dump(summ, open(out / "summary.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1, default=float)
     log(f"xong: {out} ({T['total_s']} s)")
-    print(TB[["bo", "gold", "ok", "text_only", "uncertified", "review", "lai_tinh_lai", "lai_TN4", "ok_co_core_loss"]]
+    print(TB[["bo", "gold", "ok", "text_only", "uncertified", "review", "lai_tinh_lai", "lai_TN4", "lai_tru_lt2", "ok_co_core_loss"]]
           .to_string(index=False))
     return 0 if good else 1
 
 
 def _pct(x):
     return f"{100 * x:.2f}".replace(".", ",")
+
+
+def lt2_md(rec: dict | None, chk: dict | None) -> tuple:
+    """Đoạn GOLD_EXACT.md về lần đọc thứ hai STT (kim lt2): trạng thái BẬT/TẮT từng bộ + lý do + số ô bị hạ."""
+    if not rec:
+        return ()
+    head = (f"**Lần đọc thứ hai STT (kim lt2, tín hiệu `lt2_agree`)**: config `second_read` = `{rec['config_mode']}`"
+            + (f", lượt này `{rec['mode']}` (CHỈ ĐO — không phải bản giao)" if rec.get("partial") else "")
+            + f"; ô không ghép được: `{rec['unmatched']}`. Luật CHỈ HẠ ô sẽ-là-ok -> `uncertified` "
+            "(`U_STT_lt2_khac_lt1` = nhãn ≠ chữ lt2 theo V1+; `U_STT_lt2_khong_ghep_duoc` = trang có lt2 mà không ghép được chữ); "
+            "không đổi nhãn. Hiệu chuẩn trên THẠCH BẢN so dị bản (ước lượng cận dưới; với chữ viết tay STT chỉ là SUY ĐOÁN): "
+            "P(nhãn đúng | lt1 = lt2) 89,8 % vs 11,3 % khi lệch, nền 81,8 % (`docs/STT_LT2_2026-09-28.md` §4).")
+    rows = []
+    nf = lambda x: f"{x:,}".replace(",", ".")
+    for s8, r in (rec.get("per_set") or {}).items():
+        state = "**BẬT**" if r["active"] else "**TẮT**"
+        extra = (f" — ô GOLD trên trang lt2 {nf(r['cells_on_lt2_pages'])}; ghép {nf(r['matched'])}; khác {nf(r['disagree'])}; "
+                 f"không ghép {nf(r['unmatched'])}" if r["active"] else "")
+        rows.append(f"- `{s8}`: {state} ({r['why']}; trang lt2 {r.get('pages_lt2')}/{r.get('pages_lt1')}){extra}")
+    tail = []
+    if chk:
+        tail = [f"- Ô bị hạ trong lượt này: {chk['changed']} ({', '.join(f'{k} {v}' for k, v in chk['by_reason'].items())}); "
+                f"chỉ ok -> uncertified: {chk['only_ok_to_uncertified']}; tắt -> y hệt không có tín hiệu: {chk['identical_when_off']}."]
+    return (head, "", *rows, *tail, "")
 
 
 def write_md(path, TB, reasons, ihr, cl, inv, T, cmp, prereg, a, pub_plan=None):
@@ -538,6 +589,7 @@ def write_md(path, TB, reasons, ihr, cl, inv, T, cmp, prereg, a, pub_plan=None):
             f"q = {inv['profile_handwriting']['hand_q']}, ≥ {inv['profile_handwriting']['n_hum_min']} nguyên mẫu người. Bộ khác "
             "(in/khắc) = profile printed, hành vi cũ từng ô. Chi tiết: `docs/GOLD_CHINH_XAC_2026-09-27.md` §11.", "")
            if inv.get("profile_handwriting") else ()),
+         *lt2_md(inv.get("second_read"), inv.get("lt2_chi_ha")),
          f"policy_version **{inv['policy_version']}** · `config/gold_exact.yaml` sha256 `{inv['config_sha256'][:16]}…` · "
          f"labels.csv sha256 `{inv['labels_sha256'][:16]}…` (không đổi trong lượt chạy: {inv['labels_sha256_unchanged']}).", "",
          "Trạng thái (luật đầu tiên khớp thắng): `review` (luật A, M-OCR) → `text_only` (ảnh không đúng một chữ / trượt) → "
@@ -549,20 +601,22 @@ def write_md(path, TB, reasons, ihr, cl, inv, T, cmp, prereg, a, pub_plan=None):
          f"Thiết bị nhúng: **{inv.get('device', '?')}** (cột `device`; tất định trên MPS). TA (dị bản người) KHÔNG nhìn GT người IHR "
          f"(tài sản ta_refs không có cột GT: `ta_refs_no_ihr_gt` = {inv.get('ta_refs_no_ihr_gt')}); GT IHR chỉ dùng ở §2 (đo).", "",
          "## 1. Bảng theo bộ", "",
-         "| Bộ | Mức chắc | GOLD | ok | text_only | uncertified | review | lai (tính lại) | lai TN4 | − luật A | − M-OCR | "
+         "| Bộ | Mức chắc | GOLD | ok | text_only | uncertified | review | lai (tính lại) | lai TN4 | − luật A | − M-OCR | − lt2 | "
          + ("− core_loss |" if gate else "ok mang cờ core_loss (thông tin) |"),
-         "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
+         "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|"]
     last = "lai_tru_core_loss" if gate else "ok_co_core_loss"
     for r in TB.itertuples():
         lt = f"{r.lai_TN4:,}" if r.bo in TN4_LAI else "—"      # Borg (27/09): không có mốc TN4
         L.append(f"| {r.bo} | {r.evidence} | {r.gold:,} | **{r.ok:,}** | {r.text_only:,} | {r.uncertified:,} | {r.review:,} | "
-                 f"{r.lai_tinh_lai:,} | {lt} | {r.lai_tru_luatA} | {r.lai_tru_MOCR} | {getattr(r, last)} |".replace(",", "."))
+                 f"{r.lai_tinh_lai:,} | {lt} | {r.lai_tru_luatA} | {r.lai_tru_MOCR} | {r.lai_tru_lt2} | {getattr(r, last)} |".replace(",", "."))
     tot = TB[["gold", "ok", "text_only", "uncertified", "review", "lai_tinh_lai", "lai_TN4", "lai_tru_luatA", "lai_tru_MOCR",
-              last]].sum()
+              "lai_tru_lt2", last]].sum()
     L.append(f"| **Tổng** | | {tot.gold:,} | **{tot.ok:,}** | {tot.text_only:,} | {tot.uncertified:,} | {tot.review:,} | "
-             f"{tot.lai_tinh_lai:,} | {tot.lai_TN4:,} | {tot.lai_tru_luatA} | {tot.lai_tru_MOCR} | {tot[last]} |".replace(",", "."))
-    L += ["", ("ok = lai (tính lại) − (lai ∩ luật A) − (lai ∩ M-OCR, ngoài luật A) − (lai ∩ core_loss, ngoài hai luật trước). "
-               if gate else "ok = lai (tính lại) − (lai ∩ luật A) − (lai ∩ M-OCR, ngoài luật A) — kiểm từng ô (`decomposition_ok`). ")
+             f"{tot.lai_tinh_lai:,} | {tot.lai_TN4:,} | {tot.lai_tru_luatA} | {tot.lai_tru_MOCR} | {tot.lai_tru_lt2} | {tot[last]} |".replace(",", "."))
+    L += ["", ("ok = lai (tính lại) − (lai ∩ luật A) − (lai ∩ M-OCR, ngoài luật A) − (lai ∩ core_loss, ngoài hai luật trước) "
+               "− (lai ∩ lt2, phần còn lại). "
+               if gate else "ok = lai (tính lại) − (lai ∩ luật A) − (lai ∩ M-OCR, ngoài luật A) − (lai ∩ lt2: nhãn ≠ lần đọc kim lt2 "
+               "hoặc không ghép được, chỉ bộ STT đủ cache lt2) — kiểm từng ô (`decomposition_ok`). ")
           + "Chênh 'lai tính lại' ↔ 'lai TN4' = sai khác tái lập tín hiệu (nhúng lại trên MPS).", "",
           "## 2. Độ chính xác hai vế của ô ok trên nhãn người IHR (CHẮC CHẮN THEO MÁY)", "",
           "Đúng hai vế = V1+(nhãn, chữ người) ∧ khe của CROP CHUẨN = 1; strict = nhãn trùng hẳn chữ người. CI 95 % bootstrap cụm trang.", "",

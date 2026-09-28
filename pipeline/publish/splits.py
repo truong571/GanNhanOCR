@@ -34,6 +34,8 @@ __all__ = ["USABLE_TIERS", "EVAL_SPLIT", "assign_page_disjoint", "lobo_split",
            "cross_split_exact", "perceptual_duplicates", "SplitReport",
            "eval_only_books", "eval_only_mask"]
 
+# Đường CŨ (dataset_out/ của STT, theo tầng). Bộ gộp dataset/_ALL/ + gold_exact (28/09): tập ẢNH công bố KHÔNG theo tầng mà
+# theo gold_exact == "ok" (ảnh = crop chuẩn) — xem gold_exact_release.py (`python -m pipeline.publish gold-exact`).
 USABLE_TIERS = ("GOLD", "SILVER", "SYLLABLE")
 # Nhãn split riêng cho tập ĐÁNH GIÁ. KHÔNG dùng "" (dòng không usable đã mang "") để
 # phân biệt được "không chia vì REVIEW" với "không chia vì CẤM huấn luyện".

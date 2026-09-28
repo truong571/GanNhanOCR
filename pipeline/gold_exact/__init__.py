@@ -12,7 +12,7 @@ Trạng thái (luật đầu tiên khớp thắng):
   ok           còn lại — ảnh giao = CROP CHUẨN v2
 
 Mô-đun: common (đường dẫn, tài sản + sha256, cache, từ điển V1+), crop_chuan (port nguyên cclib_v2),
-signals_geom, signals_img, signals_text, policy, eval_ihr (đo trên nhãn người IHR), compare_ref (đối chiếu
+signals_geom, signals_img, signals_text, signals_lt2 (lần đọc thứ hai STT kim lt2, 28/09 — chỉ hạ), policy, eval_ihr (đo trên nhãn người IHR), compare_ref (đối chiếu
 số tham chiếu TN4), export_assets (dựng models/gold_exact từ thư mục thử nghiệm), publish (ghi vào dataset/_ALL + bộ nguồn),
 doc_text (khối README/DATASHEET), per_book (bản lọc dataset/<Bộ>/gold_exact.csv: dọn + tài liệu), selftest, __main__ (CLI).
 Tài sản models/gold_exact/ dựng lại từ kho nguồn bền measure_out/_gold_exact_assets_src/ (SHA256SUMS; xem export_assets).

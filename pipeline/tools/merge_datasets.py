@@ -20,6 +20,10 @@ BA CHỖ DỄ SAI, ĐÃ CHẶN BẰNG BẤT BIẾN
    `self_training_rescue` cấp lại chỉ số ô). Đó là KHUYẾT TẬT CÓ THẬT của bộ đã công bố,
    không phải lỗi của phép gộp: công cụ giữ nguyên cả hai dòng, gắn cờ `image_dup=1`,
    liệt kê ra `TRUNG_ANH.csv`, và cấp khoá chính riêng `cell_uid` (duy nhất 100 %).
+   **28/09: gốc lỗi đã sửa** (self_training_rescue đặt tên `rescue_…` theo khoá riêng của ô, không
+   tái dùng tệp có sẵn) và phép gộp **CHẶN CỨNG** khi một đường ảnh bị các dòng **khác nhãn**
+   dùng chung (bất biến `anh_khong_dung_chung_giua_nhan_khac`, cả khi gộp lẫn `--check`); cùng
+   nhãn vẫn chỉ gắn cờ `image_dup=1`. Bộ STT dựng TRƯỚC bản sửa phải chạy lại (`--book all`).
 2. **Ảnh không có tệp.** Tầng `GOLD_text_only` có `image` nhưng **cố ý không giao ảnh**
    (cổng cơ chế B4'). Bất biến "ảnh tồn tại 100 %" chỉ tính dòng ngoài tầng này.
 3. **Cờ đánh giá.** Bộ nào có `evaluation_only.json` (pipeline/tools/mark_eval_dataset.py)
@@ -70,7 +74,8 @@ SINH_BOI_BUOC_NAY = {CROPS, "labels.csv", "labels_trace.csv", "columns.csv", "la
                      "TAP_DANH_GIA.md", "TRUNG_ANH.csv", "THOI_GIAN.txt"}
 # Đầu ra của bước gold_exact (chạy NGAY SAU bước gộp, `python -m pipeline.gold_exact --publish`): phụ thuộc labels.csv của
 # lần gộp trước -> gộp lại là PHẢI dọn, kẻo gold_exact.csv cũ nằm cạnh labels.csv mới. Bước gold_exact sinh lại chúng.
-SINH_BOI_GOLD_EXACT = {"gold_exact.csv", "GOLD_EXACT.md", "crops_chuan", "crops_chuan_128"}
+SINH_BOI_GOLD_EXACT = {"gold_exact.csv", "GOLD_EXACT.md", "crops_chuan", "crops_chuan_128",
+                       "cong_bo"}   # 28/09: tập công bố (pipeline.publish gold-exact) dựng từ gold_exact.csv
 SINH_BOI_BUOC_NAY |= SINH_BOI_GOLD_EXACT
 
 
@@ -173,7 +178,12 @@ def gop(root: Path, bo_list: list[str], out: Path, che_do: str = "copy",
     bb = kiem_bat_bien(rows_out, nguon, root, bo_list)
     fail = [k for k, v in bb.items() if v is False]
     if fail:
-        raise AssertionError(f"bất biến FAIL trước khi ghi: {fail}")
+        xk = anh_chung_khac_nhan(rows_out)
+        goi_y = ("" if not xk else
+                 f" — {len(xk)} đường ảnh bị các dòng KHÁC NHÃN dùng chung (vd {next(iter(xk))} -> {xk[next(iter(xk))]}); "
+                 "gốc = self_training_rescue cũ va tên tệp (đã sửa 28/09): dựng lại bộ nguồn đó, vd "
+                 "`./run_pipeline.sh --book all --yes` (STT chạy trước bước gộp)")
+        raise AssertionError(f"bất biến FAIL trước khi ghi (KHÔNG ghi gì vào {out}): {fail}{goi_y}")
 
     # --- ghi ----------------------------------------------------------------
     # XOÁ RỒI GHI LẠI — nhưng CHỈ thứ do chính bước này sinh ra, và CHẶN thẳng nếu `--out`
@@ -292,6 +302,8 @@ def kiem_bat_bien(rows: list[dict], nguon: dict, root: Path, bo_list: list[str])
         if r["image"]:
             theo_img.setdefault(r["image"], set()).add(r["book_set"])
     bb["image_khong_trung_cheo_bo"] = all(len(v) == 1 for v in theo_img.values())
+    # 28/09: CHẶN CỨNG một ảnh bị các dòng KHÁC NHÃN dùng chung (gốc: self_training_rescue va tên tệp — đã sửa)
+    bb["anh_khong_dung_chung_giua_nhan_khac"] = not anh_chung_khac_nhan(rows)
     bb["moi_dong_co_book_va_page"] = all(r.get("book") and r.get("page") for r in rows)
     bb["moi_dong_co_book_set"] = all(r["book_set"] in nguon for r in rows)
     bb["co_du_bo"] = list(nguon) == list(bo_list)
@@ -309,6 +321,15 @@ def kiem_bat_bien(rows: list[dict], nguon: dict, root: Path, bo_list: list[str])
     return bb
 
 
+def anh_chung_khac_nhan(rows: list[dict]) -> dict:
+    """{image: [nhãn…]} của các đường ảnh bị ≥ 2 dòng KHÁC NHÃN dùng chung (bỏ tầng không giao ảnh)."""
+    nhan: dict = {}
+    for r in rows:
+        if r.get("image") and r.get("tier") != TIER_TEXT_ONLY:
+            nhan.setdefault(r["image"], set()).add(r.get("label", ""))
+    return {k: sorted(v) for k, v in nhan.items() if len(v) > 1}
+
+
 def kiem_tren_dia(out: Path) -> dict:
     """Bất biến ĐỌC LẠI TỪ ĐĨA (dùng cho `--check` và cho `run_pipeline.sh --verify`)."""
     out = Path(out)
@@ -320,6 +341,7 @@ def kiem_tren_dia(out: Path) -> dict:
     bb["tong_dong_bang_tong_cac_bo"] = len(L) == sum(v["n_dong"] for v in src["nguon"].values())
     uid = [r["cell_uid"] for r in L]
     bb["cell_uid_duy_nhat"] = len(set(uid)) == len(uid)
+    bb["anh_khong_dung_chung_giua_nhan_khac"] = not anh_chung_khac_nhan(L)
     bb["trace_cung_so_dong_cung_thu_tu"] = len(T) == len(L) and all(
         a["cell_uid"] == b["cell_uid"] for a, b in zip(L, T))
     thieu = [r["image"] for r in L
@@ -564,6 +586,8 @@ def selftest() -> int:
             sum(1 for r in L if r["image_dup"] == "1"))
         chk("TRUNG_ANH.csv liệt kê đúng các dòng trùng",
             len(_doc_csv(out / "TRUNG_ANH.csv")) == 3)
+        chk("ảnh dùng chung CÙNG nhãn -> chỉ gắn cờ, không chặn (bất biến khác nhãn PASS)",
+            t["bat_bien"].get("anh_khong_dung_chung_giua_nhan_khac") is True)
         chk("số tệp crop = số đường dẫn ảnh DUY NHẤT có tệp",
             t["n_tep_crop"] == len({r["image"] for r in L
                                     if r["image"] and r["tier"] != TIER_TEXT_ONLY}),
@@ -638,6 +662,30 @@ def selftest() -> int:
         chk("README bộ gộp mô tả gold_exact.csv + 4 trạng thái + mức chắc",
             all(k in (out / "README.md").read_text(encoding="utf-8")
                 for k in ("gold_exact.csv", "`uncertified`", "evidence_level", "suy_doan")))
+        # 28/09: ảnh dùng chung giữa các dòng KHÁC NHÃN (lỗi va tên của self_training_rescue cũ) -> CHẶN CỨNG, không ghi gì
+        _bo_gia(root, "BoKhacNhan", 6, trung=1)
+        lp = root / "BoKhacNhan" / "labels.csv"
+        Lk = _doc_csv(lp)
+        Lk[-1]["label"] = "羅"                            # dòng cuối dùng ảnh gold/c000.png của dòng 0 nhưng KHÁC nhãn
+        Lk[0]["tier"] = "GOLD"; (root / "BoKhacNhan" / "gold" / "c000.png").write_bytes(b"\x89PNG0")
+        with open(lp, "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=GIAO_NOP, extrasaction="ignore"); w.writeheader(); w.writerows(Lk)
+        sha_truoc = _sha256(out / "labels.csv")
+        try:
+            gop(root, ["BoA", "BoKhacNhan"], out, che_do="none", xlsx=False, on_log=lambda *a: None)
+            chk("ảnh dùng chung KHÁC nhãn -> chặn cứng", False)
+        except AssertionError as e:
+            chk("ảnh dùng chung KHÁC nhãn -> chặn cứng (AssertionError, gợi ý dựng lại, KHÔNG ghi đè bộ gộp cũ)",
+                "anh_khong_dung_chung_giua_nhan_khac" in str(e) and "--book all" in str(e)
+                and _sha256(out / "labels.csv") == sha_truoc)
+        # --check trên bộ gộp có sẵn mang lỗi đó (bộ dựng trước bản sửa) -> FAIL
+        L2 = _doc_csv(out / "labels.csv")
+        L2[1]["image"] = L2[0]["image"] = L2[0]["image"] or "crops/BoA/gold/c001.png"; L2[1]["label"] = "羅"
+        L2[0]["tier"] = L2[1]["tier"] = "GOLD"
+        with open(out / "labels.csv", "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=list(L2[0].keys())); w.writeheader(); w.writerows(L2)
+        chk("--check: bộ gộp cũ có ảnh dùng chung khác nhãn -> FAIL",
+            kiem_tren_dia(out).get("anh_khong_dung_chung_giua_nhan_khac") is False)
         # thiếu cột giao nộp -> raise trước khi xoá gì
         (root / "BoHong").mkdir()
         (root / "BoHong" / "labels.csv").write_text("image,book\nx,y\n", encoding="utf-8")

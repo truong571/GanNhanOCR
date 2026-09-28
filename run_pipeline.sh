@@ -50,6 +50,14 @@
 #   --book <Bộ> KHÔNG chạy gold_exact (bộ gộp có thể lệch bộ nguồn). Sau --book <Bộ>, dataset/<Bộ>/gold_exact.csv bị bước
 #   export xoá -> nghiệm thu chỉ CẢNH BÁO (mềm) và gợi ý `./run_pipeline.sh --merge` (gộp lại + gold_exact).
 #
+# ĐƯỜNG TỐT NHẤT (28/09, docs/DIEU_HUONG_PIPELINE_2026-09-28.md): đầu mỗi lượt in bảng "ĐƯỜNG CHẠY" (pipeline.tools.duong_chay:
+#   box_decoder · kim lang_type · crop_source · profile gold_exact printed/handwriting · second_read lt2 STT · crop chuẩn ô ok).
+#   gold_exact tự bật lần đọc thứ hai STT (kim lt2, luật CHỈ HẠ) cho bộ STT có ĐỦ cache prepared/SachThanhTruyenN/kim_raw_lt2/
+#   (config profiles.handwriting.second_read.mode: auto); thiếu -> tắt, ghi rõ trong GOLD_EXACT.md.
+#   --publish (tuỳ chọn, 0 API): sau gold_exact dựng tập công bố dataset/_ALL/cong_bo/ (tập ẢNH = ô gold_exact ok, crop chuẩn;
+#   tập VĂN BẢN = phần còn lại kèm lý do; page-disjoint + LOBO) — `python -m pipeline.publish gold-exact`.
+#   Bộ gộp CHẶN CỨNG ảnh bị các dòng khác nhãn dùng chung (gốc self_training_rescue va tên tệp — đã sửa 28/09).
+#
 # Viết cho bash 3.2 (bash mặc định của macOS).
 # =============================================================================
 set -euo pipefail
@@ -492,6 +500,7 @@ DO_MERGE=1            # B7 gộp bộ chung (tắt bằng --no-merge)
 MERGE_ONLY=0
 MERGE_MODE="copy"     # copy (bàn giao độc lập) | link | symlink | none
 DO_GOLD_EXACT=1       # B8 gold_exact sau bước gộp (tắt bằng --gold-exact off)
+DO_PUBLISH=0          # B9 tập công bố dataset/_ALL/cong_bo (bật bằng --publish; chỉ chạy khi B8 xong CÙNG lượt)
 GOLD_EXACT_WORK="${GOLD_EXACT_WORK:-measure_out/_gold_exact}"   # thư mục làm việc (summary.json, pkl) — không commit
 GOLD_EXACT_CACHE="${GOLD_EXACT_CACHE:-prepared/_gold_exact}"   # cache crop chuẩn + nhúng (dựng lại được, ~3,8 GB)
 DO_PRUNE=0
@@ -540,7 +549,9 @@ run_pipeline.sh — GanNhanOCR
   --no-merge                      (đi với --book all) bỏ bước B7 gộp bộ chung — KÉO THEO bỏ B8 gold_exact
   --gold-exact on|off             B8 GOLD chính xác sau bước gộp (mặc định on; chạy cả với --merge; CHỈ chạy khi
                                   bước gộp chạy cùng lượt): dataset/_ALL/{gold_exact.csv,GOLD_EXACT.md,crops_chuan*/}
-                                  + dataset/<Bộ>/gold_exact.csv
+                                  + dataset/<Bộ>/gold_exact.csv; STT có ĐỦ cache kim lt2 -> tự bật lần đọc thứ hai (chỉ hạ)
+  --publish                       B9 (tuỳ chọn, 0 API) sau gold_exact: tập công bố dataset/_ALL/cong_bo/ — tập ẢNH chỉ ô
+                                  gold_exact = ok (crop chuẩn), tập VĂN BẢN = phần còn lại + lý do; page-disjoint + LOBO
   --prune [--keep-old N]          CHUYỂN bản dựng cũ (dataset/<Bộ>_v*, *probe, prepared/*/dataset_out_*)
                                   vào archive/ — in danh sách + dung lượng rồi hỏi (--yes bỏ hỏi);
                                   N = số bản mới nhất được giữ lại (mặc định 0 = dọn hết)
@@ -893,6 +904,7 @@ stt_dry_run() {   # STT --dry-run: in đúng chuỗi 6 bước cũ; X/die/assert
   BOOKS="$STT_BOOKS_ALL"; BOOKS_LABEL="$STT_BOOKS_LABEL"; FRESH_OCR=0
   log ""
   log "${BLD}[DRY-RUN STT] sách: $BOOKS_LABEL · cache OCR: dùng cache cũ · DS_OUT=$DS_OUT · không chạy gì${RST}"
+  (( RUN_ALL )) || print_route $STT_BOOKS_ALL
   log "${BLD}Sẽ chạy 6 bước:${RST} setup -> extract($BOOKS_LABEL) -> build(100% tự động) -> remediate & confusion -> rescue (Self-Training) -> export"
   (
     X() { printf '    %s$%s %s\n' "$CYA" "$RST" "$*"; }
@@ -992,6 +1004,55 @@ run_gold_exact() {
   else
     ALL_FAILED="$ALL_FAILED GOLD_EXACT"
     printf '%s[LỖI]%s gold_exact mã thoát %s — xem %s\n' "$RED" "$RST" "$rc" "$lf" >&2
+  fi
+  return 0
+}
+
+# ===================== ĐƯỜNG CHẠY (bảng đầu lượt, 28/09) =====================
+# In pipeline dùng GÌ cho từng bộ (config hiện hành): box_decoder, kim lang_type, crop_source, profile gold_exact, second_read
+# (lt2 STT: BẬT khi đủ cache), crop chuẩn ô ok. Chỉ ĐỌC config + cache (0 API); lỗi -> cảnh báo, không dừng lượt chạy.
+print_route() {   # print_route <Book…>
+  local ge=on pb=off mg=on
+  (( DO_GOLD_EXACT )) || ge=off
+  (( DO_PUBLISH )) && pb=on
+  (( DO_MERGE )) || mg=off
+  log ""
+  # shellcheck disable=SC2068
+  "$PY" -m pipeline.tools.duong_chay --books $@ --gold-exact "$ge" --publish "$pb" --merge "$mg" \
+    || warn "không in được bảng ĐƯỜNG CHẠY (pipeline.tools.duong_chay lỗi) — lượt chạy vẫn tiếp tục"
+}
+
+# ===================== B9: TẬP CÔNG BỐ (--publish, 28/09) =====================
+# Chạy NGAY SAU run_gold_exact thành công CÙNG lượt: dataset/_ALL/{labels,gold_exact}.csv -> dataset/_ALL/cong_bo/
+# (images.csv = ô gold_exact ok với ảnh = crop chuẩn; text.csv = mọi dòng khác + lý do; EXCLUSIONS.json/RELEASE.md). 0 API.
+# Bước gộp và gold_exact --publish đều dọn cong_bo/ cũ (phụ thuộc gold_exact.csv) -> không bao giờ có bản lệch.
+run_publish() {
+  local all="$DATASET_ROOT/$MERGED_SET" rc=0 lf t0=$SECONDS
+  local cmd=("$PY" -m pipeline.publish gold-exact --all-dir "$all")
+  log ""
+  log "${BLD}================================================================${RST}"
+  printf '%s>>> [công bố] %s/cong_bo — tập ảnh = ô gold_exact ok · tập văn bản = phần còn lại (0 API)%s\n' "$BLD" "$all" "$RST"
+  log "${BLD}================================================================${RST}"
+  if (( DRY_RUN )); then
+    printf '    %s$%s %s\n' "$CYA" "$RST" "${cmd[*]}"
+    return 0
+  fi
+  if [[ " $ALL_OK " != *" GOLD_EXACT "* ]]; then
+    warn "bỏ tập công bố: bước gold_exact không xong trong lượt này (tập ảnh phải lấy từ gold_exact.csv CÙNG lượt gộp)"
+    ALL_FAILED="$ALL_FAILED PUBLISH"
+    return 0
+  fi
+  mkdir -p logs
+  lf="logs/run_PUBLISH_$(date +%Y%m%d_%H%M%S).log"
+  info "log: $lf"
+  printf '# run_pipeline.sh (publish gold-exact)  %s\n\n%s  $ %s\n' "$(date +%Y-%m-%dT%H:%M:%S)" \
+      "$(date +%Y-%m-%dT%H:%M:%S)" "${cmd[*]}" >> "$lf"
+  if "${cmd[@]}" 2>&1 | tee -a "$lf"; then rc=0; else rc=$?; fi
+  if (( rc == 0 )); then
+    ALL_OK="$ALL_OK PUBLISH"; ok "tập công bố: $((SECONDS - t0))s -> $all/cong_bo/"
+  else
+    ALL_FAILED="$ALL_FAILED PUBLISH"
+    printf '%s[LỖI]%s tập công bố mã thoát %s — xem %s\n' "$RED" "$RST" "$rc" "$lf" >&2
   fi
   return 0
 }
@@ -1527,6 +1588,7 @@ run_all() {
   for b in $books; do
     [[ -f "config/pipeline_${b}.yaml" ]] || die "không thấy config/pipeline_${b}.yaml (sách: $b)"
   done
+  print_route $STT_BOOKS_ALL $books
   if [[ "$NONINTERACTIVE" != "1" ]] && ! (( DRY_RUN )); then
     die "--book all cần chạy KHÔNG TƯƠNG TÁC: thêm --yes (hoặc ASSUME_YES=1 / NONINTERACTIVE=1)."
   fi
@@ -1558,6 +1620,7 @@ run_all() {
   fi
   if (( DO_GOLD_EXACT )) && (( DO_MERGE )); then
     run_gold_exact
+    if (( DO_PUBLISH )); then run_publish; fi
   elif (( DO_GOLD_EXACT )); then
     info "--no-merge: bỏ luôn bước GOLD chính xác (chỉ chạy ngay sau bước gộp cùng lượt; sau đó: ./run_pipeline.sh --merge)"
   else
@@ -1583,7 +1646,7 @@ run_all() {
   log ""
   log "${BLD}================================================================${RST}"
   if (( DRY_RUN )); then
-    log "${GRN}${BLD}  (dry-run) đã in chuỗi lệnh đủ 8 bộ + nghiệm thu — KHÔNG chạy gì${RST}"
+    log "${GRN}${BLD}  (dry-run) đã in chuỗi lệnh đủ $n bộ + gộp + gold_exact$( (( DO_PUBLISH )) && echo " + công bố") + nghiệm thu — KHÔNG chạy gì${RST}"
     log "${BLD}================================================================${RST}"
     return 0
   fi
@@ -1623,6 +1686,7 @@ while (( $# )); do
                   else [[ $# -ge 2 ]] || die "--gold-exact cần on|off"; _ge="$2"; shift 2; fi
                   case "$_ge" in on) DO_GOLD_EXACT=1 ;; off) DO_GOLD_EXACT=0 ;;
                     *) die "--gold-exact cần on|off (nhận: $_ge)" ;; esac ;;
+    --publish)    DO_PUBLISH=1; shift ;;
     --prune)      DO_PRUNE=1; shift ;;
     --clean)      DO_CLEAN=1; shift ;;
     --keep-old)   [[ $# -ge 2 ]] || die "--keep-old cần một số"; KEEP_OLD="$2"; shift 2 ;;
@@ -1652,9 +1716,18 @@ if (( DO_PRUNE )); then prune_old; exit 0; fi
 
 # --merge đứng một mình: chỉ dựng lại bộ gộp từ các bộ đang có trên đĩa
 if (( MERGE_ONLY )); then
+  _mb="$STT_BOOKS_ALL $NEW_BOOKS_ALL $EVAL_BOOKS_IHR"
+  for _b in $EVAL_BOOKS_BORG; do if borg_merge_ready "$_b"; then _mb="$_mb $_b"; fi; done
+  print_route $_mb
   run_merge "$MERGE_MODE"
   # bước gộp vừa dọn gold_exact cũ -> dựng lại ngay (trừ --gold-exact off)
-  if (( DO_GOLD_EXACT )); then run_gold_exact; else info "--gold-exact off: bỏ bước GOLD chính xác"; fi
+  if (( DO_GOLD_EXACT )); then
+    run_gold_exact
+    if (( DO_PUBLISH )); then run_publish; fi
+  else
+    info "--gold-exact off: bỏ bước GOLD chính xác"
+    (( DO_PUBLISH )) && warn "--publish cần gold_exact cùng lượt — bỏ tập công bố"
+  fi
   [[ -z "$ALL_FAILED" ]] || exit 1
   if (( DO_VERIFY == 1 )); then verify_all; exit $(( VERIFY_FAIL ? 1 : 0 )); fi
   exit 0
@@ -1703,6 +1776,7 @@ if [[ -n "$NEW_BOOKS" ]]; then
   for _b in $_books; do
     [[ -f "config/pipeline_${_b}.yaml" ]] || die "không thấy config/pipeline_${_b}.yaml (sách: $_b)"
   done
+  _dm=$DO_MERGE; DO_MERGE=0; print_route $_books; DO_MERGE=$_dm   # --book <Bộ>: không gộp/gold_exact trong lượt (--merge sau)
   export PYTHONUNBUFFERED=1
   if (( DRY_RUN )); then SKIP_DEPS=1; fi
   preflight
@@ -1733,6 +1807,7 @@ log "${BLD}================================================================${RST
 log "${BLD}  GanNhanOCR — Pipeline Tự Động 100% (Tích Hợp Self-Training Rescue)${RST}"
 log "${BLD}================================================================${RST}"
 
+print_route $STT_BOOKS_ALL
 preflight
 stt_pipeline
 log "  Tổng thời gian: ${SECONDS}s"

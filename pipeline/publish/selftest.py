@@ -338,6 +338,78 @@ def test_integration_real():
         check("real: HF export/round-trip", False, f"{type(e).__name__}: {e}")
 
 
+def test_gold_exact_release():
+    """28/09: tập công bố theo GOLD chính xác — tập ẢNH chỉ ô gold_exact = ok (ảnh = crop chuẩn), mọi dòng khác vào tập VĂN BẢN
+    kèm lý do; page-disjoint trên hợp hai tập; bộ đánh giá eval_only; gold_exact.csv lệch labels -> ReleaseError; ghi đĩa +
+    thiếu ảnh -> không ghi."""
+    import hashlib
+    import tempfile
+    from . import gold_exact_release as GR
+    rng = np.random.default_rng(7)
+    rows, ge = [], []
+    for i in range(600):
+        bs = ["SachThanhTruyen", "LucVanTien1916", "KimVanKieu1884"][i % 3]
+        bk = {"SachThanhTruyen": ["stt2", "stt4"][i % 2], "LucVanTien1916": "lucvantien1916", "KimVanKieu1884": "kimvankieu1884"}[bs]
+        tier = "GOLD" if i % 5 else "SYLLABLE"
+        u = f"{bs}/{bk}/page_{i // 20:04d}/c{i % 9}/n{i}/s{i}"
+        lab = "天地人水火山日月"[int(rng.integers(0, 8))]
+        rows.append(dict(cell_uid=u, image=f"crops/{bs}/gold/x{i}.png", book_set=bs, book=bk, page=f"page_{i // 20:04d}",
+                         column=str(i % 9), ocr_char=lab, syllable="x", label=lab, unicode="", tier=tier, rule="r", bbox="",
+                         image_md5="", evaluation_only="1" if bs == "LucVanTien1916" else "0",
+                         split_hint="eval" if bs == "LucVanTien1916" else "train", image_dup="0"))
+        if tier == "GOLD":
+            st = ["ok", "ok", "text_only", "uncertified", "review"][i % 5 if i % 5 else 0]
+            ge.append(dict(cell_uid=u, label=lab, gold_exact=st, reason="" if st == "ok" else f"R_{st}",
+                           evidence_level="suy_doan", policy_version="p",
+                           crop_chuan=f"crops_chuan/{bs}/{bk}/x{i}.png" if st == "ok" else "",
+                           crop_chuan_md5=hashlib.md5(f"x{i}".encode()).hexdigest() if st == "ok" else "",
+                           crop_chuan_128=f"crops_chuan_128/{bs}/{bk}/x{i}.png" if st == "ok" else ""))
+    L, E = pd.DataFrame(rows), pd.DataFrame(ge)
+    I, T, rep = GR.build(L, E, eval_books={"lucvantien1916"})
+    okn = int((E.gold_exact == "ok").sum())
+    check("release: tập ảnh = đúng ô gold_exact ok", len(I) == okn and set(I.cell_uid) == set(E.cell_uid[E.gold_exact == "ok"]))
+    check("release: ảnh = crop chuẩn, image_goc giữ đường gốc", I.image.str.startswith("crops_chuan/").all()
+          and I.image_goc.str.startswith("crops/").all())
+    check("release: tập văn bản = phần còn lại, không cột ảnh", len(T) == len(L) - okn and "image" not in T.columns)
+    ex = rep["loai_khoi_tap_anh"]
+    check("release: đếm lý do loại đủ (ồn ào)", sum(ex.values()) == len(T) and "tier:SYLLABLE" in ex
+          and any(k.startswith("text_only:") for k in ex), ex)
+    check("release: bất biến PASS", all(v is True for k, v in rep.items() if isinstance(v, bool)),
+          {k: v for k, v in rep.items() if isinstance(v, bool)})
+    ev = L.book_set == "LucVanTien1916"
+    check("release: bộ đánh giá -> eval_only (ảnh + văn bản)", (I.split[I.book_set == "LucVanTien1916"] == "eval_only").all()
+          and (T.split[T.book_set == "LucVanTien1916"] == "eval_only").all() and ev.any())
+    allrows = pd.concat([I[["book_set", "book", "page", "split"]], T[["book_set", "book", "page", "split"]]])
+    check("release: page-disjoint trên hợp hai tập", int(allrows.groupby(["book_set", "book", "page"]).split.nunique().max()) == 1)
+    I2, _, _ = GR.build(L, E, eval_books={"lucvantien1916"})
+    check("release: tất định", I2.split.equals(I.split))
+    check("release: LOBO đếm theo book", set(rep["lobo"]) == set(L.book)
+          and rep["lobo"]["stt2"]["train_anh"] + rep["lobo"]["stt2"]["test_anh"] + rep["lobo"]["stt2"]["danh_gia_giu_ngoai_train"]
+          == len(I))
+    with tempfile.TemporaryDirectory() as td:
+        d = Path(td)
+        L.to_csv(d / "labels.csv", index=False)
+        E2 = E.iloc[1:]
+        E2.to_csv(d / "gold_exact.csv", index=False)
+        try:
+            GR.run(d, check_files=False, log=lambda *a: None); check("release: gold_exact.csv lệch tập GOLD -> lỗi", False)
+        except GR.ReleaseError:
+            check("release: gold_exact.csv lệch tập GOLD -> ReleaseError", True)
+        E.to_csv(d / "gold_exact.csv", index=False)
+        try:
+            GR.run(d, check_files=True, log=lambda *a: None); check("release: thiếu ảnh crop chuẩn -> lỗi, không ghi", False)
+        except GR.ReleaseError:
+            check("release: thiếu ảnh crop chuẩn -> ReleaseError, không ghi", not (d / GR.OUT_DIRNAME).exists())
+        for p, u in zip(I.image, I.cell_uid):
+            f = d / p; f.parent.mkdir(parents=True, exist_ok=True); f.write_bytes(f"x{u.rsplit('/n', 1)[1].split('/')[0]}".encode())
+        rec = GR.run(d, check_files=True, log=lambda *a: None)
+        out = d / GR.OUT_DIRNAME
+        check("release: ghi đủ tệp + md5 khớp", all((out / n).exists() for n in ("images.csv", "text.csv", "EXCLUSIONS.json",
+                                                                               "RELEASE.md", "CHECKSUMS.txt"))
+              and rec["invariants"]["md5_crop_khop_gold_exact"] is True
+              and len(pd.read_csv(out / "images.csv")) == okn)
+
+
 def main() -> int:
     print("=" * 64)
     print("PUBLISH SELFTEST")
@@ -350,6 +422,7 @@ def main() -> int:
     test_datasheet()
     test_export_and_validate_synth()
     test_integration_real()
+    test_gold_exact_release()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

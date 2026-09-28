@@ -17,7 +17,8 @@ TRANG_THAI = [
            "cột `image` gốc vẫn giữ nguyên trong `labels.csv`"),
     ("text_only", "nhãn chữ giữ, nhưng ảnh không chắc là đúng MỘT chữ của đúng khe (crop trắng/cắt nét/hai chữ, "
                   "hộp một-hộp-hai-cột, số chữ OCR ≠ số âm QN, trượt so với hộp chữ kim)"),
-    ("uncertified", "không có bằng chứng ảnh↔chữ đủ mạnh (bộ kiểm ảnh dưới ngưỡng TN1) hoặc dị bản người không chứng nhãn"),
+    ("uncertified", "không có bằng chứng ảnh↔chữ đủ mạnh (bộ kiểm ảnh dưới ngưỡng TN1), dị bản người không chứng nhãn, "
+                    "hoặc (STT, khi đủ cache lt2) lần đọc kim lt2 không xác nhận nhãn"),
     ("review", "luật A (ảnh của ô khác, nhãn rescue, cầu tự dạng, văn bản yếu) hoặc M-OCR t50 — cần xem lại"),
 ]
 
@@ -25,8 +26,10 @@ TRANG_THAI = [
 # Giới hạn phải đi kèm mọi mô tả gold_exact.csv (README bộ gộp + bộ nguồn, GOLD_EXACT.md) — số lấy từ TN4 §5.1 / TN3 §6.
 GIOI_HAN = """>
 > Biên độ theo chọn ngưỡng (TN4 §5.1, bootstrap trang tune B = 300, 5 %–95 %): số ô giữ L16 1.343–6.670, TK 9.200–12.137 —
-> con số ok là của MỘT điểm vận hành đăng ký trước, không phải hằng số. **Đọc lại STT bằng kim lt2 (H7) CHƯA làm** (cần gọi
-> API); TN3 §6: kể cả xoá hết lỗi riêng của STT, cận bi quan vẫn ≤ 97,31 % → STT vẫn là suy đoán.
+> con số ok là của MỘT điểm vận hành đăng ký trước, không phải hằng số. **Lần đọc thứ hai STT bằng kim lt2 (H7)**: luật CHỈ HẠ
+> (ok -> `uncertified` khi nhãn ≠ chữ lt2 hoặc không ghép được), CHỈ bật cho bộ STT có ĐỦ cache lt2 (trạng thái từng bộ:
+> `GOLD_EXACT.md`); hiệu chuẩn trên thạch bản (ước lượng) — với chữ viết tay vẫn là SUY ĐOÁN; TN3 §6: kể cả xoá hết lỗi riêng
+> của STT, cận bi quan vẫn ≤ 97,31 % → STT vẫn là suy đoán.
 """
 
 BEGIN, END = "<!-- gold_exact:begin -->", "<!-- gold_exact:end -->"

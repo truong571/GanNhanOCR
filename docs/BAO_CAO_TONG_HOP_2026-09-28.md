@@ -1,6 +1,6 @@
 # BÁO CÁO TỔNG HỢP 10 BỘ — 2026-09-28
 
-> Tệp SINH TỰ ĐỘNG bởi `scripts/bao_cao_tong_hop.py` lúc 2026-09-28 15:43:43 (git `0ec45bf84a`),
+> Tệp SINH TỰ ĐỘNG bởi `scripts/bao_cao_tong_hop.py` lúc 2026-09-28 17:12:54 (git `3a3ac43d64`),
 > chỉ ĐỌC đầu ra đang có trên đĩa (0 API, 0 token). Ô ghi **chưa có** = tệp nguồn thiếu, KHÔNG suy ra số.
 > Mức chắc của số độ chính xác: **ĐO** (so nhãn người từng chữ) · **ƯỚC LƯỢNG** (so dị bản do người số hoá — khác chữ hợp lệ bị tính sai) · **SUY ĐOÁN** (không có sự thật người). Đừng sửa tay — chạy lại script.
 
@@ -87,26 +87,26 @@ Gần như mọi ô GOLD Borg mang CNT = 1 (cột viết tay hiếm khi đếm b
 
 ## 4. Bất biến (invariants)
 
-`measure_out/SUMMARY.json` (2026-09-28T15:42:07, `measure.py --all --report-only`): **232 PASS · 0 FAIL · 2 FAIL mềm · 0 SKIP** trên 16 bước (sập 0).
+`measure_out/SUMMARY.json` (2026-09-28T17:12:50, `measure.py --all --report-only`): **230 PASS · 0 FAIL · 2 FAIL mềm · 0 SKIP** trên 16 bước (sập 0).
 
 | bước | bộ | mã | PASS | FAIL | mềm | SKIP | giây |
 |---|---|---:|---:|---:|---:|---:|---:|
-| code_facts | (repo) | 0 | 18 | 0 | 0 | 0 | 0 |
-| layout | LucVanTien1883 | 0 | 8 | 0 | 0 | 0 | 0 |
-| qn_ocr | LucVanTien1883 | 0 | 20 | 0 | 0 | 0 | 0 |
-| layout | KimVanKieu1884 | 0 | 10 | 0 | 0 | 0 | 0 |
-| qn_ocr | KimVanKieu1884 | 0 | 24 | 0 | 0 | 0 | 0 |
-| chresto_map | Chrestomathie1872 | 0 | 20 | 0 | 0 | 0 | 21 |
-| ihr_layout | LucVanTien1916 | 0 | 6 | 0 | 2 | 0 | 0 |
-| ihr_endtoend | LucVanTien1916 | 0 | 7 | 0 | 0 | 0 | 0 |
-| ihr_layout | TruyenKieu1872 | 0 | 8 | 0 | 0 | 0 | 0 |
-| ihr_endtoend | TruyenKieu1872 | 0 | 7 | 0 | 0 | 0 | 0 |
-| borg_endtoend | SachKinhThayCaBinh | 0 | 7 | 0 | 0 | 0 | 0 |
-| borg_endtoend | SachDungLyHoThan | 0 | 7 | 0 | 0 | 0 | 0 |
-| detector_transfer | LVT+KVK+STT | 0 | 18 | 0 | 0 | 0 | 121 |
-| box_ref | LVT+KVK | 0 | 24 | 0 | 0 | 0 | 0 |
-| gold_exact | (_ALL) | 0 | 28 | 0 | 0 | 0 | 0 |
-| borg_human | Borg18+34 | 0 | 20 | 0 | 0 | 0 | 0 |
+| code_facts | (repo) | 0 | 18 | 0 | 0 | 0 | 4 |
+| layout | LucVanTien1883 | 0 | 8 | 0 | 0 | 0 | 56 |
+| qn_ocr | LucVanTien1883 | 0 | 20 | 0 | 0 | 0 | 1 |
+| layout | KimVanKieu1884 | 0 | 10 | 0 | 0 | 0 | 83 |
+| qn_ocr | KimVanKieu1884 | 0 | 24 | 0 | 0 | 0 | 2 |
+| chresto_map | Chrestomathie1872 | 0 | 18 | 0 | 0 | 0 | 12 |
+| ihr_layout | LucVanTien1916 | 1 | 6 | 0 | 2 | 0 | 2 |
+| ihr_endtoend | LucVanTien1916 | 0 | 7 | 0 | 0 | 0 | 1 |
+| ihr_layout | TruyenKieu1872 | 0 | 8 | 0 | 0 | 0 | 1 |
+| ihr_endtoend | TruyenKieu1872 | 0 | 7 | 0 | 0 | 0 | 1 |
+| borg_endtoend | SachKinhThayCaBinh | 0 | 7 | 0 | 0 | 0 | 16 |
+| borg_endtoend | SachDungLyHoThan | 0 | 7 | 0 | 0 | 0 | 6 |
+| detector_transfer | LVT+KVK+STT | 0 | 18 | 0 | 0 | 0 | 116 |
+| box_ref | LVT+KVK | 0 | 24 | 0 | 0 | 0 | 79 |
+| gold_exact | (_ALL) | 0 | 28 | 0 | 0 | 0 | 20 |
+| borg_human | Borg18+34 | 0 | 20 | 0 | 0 | 0 | 16 |
 
 | phép đo | PASS | FAIL |
 |---|---:|---:|
@@ -118,20 +118,27 @@ Gần như mọi ô GOLD Borg mang CNT = 1 (cột viết tay hiếm khi đếm b
 
 ## 5. Thời gian chạy
 
-Chưa có lượt `clean_rebuild_all.sh --run` (logs/clean_rebuild_*_thoi_gian.tsv) — dưới đây là lượt GẦN NHẤT của từng bộ theo `CHECKSUMS.txt` (dòng `thoi_gian`).
+Lượt `clean_rebuild_all.sh --run` (`logs/clean_rebuild_20260928_155231_thoi_gian.tsv`):
+
+| bước | lệnh | mã | thời gian | bắt đầu | kết thúc | log |
+|---|---|---:|---:|---|---|---|
+| 1 | run_pipeline_all | 1 | 48 ph 1 s | 2026-09-28T15:54:55 | 2026-09-28T16:42:56 | `logs/clean_rebuild_20260928_155231_1_run_pipeline_all.log` |
+| 2 | borg_human | 0 | 11 ph 48 s | 2026-09-28T16:42:56 | 2026-09-28T16:54:44 | `logs/clean_rebuild_20260928_155231_2_borg_human.log` |
+| 3 | measure_all | 2 | 7 ph 23 s | 2026-09-28T16:54:44 | 2026-09-28T17:02:07 | `logs/clean_rebuild_20260928_155231_3_measure_all.log` |
+| 4 | bao_cao_tong_hop | 0 | 0 ph 2 s | 2026-09-28T17:02:07 | 2026-09-28T17:02:09 | `logs/clean_rebuild_20260928_155231_4_bao_cao_tong_hop.log` |
 
 | bộ / bước | bắt đầu | các bước (giây) | tổng | ghi chú |
 |---|---|---|---|---|
-| STT (3 quyển chung) | 2026-09-27T13:36:20 | setup 0s · extract 7s · build 416s · remediate 3s · rescue 7s · export 76s | 8 ph 29 s |  |
-| LucVanTien1883 | 2026-09-27T13:44:50 | setup 1s · ingest 4s · build 182s · remediate 2s · gates 6s · export 6s · measure 2s | 3 ph 23 s |  |
-| KimVanKieu1884 | 2026-09-27T13:48:13 | setup 2s · ingest 5s · build 227s · remediate 2s · gates 16s · export 9s · measure 6s | 4 ph 27 s |  |
-| Chrestomathie1872 | 2026-09-27T13:52:40 | setup 0s · ingest 56s · build 89s · remediate 2s · gates 0s · export 2s · measure 0s | 2 ph 29 s |  |
-| LucVanTien1916 | 2026-09-27T13:55:09 | setup 1s · ingest 1s · build 88s · remediate 2s · gates 0s · export 5s · measure 0s | 1 ph 37 s |  |
-| TruyenKieu1872 | 2026-09-27T13:56:46 | setup 0s · ingest 2s · build 118s · remediate 2s · gates 1s · export 8s · measure 0s | 2 ph 11 s |  |
-| SachKinhThayCaBinh | 2026-09-27T23:27:03 | setup 0s · ingest 5502s · build 626s · remediate 5s · gates 2s · export 21s · measure 16s | 102 ph 52 s | lượt nạp này GỌI API kim 529 trang (lượt từ cache sẽ ngắn hơn nhiều) |
-| SachDungLyHoThan | 2026-09-28T01:09:55 | setup 0s · ingest 1092s · build 146s · remediate 2s · gates 0s · export 2s · measure 6s | 20 ph 48 s | lượt nạp này GỌI API kim 111 trang (lượt từ cache sẽ ngắn hơn nhiều) |
-| gộp dataset/_ALL | 2026-09-28T15:37:18 | merge 96s | 1 ph 36 s |  |
-| GOLD chính xác (B8) | 20260928_153718 | mã thoát 0 · 236s | 3 ph 56 s |  |
+| STT (3 quyển chung) | 2026-09-28T15:54:57 | setup 0s · extract 7s · build 446s · remediate 3s · rescue 8s · export 79s | 9 ph 3 s |  |
+| LucVanTien1883 | 2026-09-28T16:04:01 | setup 2s · ingest 3s · build 197s · remediate 3s · gates 7s · export 5s · measure 2s | 3 ph 39 s |  |
+| KimVanKieu1884 | 2026-09-28T16:07:40 | setup 3s · ingest 5s · build 243s · remediate 3s · gates 18s · export 9s · measure 6s | 4 ph 47 s |  |
+| Chrestomathie1872 | 2026-09-28T16:12:27 | setup 0s · ingest 56s · build 95s · remediate 1s · gates 1s · export 2s · measure 0s | 2 ph 35 s |  |
+| LucVanTien1916 | 2026-09-28T16:15:02 | setup 0s · ingest 2s · build 98s · remediate 2s · gates 0s · export 5s · measure 0s | 1 ph 47 s |  |
+| TruyenKieu1872 | 2026-09-28T16:16:49 | setup 0s · ingest 2s · build 124s · remediate 2s · gates 1s · export 7s · measure 0s | 2 ph 16 s |  |
+| SachKinhThayCaBinh | 2026-09-28T16:19:05 | setup 1s · ingest 6s · build 732s · remediate 5s · gates 1s · export 28s · measure 16s | 13 ph 9 s |  |
+| SachDungLyHoThan | 2026-09-28T16:32:15 | setup 0s · ingest 2s · build 163s · remediate 2s · gates 1s · export 2s · measure 5s | 2 ph 55 s |  |
+| gộp dataset/_ALL | 2026-09-28T16:36:35 | merge 2498s | 41 ph 38 s |  |
+| GOLD chính xác (B8) | 20260928_163635 | mã thoát 0 · 315s | 5 ph 15 s |  |
 
 ## 6. Giới hạn
 

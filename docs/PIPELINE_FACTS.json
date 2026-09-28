@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-23T15:06:28Z",
+ "generated_at": "2026-09-28T10:05:04Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "7107d25d72",
+ "git_head": "3a3ac43d64",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 60,
@@ -15,8 +15,8 @@
   "json_keys_never_read": 8,
   "config_books": 3,
   "pdf_readers": 2,
-  "checkpoint_paths": 11,
-  "checkpoint_exists": 6,
+  "checkpoint_paths": 41,
+  "checkpoint_exists": 7,
   "git_dirty_pipeline_core": 0,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
@@ -193,7 +193,7 @@
    },
    "discarded": {
     "call_arg_no_column_context": 8,
-    "call_kwarg_no_column_context": 5,
+    "call_kwarg_no_column_context": 6,
     "compare_no_column_context": 1,
     "other_no_column_context": 27
    },
@@ -209,8 +209,9 @@
     "pipeline/publish/selftest.py:103 split_mod.assign_page_disjoint(seed=9)",
     "pipeline/remediation/mechanism_gates_selftest.py:62 _row(… arg#0=9)",
     "pipeline/remediation/mechanism_gates_selftest.py:218 _row(… arg#0=9)",
+    "pipeline/tools/ingest_borg_book.py:694 KimClient(budget=9)",
     "pipeline/tools/ingest_prose_selftest.py:43 ing.sino_number(… arg#0=9)",
-    "pipeline/tools/merge_datasets.py:512 _bo_gia(… arg#2=9)",
+    "pipeline/tools/merge_datasets.py:535 _bo_gia(… arg#2=9)",
     "pipeline/tools/selftest.py:717 bbox(… arg#0=9)"
    ],
    "known_pins_check": [
@@ -353,7 +354,7 @@
     },
     {
      "file": "core/ocr/ocr_api.py",
-     "line": 761,
+     "line": 764,
      "category": "default_param",
      "context": "line",
      "detail": "ocr_page(expected_cols=9)",
@@ -767,7 +768,7 @@
     },
     {
      "file": "pipeline/tools/make_dataset_docs.py",
-     "line": 378,
+     "line": 394,
      "category": "call_kwarg",
      "context": "line",
      "detail": "ap.add_argument(default=9)",
@@ -1066,25 +1067,25 @@
     },
     {
      "file": "core/ocr/ocr_api.py",
-     "line": 761,
+     "line": 764,
      "ident": "expected_cols",
      "code": "expected_cols: int = 9,"
     },
     {
      "file": "core/ocr/ocr_api.py",
-     "line": 792,
+     "line": 795,
      "ident": "expected_cols",
      "code": "if use_frame and len(columns) != expected_cols and retry_pad > frame_pad:"
     },
     {
      "file": "core/ocr/ocr_api.py",
-     "line": 794,
+     "line": 797,
      "ident": "expected_cols",
      "code": "print(f\"    [OCR] {len(columns)} cột != {expected_cols} -> retry pad={retry_pad}\")"
     },
     {
      "file": "core/ocr/ocr_api.py",
-     "line": 799,
+     "line": 802,
      "ident": "expected_cols",
      "code": "if abs(len(c2) - expected_cols) < abs(len(columns) - expected_cols):"
     },
@@ -1304,11 +1305,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 266,
+       "line": 280,
        "cmd": "X \"$PY\" -m pipeline.step0_setup \"$CONFIG\""
       },
       {
-       "line": 641,
+       "line": 716,
        "cmd": "R \"$PY\" -m pipeline.step0_setup \"$BK_CONFIG\""
       }
      ]
@@ -1353,7 +1354,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 280,
+       "line": 294,
        "cmd": "X \"$PY\" -m pipeline.step1_extract \"$CONFIG\" \"$b\""
       }
      ]
@@ -1667,11 +1668,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 293,
+       "line": 307,
        "cmd": "X \"$PY\" -m pipeline.align_engine.build_dataset --config \"$CONFIG\" --reseg \"$RESEG\" --qd01-cells none --force --out \"$DS_OUT\""
       },
       {
-       "line": 710,
+       "line": 813,
        "cmd": "R \"$PY\" -m pipeline.align_engine.build_dataset --config \"$BK_CONFIG\" --reseg detector --qd01-cells none --decisions none --use-s3 --two-pass --box-rule syl_index --force --out \"$ds_out\""
       }
      ]
@@ -1734,19 +1735,19 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 334,
+       "line": 348,
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" census"
       },
       {
-       "line": 335,
+       "line": 349,
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" apply --tau \"$TAU_REMEDIATE\""
       },
       {
-       "line": 719,
+       "line": 822,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" census"
       },
       {
-       "line": 720,
+       "line": 823,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" apply --tau \"$TAU_REMEDIATE\""
       }
      ],
@@ -1804,11 +1805,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 339,
+       "line": 353,
        "cmd": "X \"$PY\" -m pipeline.remediation.confusion_fix --in \"$LABELS_REMED\" --out \"$LABELS_FINAL\" --fixes \"$CONFUSION_FIXES\" --measure"
       },
       {
-       "line": 723,
+       "line": 826,
        "cmd": "R \"$PY\" -m pipeline.remediation.confusion_fix --in \"$labels_remed\" --out \"$labels_final\" --fixes \"$CONFUSION_FIXES\" --measure"
       }
      ]
@@ -1946,7 +1947,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 731,
+       "line": 834,
        "cmd": "cmd=(\"$PY\" -m pipeline.remediation.mechanism_gates --in \"$labels_final\" --out \"$labels_gated\""
       }
      ]
@@ -2064,7 +2065,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 381,
+       "line": 395,
        "cmd": "X \"$PY\" -m pipeline.remediation.self_training_rescue \"${_args[@]}\""
       }
      ]
@@ -2128,11 +2129,11 @@
        "cmd": "#   6 export      pipeline/export_final_dataset.py -> dataset/ (usable: GOLD+SYLLABLE)"
       },
       {
-       "line": 390,
+       "line": 404,
        "cmd": "X \"$PY\" pipeline/export_final_dataset.py --labels \"$LABELS_FINAL\" --src-root \"$DS_OUT\" --out \"$FINAL_DIR\""
       },
       {
-       "line": 753,
+       "line": 856,
        "cmd": "R \"$PY\" pipeline/export_final_dataset.py --labels \"$labels_gated\" --src-root \"$ds_out\" --out \"$final_dir\" --n-columns \"$BK_NCOL\""
       }
      ]
@@ -2189,11 +2190,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 297,
+       "line": 311,
        "cmd": "X \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$LABELS_RAW\" --src-root \"$DS_OUT\""
       },
       {
-       "line": 713,
+       "line": 816,
        "cmd": "R \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$labels_raw\" --src-root \"$ds_out\""
       }
      ]
@@ -2424,7 +2425,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 697,
+       "line": 800,
        "cmd": "cmd=(\"$PY\" -m pipeline.tools.ingest_lithograph_book --book \"$book\" --ocr \"$ocr\" --out \"$BK_DATA_DIR\""
       }
      ]
@@ -2465,19 +2466,19 @@
     },
     {
      "file": "core/ocr/ocr_api.py",
-     "line": 665,
+     "line": 668,
      "schema": "ocr_cache",
      "code": "data = json.load(f)"
     },
     {
      "file": "core/ocr/ocr_api.py",
-     "line": 710,
+     "line": 713,
      "schema": "ocr_cache",
      "code": "data = json.loads(cache_file.read_text(encoding=\"utf-8\"))"
     },
     {
      "file": "core/ocr/ocr_api.py",
-     "line": 747,
+     "line": 750,
      "schema": "ocr_cache",
      "code": "data = json.load(f)"
     }
@@ -2509,7 +2510,7 @@
      "path_pattern": "prepared/<book>/detected/<page>_ocr_cache.json",
      "writer": {
       "file": "core/ocr/ocr_api.py",
-      "line": 815,
+      "line": 818,
       "keys": [
        "image",
        "image_hash",
@@ -2524,7 +2525,7 @@
      },
      "per_char_writer": {
       "file": "core/ocr/ocr_api.py",
-      "line": 511,
+      "line": 514,
       "keys": [
        "char",
        "y_center",
@@ -2868,7 +2869,7 @@
       },
       {
        "file": "core/ocr/ocr_api.py",
-       "line": 748,
+       "line": 751,
        "recv": "data",
        "access": "get(default=[])"
       }
@@ -2911,7 +2912,7 @@
       },
       {
        "file": "core/ocr/ocr_api.py",
-       "line": 749,
+       "line": 752,
        "recv": "data",
        "access": "get"
       }
@@ -2936,7 +2937,7 @@
       },
       {
        "file": "core/ocr/ocr_api.py",
-       "line": 751,
+       "line": 754,
        "recv": "data",
        "access": "get(default=12)"
       }
@@ -2961,7 +2962,7 @@
       },
       {
        "file": "core/ocr/ocr_api.py",
-       "line": 749,
+       "line": 752,
        "recv": "data",
        "access": "get"
       }
@@ -2992,7 +2993,7 @@
       },
       {
        "file": "core/ocr/ocr_api.py",
-       "line": 716,
+       "line": 719,
        "recv": "data",
        "access": "get"
       }
@@ -3010,19 +3011,19 @@
      "reads": [
       {
        "file": "core/ocr/ocr_api.py",
-       "line": 669,
-       "recv": "data",
-       "access": "get"
-      },
-      {
-       "file": "core/ocr/ocr_api.py",
-       "line": 720,
+       "line": 672,
        "recv": "data",
        "access": "get"
       },
       {
        "file": "core/ocr/ocr_api.py",
        "line": 723,
+       "recv": "data",
+       "access": "get"
+      },
+      {
+       "file": "core/ocr/ocr_api.py",
+       "line": 726,
        "recv": "data",
        "access": "subscript"
       }
@@ -3083,13 +3084,13 @@
      "reads": [
       {
        "file": "core/ocr/ocr_api.py",
-       "line": 676,
+       "line": 679,
        "recv": "data",
        "access": "get"
       },
       {
        "file": "core/ocr/ocr_api.py",
-       "line": 713,
+       "line": 716,
        "recv": "data",
        "access": "get"
       }
@@ -3226,19 +3227,19 @@
      "reads": [
       {
        "file": "core/ocr/ocr_api.py",
-       "line": 432,
+       "line": 435,
        "recv": "b",
        "access": "subscript"
       },
       {
        "file": "core/ocr/ocr_api.py",
-       "line": 419,
+       "line": 422,
        "recv": "b",
        "access": "subscript"
       },
       {
        "file": "core/ocr/ocr_api.py",
-       "line": 452,
+       "line": 455,
        "recv": "b",
        "access": "subscript"
       }
@@ -3328,7 +3329,7 @@
     },
     {
      "file": "core/ocr/ocr_api.py",
-     "line": 708,
+     "line": 711,
      "code": "for cache_file in sorted(Path(root).rglob(\"*_ocr_cache.json\")):"
     }
    ]
@@ -3390,6 +3391,66 @@
      "has_nom_pages": false,
      "prepared_exists": true,
      "n_ocr_cache": 99,
+     "n_qn_cache": 0
+    },
+    {
+     "dir": "MSS_Borg.tonch.18",
+     "in_yaml": false,
+     "pdfs": [
+      "MSS_Borg.tonch.18.pdf",
+      "SachKinhThayCaBinh.pdf"
+     ],
+     "n_pages": 0,
+     "page_exts": {},
+     "has_quocngu_pages": false,
+     "has_nom_pages": false,
+     "prepared_exists": false,
+     "n_ocr_cache": 0,
+     "n_qn_cache": 0
+    },
+    {
+     "dir": "MSS_Borg.tonch.34",
+     "in_yaml": false,
+     "pdfs": [
+      "MSS_Borg.tonch.34.pdf",
+      "SachDungLyHoThan.pdf"
+     ],
+     "n_pages": 0,
+     "page_exts": {},
+     "has_quocngu_pages": false,
+     "has_nom_pages": false,
+     "prepared_exists": false,
+     "n_ocr_cache": 0,
+     "n_qn_cache": 0
+    },
+    {
+     "dir": "SachDungLyHoThan",
+     "in_yaml": false,
+     "pdfs": [
+      "MSS_Borg.tonch.34.pdf",
+      "SachDungLyHoThan.pdf"
+     ],
+     "n_pages": 0,
+     "page_exts": {},
+     "has_quocngu_pages": false,
+     "has_nom_pages": false,
+     "prepared_exists": true,
+     "n_ocr_cache": 0,
+     "n_qn_cache": 0
+    },
+    {
+     "dir": "SachKinhThayCaBinh",
+     "in_yaml": false,
+     "pdfs": [
+      "MSS_Borg.tonch.18.pdf",
+      "SachKinhThayCaBinh.pdf"
+     ],
+     "n_pages": 0,
+     "page_exts": {},
+     "has_quocngu_pages": false,
+     "has_nom_pages": false,
+     "prepared_exists": true,
+     "n_ocr_cache": 0,
      "n_qn_cache": 0
     },
     {
@@ -3464,6 +3525,10 @@
     "KimVanKieu1884",
     "LucVanTien1883",
     "LucVanTien1916",
+    "MSS_Borg.tonch.18",
+    "MSS_Borg.tonch.34",
+    "SachDungLyHoThan",
+    "SachKinhThayCaBinh",
     "TruyenKieu1872",
     "TruyenKieuPhongTinhCoLuc"
    ],
@@ -3653,6 +3718,62 @@
      "code": "book = b[\"name\"]"
     },
     {
+     "file": "pipeline/gold_exact/signals_geom.py",
+     "line": 386,
+     "key": "name",
+     "access": "subscript",
+     "keyerror_if_missing": true,
+     "code": "code = _book_code(b[\"name\"]); code2[(bs, code)] = b[\"name\"]"
+    },
+    {
+     "file": "pipeline/gold_exact/signals_geom.py",
+     "line": 386,
+     "key": "name",
+     "access": "subscript",
+     "keyerror_if_missing": true,
+     "code": "code = _book_code(b[\"name\"]); code2[(bs, code)] = b[\"name\"]"
+    },
+    {
+     "file": "pipeline/gold_exact/signals_geom.py",
+     "line": 387,
+     "key": "name",
+     "access": "subscript",
+     "keyerror_if_missing": true,
+     "code": "psub = AUTO_PREP.get(b[\"name\"], b[\"name\"])      # Borg: prepared/_auto/<Sách> (27/09)"
+    },
+    {
+     "file": "pipeline/gold_exact/signals_geom.py",
+     "line": 387,
+     "key": "name",
+     "access": "subscript",
+     "keyerror_if_missing": true,
+     "code": "psub = AUTO_PREP.get(b[\"name\"], b[\"name\"])      # Borg: prepared/_auto/<Sách> (27/09)"
+    },
+    {
+     "file": "pipeline/gold_exact/signals_geom.py",
+     "line": 393,
+     "key": "name",
+     "access": "subscript",
+     "keyerror_if_missing": true,
+     "code": "pf = root / b[\"name\"] / f\"{pg}.pkl\""
+    },
+    {
+     "file": "pipeline/gold_exact/signals_geom.py",
+     "line": 397,
+     "key": "name",
+     "access": "subscript",
+     "keyerror_if_missing": true,
+     "code": "res[(bs, b[\"name\"], pg)] = z[\"out\"]; continue"
+    },
+    {
+     "file": "pipeline/gold_exact/signals_geom.py",
+     "line": 398,
+     "key": "name",
+     "access": "subscript",
+     "keyerror_if_missing": true,
+     "code": "jobs.append(((psub, pg, b), (bs, b[\"name\"], pg), key, pf))"
+    },
+    {
      "file": "pipeline/remediation/mechanism_gates.py",
      "line": 112,
      "key": "name",
@@ -3835,14 +3956,43 @@
   },
   "checkpoints": {
    "how": "AST: ast.Constant/JoinedStr khớp /\\.(?:pt|pth|h5|ckpt|keras|onnx|safetensors)$/ trong pipeline/ core/; leo qua chuỗi BinOp '/' rồi ước lượng tĩnh (REPO, __file__, Path().parent, hằng module) -> đường dẫn; kiểm tồn tại + kích thước. f-string (fold{k}.pt) -> glob trong tuple/list Path cùng tệp (vd DEFAULT_MODEL_DIRS) và CKPT_DIR_HINTS. env_overrides: os.environ.get('*CKPT*').",
-   "n_paths": 11,
-   "n_exists": 6,
+   "n_paths": 41,
+   "n_exists": 7,
    "missing": [
     "/a/b/detector_r34_v2_litho.pt",
+    "OUT / 'lexicon.pt'",
+    "OUT / 'mocr_refs.pt'",
+    "OUT / 'ta_refs.pt'",
+    "OUT / 'vft_universe.pt'",
+    "OUT / 'viss_params.pt'",
+    "a.pt",
+    "b.pt",
+    "c.pt",
+    "hand_model_{FT}.pt",
+    "hand_model_{t}_{var}.pt",
+    "hand_tables_L_{bk_}.pt",
+    "hand_tables_T_Kinh.pt",
+    "hand_tables_T_{bk_}.pt",
+    "hand_tables_{FT}.pt",
+    "hand_tables_{t}_{variant}.pt",
+    "hand_tables_{t}_{var}.pt",
+    "hand_tables_{t}_{v}.pt",
+    "lexicon.pt",
     "md / 'fold0.pt'",
+    "mocr_refs.pt",
+    "model_{FT}.pt",
+    "model_{t}.pt",
+    "model_{t}_{bk}.pt",
     "pipeline/align_engine/char_detector/detector_r34.best.pt",
     "pipeline/align_engine/nom_classifier/checkpoints/best.pt",
-    "train_crop/khong_co_tep_nay.pt"
+    "ta_refs.pt",
+    "td / 'a.pt'",
+    "td / 'b.pt'",
+    "train_crop/khong_co_tep_nay.pt",
+    "vft_model_{t}.pt",
+    "vft_tables_{t}.pt",
+    "vft_universe.pt",
+    "viss_params.pt"
    ],
    "items": [
     {
@@ -3854,6 +4004,127 @@
      ],
      "src": "'/a/b/detector_r34_v2_litho.pt'",
      "resolved": "/a/b/detector_r34_v2_litho.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "ArcFace/checkpoints/best.pt",
+     "literal": "ArcFace/checkpoints/best.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/borg_human/params.py:39",
+      "pipeline/gold_exact/export_assets.py:420",
+      "pipeline/gold_exact/signals_img.py:223"
+     ],
+     "src": "'ArcFace/checkpoints/best.pt'",
+     "resolved": "ArcFace/checkpoints/best.pt",
+     "unresolved_expr": false,
+     "exists": true,
+     "size_mb": 46.9
+    },
+    {
+     "path": "OUT / 'lexicon.pt'",
+     "literal": "lexicon.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:243"
+     ],
+     "src": "OUT / 'lexicon.pt'",
+     "resolved": null,
+     "unresolved_expr": true,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "OUT / 'mocr_refs.pt'",
+     "literal": "mocr_refs.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:412"
+     ],
+     "src": "OUT / 'mocr_refs.pt'",
+     "resolved": null,
+     "unresolved_expr": true,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "OUT / 'ta_refs.pt'",
+     "literal": "ta_refs.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:388"
+     ],
+     "src": "OUT / 'ta_refs.pt'",
+     "resolved": null,
+     "unresolved_expr": true,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "OUT / 'vft_universe.pt'",
+     "literal": "vft_universe.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:252"
+     ],
+     "src": "OUT / 'vft_universe.pt'",
+     "resolved": null,
+     "unresolved_expr": true,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "OUT / 'viss_params.pt'",
+     "literal": "viss_params.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:374"
+     ],
+     "src": "OUT / 'viss_params.pt'",
+     "resolved": null,
+     "unresolved_expr": true,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "a.pt",
+     "literal": "a.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/selftest.py:324"
+     ],
+     "src": "'a.pt'",
+     "resolved": "a.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "b.pt",
+     "literal": "b.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/selftest.py:324",
+      "pipeline/gold_exact/selftest.py:331"
+     ],
+     "src": "'b.pt'",
+     "resolved": "b.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "c.pt",
+     "literal": "c.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/selftest.py:325",
+      "pipeline/gold_exact/selftest.py:331"
+     ],
+     "src": "'c.pt'",
+     "resolved": "c.pt",
      "unresolved_expr": false,
      "exists": false,
      "size_mb": null
@@ -3897,6 +4168,133 @@
      "exists": true
     },
     {
+     "path": "hand_model_{FT}.pt",
+     "literal": "hand_model_{FT}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:297"
+     ],
+     "src": "f'hand_model_{FT}.pt'",
+     "glob_pattern": "hand_model_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "hand_model_{t}_{var}.pt",
+     "literal": "hand_model_{t}_{var}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/selftest.py:359",
+      "pipeline/gold_exact/signals_img.py:420",
+      "pipeline/gold_exact/signals_img.py:421"
+     ],
+     "src": "f'hand_model_{t}_{var}.pt'",
+     "glob_pattern": "hand_model_*_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "hand_tables_L_{bk_}.pt",
+     "literal": "hand_tables_L_{bk_}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:336"
+     ],
+     "src": "OUT / f'hand_tables_L_{bk_}.pt'",
+     "glob_pattern": "hand_tables_L_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "hand_tables_T_Kinh.pt",
+     "literal": "hand_tables_T_Kinh.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/selftest.py:60"
+     ],
+     "src": "'hand_tables_T_Kinh.pt'",
+     "resolved": "hand_tables_T_Kinh.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "hand_tables_T_{bk_}.pt",
+     "literal": "hand_tables_T_{bk_}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:335"
+     ],
+     "src": "OUT / f'hand_tables_T_{bk_}.pt'",
+     "glob_pattern": "hand_tables_T_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "hand_tables_{FT}.pt",
+     "literal": "hand_tables_{FT}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:326",
+      "pipeline/gold_exact/export_assets.py:327"
+     ],
+     "src": "f'hand_tables_{FT}.pt'",
+     "glob_pattern": "hand_tables_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "hand_tables_{t}_{variant}.pt",
+     "literal": "hand_tables_{t}_{variant}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/signals_img.py:590"
+     ],
+     "src": "f'hand_tables_{t}_{variant}.pt'",
+     "glob_pattern": "hand_tables_*_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "hand_tables_{t}_{var}.pt",
+     "literal": "hand_tables_{t}_{var}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/__main__.py:133",
+      "pipeline/gold_exact/selftest.py:359"
+     ],
+     "src": "f'hand_tables_{t}_{var}.pt'",
+     "glob_pattern": "hand_tables_*_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "hand_tables_{t}_{v}.pt",
+     "literal": "hand_tables_{t}_{v}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/selftest.py:456"
+     ],
+     "src": "f'hand_tables_{t}_{v}.pt'",
+     "glob_pattern": "hand_tables_*_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "lexicon.pt",
+     "literal": "lexicon.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/common.py:325",
+      "pipeline/gold_exact/export_assets.py:244"
+     ],
+     "src": "'lexicon.pt'",
+     "resolved": "lexicon.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
      "path": "md / 'fold0.pt'",
      "literal": "fold0.pt",
      "fstring": false,
@@ -3910,11 +4308,69 @@
      "size_mb": null
     },
     {
+     "path": "mocr_refs.pt",
+     "literal": "mocr_refs.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/__main__.py:275",
+      "pipeline/gold_exact/export_assets.py:413"
+     ],
+     "src": "'mocr_refs.pt'",
+     "resolved": "mocr_refs.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "model_{FT}.pt",
+     "literal": "model_{FT}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:297"
+     ],
+     "src": "HL / f'model_{FT}.pt'",
+     "glob_pattern": "model_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "model_{t}.pt",
+     "literal": "model_{t}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:264",
+      "pipeline/gold_exact/export_assets.py:58"
+     ],
+     "src": "VF / f'model_{t}.pt'",
+     "glob_pattern": "model_*.pt",
+     "matches": [],
+     "exists": false,
+     "resolved": "model_{t}.pt",
+     "unresolved_expr": false,
+     "size_mb": null
+    },
+    {
+     "path": "model_{t}_{bk}.pt",
+     "literal": "model_{t}_{bk}.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:62"
+     ],
+     "src": "'model_{t}_{bk}.pt'",
+     "resolved": "model_{t}_{bk}.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
      "path": "nom-embed/best.pt",
      "literal": "best.pt",
      "fstring": false,
      "referenced_in": [
       "pipeline/align_engine/visual_signal.py:57",
+      "pipeline/borg_human/params.py:39",
+      "pipeline/gold_exact/export_assets.py:419",
+      "pipeline/gold_exact/signals_img.py:223",
       "pipeline/tools/repro_check.py:35"
      ],
      "src": "repo / 'nom-embed' / 'best.pt'",
@@ -3964,6 +4420,49 @@
      "size_mb": null
     },
     {
+     "path": "ta_refs.pt",
+     "literal": "ta_refs.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/__main__.py:273",
+      "pipeline/gold_exact/export_assets.py:389",
+      "pipeline/gold_exact/selftest.py:295",
+      "pipeline/gold_exact/signals_text.py:111"
+     ],
+     "src": "'ta_refs.pt'",
+     "resolved": "ta_refs.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "td / 'a.pt'",
+     "literal": "a.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/selftest.py:323"
+     ],
+     "src": "td / 'a.pt'",
+     "resolved": null,
+     "unresolved_expr": true,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "td / 'b.pt'",
+     "literal": "b.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/selftest.py:323",
+      "pipeline/gold_exact/selftest.py:327"
+     ],
+     "src": "td / 'b.pt'",
+     "resolved": null,
+     "unresolved_expr": true,
+     "exists": false,
+     "size_mb": null
+    },
+    {
      "path": "train_crop/detector_r34.best.pt",
      "literal": "detector_r34.best.pt",
      "fstring": false,
@@ -3974,6 +4473,7 @@
       "pipeline/align_engine/book_layout_selftest.py:487",
       "pipeline/align_engine/book_layout_selftest.py:489",
       "pipeline/align_engine/char_detector/detector_infer.py:28",
+      "pipeline/borg_human/params.py:29",
       "pipeline/phase1_engine_selftest.py:846"
      ],
      "src": "REPO / 'train_crop' / 'detector_r34.best.pt'",
@@ -4004,6 +4504,62 @@
      ],
      "src": "'train_crop/khong_co_tep_nay.pt'",
      "resolved": "train_crop/khong_co_tep_nay.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "vft_model_{t}.pt",
+     "literal": "vft_model_{t}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:264",
+      "pipeline/gold_exact/signals_img.py:410",
+      "pipeline/gold_exact/signals_img.py:411"
+     ],
+     "src": "f'vft_model_{t}.pt'",
+     "glob_pattern": "vft_model_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "vft_tables_{t}.pt",
+     "literal": "vft_tables_{t}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/gold_exact/export_assets.py:280",
+      "pipeline/gold_exact/export_assets.py:281",
+      "pipeline/gold_exact/signals_img.py:572"
+     ],
+     "src": "f'vft_tables_{t}.pt'",
+     "glob_pattern": "vft_tables_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "vft_universe.pt",
+     "literal": "vft_universe.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/__main__.py:293",
+      "pipeline/gold_exact/export_assets.py:253"
+     ],
+     "src": "'vft_universe.pt'",
+     "resolved": "vft_universe.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "viss_params.pt",
+     "literal": "viss_params.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/gold_exact/__main__.py:326",
+      "pipeline/gold_exact/export_assets.py:375"
+     ],
+     "src": "'viss_params.pt'",
+     "resolved": "viss_params.pt",
      "unresolved_expr": false,
      "exists": false,
      "size_mb": null
@@ -4043,7 +4599,7 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "7107d25d72",
+   "head": "3a3ac43d64",
    "branch": "main",
    "n_dirty_pipeline_core": 0,
    "dirty_pipeline_core": [],

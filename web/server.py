@@ -108,6 +108,17 @@ REASON_VI = {
     "U_Borg_bo_kiem_viet_tay_LOBO_khong_chung_nhan": "Borg: bộ kiểm chữ viết tay học chéo sách (LOBO) không chứng nhận.",
     "U_bo_kiem_anh_duoi_nguong_TN1": "Bộ kiểm ảnh↔chữ dưới ngưỡng tin cậy (TN1).",
     "U_khong_co_van_ban_nguoi_chung": "Không có văn bản người (dị bản) chứng cho nhãn.",
+    "U_STT_lt2_khac_lt1": "Sách Thánh Truyện: lần đọc thứ hai của kim (chế độ Nôm, lt2) ra chữ khác lần đọc chính — "
+                          "không chứng nhận.",
+    "U_STT_lt2_khong_ghep_duoc": "Sách Thánh Truyện: không ghép được ô này với lần đọc thứ hai của kim (chế độ Nôm, lt2) — "
+                                 "không chứng nhận.",
+}
+# box_decoder (TN6, docs/HOP_ANH_TN6_2026-09-28.md) — cách chọn hộp ảnh cho từng âm tiết
+DECODER_VI = {
+    "legacy": "legacy — hộp của detector gán theo thứ tự trong cột",
+    "pitch": "pitch — tách cột theo bước chữ đều (CenterNet + Pitch Decoding)",
+    "visual_dp": "visual_dp — gióng âm tiết với hộp bằng so khớp hình chữ (DP thị giác)",
+    "visual_dp_hybrid": "visual_dp_hybrid — gióng bằng hình; ô không tự tin và lệch nhịp thì lấy hộp pitch",
 }
 KEEP_VI = {"keep_v5": "keep_v5 (khuyên dùng)", "keep": "keep", "keep_high": "keep_high (chỉ có hộp)", "khong": "không giữ"}
 
@@ -609,6 +620,31 @@ class Store:
         self.dict_entries = None
         self.dims: dict[str, tuple] = {}
         self.dims_lock = threading.Lock()
+        self.routes: dict[str, dict] = {}
+        self.routes_meta: dict = {}
+
+
+def load_routes(log=print) -> tuple[dict, dict]:
+    """Đường chạy từng bộ = ĐÚNG bảng ĐƯỜNG CHẠY mà run_pipeline.sh in (pipeline.tools.duong_chay.routes, đọc config
+    hiện hành). Cần môi trường của repo (.venv: PyYAML + pipeline/); thiếu thì trả rỗng -> giao diện ghi "chưa có"."""
+    try:
+        if str(REPO_ROOT) not in sys.path:
+            sys.path.insert(0, str(REPO_ROOT))
+        from pipeline.tools.duong_chay import ALL10, routes  # noqa: PLC0415 — tuỳ chọn, không bắt buộc
+        rows, gcfg, prof = routes(ALL10)
+    except Exception as e:  # noqa: BLE001
+        log(f"  [!!] đường chạy: không đọc được ({type(e).__name__}: {e})")
+        return {}, dict(error=f"{type(e).__name__}: {e}")
+    out = {}
+    for b, cfg, layout, dec, lang, src, pf, sr in rows:
+        out[b] = dict(config=cfg, layout=layout, box_decoder=dec, box_decoder_vi=DECODER_VI.get(dec, dec),
+                      kim_lang_type=lang, crop_source=src, profile=pf, second_read=sr)
+    hw = ((gcfg.get("profiles") or {}).get("handwriting") or {})
+    sr = hw.get("second_read") if isinstance(hw, dict) else None
+    meta = dict(source="pipeline/tools/duong_chay.py (config/pipeline*.yaml, config/gold_exact.yaml)",
+                policy=gcfg.get("version"), second_read_mode=(sr or {}).get("mode") if isinstance(sr, dict) else sr)
+    log(f"  [OK] đường chạy: {len(out)} bộ · " + ", ".join(f"{k}={v['box_decoder']}" for k, v in out.items()))
+    return out, meta
 
 
 def code_file(root: Path, rel: str) -> Path:
@@ -636,6 +672,7 @@ def load_store(root: Path, log=print) -> Store:
         log(f"  [{mark}] {cfg['id']}: {len(bd.rows):,} dòng · {len(bd.pages)} trang nhãn · "
             f"{len(bd.scan_pages)} ảnh trang · {STATUS_VI[bd.status]}{extra}")
     cache.clear()
+    st.routes, st.routes_meta = load_routes(log)
     try:
         dpath = code_file(root, "Dict/QuocNgu_SinoNom.csv")
         if dpath.is_file():
@@ -787,6 +824,18 @@ class Measures:
     def borg_build_info(self):
         p = self.root / "dataset" / "_BORG_NHAN_NGUOI" / "BUILD_INFO.json"
         return self.load(p, "bộ nhãn người Borg"), self.src(p)
+
+    def tn6(self):
+        p = self.mo / "_tn6" / "table.json"
+        return self.load(p, "TN6 hộp ảnh (bảng quyết định box_decoder)"), self.src(p)
+
+    def stt_lt2(self):
+        p = self.mo / "stt_lt2" / "summary.json"
+        return self.load(p, "stt_lt2 (lần đọc thứ hai chế độ Nôm)"), self.src(p)
+
+    def cong_bo(self):
+        p = self.root / "dataset" / "_ALL" / "cong_bo" / "EXCLUSIONS.json"
+        return self.load(p, "tập công bố dataset/_ALL/cong_bo"), self.src(p)
 
 
 def acc_row(book_id, level, metric, value=None, value_text=None, ci="", n=None, source="", note=""):
@@ -962,6 +1011,54 @@ def profile_from_config(root: Path) -> dict | None:
                 n_hum_min=g("n_hum_min"), source=rel_to(p, root))
 
 
+_BORG_TRUTH = ("tâm hộp nằm trong hộp chữ của bộ nhãn người Borg (keep_high+/keep_v5; bộ đó gióng bằng detector/encoder "
+               "chung với visual_dp -> số có thể lạc quan)")
+_IHR_TRUTH = "khe vị trí dựng từ hộp CỘT do người vẽ (IHR-NomDB) + dòng kim thô"
+TN6_TRUTH = {"SachKinhThayCaBinh": _BORG_TRUTH, "SachDungLyHoThan": _BORG_TRUTH,
+             "LucVanTien1916": _IHR_TRUTH, "TruyenKieu1872": _IHR_TRUTH}
+
+
+def _diem(a, b) -> str:
+    d = 100.0 * (float(b) - float(a))
+    return f"{d:+.2f} điểm %".replace(".", ",")
+
+
+def tn6_comparisons(M: Measures) -> list[dict]:
+    """TN6: hộp ảnh trước (pitch) -> box_decoder đang dùng — measure_out/_tn6/table.json (lab/thu_nghiem_anh_chu/TN6_hop_anh)."""
+    t, src = M.tn6()
+    if not t:
+        return []
+    out = []
+    for bid, truth in TN6_TRUTH.items():
+        dec = (M.st.routes.get(bid) or {}).get("box_decoder")
+        base, prop = t.get(f"{bid}/current") or {}, t.get(f"{bid}/{dec}") or {}
+        if not dec or not base or not prop:
+            continue
+        title = BOOK_BY_ID[bid]["title"]
+        for key, label, n_key in (("slot_all", "đúng vị trí (mọi ô)", "n_all"),
+                                  ("both_gold", "GOLD đúng cả ảnh lẫn chữ", "n_gold_truth")):
+            a, b = base.get(key), prop.get(key)
+            if a is None or b is None:
+                continue
+            out.append(dict(metric=f"Hộp ảnh TN6 — {title}: {label}",
+                            baseline=f"{fmt_pct(a)} (pitch, trước TN6)",
+                            proposed=f"{fmt_pct(b)} ({dec}" + (f", n {fmt_int(prop[n_key])})" if prop.get(n_key) else ")"),
+                            improvement=_diem(a, b) + (" (tốt hơn)" if b > a else " (không tốt hơn)" if b < a else ""),
+                            level_vi=LEVEL_VI["do"],
+                            impact=f"Sự thật vị trí: {truth}. GOLD có ảnh {fmt_int(base.get('gold'))} -> "
+                                   f"{fmt_int(prop.get('gold'))}.", source=src))
+    for bid in ("LucVanTien1883", "KimVanKieu1884"):
+        cur, vdp = t.get(f"{bid}/current/boxref") or {}, t.get(f"{bid}/visual_dp/boxref") or {}
+        a, b = (cur.get("ALL") or {}).get("ok"), (vdp.get("ALL") or {}).get("ok")
+        if a is None or b is None:
+            continue
+        out.append(dict(metric=f"Hộp ảnh TN6 — {BOOK_BY_ID[bid]['title']}: ô nằm trong hộp tham chiếu (mọi ô)",
+                        baseline=f"{fmt_pct(a)} (pitch — GIỮ)", proposed=f"{fmt_pct(b)} (visual_dp — không chọn)",
+                        improvement=_diem(a, b) + " (giữ pitch)", level_vi=LEVEL_VI["do_tu_dong"],
+                        impact="Thạch bản: visual_dp không tốt hơn pitch nên bộ này giữ pitch.", source=src))
+    return out
+
+
 def comparisons(M: Measures) -> list[dict]:
     """Phương pháp đề xuất (pitch decoding) so với cơ sở (legacy @0,15) — measure_out/box_ref/summary.json."""
     s, src = M.box_ref()
@@ -992,6 +1089,7 @@ def comparisons(M: Measures) -> list[dict]:
         out.append(dict(metric="Hộp ký tự: pitch decoding so với hộp legacy", baseline=NA, proposed=NA, improvement="—",
                         level_vi=LEVEL_VI["do_tu_dong"], impact="Chưa có measure_out/box_ref/summary.json "
                         "(chạy scripts/measure/measure.py --all).", source=src))
+    out.extend(tn6_comparisons(M))
     out.append(dict(metric="Can thiệp thủ công khi gán nhãn", baseline="Gán nhãn thủ công / bán tự động",
                     proposed="0 quyết định của người (mọi nhãn theo luật)", improvement="Tự động hoá hoàn toàn",
                     level_vi="Thuộc tính thiết kế", impact="Nhãn người (IHR, Borg) chỉ dùng để ĐO, không vào quyết định.",
@@ -1063,7 +1161,9 @@ def book_summary(st: Store, bd: BookData) -> dict:
     gx = st.ge.counts.get(cfg["set8"]) if cfg["kind"] == "auto" else None
     ev = st.ge.evidence.get(cfg["set8"]) or EVIDENCE_OF.get(cfg["set8"], "suy_doan")
     gold = t.get("GOLD", 0)
-    d = dict(id=cfg["id"], title=cfg["title"], subtitle=cfg["subtitle"], author=cfg["author"], layout=cfg["layout_desc"],
+    route = st.routes.get(cfg["id"]) if cfg["kind"] == "auto" else None
+    layout = cfg["layout_desc"] + (f" · hộp {route['box_decoder']}" if route else "")
+    d = dict(id=cfg["id"], title=cfg["title"], subtitle=cfg["subtitle"], author=cfg["author"], layout=layout, route=route,
              kind=cfg["kind"], role=cfg["role"], role_vi=ROLE_VI[cfg["role"]], script=cfg["script"], genre=cfg["genre"],
              set8=cfg["set8"], book_set=cfg["book_set"], status=bd.status, status_vi=STATUS_VI[bd.status], note=bd.note,
              source=bd.source, total=total, tiers=dict(t), gold=gold, syllable=t.get("SYLLABLE", 0),
@@ -1329,6 +1429,21 @@ def api_pipeline_flow(st: Store) -> list[dict]:
                                  box_src, LEVEL_VI["do_tu_dong"]))
     if not det_metrics:
         det_metrics.append(m("Hộp ký tự so với tham chiếu (box_ref)", NA, box_src))
+    route_metrics, route_details = [], []
+    if st.routes:
+        by_dec: dict[str, list[str]] = {}
+        for b, r in st.routes.items():
+            by_dec.setdefault(r["box_decoder"], []).append(BOOK_BY_ID[b]["title"] if b in BOOK_BY_ID else b)
+        for dec, names in by_dec.items():
+            route_metrics.append(m(f"box_decoder {dec}", ", ".join(names), st.routes_meta.get("source", "")))
+        route_details = [f"{BOOK_BY_ID.get(b, {}).get('title', b)}: {r['box_decoder_vi']} · kim lang_type "
+                         f"{r['kim_lang_type']} · gold_exact {r['profile']}"
+                         + (f" · lần đọc thứ hai lt2 {r['second_read']}" if r["second_read"] not in ("—", "") else "")
+                         + f" ({r['config']})" for b, r in st.routes.items()]
+    else:
+        route_metrics.append(m("Đường chạy từng bộ", NA, "pipeline/tools/duong_chay.py"))
+    tn6_metrics = [m(c["metric"].replace("Hộp ảnh TN6 — ", "TN6 · "), f"{c['baseline']} → {c['proposed']}",
+                     c["source"], c["level_vi"]) for c in tn6_comparisons(M)]
 
     gate_metrics = []
     for bid in ("LucVanTien1883", "KimVanKieu1884"):
@@ -1385,7 +1500,34 @@ def api_pipeline_flow(st: Store) -> list[dict]:
             f"tối thiểu {prof.get('n_hum_min')} mẫu chữ người.",
             "Bộ kiểm viết tay chạy LOBO theo sách: sách Borg đang đánh giá luôn dùng mô hình học trên sách Borg kia.",
         ]
+    lt2, lt2_src = M.stt_lt2()
+    if lt2:
+        cov, est = lt2.get("coverage") or {}, dig(lt2, "gate_ok_iff_lt1_eq_lt2", "_est") or {}
+        n_dem = (sum(v for c in st.ge.reasons.values() for k, v in c.items() if (k or "").startswith("U_STT_lt2_"))
+                 if st.ge.available else None)
+        prof_details.append(
+            f"Lần đọc thứ hai (lt2, chỉ STT, CHỈ HẠ): kim đọc lại {fmt_int(cov.get('pages_lt2'))}/{fmt_int(cov.get('pages_lt1'))} "
+            f"trang ở chế độ Nôm; ô ok mà lt2 ra chữ khác hoặc không ghép được -> uncertified"
+            + (f" ({fmt_int(n_dem)} ô)" if n_dem is not None else "") + ".")
+        if est.get("p_ok_given_agree_inR") is not None:
+            ge_metrics.append(m("lt2: P(đúng | hai lần đọc trùng) · P(đúng | lệch) — hiệu chuẩn trên thạch bản",
+                                f"{fmt_pct(est['p_ok_given_agree_inR'], 1)} {fmt_ci(est.get('wilson'), 1)} · "
+                                f"{fmt_pct(est.get('p_ok_given_disagree_inR'), 1)}", lt2_src, LEVEL_VI["uoc_luong"]))
+        if n_dem is not None:
+            ge_metrics.append(m("STT: ô ok bị lt2 hạ", fmt_int(n_dem), gxt["source"], LEVEL_VI["suy_doan"]))
     policy = gxt.get("policy_version")
+    cb, cb_src = M.cong_bo()
+    cb_metrics = []
+    if cb:
+        inv = cb.get("invariants") or {}
+        sp = cb.get("split_images") or {}
+        cb_metrics = [m("Tập ẢNH (chỉ ô gold_exact = ok, crop chuẩn v2)", fmt_int(cb.get("n_images")), cb_src),
+                      m("Tập VĂN BẢN/NHÃN (không cột ảnh)", fmt_int(cb.get("n_text")), cb_src),
+                      m("Chia tập ảnh train · val · test · đánh giá (giữ ngoài)",
+                        " · ".join(fmt_int(sp.get(k)) for k in ("train", "val", "test", "eval_only")), cb_src),
+                      m("Bất biến tập công bố", f"{sum(1 for v in inv.values() if v is True)}/{len(inv)} PASS", cb_src)]
+    else:
+        cb_metrics = [m("Tập công bố dataset/_ALL/cong_bo", NA, cb_src)]
     return [
         dict(step=1, id="ingest", name="Tiền xử lý ảnh & OCR trang", tag="Chuẩn hoá ảnh · OCR có bộ đệm",
              input="Ảnh quét trang gốc và bản phiên âm Quốc ngữ (Borg: phiên âm người theo trang).",
@@ -1395,13 +1537,18 @@ def api_pipeline_flow(st: Store) -> list[dict]:
              output="prepared/<Bộ>/pages, detected/*_ocr_cache.json, transcriptions/",
              evidence="Chốt chặn chạy lại: mọi yêu cầu API bị chặn, bộ đệm gốc phải trùng sha256 trước/sau.",
              metrics=[]),
-        dict(step=2, id="detect", name="Phát hiện vị trí ký tự", tag="CenterNet & Pitch Decoding",
-             input="Ảnh cột chữ dọc tách từ trang.",
-             model="CenterNet (ResNet-34) + giải mã nhịp ký tự (Pitch Decoding).",
-             process="Dự đoán tâm chữ qua bản đồ nhiệt, rồi giải mã khoảng cách nhịp đều để tách chữ dính, hạn chế hộp rỗng "
-                     "và hộp cắt vào nét.",
-             output="Hộp bao [xmin, ymin, xmax, ymax] cho từng chữ trong cột.",
-             evidence="So với hộp legacy trên trang có hộp tham chiếu tự động (box_ref).", metrics=det_metrics),
+        dict(step=2, id="detect", name="Phát hiện & chọn hộp ký tự", tag="CenterNet · pitch · visual_dp (TN6)",
+             input="Ảnh cột chữ dọc tách từ trang + chuỗi âm Quốc ngữ của cột.",
+             model="CenterNet (ResNet-34) tìm tâm chữ; bộ giải mã hộp (box_decoder) chọn theo từng bộ: "
+                   + " · ".join(DECODER_VI.values()) + ".",
+             process="Dự đoán tâm chữ qua bản đồ nhiệt, rồi ghép mỗi âm tiết với đúng một hộp ảnh. Bộ giải mã được CHỌN "
+                     "THEO SỐ ĐO (TN6): visual_dp so hình chữ của hộp với các tự dạng có thể của âm tiết nên không trượt "
+                     "chỉ số khi detector thừa/thiếu hộp; pitch chia theo bước chữ đều (tốt trên thạch bản); legacy "
+                     "giữ cho Sách Thánh Truyện vì visual_dp chưa thắng rõ và bộ này không có hộp người để đo.",
+             output="Hộp bao [xmin, ymin, xmax, ymax] cho từng chữ trong cột (config: box_decoder).",
+             evidence="TN6 đo vị trí hộp trên hộp người (Borg, IHR); thạch bản đo trên hộp tham chiếu tự động (box_ref).",
+             metrics=route_metrics + tn6_metrics + det_metrics,
+             details=route_details, details_title="Đường chạy hiện hành (bảng ĐƯỜNG CHẠY của run_pipeline.sh)"),
         dict(step=3, id="align", name="Gióng hàng song ngữ", tag="Banded Dynamic Programming",
              input="Chuỗi hộp chữ và chuỗi âm Quốc ngữ đối ứng.",
              model=f"Quy hoạch động dải hẹp (Banded DP) + từ điển Quốc ngữ ↔ Hán Nôm ({de}).",
@@ -1445,7 +1592,16 @@ def api_pipeline_flow(st: Store) -> list[dict]:
                      "Profile CHỮ VIẾT TAY: chính sách riêng cho STT + 2 bản Borg (xem chi tiết).",
              output="dataset/_ALL/gold_exact.csv, crops_chuan/ (ô ok), dataset/<Bộ>/gold_exact.csv",
              evidence="Độ chính xác chỉ ĐO được trên bộ có nhãn người; nơi khác là ước lượng hoặc suy đoán.",
-             metrics=ge_metrics, details=prof_details, details_title="Profile chữ viết tay (handwriting)"),
+             metrics=ge_metrics, details=prof_details, details_title="Profile chữ viết tay (handwriting) + lần đọc lt2"),
+        dict(step=9, id="publish", name="Công bố theo GOLD chính xác", tag="dataset/_ALL/cong_bo · ảnh = ô ok",
+             input="dataset/_ALL/labels.csv + gold_exact.csv (không sửa nhãn).",
+             model="python -m pipeline.publish gold-exact (./run_pipeline.sh … --publish).",
+             process="Tách hai tập: tập ẢNH chỉ gồm ô gold_exact = ok (ảnh = crop chuẩn v2 + md5); tập VĂN BẢN/NHÃN gồm "
+                     "mọi dòng còn lại, không cột ảnh, kèm lý do bị loại khỏi tập ảnh. Chia train/val/test theo trang; "
+                     "bộ đánh giá (IHR, Borg) giữ ngoài train.",
+             output="dataset/_ALL/cong_bo/images.csv, text.csv, EXCLUSIONS.json, RELEASE.md, CHECKSUMS.txt",
+             evidence="Bất biến: tập ảnh = GOLD ok, hai tập rời nhau và phủ đủ, không trang/md5 nào vắt hai split.",
+             metrics=cb_metrics),
     ]
 
 

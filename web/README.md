@@ -10,7 +10,7 @@ GOLD chính xác, độ chính xác, bất biến) được máy chủ đọc tr
 | Tab | Nội dung |
 | --- | --- |
 | 1. Tổng quan | KPI (ký tự, GOLD, SYLLABLE, **GOLD chính xác ok**, số bộ, bất biến), danh mục **10 bộ** theo vai trò, quy ước 3 tầng nhãn, **4 trạng thái GOLD chính xác** và 3 mức chứng cứ |
-| 2. Quy trình | **8 giai đoạn**: tiền xử lý & OCR → phát hiện (CenterNet + pitch) → gióng hàng (Banded DP) → kiểm kê → cổng & dị bản → đóng gói → gộp `dataset/_ALL` → **GOLD chính xác (B8)** kèm **profile chữ viết tay**; mỗi bước có chỉ số đọc từ `measure_out/` |
+| 2. Quy trình | **9 giai đoạn**: tiền xử lý & OCR → phát hiện & **chọn hộp theo từng bộ** (legacy / pitch / visual_dp / visual_dp_hybrid — đọc đúng bảng ĐƯỜNG CHẠY của `run_pipeline.sh` + số đo TN6) → gióng hàng (Banded DP) → kiểm kê → cổng & dị bản → đóng gói → gộp `dataset/_ALL` → **GOLD chính xác (B8)** kèm **profile chữ viết tay + lần đọc thứ hai lt2 (STT)** → **công bố** `dataset/_ALL/cong_bo` (ảnh = ô ok); mỗi bước có chỉ số đọc từ `measure_out/` |
 | 3. Trực quan hoá bản quét | Ảnh trang + hộp ký tự; **công tắc tô màu theo tầng nhãn HOẶC theo GOLD chính xác** (ok xanh · text_only vàng · uncertified xám · review đỏ · GOLD chưa có gold_exact tím nét đứt · ô không phải GOLD nét đứt mờ); chú giải = bộ lọc; bảng chi tiết hiện **crop gốc + crop chuẩn**, trạng thái, **lý do (tiếng Việt)**, **mức chứng cứ**, `cell_uid` |
 | 4. Tra cứu | Tìm theo âm (có/không dấu), chữ Nôm, Unicode; lọc theo bộ/nhóm (giao nộp · tập đánh giá · Borg nhãn người), tầng nhãn, **trạng thái GOLD chính xác**; bấm thẻ để mở đúng trang |
 | 5. Kết quả & đánh giá | Độ chính xác theo **mức chứng cứ** (ĐO trên nhãn người · ƯỚC LƯỢNG qua dị bản · SUY ĐOÁN), bảng GOLD chính xác 10 bộ, pitch decoding so với hộp legacy (box_ref), độ đúng OCR kim theo loại bản, bất biến, bộ crop nhãn người Borg, cây thư mục `dataset/`, danh sách nguồn còn thiếu |
@@ -41,7 +41,7 @@ GOLD chính xác, độ chính xác, bất biến) được máy chủ đọc tr
 `measure_out/SUMMARY.json` (bất biến) · `measure_out/gold_exact/summary.json` · `measure_out/<LVT1916|TK1872>/ihr_endtoend/summary.json`
 · `measure_out/<Borg>/borg_endtoend/summary.json` · `measure_out/box_ref/summary.json` · `measure_out/borg_human/summary.json`
 · `prepared/<LVT1883|KVK1884>/dataset_out/auto_precision_{verify,gated}/SUMMARY.json` · `dataset/_ALL/SOURCES.json`
-· `dataset/_BORG_NHAN_NGUOI/BUILD_INFO.json` · `Dict/QuocNgu_SinoNom.csv` (số mục từ) — cùng cách đọc với
+· `dataset/_BORG_NHAN_NGUOI/BUILD_INFO.json` · `Dict/QuocNgu_SinoNom.csv` (số mục từ) · `measure_out/_tn6/table.json` (TN6: hộp trước/sau) · `measure_out/stt_lt2/summary.json` (hiệu chuẩn lt2) · `dataset/_ALL/cong_bo/EXCLUSIONS.json` (tập công bố) · đường chạy từng bộ = `pipeline/tools/duong_chay.py` (cần .venv; thiếu -> "chưa có") — cùng cách đọc với
 `scripts/bao_cao_tong_hop.py`.
 
 ## 2. Chạy

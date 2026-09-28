@@ -1333,8 +1333,9 @@ verify_all() {
   log ""
   log "${BLD}--- KẾT QUẢ NGHIỆM THU ------------------------------------------${RST}"
   printf '%s' "$VERIFY_LINES" | sed 's/^/  /'
-  "$PY" - <<'PYVER'
+  BORG_MODE="$BORG_MODE" "$PY" - <<'PYVER'
 import json
+import os
 from pathlib import Path
 
 print("\n  precision trên NHÃN NGƯỜI (ihr_endtoend_eval):")
@@ -1348,6 +1349,32 @@ for b in ("LucVanTien1916", "TruyenKieu1872"):
     n_fail = sum(1 for iv in s["invariants"] if iv["pass"] is False)
     print(f"    {b:16s} GOLD ảnh n {g['with_gt']:6d} · ĐÚNG {g['precision']} CI{g['ci95']} · "
           f"bất biến FAIL {n_fail}/{len(s['invariants'])}")
+
+# 2026-09-28: chữ VIẾT TAY Borg (nhãn người Excel) — kim ở ô · GOLD đúng V1+ [CI cụm trang] · gold_exact ok
+if os.environ.get("BORG_MODE", "auto") != "off":
+    print("\n  precision trên NHÃN NGƯỜI — chữ viết tay Borg (borg_endtoend_eval, V1+ = biến thể Unihan/OpenCC):")
+    for b in ("SachKinhThayCaBinh", "SachDungLyHoThan"):
+        f = Path("measure_out") / b / "borg_endtoend" / "summary.json"
+        if not f.exists():
+            print(f"    {b:18s} (chưa có {f})")
+            continue
+        s = json.loads(f.read_text(encoding="utf-8"))
+        inv = s.get("invariants") or []
+        n_fail = sum(1 for iv in inv if iv.get("pass") is False)
+        k = s.get("kim_at_cells") or {}
+        g = (s.get("tiers") or {}).get("GOLD") or {}
+        ok = (s.get("gold_exact") or {}).get("ok") or {}
+        if not g.get("v1p"):
+            print(f"    {b:18s} chưa có nhãn máy (SKIP) · bất biến FAIL {n_fail}/{len(inv)}")
+            continue
+        gv, kv = g["v1p"], k.get("strict") or {}
+        lo, hi = gv.get("ci_page") or [float("nan")] * 2
+        okv = ok.get("v1p") or {}
+        ok_txt = (f"ok {ok.get('n', 0):,} (có chữ người {ok.get('n_eval', 0)}, đúng {okv.get('k', 0)}/{ok.get('n_eval', 0)})"
+                  if ok else "ok —")
+        print(f"    {b:18s} kim ở ô {100 * kv.get('pt', float('nan')):.1f} % (n {k.get('n_eval', 0):,}) · "
+              f"GOLD n {g.get('n_eval', 0):6,} ĐÚNG V1+ {100 * gv['pt']:.2f} % [{100 * lo:.2f}–{100 * hi:.2f}] "
+              f"(strict {100 * g['strict']['pt']:.2f} %) · gold_exact {ok_txt} · bất biến FAIL {n_fail}/{len(inv)}")
 
 f = Path("dataset/_ALL/SOURCES.json")
 if f.exists():

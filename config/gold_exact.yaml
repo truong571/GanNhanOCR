@@ -6,7 +6,28 @@
 # version = policy_version ghi vào mỗi dòng gold_exact.csv. "2026-09-27" = lượt run1 (core_loss là cổng);
 # "2026-09-27.2" = bỏ core_loss khỏi cổng (quyết định 27/09, xem core_loss.gate).
 # "2026-09-28" = sửa rò rỉ N6: TA của TK không còn nhìn GT người IHR (mọi ô TK căn được với Kiều 1871 LVD đều được chấm TA).
-version: "2026-09-28"
+# "2026-09-28.2" = thêm profile handwriting (khối `profiles` bên dưới; 6 bộ in/khắc giữ nguyên quyết định từng ô).
+version: "2026-09-28.2"
+
+# PROFILE theo loại chữ (28/09, TN5 — lab/thu_nghiem_anh_chu/TN5_viet_tay, docs/GOLD_CHINH_XAC_2026-09-27.md §11).
+# handwriting: bộ CHỮ VIẾT TAY (STT chép tay + 2 bản chép tay Borg có nhãn người). Hiệu chuẩn trên nhãn người Borg (CHỈ để đo):
+#   - drop_gates [cnt]: CNT (số chữ OCR cột ≠ số âm QN) KHÔNG hạ ô viết tay — trên Borg AUC nhãn 0,493 / khe 0,494 / hai vế 0,495,
+#     cờ gắn 97 % ô GOLD Borg (h03_auc.py). Cờ ảnh/hộp "một chữ" (A0/B0) GIỮ: f_two/tall_new/f_ink phân biệt "một chữ" trên Borg.
+#   - slot_gate / hand_q / n_hum_min: CHỌN theo bản đăng ký trước (prereg_handwriting.json, sha mã h04_select.py dưới đây) trên
+#     TOÀN BỘ Kinh (B18): không cấu hình nào đạt hai vế ≥ 0,995 ∧ nhãn ≥ 0,990 -> quy tắc dự phòng "hai vế cao nhất" -> bc, q 0,00015
+#     (= BC + mức q cũ). Đo giữ ngoài: CV 5 khối trang Kinh hai vế 99,11 % [98,57–99,61], nhãn 98,68 %; LOBO Kinh→DungLy 97,56 %
+#     (n 41) — measure_out/_thu_nghiem_anh_chu/TN5/select.json.
+# printed: mọi bộ KHÔNG có trong handwriting.sets = hành vi cũ từng ô (không khoá riêng). Vắng khối profiles = hành vi cũ mọi bộ.
+profiles:
+  handwriting:
+    sets: [stt2, stt4, stt11, B18, B34]
+    drop_gates: [cnt]
+    slot_gate: bc            # bc | none | vis0 (policy.SLOT_GATES)
+    hand_q: 0.00015          # khoá thang hand_tables_*.pt (FAR hiệu chuẩn theo biến thể)
+    n_hum_min: 3
+    source: "lab/thu_nghiem_anh_chu/TN5_viet_tay/h04_select.py -> measure_out/_thu_nghiem_anh_chu/TN5/select.json"
+    prereg: {registered_at: "2026-09-28 15:17:45", file: lab/thu_nghiem_anh_chu/TN5_viet_tay/prereg_handwriting.json,
+             code_sha256: "158708e6e4e2bb8ec8ad6317dba44152259226e8cfb3ce0519fdfd7c04cf4f8d"}
 
 # Thiết bị nhúng mặc định (--device ghi đè). Kết quả TẤT ĐỊNH trên MPS (lượt lặp trùng byte gold_exact.csv); CPU cho điểm
 # nhúng lệch ở chữ số cuối -> có thể lật vài cờ sát ngưỡng. Thiết bị thực dùng ghi vào cột `device` của gold_exact.csv.

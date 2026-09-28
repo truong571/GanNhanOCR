@@ -84,11 +84,35 @@ def csv_frame(X: pd.DataFrame, G: pd.DataFrame, md5_sq: dict, md5_128: dict, pol
     return P
 
 
+def md5_tn4_verdict(res: dict) -> dict:
+    """PASS/N/A của phép so md5 crop chuẩn ↔ TN4 v2. Bộ KHÔNG có tham chiếu TN4 (n = 0 — Borg B18/B34, không có trong TN4)
+    là N/A: không làm PASS = False. PASS = mọi bộ CÓ tham chiếu đạt n ≥ 300 và md5 trùng hết; không bộ nào có -> None (N/A)."""
+    per = {k: v for k, v in res.items() if isinstance(v, dict)}
+    have = {k: v for k, v in per.items() if v["n"] > 0}
+    out = dict(res)
+    out["na"] = sorted(k for k in per if k not in have)
+    out["PASS"] = None if not have else all(v["n"] >= 300 and v["eq"] == v["n"] for v in have.values())
+    return out
+
+
+def md5_tn4_text(r: dict) -> str:
+    """Dòng log cho md5 ↔ TN4 v2: 'PASS (8 bộ, 400/400 mỗi bộ; N/A: B18, B34)' / 'FAIL (…)' / 'N/A (…)'."""
+    if "skipped" in r:
+        return f"N/A ({r['skipped']})"
+    per = {k: v for k, v in r.items() if isinstance(v, dict) and v["n"] > 0}
+    v = r.get("PASS")
+    head = "N/A" if v is None else ("PASS" if v else "FAIL")
+    bad = [f"{k} {x['eq']}/{x['n']}" for k, x in per.items() if not (x["n"] >= 300 and x["eq"] == x["n"])]
+    ns = sorted({x["n"] for x in per.values()})
+    body = f"{len(per)} bộ, {'/'.join(map(str, ns))} ô mỗi bộ" + (f"; lệch: {', '.join(bad)}" if bad else "")
+    return f"{head} ({body}" + (f"; N/A không có tham chiếu TN4: {', '.join(r['na'])}" if r.get("na") else "") + ")"
+
+
 def md5_check_tn4(D: pd.DataFrame, G: pd.DataFrame, per_set=400, seed=20260927) -> dict:
-    """md5 byte của crop chuẩn (cache) == TN4/v2/crops trên mẫu ≥ 300 ô/bộ."""
+    """md5 byte của crop chuẩn (cache) == TN4/v2/crops trên mẫu ≥ 300 ô/bộ (bộ không có tham chiếu TN4 -> N/A)."""
     root = REPO / "measure_out/_thu_nghiem_anh_chu/TN4/v2/crops"
     if not root.exists():
-        return dict(skipped="không có measure_out/_thu_nghiem_anh_chu/TN4/v2/crops")
+        return dict(skipped="không có measure_out/_thu_nghiem_anh_chu/TN4/v2/crops", PASS=None)
     X = G[["cell_uid", "set8"]].merge(D[["cell_uid", "sq_md5"]], on="cell_uid", how="left")
     X = X[X.sq_md5.notna()]
     rng = np.random.default_rng(seed)
@@ -101,8 +125,26 @@ def md5_check_tn4(D: pd.DataFrame, G: pd.DataFrame, per_set=400, seed=20260927) 
             if f.exists():
                 n += 1; eq += hashlib.md5(f.read_bytes()).hexdigest() == m
         res[s] = dict(n=n, eq=eq)
-    res["PASS"] = all(v["n"] >= 300 and v["eq"] == v["n"] for k, v in res.items() if isinstance(v, dict))
-    return res
+    return md5_tn4_verdict(res)
+
+
+def hand_thr_at(A, t: str, var: str, q: float) -> float:
+    """Ngưỡng bộ kiểm viết tay (biến thể var, nhánh t ∈ T/L) ở mức q — khoá str(q) của thang hand_tables (sai khoá -> lỗi rõ)."""
+    tb = A.load(f"hand_tables_{t}_{var}.pt")["thr"]
+    if str(q) not in tb:
+        raise SystemExit(f"hand_q = {q} không có trong thang hand_tables_{t}_{var}.pt ({sorted(tb, key=float)})")
+    return float(tb[str(q)])
+
+
+def profile_record(cfg: dict, S8) -> dict | None:
+    """Profile handwriting đã áp (cho summary/GOLD_EXACT.md): tập bộ, cổng bỏ, cổng khe, q, n_min, bản đăng ký."""
+    p = POL.profile_hw(cfg)
+    if not p:
+        return None
+    hw = cfg["profiles"]["handwriting"]
+    have = set(np.asarray(S8, dtype=object))
+    return dict(p, sets_present=[s for s in p["sets"] if s in have], prereg=hw.get("prereg"), source=hw.get("source"),
+                printed="mọi bộ khác: hành vi cũ từng ô")
 
 
 def resolve_device(req: str | None, log=print) -> str:
@@ -183,6 +225,12 @@ def main(argv=None):
         f"{'= bản đăng ký ' + prereg['registered_at'] if prereg['same_def'] else 'ĐÃ ĐỔI so với bản đăng ký'}")
     G = load_gold(all_dir)
     log(f"GOLD {len(G)} ô; thiết bị {dev}; cache {cache}")
+    prof = profile_record(cfg, G.set8.values)      # ValueError nếu config profile sai
+    if prof:
+        for var in ("Kinh", "DungLy"):
+            hand_thr_at(A, "T", var, prof["hand_q"])
+        log(f"profile handwriting: bộ {prof['sets_present']} · bỏ cổng {prof['drop']} · cổng khe {prof['slot']} · "
+            f"hand_q {prof['hand_q']} · n_hum_min {prof['n_hum_min']}; bộ khác = printed (hành vi cũ)")
     # N5: thiếu/rỗng tệp ảnh của BẤT KỲ ô GOLD nào -> dừng (không bao giờ nhúng ảnh trắng thay thế)
     miss_img = SI.check_images([all_dir / p for p in G.image])
     if miss_img:
@@ -202,7 +250,7 @@ def main(argv=None):
     crop_src_fallback = int((np.isin(G.book_set.values, list(SG.ORIGINAL)) & (dsk != "original")).sum())
     md5chk = md5_check_tn4(D, G)
     T["crop_chuan_s"] = round(time.time() - t)
-    log(f"crop chuẩn xong; md5 ↔ TN4 v2: {md5chk.get('PASS')}")
+    log(f"crop chuẩn xong; md5 ↔ TN4 v2: {md5_tn4_text(md5chk)}")
     t = time.time()
     present = sorted(set(G.book_set))
     raw = SG.load_raw(present)          # chỉ bộ có trong bộ gộp (vắng Borg -> y hệt 6 bộ cũ)
@@ -252,12 +300,20 @@ def main(argv=None):
     for k in ("lobo_pT", "lobo_pL", "lobo_nh", "lobo_cert"):
         sig[k] = np.full(len(G), np.nan)
     hand_thr = {}
+    qv = POL.hand_q_of(G.set8.values, cfg)          # 28/09: mức q theo profile handwriting (vắng profile -> stt_q như cũ)
     for var, hm in hand_masks.items():
         if not hm.any():
             continue
         Gs = G[hm].reset_index(drop=True)
-        H = SI.score_hand(S, Gs, E, uni, cfg["thresholds"]["stt_q"], log, variant=var)
+        qs = sorted(set(qv[hm].tolist()))
+        H = SI.score_hand(S, Gs, E, uni, qs[0], log, variant=var)
         hand_thr[var] = H["thr"]
+        if len(qs) > 1:                             # bộ viết tay ngoài profile (q khác) cùng biến thể: chứng nhận lại theo q của ô
+            qsub = qv[hm]
+            for q in qs[1:]:
+                tT, tL = (hand_thr_at(A, t, var, q) for t in "TL")
+                m = qsub == q
+                H["lobo_cert"][m] = ((H["lobo_pT"][m] >= tT) & (H["lobo_pL"][m] >= tL)).astype(np.int8)
         for k in ("lobo_pT", "lobo_pL", "lobo_nh", "lobo_cert"):
             sig[k][hm] = H[k]
     V = SI.score_vis(S, G, E["enc"], cfg["vis_calib"], log)
@@ -280,8 +336,8 @@ def main(argv=None):
               f_blank=CF.f_blank.values, f_cut=CF.f_cut.values, f_two=CF.f_two.values, f_ink=CF.f_ink.values,
               bleed_new=CF.bleed_new.values, trunc_new=CF.trunc_new.values, tall_new=CF.tall_new.values,
               one_char_ok=CF.one_char_ok.values, dup_bbox=dup, ov_heavy=ovh, cnt=cnt, bc=bc,
-              core_loss_flag=CF.core_loss_flag.values, ta=ta, lobo_nh=sig["lobo_nh"])
-    sg["simg"] = POL.simg(S8, sig, cfg["thresholds"])
+              core_loss_flag=CF.core_loss_flag.values, ta=ta, lobo_nh=sig["lobo_nh"], vis_z=sig["vis_z"])
+    sg["simg"] = POL.simg(S8, sig, cfg["thresholds"], cfg)
     dec, why, M = POL.decide(S8, sg, cfg)
 
     X = pd.DataFrame(dict(cell_uid=G.cell_uid, book_set=G.book_set, book=G.book, set8=S8, label=G.label, gold_exact=dec,
@@ -417,7 +473,7 @@ def main(argv=None):
                assets_manifest_verified=asset_check, device=dev,
                all_gold_images_present=True, crop_no_page=no_page, crop_src_original_fallback=crop_src_fallback,
                ta_refs_no_ihr_gt="has_gt" not in z_ta and "gt_char" not in z_ta,
-               ref_coverage=cov)
+               ref_coverage=cov, profile_handwriting=prof)
     pub_plan = None
     if a.publish:
         root = Path(a.dataset_root).resolve() if a.dataset_root else all_dir.parent
@@ -451,7 +507,7 @@ def main(argv=None):
             good = good and inv["published_png_eq_ok"] and inv["per_book_gold_set_eq_labels"]
             log(f"publish: {pub['rows']} dòng, {pub['ok']} ô ok -> {all_dir}; theo bộ: "
                 + ", ".join(f"{k} {v['rows']}" for k, v in pub["per_book"].items()))
-    summ = dict(version=cfg["version"], policy_version=policy_version, config_sha256=cfg_sha, api_calls=0, device=dev,
+    summ = dict(version=cfg["version"], policy_version=policy_version, config_sha256=cfg_sha, api_calls=0, device=dev, profiles=prof,
                 cache_dir=str(cache), timings=T, table=rows, ihr=ihr, core_loss=dict(prereg=prereg, by_book=cl),
                 invariants=inv, compare_ref=cmp, thresholds=cfg["thresholds"], hand_thr=hand_thr.get("Kinh"), publish=pub)
     if borg.any():
@@ -476,6 +532,12 @@ def write_md(path, TB, reasons, ihr, cl, inv, T, cmp, prereg, a, pub_plan=None):
          + ("**core_loss là cổng** (cấu hình tái lập lượt run1). " if gate else
             "**core_loss KHÔNG còn là cổng** (đăng ký trước, kết quả âm — §3; chỉ giữ cột thông tin). ")
          + "Chỉ gắn trạng thái; không sửa nhãn; không đổi `labels.csv`.", "",
+         *((f"**Profile handwriting** (TN5, đăng ký trước {(inv['profile_handwriting'].get('prereg') or {}).get('registered_at', '?')}): "
+            f"bộ {', '.join(inv['profile_handwriting']['sets_present']) or '—'} — bỏ cổng {', '.join(inv['profile_handwriting']['drop']) or '—'} "
+            f"(không phân biệt trên chữ viết tay có nhãn người Borg), cổng khe `{inv['profile_handwriting']['slot']}`, bộ kiểm viết tay "
+            f"q = {inv['profile_handwriting']['hand_q']}, ≥ {inv['profile_handwriting']['n_hum_min']} nguyên mẫu người. Bộ khác "
+            "(in/khắc) = profile printed, hành vi cũ từng ô. Chi tiết: `docs/GOLD_CHINH_XAC_2026-09-27.md` §11.", "")
+           if inv.get("profile_handwriting") else ()),
          f"policy_version **{inv['policy_version']}** · `config/gold_exact.yaml` sha256 `{inv['config_sha256'][:16]}…` · "
          f"labels.csv sha256 `{inv['labels_sha256'][:16]}…` (không đổi trong lượt chạy: {inv['labels_sha256_unchanged']}).", "",
          "Trạng thái (luật đầu tiên khớp thắng): `review` (luật A, M-OCR) → `text_only` (ảnh không đúng một chữ / trượt) → "

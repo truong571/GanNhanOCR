@@ -157,6 +157,7 @@ def run() -> int:
     # ---- N1/N5/nhỏ: MANIFEST toàn bộ, ảnh thiếu, cache hỏng, is_inside
     _robust_tests(check)
     _borg_tests(check, POL)
+    _profile_tests(check, POL)
     # ---- khối tài liệu README/DATASHEET: mức chắc trùng common.EVIDENCE, không đụng chuỗi tầng text-only của bộ giao nộp
     from . import doc_text as DT
     from .common import EVIDENCE
@@ -383,6 +384,94 @@ def _borg_tests(check, POL):
     check("borg_decide_reasons", list(dec) == ["ok", "uncertified", "uncertified", "uncertified", "ok"]
           and why[1] == "U_Borg_bo_kiem_viet_tay_LOBO_khong_chung_nhan" and why[2] == "U_Borg_thieu_nguyen_mau_nguoi_LOBO"
           and why[3] == "U_STT_bo_kiem_viet_tay_khong_chung_nhan")
+
+
+def _profile_tests(check, POL):
+    """28/09 (TN5): profile handwriting — kiểm config, CNT bỏ chỉ ở ô viết tay, cổng khe bc/none/vis0, n_hum_min/hand_q theo
+    profile, bộ in/khắc KHÔNG đổi quyết định từng ô (tín hiệu ngẫu nhiên), phân rã ok = lai − luật A − M-OCR, config thật +
+    bản đăng ký trước, md5 ↔ TN4: bộ không có tham chiếu = N/A (không làm PASS = False)."""
+    import hashlib as _h
+    import numpy as np
+    from .common import HANDWRITTEN, REPO, SETS8, Assets
+    from .__main__ import md5_tn4_text, md5_tn4_verdict
+    th = dict(C5_T=[0.98744, 0.09307], C5_L=[0.95369, 0.13467], C2_T=0.98835, C2_L=0.9745, stt_q=0.00015, stt_n_hum_min=3)
+    base = dict(thresholds=th, core_loss=dict(gate=False))
+    prof = lambda **k: dict(base, profiles=dict(handwriting=dict(dict(sets=list(HANDWRITTEN), drop_gates=["cnt"], slot_gate="bc",
+                                                                         hand_q=0.00015, n_hum_min=3), **k)))
+    check("profile_absent_none", POL.profile_hw(base) is None and not POL.hw_mask(np.array(["stt2", "B18"]), base).any())
+    for nm, bad in (("set_in", dict(sets=["stt2", "L16"])), ("slot", dict(slot_gate="xyz")), ("drop", dict(drop_gates=["bc"]))):
+        try:
+            POL.profile_hw(prof(**bad)); check(f"profile_reject_{nm}", False)
+        except ValueError:
+            check(f"profile_reject_{nm}", True)
+    S8 = np.array(["stt2", "B18", "L16", "KVK", "stt4", "B34"], dtype=object)
+    n = len(S8); z = np.zeros(n, bool)
+    sig = {k: z.copy() for k in ("int_foreign", "rescue", "similar", "weak_text", "mocr", "f_blank", "f_cut", "dup_bbox", "ov_heavy",
+                                 "f_two", "f_ink", "bleed_new", "trunc_new", "tall_new", "bc", "core_loss_flag")}
+    sig.update(cnt=np.ones(n, bool), one_char_ok=np.ones(n, bool), simg=np.ones(n, bool), lobo_nh=np.full(n, 5.0),
+               ta=np.array(["na", "na", "na", "attested", "na", "na"], dtype=object), vis_z=np.array([1, -0.2, -5, -5, np.nan, 0.0]))
+    d0, w0, _ = POL.decide(S8, sig, base)
+    d1, w1, M1 = POL.decide(S8, sig, prof())
+    check("profile_cnt_dropped_hw_only", list(d0) == ["text_only"] * 6 and list(d1) == ["ok", "ok", "text_only", "text_only", "ok", "ok"]
+          and w1[2] == w1[3] == "CNT_so_chu_OCR_cot_khac_so_am_QN")
+    check("profile_decomposition", POL.decomposition(d1 == "ok", M1["lai"], M1["AINT"], sig["mocr"], sig["core_loss_flag"], False))
+    sig2 = dict(sig, cnt=z.copy(), bc=np.ones(n, bool))
+    d2, w2, _ = POL.decide(S8, sig2, prof())
+    check("profile_slot_bc_keeps_bc", list(d2) == ["text_only"] * 6 and set(w2) == {"BC_truot_theo_hop_kim_vis"})
+    d3, w3, M3 = POL.decide(S8, sig2, prof(slot_gate="none"))
+    check("profile_slot_none", list(d3) == ["ok", "ok", "text_only", "text_only", "ok", "ok"])
+    d4, w4, M4 = POL.decide(S8, dict(sig2, bc=z.copy()), prof(slot_gate="vis0"))
+    check("profile_slot_vis0", list(d4) == ["ok", "text_only", "ok", "ok", "text_only", "ok"]
+          and w4[1] == w4[4] == "HW_vis_z_duoi_0"
+          and POL.decomposition(d4 == "ok", M4["lai"], M4["AINT"], sig["mocr"], sig["core_loss_flag"], False))
+    s = dict(p_wood_T=np.full(n, np.nan), p_wood_L=np.full(n, np.nan), viss_T=np.zeros(n), viss_L=np.zeros(n), viss_X=np.zeros(n),
+             lobo_cert=np.ones(n), lobo_nh=np.full(n, 4.0))
+    hw = np.isin(S8, list(HANDWRITTEN))
+    check("profile_n_hum_min", list(POL.simg(S8, s, th, prof(n_hum_min=5))[hw]) == [False] * 4
+          and list(POL.simg(S8, s, th, prof())[hw]) == [True] * 4 and list(POL.simg(S8, s, th)[hw]) == [True] * 4)
+    check("profile_hand_q_of", list(POL.hand_q_of(S8, prof(hand_q=0.001))) == [0.001, 0.001, 0.00015, 0.00015, 0.001, 0.001]
+          and list(POL.hand_q_of(S8, base)) == [0.00015] * 6)
+    # bộ in/khắc: quyết định + lý do từng ô KHÔNG đổi khi bật profile (tín hiệu ngẫu nhiên, mọi bộ, mọi cổng khe)
+    rng = np.random.default_rng(20260928)
+    N = 3000
+    S8r = rng.choice(np.array(SETS8 + ["B18", "B34"], dtype=object), N)
+    sr = {k: rng.random(N) < 0.15 for k in sig if k not in ("ta", "lobo_nh", "vis_z", "one_char_ok")}
+    sr.update(one_char_ok=~(sr["f_blank"] | sr["f_cut"] | sr["f_two"] | sr["f_ink"] | sr["bleed_new"] | sr["trunc_new"]),
+              simg=rng.random(N) < 0.6, lobo_nh=rng.integers(0, 6, N).astype(float),
+              ta=rng.choice(np.array(["attested", "contradicted", "na", "unattestable"], dtype=object), N), vis_z=rng.normal(0, 1, N))
+    pr = ~np.isin(S8r, list(HANDWRITTEN))
+    same = True
+    for sl in POL.SLOT_GATES:
+        da, wa, _ = POL.decide(S8r, sr, base); db, wb, Mb = POL.decide(S8r, sr, prof(slot_gate=sl))
+        same &= bool((da[pr] == db[pr]).all() and (wa[pr] == wb[pr]).all())
+        same &= POL.decomposition(db == "ok", Mb["lai"], Mb["AINT"], sr["mocr"], sr["core_loss_flag"], False)
+    check("profile_printed_unchanged_random", same)
+    # config thật + bản đăng ký trước (TN5)
+    from .common import load_cfg
+    rc = load_cfg()
+    p = POL.profile_hw(rc)
+    ok_ = bool(p) and sorted(p["sets"]) == sorted(HANDWRITTEN) and p["slot"] in POL.SLOT_GATES and p["drop"] == ["cnt"]
+    try:
+        A = Assets()
+        ok_ &= all(str(p["hand_q"]) in A.load(f"hand_tables_{t}_{v}.pt")["thr"] for t in "TL" for v in ("Kinh", "DungLy"))
+    except Exception as e:  # noqa: BLE001
+        print("profile hand_q:", e); ok_ = False
+    check("config_profile_handwriting", ok_)
+    pre = rc["profiles"]["handwriting"].get("prereg") or {}
+    pf = REPO / str(pre.get("file", ""))
+    h04 = REPO / "lab/thu_nghiem_anh_chu/TN5_viet_tay/h04_select.py"
+    if pf.is_file() and h04.is_file():
+        pj = json.loads(pf.read_text(encoding="utf-8"))
+        check("config_profile_prereg_sha", pj.get("code_sha256") == pre.get("code_sha256")
+              == _h.sha256(h04.read_bytes()).hexdigest() and pj.get("registered_at") == pre.get("registered_at"))
+    else:
+        check("config_profile_prereg_sha", False)
+    # md5 ↔ TN4: bộ không có tham chiếu (n = 0) = N/A
+    v1 = md5_tn4_verdict({"L16": dict(n=400, eq=400), "B18": dict(n=0, eq=0), "B34": dict(n=0, eq=0)})
+    v2 = md5_tn4_verdict({"L16": dict(n=400, eq=399), "B18": dict(n=0, eq=0)})
+    v3 = md5_tn4_verdict({"B18": dict(n=0, eq=0)})
+    check("md5_tn4_na_not_fail", v1["PASS"] is True and v1["na"] == ["B18", "B34"] and v2["PASS"] is False and v3["PASS"] is None
+          and md5_tn4_text(v1).startswith("PASS") and "N/A" in md5_tn4_text(v1) and md5_tn4_text(v2).startswith("FAIL"))
 
 
 if __name__ == "__main__":   # cuối tệp: mọi hàm phụ (_ta_tests, _robust_tests, _borg_tests) đã được định nghĩa

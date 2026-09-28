@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 # =============================================================================
+# ⚠️ ĐÃ LỖI THỜI (28/09/2026) — DÙNG scripts/clean_rebuild_all.sh
+#   Tệp này viết cho thời CHỈ CÓ STT: chạy menu tương tác '4' hai lượt S3, chỉ kiểm 890 cache STT, và XOÁ CẢ
+#   dataset/ (gồm 9 bộ còn lại + _ALL + _BORG_NHAN_NGUOI) nhưng CHỈ dựng lại STT. Bản mới kiểm cache OCR của cả
+#   10 bộ, kiểm kê sha256 phần GIỮ trước/sau khi xoá, chặn API kim khi chạy lại và gọi `run_pipeline.sh --book all`.
+#   Giữ tệp để tra lịch sử; `--yes` bị TỪ CHỐI trừ khi đặt CLEAN_BUILD_CU=1 (tự chịu trách nhiệm).
+# =============================================================================
 # clean_build.sh — DỰNG LẠI TỪ ĐẦU: xoá sạch mọi cache dẫn xuất + hash cũ, rồi
 # chạy trọn run_pipeline.sh để ra bộ dữ liệu mới nhất.
 #
@@ -13,7 +19,7 @@
 # Đó KHÔNG phải cache theo nghĩa thông thường — đó là DỮ LIỆU GỐC, và lý do phải giữ
 # KHÔNG PHẢI tiền bạc (đính chính 2026-08-25, xem bên dưới) mà là KHÔNG TÁI TẠO ĐƯỢC:
 #
-#   * Nguồn là dịch vụ HỌC THUẬT NGOÀI TẦM KIỂM SOÁT: kimhannom.fit.hcmus.edu.vn
+#   * Nguồn là dịch vụ HỌC THUẬT NGOÀI TẦM KIỂM SOÁT: kimhannom.clc.hcmus.edu.vn
 #     (Khoa CNTT, ĐH Khoa học Tự nhiên TP.HCM), đăng nhập bằng tài khoản
 #     SN_OCR_USERNAME/SN_OCR_PASSWORD. Nó có thể đổi mô hình, giới hạn truy cập,
 #     hoặc ngừng chạy — và khi đó 890 tệp này là KHÔNG LẤY LẠI ĐƯỢC.
@@ -63,6 +69,15 @@ for a in "$@"; do
     *) echo "tham số lạ: $a"; exit 2 ;;
   esac
 done
+
+printf '%s%s[LỖI THỜI]%s scripts/clean_build.sh chỉ biết bộ STT. Dùng:\n' "$YEL" "$BLD" "$RST" >&2
+printf '    bash scripts/clean_rebuild_all.sh            # chạy thử: kiểm cache 10 bộ + GIỮ/XOÁ\n' >&2
+printf '    bash scripts/clean_rebuild_all.sh --yes --run  # dọn + chạy lại 10 bộ + đo + báo cáo\n' >&2
+if (( DO_IT )) && [[ "${CLEAN_BUILD_CU:-0}" != "1" ]]; then
+  printf '%sTỪ CHỐI --yes: tệp này sẽ xoá dataset/ của cả 10 bộ nhưng chỉ dựng lại STT.%s (CLEAN_BUILD_CU=1 để ép)\n' \
+    "$RED" "$RST" >&2
+  exit 2
+fi
 
 # ---- 1. CHỐT CHẶN: dữ liệu gốc phải còn nguyên TRƯỚC khi đụng vào gì --------
 n_ocr=$(find prepared -name '*_ocr_cache.json' 2>/dev/null | wc -l | tr -d ' ')

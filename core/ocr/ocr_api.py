@@ -1,4 +1,4 @@
-"""OCR API clients: HCMUS SinoNom OCR (kimhannom.fit.hcmus.edu.vn)."""
+"""OCR API clients: HCMUS SinoNom OCR (kimhannom.clc.hcmus.edu.vn)."""
 from __future__ import annotations
 
 import base64
@@ -28,10 +28,10 @@ if _env_path.exists():
 
 
 # ---------------------------------------------------------------------------
-# HCMUS SinoNom OCR API (kimhannom.fit.hcmus.edu.vn)
+# HCMUS SinoNom OCR API (kimhannom.clc.hcmus.edu.vn)
 # ---------------------------------------------------------------------------
 
-_SN_DOMAIN = os.environ.get("SN_DOMAIN", "kimhannom.fit.hcmus.edu.vn")
+_SN_DOMAIN = os.environ.get("SN_DOMAIN", "kimhannom.clc.hcmus.edu.vn")
 
 # In-memory cache for refreshed Firebase ID token (idToken lives 1h).
 # {'token': <jwt>, 'exp': <epoch_seconds>}
@@ -94,8 +94,11 @@ def _get_ocr_token() -> str:
       1. Cached token (if still valid for >5 min).
       2. Auto-login via `SN_OCR_USERNAME` + `SN_OCR_PASSWORD` (POSTs to
          /account/login, extracts fresh idToken from `token` cookie).
-         HCMUS doesn't expose Firebase API key, so re-login is the only
-         way to get a fresh token from script.
+         The server also sets a `refresh_token` cookie, but it cannot be used
+         from a script: the site exposes no Firebase web API key and does not
+         re-issue `token` from `refresh_token` (checked 2026-09-27 on
+         kimhannom.clc.hcmus.edu.vn). So re-login is the only way to get a
+         fresh token; `REFRESH_TOKEN` in .env is not read by this module.
       3. Fallback to manual `SN_OCR_TOKEN` (expires in 1h, rotate by hand).
     """
     now = time.time()
@@ -652,7 +655,7 @@ def verify_cache_image(cache_path: str, image_path: str, *, verbose: bool = Fals
     KHÔNG tự gọi lại API: OCR lại là thao tác KHÔNG ĐẢO NGƯỢC ĐƯỢC, phải do người quyết
     định. (Đính chính 2026-08-25: câu này trước ghi "tốn tiền" — tôi viết ở KHỐI 0 sau khi
     tiếp nhận cụm đó từ run_pipeline.sh mà không kiểm chứng. Nguồn là dịch vụ học thuật
-    kimhannom.fit.hcmus.edu.vn đăng nhập bằng tài khoản, không phải khoá API tính cước.
+    kimhannom.clc.hcmus.edu.vn đăng nhập bằng tài khoản, không phải khoá API tính cước.
     Lý do thật để không tự gọi lại: dịch vụ có thể đã đổi mô hình, nên kết quả mới sẽ
     KHÁC bộ đã công bố mà không ai truy được nguyên nhân.)
     """

@@ -40,7 +40,7 @@ Bước này **chỉ gắn trạng thái**: không sửa nhãn, không đổi `l
 | 1 | review | `A0a_anh_cua_o_khac` (ô rescue dùng tệp crop của ô khác) · `A1_rescue_nhan_khong_do_OCR_doc` · `A2a_cau_tu_dang` (s1_inter_s2_similar) · `A2b_van_ban_yeu` (am_sua_dau, lowp, corpus_reading*) | luật A, chính sách v3 |
 | 1 | review | `M_ocr_t50` (sách in, bộ có M-OCR: L83, KVK) · `M_ocr_t50_STT` (STT; v3 xếp human_check → ở đây review) | M-OCR t50, gate_v2 |
 | 2 | text_only | crop chuẩn trắng / cắt nét / hai chữ / mực bất thường so với nhãn / bleed–truncated trên crop chặt mới / quá cao; một hộp hai cột; hai hộp chồng nặng | A0_new ∪ B0_new (TN4) |
-| 2 | text_only | `CNT` số chữ OCR của cột ≠ số âm QN · `BC` trượt so với hộp chữ kim / vis (L16: bc_k06v1, bộ khác bc_k05dxv05, cấu hình chọn NGOÀI sách) | TN3 |
+| 2 | text_only | `CNT` số chữ OCR của cột ≠ số âm QN (**trừ profile handwriting** — §11) · `BC` trượt so với hộp chữ kim / vis (L16: bc_k06v1, bộ khác bc_k05dxv05, cấu hình chọn NGOÀI sách) | TN3 |
 | 3 | uncertified | dị bản người chống nhãn (TK, KVK, L83) | TA, r5 |
 | 3 | uncertified | bộ kiểm ảnh↔chữ dưới ngưỡng TN1 (τ = 0,995, LOBO; sách in chấm **crop cũ**) · STT: bộ kiểm viết tay LOBO-sách không chứng nhận / < 3 nguyên mẫu người | TN1, TN4 "lai" |
 | 3 | uncertified | TK/KVK/L83: nhãn không được văn bản người chứng (TA chỉ dùng văn bản người của DỊ BẢN; KHÔNG nhìn GT IHR — sửa N6, §10) | TA_OK |
@@ -178,3 +178,104 @@ các `dataset/<Bộ>/gold_exact.csv` ≈ 49 MB.
 | **N5** | thiếu ảnh → nhúng ảnh trắng | thiếu/rỗng/không giải mã ảnh ô GOLD hoặc trang (crop chuẩn, view B) → dừng lỗi | invariant `all_gold_images_present`, `crop_no_page = 0`; selftest `n5_*` |
 | nhỏ | — | cột `device` + config `device: mps`; CSV `%.17g` (tái lập cờ đúng bit, eval dung sai 0); chặn `--out` theo thành phần đường dẫn (không chặn nhầm `dataset_out/`); cache hỏng → tính lại, ghi nguyên tử; sha mã align_engine vào khoá cache crop chuẩn + kim; invariant độ phủ `ref_coverage`; thay hằng `crop_md5_eq_cache_record` bằng kiểm thật (`crop_md5_cache_eq_build`, `crop_md5_dest_verify` đọc lại 48.264 tệp); tài liệu nêu lt2 STT chưa làm + biên độ theo ngưỡng + bản lọc theo bộ chỉ khi có tệp | selftest gói 62/62 |
 
+
+## 11. Profile `handwriting` — chính sách riêng cho CHỮ VIẾT TAY (28/09, policy `2026-09-28.2`)
+
+**Vì sao.** Trên hai bản chép tay Borg có nhãn người (tập đánh giá), bước gold_exact cũ chỉ cho ok 112 ô (B18 106 + B34 6):
+≈ 80 % ô GOLD bị hạ `text_only` bởi **CNT** (số chữ kim của cột ≠ số âm QN), mà CNT gắn 95–97 % ô GOLD Borg và KHÔNG phân biệt
+đúng/sai. Profile là một khối config (`profiles.handwriting`) áp cho bộ viết tay (stt2/stt4/stt11 + B18/B34); **6 bộ in/khắc
+còn lại = profile printed = hành vi cũ từng ô** (kiểm: dưới). Nhãn người chỉ dùng để ĐO/hiệu chuẩn, không vào quyết định.
+Mã/số: `lab/thu_nghiem_anh_chu/TN5_viet_tay/h01…h05`, đầu ra `measure_out/_thu_nghiem_anh_chu/TN5/` (0 API, CPU, không mở ảnh).
+
+### 11.1 Sự thật hai vế trên Borg (h01)
+
+Ô GOLD tự động → chỉ số âm của trang (khoảng âm cột của adapter + syl_idx, như `borg_endtoend_eval`) → (câu, vị trí) → chữ người
+(vế NHÃN, V1+) → chỉ số chữ người của trang → **hộp người** của `dataset/_BORG_NHAN_NGUOI` (vế ẢNH: tâm hộp mực CROP CHUẨN ∈ hộp
+người; chỉ tin hộp mức keep_high trở lên, trượt ±1 ≤ 1,9 %). Kiểm: chữ người theo hộp == chữ người theo câu ở 100 % ô ghép được.
+Kết quả: GOLD tự động B18 đúng NHÃN 91,2 % nhưng crop đúng VỊ TRÍ chỉ **74,3 %** (B34 80,6 %) — lệch ±1 ô đối xứng (786/778
+ô), như nhau dù nhãn đúng hay sai (74,4 % vs 72,6 %): nhãn chữ viết tay đúng nhờ căn văn bản, còn hộp gán theo bước cột nên
+trượt khi số hộp ≠ số âm. **Đúng hai vế của GOLD tự động Borg ≈ 69 %** (n 7.072 ô đo được).
+
+### 11.2 Tín hiệu nào phân biệt trên chữ viết tay (h03, Borg gộp, AUC hướng "điểm cao = đúng"; < 0,5 = giá trị cao đi với SAI)
+
+| tín hiệu (có ở cả STT) | AUC nhãn | AUC khe | AUC hai vế | trong ô đã chứng (simg) | ghi chú |
+|---|---:|---:|---:|---:|---|
+| **CNT** | 0,493 | 0,494 | 0,495 | 0,486 | gắn 95–97 % ô; hai vế 69,0 % (cờ) vs 77,0 % (n 183 không cờ) → KHÔNG phân biệt |
+| BC (hộp kim/vis) | 0,485 | 0,377 | 0,398 | 0,465 | phân biệt khe (61,5 % vs 79,2 %), trong simg gần như không (99,1 vs 99,4 %) |
+| ady | 0,476 | 0,367 | 0,390 | 0,403 | |
+| **vis_z** | 0,582 | **0,955** | **0,911** | 0,386 | mạnh cho khe, không thêm gì sau simg |
+| **lobo_pT / lobo_pL** (bộ kiểm viết tay LOBO) | 0,727 / 0,731 | 0,940 / 0,934 | **0,949 / 0,943** | 0,49 / 0,55 | |
+| simg (lobo_cert q 0,00015 ∧ ≥ 3 nguyên mẫu) | cờ | | | | hai vế **99,25 %** khi chứng nhận (n 1.855) |
+| \|n_det − n_qn\| | 0,488 | 0,244 | 0,289 | 0,437 | phân biệt khe (ngược) |
+| f_two / tall_new / f_ink / … (cờ crop chuẩn) | ≈ 0,50 | ≈ 0,50 | ≈ 0,50 | | không phân biệt nhãn/khe, NHƯNG phân biệt "một chữ": hộp mực phủ ≥ 50 % một hộp người khác ở 52,5 % ô f_two vs 7,9 % (tall 56 vs 10 %, f_ink 67 vs 12 %) → GIỮ |
+| dp_ratio / n_match (chỉ adapter Borg) | 0,527 / 0,491 | 0,540 / 0,596 | 0,538 / 0,579 | 0,742 / 0,725 | STT không có → không dùng |
+
+### 11.3 Thiết kế + chọn ngưỡng ĐĂNG KÝ TRƯỚC (h04, `prereg_handwriting.json`, 2026-09-28 15:17:45, sha mã `158708e6…`)
+
+Profile: luật A + M-OCR giữ; cờ ảnh/hộp "một chữ" (A0/B0) giữ; **CNT bỏ**; cổng khe ∈ {none, bc, ad_dn0, vis0}; bộ kiểm viết
+tay ở mức q ∈ thang 14 mức của `hand_tables` (FAR hiệu chuẩn sẵn theo biến thể), ≥ 3 nguyên mẫu người. Quy tắc chọn trên phần
+HỌC: khả thi ⇔ hai vế ≥ 99,5 % ∧ nhãn ≥ 99,0 % ∧ đủ ô đo; lấy cấu hình nhiều ô ok nhất; không khả thi → hai vế cao nhất.
+Phần kiểm: LOBO Kinh→DungLy, LOBO DungLy→Kinh, CV 5 khối trang trong Kinh. Khai báo trung thực: phép AUC gộp hai sách (11.2) và
+xem nhanh simg cũ đã làm TRƯỚC đăng ký (nên việc bỏ CNT không hoàn toàn "giữ ngoài"); cơ chế h04 thử trên nhãn xáo.
+
+**Kết quả chọn:** trên toàn Kinh KHÔNG cấu hình nào khả thi (tốt nhất: q 0,00015 + bc 99,48 %, q 0,00015 + none 99,46 %) → dự
+phòng "hai vế cao nhất" → **`slot_gate: bc`, `hand_q: 0.00015`, `n_hum_min: 3`** (= BC + mức q cũ; khác cũ DUY NHẤT ở bỏ CNT).
+Chọn trên DungLy (354 GOLD): q 0,001 + ad_dn0 (khả thi trên 73 ô đo được, 0 lỗi — rất nhiễu).
+
+### 11.4 Kết quả Borg (đo trên nhãn người; hai vế = V1+ ∧ tâm crop chuẩn ∈ hộp người keep_high+; CI 95 % bootstrap cụm trang)
+
+| | ô ok | hai vế | CI | nhãn (mọi ô có gt) | CI | ghi chú |
+|---|---:|---:|---|---:|---|---|
+| Hiện tại B18 (trước profile) | 106 | 100 % (42/42) | — | 100 % (70/70) | — | quá ít ô |
+| Hiện tại B34 | 6 | 1/1 | — | 1/1 | — | |
+| **Profile B18** (trong mẫu — cấu hình chọn trên Kinh) | **1.120** | 99,48 % (4 lỗi/765) | [98,92–99,88] | 99,18 % (8/970) | [98,53–99,70] | "một chữ" 96,3 % |
+| **Profile B18 — CV 5 khối (GIỮ NGOÀI, quy tắc chọn)** | 1.847 | **99,11 %** (12/1.353) | [98,57–99,61] | **98,68 %** (22/1.663) | [98,13–99,20] | hộp 'khong' (nhiễu) 93,8 % |
+| **Profile B34 — LOBO Kinh→DungLy (GIỮ NGOÀI)** | **88** | 97,56 % (1/41) | [90,63–100] | 100 % (65/65) | — | n quá nhỏ |
+| LOBO DungLy→Kinh (tham khảo) | 2.862 | 98,93 % (21/1.969) | [98,41–99,41] | 97,79 % | [97,17–98,38] | chọn trên 73 ô |
+
+Mục tiêu "≥ 99 % hai vế trên phần giữ ngoài": **đạt ở điểm ước lượng CV Kinh (99,11 %) nhưng CHƯA chứng được** — cận dưới
+98,57 %, vế nhãn trên mọi ô có gt 98,68 %, B34 97,56 % (n 41). Tập hộp keep lạc quan (hộp người chọn nhờ encoder v1/v2 — ô dễ).
+Nói gọn: ô ok chữ viết tay ≈ **98,5–99,5 %** đúng hai vế, thấp hơn sách in IHR (L16 99,46 %, TK 99,87 %).
+
+### 11.5 STT (SUY ĐOÁN — không có sự thật)
+
+| bộ | GOLD | ok trước | **ok sau** | thêm (đều từ lý do CNT) |
+|---|---:|---:|---:|---:|
+| stt2 | 17.678 | 2.316 | **2.864** | +548 |
+| stt4 | 17.440 | 1.495 | **1.872** | +377 |
+| stt11 | 17.589 | 2.646 | **3.750** | +1.104 |
+| tổng | 52.707 | 6.457 | **8.486** | +2.029 (0 ô ok bị mất) |
+
+Ước lượng chuyển từ Borg (SUY ĐOÁN): STT dùng biến thể bộ kiểm **Kinh** (như B34), nên số gần nhất là B34 LOBO 97,56 %
+[90,6–100] (n 41) và CV Kinh 99,11 % [98,57–99,61] → đọc **≈ 97,5–99 %**, không trích như số đo. Khác biệt làm số chuyển kém
+chắc: STT đọc kim `lang_type = 1` (Borg lt2); người chép khác (bộ kiểm học trên nét Borg Kinh); STT là văn vần 9 cột có QN OCR
+riêng từng cột (Borg văn xuôi, cột ↔ âm do adapter DP) → cơ chế trượt hộp khác; STT có luật A/M-OCR (Borg không có ô nào dính);
+CNT trên STT chỉ gắn 22–32 % ô GOLD (Borg 95–97 %) nên tín hiệu CNT trên STT có thể khác Borg — việc bỏ CNT ở STT dựa trên lập
+luận "bộ kiểm ảnh↔chữ đã chặn ô trượt" (Borg: simg ⇒ đúng khe 99,4 %), chưa đo được trên STT.
+
+### 11.6 Kiểm
+
+- 5 bộ in/khắc (Chr, L83, KVK, L16, TK; 66.247 ô): so từng `cell_uid` với bản trước profile (sha256 `da5bdc9a…`) — `gold_exact`,
+  `reason`, `crop_chuan`, `crop_chuan_md5`, `crop_chuan_128_md5`, `crop_status`: **0 ô lệch**; md5 crop chuẩn của 24.244 ô ok ở cả
+  hai bản: 0 lệch (h05_compare.py → `measure_out/_thu_nghiem_anh_chu/TN5/compare.json`). Bộ viết tay: 0 ô ok bị mất.
+- Số ô ok Borg của pipeline == số h04 dự đoán (1.120 / 88).
+- selftest gói 85/85 (thêm `_profile_tests`: kiểm config, CNT chỉ bỏ ở ô viết tay, cổng khe bc/none/vis0, n_hum_min/hand_q theo
+  profile, bộ in KHÔNG đổi quyết định với tín hiệu ngẫu nhiên 3.000 ô × 3 cổng khe, config thật + sha bản đăng ký, md5 ↔ TN4 N/A).
+- `gold_exact_eval` thêm: `profile_hw_lobo_cert_tai_lap_tai_hand_q`, `profile_hw_cong_bo_khong_ha_o`, `printed_khong_mang_ly_do_profile_hw`.
+- **Bản chạy 28/09** `./run_pipeline.sh --merge --yes --verify` (0 API): gộp 173.973 dòng (bất biến 24/24); gold_exact policy
+  `2026-09-28.2`, ok **27.369** / GOLD 130.895 (trước 24.244; +3.125 = STT 2.029 + Borg 1.096); `gold_exact.csv` sha256 `3a391bf6…`; nghiệm thu **8/8 PASS**
+  (`gold_exact_eval` 28/28, `borg_endtoend_eval`, `measure.py --all --report-only`, `--check` bộ gộp); `labels.csv` của 13 tệp
+  (`dataset/*/labels.csv`) trùng sha256 trước lượt chạy; IHR ô ok không đổi: L16 **99,46 %** [99,09–99,74] (2.758 ô), TK
+  **99,87 %** [99,80–99,93] (10.322 ô).
+- Sửa hiển thị: invariant `md5_crop_chuan_vs_TN4` — bộ không có tham chiếu TN4 (B18, B34: n = 0) là **N/A**, không làm
+  PASS = False; log in `md5 ↔ TN4 v2: PASS (8 bộ, 400 ô mỗi bộ; N/A không có tham chiếu TN4: B18, B34)`.
+
+### 11.7 Giới hạn
+
+1. Mục tiêu 99 % chưa chứng được (11.4); cấu hình giao là dự phòng của quy tắc đăng ký trước. Nếu muốn nhiều ô hơn: `slot_gate:
+   none` cho B18 2.025 ô ok ở 99,46 % trong mẫu (gần như bằng bc) — muốn đổi phải ĐĂNG KÝ LẠI (không dò trên cùng dữ liệu).
+2. Vế ảnh đo bằng hộp người do máy gióng (keep_high+: trượt ≤ 1,9 %), trên tập hộp chọn nhờ encoder (thiên dễ); vế "một chữ" chỉ
+   gián tiếp (hộp mực vs hộp người).
+3. DungLy nhỏ (354 GOLD) → LOBO K→D và mọi số B34 rất rộng CI; LOBO D→K chọn trên 73 ô.
+4. STT hoàn toàn suy đoán (11.5); Borg vẫn là tập ĐÁNH GIÁ (không vào tập huấn luyện).
+5. Cổng khe `ad_dn0` có trong lưới đăng ký nhưng không được chọn nên chưa cài vào gói (`policy.SLOT_GATES` = bc/none/vis0).

@@ -13,7 +13,12 @@
 "chữ người ∈ R(âm)" = tỉ lệ cặp (chữ Nôm người, âm người) của câu đếm bằng mà chữ nằm trong tập chữ của âm theo
 `Dict/QuocNgu_SinoNom.csv` — **trần** của luật GOLD (`kim ∈ R(âm)`) nếu kim đọc đúng 100 %.
 
-## 0. TRẠNG THÁI — ĐÃ XÂY XONG, CHƯA CÓ SỐ ĐO NHÃN MÁY (API kim từ chối truy cập)
+## 0. TRẠNG THÁI (cập nhật 28/09) — ĐÃ CÓ SỐ ĐO NHÃN MÁY (§3, §6)
+
+Cache kim đủ cả hai sách (`ingest_borg_book --status`: B18 **529/529** trang, sổ 531 lượt / 529 ok / 1 lỗi tài khoản; B34
+**112/112**, sổ 112 lượt / 112 ok). Hai bộ đã chạy trọn B1–B6, vào bộ gộp (`evaluation_only`), qua `gold_exact` và
+`borg_endtoend_eval` (7/7 bất biến PASS mỗi sách, `api_calls = 0`). Từ nay `./run_pipeline.sh --book all --yes --borg require`
+chạy Borg TỪ CACHE; `scripts/clean_rebuild_all.sh` chặn cứng nếu cache thiếu. Đoạn dưới là **lịch sử 27/09** (trước khi có tài khoản).
 
 Lượt thử API duy nhất (27/09, trang `page_0001` của B18, tham số `lang_type 2`): đăng nhập tự động **thất bại** (máy chủ không
 trả cookie `token`), token dự phòng `SN_OCR_TOKEN` trong `.env` **đã hết hạn**, và bước tải ảnh bị từ chối
@@ -79,14 +84,34 @@ Thước: **strict** (trùng hẳn) · **V1+** (biến thể Unihan/OpenCC/kJapa
 của adapter) căn **LCS** với chuỗi chữ người cả trang → precision = khớp/chữ kim, recall = khớp/chữ người (strict, V1+, +4 cặp),
 độc lập với phép ghép QN của pipeline. Bất biến: ánh xạ trang == ingest_borg_tonch · adapter không đọc cột Nôm ·
 manifest `evaluation_only` · ô khoá duy nhất · âm ghép == âm người (≥ 99 %) · ≥ 100 ô GOLD có chữ người · cache kim đủ trang.
-Thiếu nhãn máy / cache → SKIP (hiện: 2 PASS / 0 FAIL / 3 SKIP mỗi sách).
+Thiếu nhãn máy / cache → SKIP. **Hiện (28/09): 7 PASS / 0 FAIL / 0 SKIP mỗi sách.**
 
-| đại lượng | B18 | B34 |
+Số đo 28/09 (`measure_out/<Sách>/borg_endtoend/summary.json`, labels = `prepared/_auto/<Sách>/dataset_out/labels_gated.csv`;
+dòng CNT do `scripts/bao_cao_tong_hop.py` tính từ `borg_endtoend/cells.csv` ⋈ `dataset/_ALL/gold_exact.csv`). CI = bootstrap cụm
+trang trừ khi ghi Wilson. Mức chắc: **ĐO** (so chữ Nôm người từng vị trí).
+
+| đại lượng | B18 `SachKinhThayCaBinh` | B34 `SachDungLyHoThan` |
 |---|---|---|
-| kim thô vs người: precision strict / V1+ / +4 cặp, recall | **chưa đo** (0 trang kim) | **chưa đo** |
-| GOLD: n có chữ người, strict, V1+ [CI trang], +4 cặp | **chưa đo** | **chưa đo** |
-| `gold_exact = ok`: n, V1+ [CI] | **chưa đo** | **chưa đo** |
+| ô pipeline (mọi tầng) · GOLD · GOLD có chữ người | 90.747 · 11.587 (12,8 %) · 10.294 | 19.348 · 354 (1,8 %) · 278 |
+| kim thô cả trang vs người (LCS): precision strict / V1+ / +4 cặp | 49,2 / 52,2 / 52,5 % | 32,7 / 34,7 / 35,0 % |
+| kim thô cả trang: recall strict / V1+ | 37,7 / 39,9 % | 26,4 / 28,0 % |
+| **kim ở ô** (chữ kim của ô vs chữ người cùng vị trí): strict [CI] · V1+ | **50,3 % [49,4–51,1]** · 53,4 % (n 73.415) | **37,7 % [36,2–39,2]** · 39,7 % (n 13.274) |
+| GOLD strict [CI] | 85,7 % [84,9–86,5] | 84,9 % [81,0–89,7] |
+| **GOLD V1+ [CI]** | **91,2 % [90,5–91,8]** | **91,7 % [88,5–95,1]** |
+| GOLD +4 cặp / +11 cặp | 91,4 / 91,5 % | 92,1 / 92,4 % |
+| GOLD_text_only V1+ | 94,0 % (n 268) | 100 % (n 19) |
+| REVIEW V1+ (không giao) | 63,7 % (n 47.170) | 51,5 % (n 10.132) |
+| `gold_exact`: ok / text_only / uncertified | 106 / 11.149 / 332 | 6 / 342 / 6 |
+| **`gold_exact = ok` có chữ người: đúng V1+ (= strict)** | **70/70** [94,8–100] Wilson | 1/1 [20,7–100] Wilson |
+| GOLD V1+ theo cờ CNT của gold_exact: CNT = 1 · CNT = 0 (Wilson) | 91,1 % [90,5–91,6] (n 9.942) · 94,6 % [91,7–96,5] (n 352) | 91,5 % [87,6–94,3] (n 272) · 100 % (n 6) |
 | trần luật GOLD (chữ người ∈ R(âm)) | 96,8 % | 98,3 % |
+
+Đọc bảng: (1) kim trên chữ viết tay đúng chỉ ~50 % (B18) / ~38 % (B34) ở ô, nhưng luật GOLD (`kim ∈ R(âm)` + căn QN) lọc
+còn 12,8 % / 1,8 % số ô và nâng độ đúng lên ~91 % (V1+) — ~6 điểm dưới V1+ là quy ước người phiên (strict 85,7 / 84,9 %).
+(2) `gold_exact = ok` ĐÚNG 70/70 ở B18 (cận dưới Wilson 94,8 %) nhưng chỉ phủ 106/11.587 ô GOLD (0,9 %); ở B34 chỉ 1 ô ok có chữ
+người ⇒ chưa kết luận được. (3) Cờ **CNT không phân biệt** ô sai/đúng trên chữ viết tay: nó gắn cho 96,6 % (B18) / 97,8 % (B34)
+ô GOLD, nhóm CNT = 1 đúng 91,1 % ≈ toàn GOLD 91,2 %; nhóm CNT = 0 cao hơn (94,6 %) nhưng nhỏ (352 ô, CI chạm 91,7 %) — tác dụng
+thực của CNT trên Borg là dồn gần hết GOLD sang `text_only` (chữ đúng ~91 %, ảnh chưa chứng nhận).
 
 ## 4. GOLD chính xác cho Borg — bộ kiểm chữ viết tay LOBO THEO SÁCH
 
@@ -129,17 +154,33 @@ do_tren_nhan_nguoi`. Kỳ vọng từ phòng thí nghiệm (h03, crop người B
   trước `_ta_tests`) — đã dời xuống cuối tệp → 70 passed.
 - `--no-api` với sách Borg chưa có cache: ingest dừng mã 3, 0 lượt API (đã chạy thật với B34).
 
-## 6. So với STT
+## 6. So với mộc bản IHR và với STT
 
-STT chỉ có số **SUY ĐOÁN** (không có sự thật người): bộ ước lượng TN3 cho tập "lai" stt2 98,39 % [96,40–99,24], stt4 98,26 %
-[96,19–99,19], stt11 98,47 % [96,48–99,28] (`docs/GOLD_CHINH_XAC_2026-09-27.md` §6). Borg là **chữ viết tay Công giáo cùng loại
-có nhãn người từng chữ** → khi có kim, đây sẽ là **bằng chứng ĐO ĐƯỢC đầu tiên** cho độ đúng của pipeline trên chữ viết tay
-(cận trên: QN đầu vào là phiên âm người, không phải OCR). Hiện CHƯA có số vì API.
+**Mộc bản (ĐO, `measure_out/<IHR>/ihr_endtoend/summary.json`) vs viết tay (ĐO, §3)** — cùng pipeline, cùng luật GOLD:
+
+| đại lượng | L16 mộc bản | TK mộc bản | B18 viết tay | B34 viết tay |
+|---|---|---|---|---|
+| kim ở ô (mọi ô có chữ người) | 95,2 % [94,9–95,6] | 97,5 % [97,2–97,7] | 50,3 % (strict) · 53,4 % (V1+) | 37,7 % · 39,7 % |
+| GOLD / ô pipeline | 84 % (11.587 / 13.760) | 87 % (19.554 / 22.499) | 12,8 % | 1,8 % |
+| GOLD đúng — trùng hẳn | 98,05 % [97,78–98,29] | 98,61 % [98,44–98,77] | 85,7 % [84,9–86,5] | 84,9 % [81,0–89,7] |
+| GOLD đúng — tính cả dị thể (IHR: bỏ PUA + dị thể · Borg: V1+) | 99,68 % | 99,99 % | 91,2 % [90,5–91,8] | 91,7 % [88,5–95,1] |
+| `gold_exact = ok`: đúng (IHR: hai vế V1+ ∧ crop · Borg: V1+) | 99,46 % (n 2.757) | 99,87 % (n 9.746) | 70/70 | 1/1 |
+
+(Hai thước "tính cả dị thể" không hoàn toàn trùng định nghĩa: IHR loại PUA + dị thể theo bảng của `ihr_endtoend_eval`, Borg dùng
+`var_eq_plus`; so theo hàng "trùng hẳn" là chặt nhất.) Trên chữ viết tay kim yếu hẳn (−45…−60 điểm), luật GOLD giữ được ít ô
+hơn nhiều và độ đúng GOLD thấp hơn mộc bản ~7–13 điểm; `gold_exact = ok` là bộ lọc duy nhất đạt mức mộc bản nhưng phủ rất ít.
+
+**STT** chỉ có số **SUY ĐOÁN** (không có sự thật người): bộ ước lượng TN3 cho tập "lai" stt2 98,39 % [96,40–99,24], stt4 98,26 %
+[96,19–99,19], stt11 98,47 % [96,48–99,28] (`docs/GOLD_CHINH_XAC_2026-09-27.md` §6). Borg là chữ viết tay Công giáo cùng loại có
+nhãn người từng chữ và là **bằng chứng ĐO ĐƯỢC đầu tiên** trên chữ viết tay: GOLD Borg đúng 91,2 / 91,7 % (V1+), thấp hơn rõ so với
+số suy đoán của STT. Hai con số KHÔNG so thẳng được (tập "lai" của STT ≠ toàn GOLD; kim trên STT có thể khác Borg vì nét/khổ ảnh;
+QN của Borg là phiên âm người nên Borg còn là **cận trên**), nhưng đủ để coi số STT ~98 % là lạc quan cho tới khi có nhãn người STT.
+Bảng tổng hợp 10 bộ (mức chắc ĐO / ƯỚC LƯỢNG / SUY ĐOÁN): `docs/BAO_CAO_TONG_HOP_<ngày>.md` (`scripts/bao_cao_tong_hop.py`).
 
 ## 7. Giới hạn
 
-1. Chưa có số đo nhãn máy (API từ chối truy cập, §0). Sau khi chạy: báo cả strict và V1+ ± cặp quy ước; khác biệt giữa hai con
-   số phần lớn là quy ước người phiên (A3), không phải lỗi máy.
+1. (28/09: đã có số đo, §3.) Luôn báo cả strict và V1+ ± cặp quy ước; khác biệt giữa hai con số (~6 điểm ở GOLD) phần lớn là quy
+   ước người phiên (A3), không phải lỗi máy. B34 chỉ có 278 ô GOLD và 1 ô `gold_exact = ok` có chữ người ⇒ CI rộng.
 2. QN là phiên âm NGƯỜI theo trang ⇒ số đo là cận trên của phương pháp; chỉ câu đếm bằng (87,8 % / 93,4 % âm) được chấm.
 3. Chưa đo tham số kim riêng cho chữ viết tay (`font_type 2 = Viết tay` chưa thử; dùng `lang_type 2` như config). Borg có 1–2
    bản duy nhất 720 px trên máy (≈ 60 px/cột) — thấp hơn IHR.

@@ -10,14 +10,81 @@ Thứ tự (luật đầu tiên khớp thắng):
   3. uncertified  dị bản người chống nhãn · bộ kiểm ảnh↔chữ (chấm crop CŨ, ngưỡng TN1 τ = 0,995 LOBO) không chứng nhận
                   · sách có dị bản người (TK, KVK, L83) mà nhãn không được văn bản người chứng (TA ≠ attested).
   4. ok           ảnh giao = crop chuẩn v2.
+
+PROFILE (28/09, TN5 — lab/thu_nghiem_anh_chu/TN5_viet_tay, đăng ký trước prereg_handwriting.json): config `profiles.handwriting`
+áp cho các bộ CHỮ VIẾT TAY liệt kê ở `sets` (⊂ common.HANDWRITTEN: stt2/stt4/stt11 + Borg B18/B34):
+  - `drop_gates: [cnt]`  CNT KHÔNG hạ ô viết tay (trên Borg có nhãn người: AUC nhãn 0,49 / khe 0,49 — không phân biệt);
+  - `slot_gate`          cổng khe thay cho BC: bc (= BC cũ) | none | vis0 (vis_z < 0 hoặc thiếu -> text_only `HW_vis_z_duoi_0`);
+  - `hand_q`, `n_hum_min` mức q của bộ kiểm viết tay (khoá của thang hand_tables) + số nguyên mẫu người tối thiểu.
+Mọi bộ KHÔNG nằm trong `sets` (6 bộ in/khắc) = profile "printed" = hành vi cũ từng ô. Vắng khoá `profiles` = hành vi cũ cho mọi bộ.
 """
 from __future__ import annotations
 
 import numpy as np
 
-from .common import BORG8, EVIDENCE
+from .common import BORG8, EVIDENCE, HANDWRITTEN
 
 STATUSES = ("ok", "text_only", "uncertified", "review")
+SLOT_GATES = ("bc", "none", "vis0")      # cổng khe profile handwriting cài trong gói (TN5 lưới còn ad_dn0 — không được chọn, chưa cài)
+DROPPABLE = ("cnt",)
+
+
+def profile_hw(cfg: dict | None) -> dict | None:
+    """Profile handwriting đã kiểm (None nếu config không có). Sai khoá/giá trị -> ValueError (không chạy nửa vời)."""
+    hw = ((cfg or {}).get("profiles") or {}).get("handwriting")
+    if not hw:
+        return None
+    th = (cfg or {}).get("thresholds") or {}
+    sets = [str(s) for s in (hw.get("sets") or [])]
+    bad = [s for s in sets if s not in HANDWRITTEN]
+    if bad:
+        raise ValueError(f"profiles.handwriting.sets chứa bộ không phải chữ viết tay: {bad} (chỉ {list(HANDWRITTEN)})")
+    drop = [str(g) for g in (hw.get("drop_gates") or [])]
+    if set(drop) - set(DROPPABLE):
+        raise ValueError(f"profiles.handwriting.drop_gates chỉ nhận {list(DROPPABLE)}: {drop}")
+    slot = str(hw.get("slot_gate", "bc"))
+    if slot not in SLOT_GATES:
+        raise ValueError(f"profiles.handwriting.slot_gate = {slot!r} không hỗ trợ (chỉ {list(SLOT_GATES)})")
+    q = float(hw.get("hand_q", th.get("stt_q", 0.00015)))
+    nmin = int(hw.get("n_hum_min", th.get("stt_n_hum_min", 3)))
+    return dict(sets=sets, drop=drop, slot=slot, hand_q=q, n_hum_min=nmin)
+
+
+def hw_mask(S8, cfg: dict | None) -> np.ndarray:
+    """Ô thuộc profile handwriting (theo set8)."""
+    p = profile_hw(cfg)
+    return np.isin(np.asarray(S8, dtype=object), p["sets"]) if p else np.zeros(len(S8), bool)
+
+
+def hand_q_of(S8, cfg: dict | None) -> np.ndarray:
+    """Mức q của bộ kiểm viết tay theo ô: profile hand_q (ô thuộc profile) / thresholds.stt_q (còn lại)."""
+    p = profile_hw(cfg)
+    q0 = float(((cfg or {}).get("thresholds") or {}).get("stt_q", 0.00015))
+    return np.where(hw_mask(S8, cfg), p["hand_q"] if p else q0, q0).astype(float)
+
+
+def n_hum_min_of(S8, cfg: dict | None, th: dict | None = None) -> np.ndarray:
+    """Số nguyên mẫu người tối thiểu theo ô: profile n_hum_min (ô thuộc profile) / thresholds.stt_n_hum_min (còn lại)."""
+    th = th if th is not None else ((cfg or {}).get("thresholds") or {})
+    n0 = th["stt_n_hum_min"]
+    p = profile_hw(cfg)
+    return np.where(hw_mask(S8, cfg), p["n_hum_min"] if p else n0, n0)
+
+
+def slot_gate_masks(S8, sig: dict, cfg: dict | None):
+    """(cnt_eff, bc_eff, vis_eff): cờ CNT/BC sau profile + cổng vis0 (chỉ ô profile có slot_gate vis0)."""
+    b = lambda k: np.asarray(sig[k], bool)
+    p = profile_hw(cfg)
+    HW = hw_mask(S8, cfg)
+    cnt = b("cnt") & ~(HW & bool(p and "cnt" in p["drop"]))
+    slot = p["slot"] if p else "bc"
+    bc = b("bc") & ~(HW & (slot != "bc"))
+    if slot == "vis0":
+        vz = np.asarray(sig["vis_z"], float)
+        vis = HW & ~(np.nan_to_num(vz, nan=-np.inf) >= 0)
+    else:
+        vis = np.zeros(len(S8), bool)
+    return cnt, bc, vis
 
 
 def bc_flags(ady, adx, vis_z, cfg):
@@ -28,8 +95,9 @@ def bc_flags(ady, adx, vis_z, cfg):
     return BC_T, BC_L
 
 
-def simg(S8, s, th):
-    """Bộ kiểm ảnh "lai" (công thức TN3/TN4 s06a, điểm chấm CROP CŨ, ngưỡng TN1 LOBO)."""
+def simg(S8, s, th, cfg: dict | None = None):
+    """Bộ kiểm ảnh "lai" (công thức TN3/TN4 s06a, điểm chấm CROP CŨ, ngưỡng TN1 LOBO). cfg (tuỳ chọn): profile handwriting ->
+    n_hum_min theo profile cho ô viết tay (lobo_cert đã chấm ở hand_q của profile — __main__)."""
     n = len(S8)
     C5T, C5L, C2T, C2L = th["C5_T"], th["C5_L"], th["C2_T"], th["C2_L"]
     pwT, pwL = s["p_wood_T"], s["p_wood_L"]
@@ -40,7 +108,7 @@ def simg(S8, s, th):
     m = np.isin(S8, ["L83", "KVK"]); out[m] = ((pwT >= C5T[0]) & (pwL >= C5L[0]) & (vX >= max(C5T[1], C5L[1])))[m]
     m = S8 == "Chr"; out[m] = ((pwT >= C2T) & (pwL >= C2L))[m]
     m = np.isin(S8, ["stt2", "stt4", "stt11"])
-    hand = (np.nan_to_num(s["lobo_cert"], nan=0).astype(int) == 1) & (np.nan_to_num(s["lobo_nh"], nan=0) >= th["stt_n_hum_min"])
+    hand = (np.nan_to_num(s["lobo_cert"], nan=0).astype(int) == 1) & (np.nan_to_num(s["lobo_nh"], nan=0) >= n_hum_min_of(S8, cfg, th))
     out[m] = hand[m]
     # Borg (27/09): CÙNG công thức chữ viết tay, nhưng điểm lobo_* đã chấm bằng biến thể LOBO-sách (common.HAND_VARIANT:
     # B18 -> mô hình/nguyên mẫu/hiệu chuẩn học trên DungLy, B34 -> học trên Kinh). Không dùng p_wood/viss (có crop Borg).
@@ -88,8 +156,11 @@ def decide(S8: np.ndarray, sig: dict, cfg: dict):
     put(b("bleed_new"), "text_only", "B0_muc_la_bleed_crop_moi")
     put(b("trunc_new"), "text_only", "B0_truncated_crop_moi")
     put(b("tall_new"), "text_only", "B0_tall_crop_moi")
-    put(b("cnt"), "text_only", "CNT_so_chu_OCR_cot_khac_so_am_QN")
-    put(b("bc"), "text_only", "BC_truot_theo_hop_kim_vis")
+    # profile handwriting (28/09, TN5): CNT bỏ ở ô viết tay; BC thay bằng cổng khe của profile (bc = như cũ)
+    cnt_e, bc_e, vis_e = slot_gate_masks(S8, sig, cfg)
+    put(cnt_e, "text_only", "CNT_so_chu_OCR_cot_khac_so_am_QN")
+    put(bc_e, "text_only", "BC_truot_theo_hop_kim_vis")
+    put(vis_e, "text_only", "HW_vis_z_duoi_0")
     if core_loss_gate(cfg):
         put(b("core_loss_flag"), "text_only", "core_loss_crop_chuan_cat_vao_chu")
     # ---- 3. uncertified
@@ -97,11 +168,10 @@ def decide(S8: np.ndarray, sig: dict, cfg: dict):
     TA_SETS = np.isin(S8, ["TK", "KVK", "L83"])
     put(TA_SETS & (ta == "contradicted"), "uncertified", "U_di_ban_nguoi_chong_nhan")
     SIMG = b("simg")
-    put(STT & ~SIMG & (np.nan_to_num(sig["lobo_nh"], nan=0) < cfg["thresholds"]["stt_n_hum_min"]), "uncertified",
-        "U_STT_thieu_nguyen_mau_nguoi")
+    nmin = n_hum_min_of(S8, cfg)
+    put(STT & ~SIMG & (np.nan_to_num(sig["lobo_nh"], nan=0) < nmin), "uncertified", "U_STT_thieu_nguyen_mau_nguoi")
     put(STT & ~SIMG, "uncertified", "U_STT_bo_kiem_viet_tay_khong_chung_nhan")
-    put(BORG & ~SIMG & (np.nan_to_num(sig["lobo_nh"], nan=0) < cfg["thresholds"]["stt_n_hum_min"]), "uncertified",
-        "U_Borg_thieu_nguyen_mau_nguoi_LOBO")
+    put(BORG & ~SIMG & (np.nan_to_num(sig["lobo_nh"], nan=0) < nmin), "uncertified", "U_Borg_thieu_nguyen_mau_nguoi_LOBO")
     put(BORG & ~SIMG, "uncertified", "U_Borg_bo_kiem_viet_tay_LOBO_khong_chung_nhan")
     put(PRINT & ~SIMG, "uncertified", "U_bo_kiem_anh_duoi_nguong_TN1")
     put(TA_SETS & (ta != "attested"), "uncertified", "U_khong_co_van_ban_nguoi_chung")
@@ -109,7 +179,7 @@ def decide(S8: np.ndarray, sig: dict, cfg: dict):
     assert (dec != "").all()
     A0n = b("int_foreign") | b("dup_bbox") | b("f_blank") | b("f_cut")
     B0n = b("dup_bbox") | b("ov_heavy") | ~b("one_char_ok") | b("tall_new")
-    H1n = ~(A0n | B0n | b("cnt") | b("bc"))
+    H1n = ~(A0n | B0n | cnt_e | bc_e | vis_e)          # printed: = ~(A0 | B0 | cnt | bc) như cũ
     TA_OK = ~TA_SETS | (ta == "attested")
     masks = dict(A0_new=A0n, B0_new=B0n, H1_new=H1n, SIMG=SIMG, TA_OK=TA_OK, lai=H1n & SIMG & TA_OK,
                  AINT=b("int_foreign") | b("rescue") | b("similar") | b("weak_text"))

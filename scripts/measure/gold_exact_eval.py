@@ -14,6 +14,8 @@ khớp bản gộp VÀ khớp tập ô GOLD của dataset/<Bộ>/labels.csv (N3)
 MỀM (SKIP + cảnh báo, không FAIL — N4): bộ nguồn có labels.csv mà THIẾU dataset/<Bộ>/gold_exact.csv = bộ đó vừa được dựng lại
 (`--book <Bộ>`: bước export xoá *.csv) sau lần gộp -> gợi ý `./run_pipeline.sh --merge`. Chọn cảnh báo thay vì để --book tự
 gộp: gộp lại đụng dataset/_ALL của MỌI bộ + ≈ 5–20 phút, trong khi --book chỉ được phép đổi đúng một bộ.
+Profile handwriting (28/09, TN5; config `profiles.handwriting`): lobo_cert tái lập ở hand_q của profile từ điểm + thang
+hand_tables; cổng đã bỏ (CNT) không hạ ô nào của profile; bộ in/khắc không mang lý do HW_*.
 ĐỘ CHÍNH XÁC trên nhãn người IHR (L16/TK, V1+/strict, CI bootstrap cụm trang) CHỈ BÁO — không làm cổng PASS/FAIL.
 
     .venv/bin/python scripts/measure/gold_exact_eval.py [--all-dir dataset/_ALL] [--out measure_out/gold_exact] [--limit N]
@@ -172,7 +174,7 @@ def main(argv=None) -> int:
     S8 = G.set8.values
     num = lambda c: to_float(E[c])          # đúng bit (pd.to_numeric có thể lệch 1 ulp với %.17g)
     sig = {k: (E[k].values == "1") for k in BOOL_COLS}
-    sig["ta"] = E.ta.values.astype(object); sig["lobo_nh"] = num("lobo_nh")
+    sig["ta"] = E.ta.values.astype(object); sig["lobo_nh"] = num("lobo_nh"); sig["vis_z"] = num("vis_z")
     dec, why, M = POL.decide(S8, sig, cfg)
     n_dec = int((dec != st).sum()); n_why = int((why != E.reason.values).sum())
     add("trang_thai_tai_lap_tu_cot_va_config", 0, dict(trang_thai=n_dec, ly_do=n_why), n_dec == 0 and n_why == 0,
@@ -182,11 +184,37 @@ def main(argv=None) -> int:
     # CSV %.17g (từ 28/09) tái lập đúng từng bit -> dung sai 0; nhận ra tệp cũ %.6g qua độ dài chữ số của p_wood_T
     full = E.p_wood_T.str.len().max() > 12 if len(E) else True
     eps = 0.0 if full else EPS_OLD
-    lo, hi = POL.simg(S8, s, shift_th(th, -eps)), POL.simg(S8, s, shift_th(th, +eps))
+    lo, hi = POL.simg(S8, s, shift_th(th, -eps), cfg), POL.simg(S8, s, shift_th(th, +eps), cfg)
     simg = sig["simg"]
     n_out = int((simg & ~lo).sum() + (~simg & hi).sum())
     add("bo_kiem_anh_tai_lap_tu_diem_va_nguong_config", 0, dict(lech=n_out, dung_sai=eps), n_out == 0,
         "simg tái lập từ điểm + ngưỡng config (CSV %.17g: dung sai 0; CSV cũ %.6g: ±1e-6)")
+    # ---- profile handwriting (28/09, TN5): lobo_cert = chứng nhận ở hand_q của profile (tái lập từ điểm + thang hand_tables);
+    # cổng đã bỏ (drop_gates) không hạ ô nào của profile; bộ ngoài profile không mang lý do riêng của profile
+    prof = POL.profile_hw(cfg)
+    HW = POL.hw_mask(S8, cfg)
+    if prof:
+        from pipeline.gold_exact.common import HAND_VARIANT, Assets
+        A_ = Assets()
+        qv = POL.hand_q_of(S8, cfg)
+        pT, pL, lc = num("lobo_pT"), num("lobo_pL"), num("lobo_cert")
+        n_bad = n_chk = 0
+        for s8 in sorted(set(S8[HW])):
+            m = S8 == s8
+            var = HAND_VARIANT[s8]
+            for q in sorted(set(qv[m])):
+                mm = m & (qv == q)
+                tT, tL = (float(A_.load(f"hand_tables_{t}_{var}.pt")["thr"][str(q)]) for t in "TL")
+                rec = (pT[mm] >= tT) & (pL[mm] >= tL)
+                n_chk += int(mm.sum()); n_bad += int((rec != (np.nan_to_num(lc[mm], nan=0) == 1)).sum())
+        add("profile_hw_lobo_cert_tai_lap_tai_hand_q", 0, dict(lech=n_bad, kiem=n_chk, hand_q=prof["hand_q"]), n_bad == 0,
+            "ô profile handwriting: lobo_cert == (lobo_pT ≥ t_T(q) ∧ lobo_pL ≥ t_L(q)), t từ hand_tables biến thể của bộ, q = hand_q")
+        drop_reason = {"cnt": "CNT_so_chu_OCR_cot_khac_so_am_QN"}
+        n_drop = int(sum(((E.reason.values == drop_reason[g]) & HW).sum() for g in prof["drop"]))
+        add("profile_hw_cong_bo_khong_ha_o", 0, dict(o=n_drop, cong=prof["drop"]), n_drop == 0,
+            "không ô profile handwriting nào mang lý do của cổng đã bỏ (drop_gates)")
+    n_hwr = int(((E.reason.values == "HW_vis_z_duoi_0") & ~HW).sum())
+    add("printed_khong_mang_ly_do_profile_hw", 0, n_hwr, n_hwr == 0, "bộ ngoài profile handwriting không có lý do HW_*")
     dv = sorted(set(E.device)) if "device" in E else ["(không có cột)"]
     add("thiet_bi_mot_gia_tri", "1 thiết bị (mps)", dv, len(dv) == 1 and dv[0] not in ("", "(không có cột)"),
         "cột device (thiết bị nhúng) có đúng một giá trị trong bản giao")
@@ -257,7 +285,7 @@ def main(argv=None) -> int:
                                strict_ci95=[round(r["strict_lo"], 5), round(r["strict_hi"], 5)],
                                both_lo=r["both_lo"], both_hi=r["both_hi"])
     summ = dict(generated_at=time.strftime("%Y-%m-%dT%H:%M:%S"), all_dir=str(all_dir), policy_version=str(cfg["version"]),
-                config_sha16=cfg_sha[:16], core_loss_gate=gate, labels_sha256=sha_lab, limit=a.limit or None,
+                config_sha16=cfg_sha[:16], core_loss_gate=gate, profile_handwriting=prof, labels_sha256=sha_lab, limit=a.limit or None,
                 partial_run=part, totals=totals, table=table, ihr=ihr,
                 ihr_note="đúng hai vế = V1+(nhãn, chữ người) ∧ khe crop chuẩn = 1; CI bootstrap cụm trang — CHỈ BÁO, không là cổng",
                 runtime_s=round(time.time() - t0, 1), invariants=iv)

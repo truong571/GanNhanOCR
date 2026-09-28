@@ -1,0 +1,60 @@
+{
+ "registered_at": "2026-09-28 15:17:45",
+ "code_sha256": "158708e6e4e2bb8ec8ad6317dba44152259226e8cfb3ce0519fdfd7c04cf4f8d",
+ "support_code_sha256": {
+  "h01_truth.py": "f6fe597b09c072c8ca301e9c65b0cde9fa8923ca543a3830fa59b153164ac799",
+  "h02_features.py": "8075e6aaeff44d8803b23003e093006e131f7d0dd88dfb9851b854245c49db39",
+  "h03_auc.py": "2ff5114b2bbbc5a2f2dd918d3cf2516713970a8193096d9d65d3e6635753d8ca"
+ },
+ "input_sha256": {
+  "truth.csv": "516e78648fa9c398a1fd5c95f5d9071d6f25b8c1a355f71a68f00018696aed35",
+  "features.pkl": "14c746aad0fa52b64d0fd7b95b91d7f790728ecb2475ee86a64cba7b2a7cd243",
+  "dataset/_ALL/gold_exact.csv (ban truoc profile)": "da5bdc9a0ffcc3c4c68562178731a19b0cbb5b5154ed8890f2a919b547b2ea1e"
+ },
+ "muc_tieu": "đúng hai vế (V1+ nhãn ∧ tâm hộp mực crop chuẩn ∈ hộp người keep_high+) ≥ 99 % trên phần GIỮ NGOÀI; tối đa số ô ok",
+ "profile": {
+  "review": "luật A + M-OCR giữ nguyên",
+  "text_only_giu": [
+   "f_blank",
+   "f_cut",
+   "dup_bbox",
+   "ov_heavy",
+   "f_two",
+   "f_ink",
+   "bleed_new",
+   "trunc_new",
+   "tall_new"
+  ],
+  "text_only_bo": [
+   "cnt"
+  ],
+  "ly_do_bo_cnt": "h03 (gộp 2 sách): AUC nhãn 0,493 / khe 0,494 / hai vế 0,495; CNT gắn 97 % ô GOLD Borg",
+  "ly_do_giu_co_anh": "định nghĩa ok = ảnh đúng MỘT chữ; trên Borg f_two/tall_new/f_ink phân biệt 'một chữ' (hộp mực phủ ≥ 50 % hộp người khác: f_two 52,5 % vs 7,9 %; tall 56 % vs 10 %; f_ink 67 % vs 12 %); cờ còn lại quá ít ô để kiểm -> giữ (bảo thủ)",
+  "slot_gate_luoi": [
+   "none",
+   "bc",
+   "ad_dn0",
+   "vis0"
+  ],
+  "q_luoi": "thang q của hand_tables_*.pt (14 mức 1e-4 … 0,02, FAR hiệu chuẩn sẵn theo biến thể)",
+  "n_hum_min": 3
+ },
+ "quy_tac_chon": "khả thi ⇔ hai vế ≥ 0,995 ∧ nhãn ≥ 0,990 ∧ n_hai_vế ≥ 200 (Kinh) / 50 (DungLy) trên phần HỌC; max số ô ok; hoà: none<bc<ad_dn0<vis0 rồi q nhỏ; không khả thi -> hai vế cao nhất",
+ "phan_kiem": [
+  "LOBO Kinh→DungLy (cấu hình giao)",
+  "LOBO DungLy→Kinh",
+  "CV 5 khối trang trong Kinh (khoi_trang bộ nhãn người), gộp dự đoán"
+ ],
+ "cau_hinh_giao": "chọn trên TOÀN BỘ Kinh; Borg B18 báo bằng CV khối (giữ ngoài), B34 bằng LOBO K→D; STT = chiếu (SUY ĐOÁN)",
+ "ci": "bootstrap cụm trang B=2000 seed 20260928",
+ "khai_bao_truoc_dang_ky": [
+  "h01 dựng sự thật (khe người) + h02 tín hiệu + h03 AUC GỘP CẢ HAI SÁCH (đã xem trước đăng ký -> việc chọn TẬP tín hiệu/cổng không hoàn toàn giữ ngoài)",
+  "đã xem nhanh: simg cũ (q=0,00015) trên ô keep: hai vế 99,48 % B18 / 97,96 % B34 (2/98); ngưỡng p thô min(pT,pL) 0,9–0,998 không đạt nhãn 99 % trên B18",
+  "đã kiểm cơ chế h04 trên NHÃN XÁO (không nhìn kết quả thật): q=0,00015/none tái lập đúng simg cũ (0 lệch)"
+ ],
+ "gioi_han_biet_truoc": [
+  "hộp người mức keep chọn nhờ encoder v1/v2 (tập dễ hơn) -> hai vế trên keep có thể lạc quan; báo thêm nhãn trên MỌI ô có gt và hai vế trên hộp 'khong' (nhiễu)",
+  "DungLy chỉ 354 GOLD -> LOBO D→K và phép đo trên B34 rất rộng CI",
+  "STT: không có sự thật; biến thể Kinh; kim lt1; người chép khác; luật A/M-OCR có mặt"
+ ]
+}

@@ -11,9 +11,9 @@
 #
 # 10 BỘ: 3 STT (SachThanhTruyen2/4/11, config/pipeline.yaml) + 3 sách giao nộp (LucVanTien1883, KimVanKieu1884,
 # Chrestomathie1872) + 2 IHR đánh giá (LucVanTien1916, TruyenKieu1872) + 2 Borg đánh giá (SachKinhThayCaBinh,
-# SachDungLyHoThan). Chạy lại = `./run_pipeline.sh --book all --yes --borg require` (kèm nghiệm thu --verify, gộp
-# dataset/_ALL, GOLD chính xác) -> `python -m pipeline.borg_human --stage all` -> `scripts/measure/measure.py --all`
-# -> `scripts/bao_cao_tong_hop.py` (docs/BAO_CAO_TONG_HOP_<ngày>.md). Log: logs/clean_rebuild_<thời điểm>_*.
+# SachDungLyHoThan). Chạy lại = `./run_pipeline.sh --book all --yes --borg require --no-verify` (gộp dataset/_ALL,
+# GOLD chính xác) -> `python -m pipeline.borg_human --stage all` -> `scripts/measure/measure.py --all` ->
+# `./run_pipeline.sh --verify` -> `scripts/bao_cao_tong_hop.py` (docs/BAO_CAO_TONG_HOP_<ngày>.md). Log: logs/clean_rebuild_<thời điểm>_*.
 #
 # RANH GIỚI (xác định bằng MÃ, không đoán — xem khối Python bên dưới, hàm protected_roots/targets):
 #   GIỮ, KHÔNG BAO GIỜ XOÁ (kiểm kê sha256 trước/sau khi xoá -> measure_out/_clean_manifest/<ts>.txt):
@@ -816,9 +816,9 @@ fi
 ok "đã dọn dẫn xuất; phần GIỮ nguyên vẹn (kiểm kê ${MAN#$ROOT/})"
 
 if (( ! RUN )); then
-  printf '\n%sĐã dọn xong (không --run).%s Chạy lại toàn bộ:\n    ./run_pipeline.sh --book all --yes --borg require\n' "$GRN$BLD" "$RST"
+  printf '\n%sĐã dọn xong (không --run).%s Chạy lại toàn bộ:\n    ./run_pipeline.sh --book all --yes --borg require --no-verify\n' "$GRN$BLD" "$RST"
   printf '    .venv/bin/python -m pipeline.borg_human --stage all\n    .venv/bin/python scripts/measure/measure.py --all\n'
-  printf '    .venv/bin/python scripts/bao_cao_tong_hop.py\n'
+  printf '    ./run_pipeline.sh --verify\n    .venv/bin/python scripts/bao_cao_tong_hop.py\n'
   exit 0
 fi
 
@@ -913,10 +913,13 @@ step() {   # step <số> <tên> <lệnh…>
   fi
   return 0
 }
-step 1 run_pipeline_all  env GANNHANOCR_ROOT="$ROOT" bash "$FROZEN" --book all --yes --borg require
+# THỨ TỰ (sửa 2026-09-28): nghiệm thu --verify chỉ ĐỌC kết quả đo (measure.py --all --report-only) mà bước dọn đã
+# xoá -> phải chạy measure.py --all TRƯỚC rồi mới nghiệm thu, nếu không code_facts/detector_transfer/box_ref báo ERR.
+step 1 run_pipeline_all  env GANNHANOCR_ROOT="$ROOT" bash "$FROZEN" --book all --yes --borg require --no-verify
 step 2 borg_human        "$PY" -m pipeline.borg_human --stage all
 step 3 measure_all       "$PY" scripts/measure/measure.py --all
-step 4 bao_cao_tong_hop  "$PY" scripts/bao_cao_tong_hop.py --timing "$TIMING"
+step 4 nghiem_thu        env GANNHANOCR_ROOT="$ROOT" bash "$FROZEN" --verify
+step 5 bao_cao_tong_hop  "$PY" scripts/bao_cao_tong_hop.py --timing "$TIMING"
 
 banner "5 · KIỂM SAU KHI CHẠY: 0 lượt API, cache gốc không đổi"
 H postrun --manifest "$MAN"; RC_POST=$?

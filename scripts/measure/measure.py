@@ -417,8 +417,17 @@ def collect(st: dict) -> dict:
             if p.is_file() and p.suffix.lower() in (".csv", ".tsv", ".json") and p.name != "summary.json":
                 outs.append(rel(p))
     rec["outputs"] = outs
-    rec["ok"] = rec["rc"] == 0 and rec["summary_found"] and rec["n_fail"] == 0
+    # Script đo trả rc=1 khi có invariant FAIL — kể cả invariant đã khai MỀM ở SOFT_INVARIANTS (vd ihr_layout
+    # L16). Có summary, 0 FAIL cứng, ≥1 FAIL mềm ⇒ KHÔNG coi là bước lỗi (trước 2026-09-28 lỗi này ẩn vì nghiệm thu
+    # chỉ chạy --report-only).
+    rec["soft_only_rc"] = (rec["rc"] == 1 and rec["summary_found"] and rec["n_fail"] == 0
+                           and rec["n_soft_fail"] > 0)
+    rec["ok"] = (rec["rc"] == 0 or rec["soft_only_rc"]) and rec["summary_found"] and rec["n_fail"] == 0
     return rec
+
+
+def _crashed(r: dict) -> bool:
+    return not r["summary_found"] or (r["rc"] != 0 and not r.get("soft_only_rc"))
 
 
 # ----------------------------------------------------------------------------- báo cáo
@@ -432,12 +441,12 @@ def write_report(recs: list[dict], root: Path, args_text: str, total_s: float, e
     L.append("| # | phép đo | sách | rc | thời gian | invariants PASS / FAIL / mềm / SKIP | summary |")
     L.append("|---|---|---|---|---|---|---|")
     for i, r in enumerate(recs, 1):
-        st = "✅" if r["ok"] else ("⚠️" if r["rc"] == 0 and r["summary_found"] else "❌")
+        st = "✅" if r["ok"] else ("❌" if _crashed(r) else "⚠️")
         L.append(f"| {i} | {st} {r['step']} | {r['book']} | {fmt(r['rc'])} | {r['seconds']:.0f} s | "
                  f"{r['n_pass']} / {r['n_fail']} / {r['n_soft_fail']} / {r['n_skip']} | `{r['summary']}` |")
     L.append("")
     fails = [(r, iv) for r in recs for iv in r["invariants"] if iv["status"] in ("FAIL", "SOFT_FAIL")]
-    crashed = [r for r in recs if r["rc"] != 0 or not r["summary_found"]]
+    crashed = [r for r in recs if _crashed(r)]
     L.append("## 2. Invariants FAIL\n")
     if not fails and not crashed:
         L.append("Không có invariant nào FAIL.\n")
@@ -540,14 +549,14 @@ def main(argv=None) -> int:
             continue
         r = collect(st)
         recs.append(r)
-        mark = "OK  " if r["ok"] else ("WARN" if r["rc"] == 0 and r["summary_found"] else "ERR ")
+        mark = "OK  " if r["ok"] else ("ERR " if _crashed(r) else "WARN")
         print(f"  [{i}/{len(plan)}] {mark} {r['step']:18s} {r['book']:14s} {r['seconds']:6.0f}s  "
               f"inv PASS {r['n_pass']} FAIL {r['n_fail']} mềm {r['n_soft_fail']} SKIP {r['n_skip']}")
     if a.dry_run:
         return 0
     total_s = time.time() - t_all
     hard_fail = sum(r["n_fail"] for r in recs)
-    crashed = [r for r in recs if r["rc"] != 0 or not r["summary_found"]]
+    crashed = [r for r in recs if _crashed(r)]
     exit_code = 2 if crashed else (1 if hard_fail else 0)
     args_text = "measure.py " + " ".join(sys.argv[1:])
     summary = dict(

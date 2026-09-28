@@ -1,60 +1,103 @@
-# GanNhanOCR — Công cụ minh họa và trực quan hóa dữ liệu
-## Đề tài Luận văn Thạc sĩ Công nghệ Thông tin
-### Hệ thống hỗ trợ gán nhãn tự động văn bản Hán Nôm cổ (111.525 ký tự)
+# GanNhanOCR — ứng dụng web minh hoạ luận văn
 
----
+Ứng dụng một trang (HTML/CSS/JS thuần + máy chủ Python chỉ dùng thư viện chuẩn) phục vụ buổi bảo vệ luận văn Thạc sĩ
+*Hệ thống hỗ trợ gán nhãn tự động văn bản Hán Nôm cổ*. **Không có con số nào gõ cứng**: mọi số liệu (số ký tự, tầng nhãn,
+GOLD chính xác, độ chính xác, bất biến) được máy chủ đọc trực tiếp từ dữ liệu của dự án; tệp nguồn thiếu thì giao diện ghi
+**"chưa có"** thay vì bịa số.
 
-## 1. Mục đích ứng dụng
-Ứng dụng web được xây dựng nhằm hỗ trợ buổi báo cáo bảo vệ Luận văn Thạc sĩ, giúp Hội đồng và người tham dự dễ dàng theo dõi:
-1. **Quy trình xử lý dữ liệu (6 giai đoạn):** Thể hiện tuần tự các bước từ ảnh quét tài liệu gốc $\to$ tiền xử lý khử nhiễu $\to$ định vị ký tự bằng CenterNet & Pitch Decoding $\to$ gióng hàng song ngữ bằng quy hoạch động Banded-DP $\to$ kiểm kê & hiệu chỉnh lỗi $\to$ kiểm soát biên & đối soát dị bản $\to$ đóng gói tập ngữ liệu chuẩn.
-2. **Trực quan hóa bản quét (Manuscript Inspector):** Trực tiếp hiển thị các trang tài liệu gốc độ nét cao của 4 tác phẩm tiêu biểu (*Lục Vân Tiên 1883*, *Kim Vân Kiều 1884*, *Chrestomathie 1872*, *Sách Thánh Truyện*), phủ tọa độ các hộp bao ký tự theo màu quy ước mức tin cậy, xem chi tiết ảnh trích xuất, chữ Nôm, âm đọc Quốc ngữ và mã Unicode.
-3. **Tra cứu mẫu ký tự:** Tìm kiếm tức thời theo âm đọc hoặc tự dạng chữ Nôm trên tập dữ liệu thực nghiệm hơn 111.000 ký tự.
-4. **Kết quả đánh giá thực nghiệm:** Trình bày bảng so sánh định lượng với phương pháp cơ sở (tỷ lệ đếm đúng số chữ trên cột đạt 78.4% – 90.0%, giảm 4 lần tỷ lệ cắt phạm vào nét chữ, vượt qua toàn bộ 18 tiêu chí kiểm tra tính toàn vẹn dữ liệu).
+## 1. Nội dung trình bày
 
----
+| Tab | Nội dung |
+| --- | --- |
+| 1. Tổng quan | KPI (ký tự, GOLD, SYLLABLE, **GOLD chính xác ok**, số bộ, bất biến), danh mục **10 bộ** theo vai trò, quy ước 3 tầng nhãn, **4 trạng thái GOLD chính xác** và 3 mức chứng cứ |
+| 2. Quy trình | **8 giai đoạn**: tiền xử lý & OCR → phát hiện (CenterNet + pitch) → gióng hàng (Banded DP) → kiểm kê → cổng & dị bản → đóng gói → gộp `dataset/_ALL` → **GOLD chính xác (B8)** kèm **profile chữ viết tay**; mỗi bước có chỉ số đọc từ `measure_out/` |
+| 3. Trực quan hoá bản quét | Ảnh trang + hộp ký tự; **công tắc tô màu theo tầng nhãn HOẶC theo GOLD chính xác** (ok xanh · text_only vàng · uncertified xám · review đỏ · GOLD chưa có gold_exact tím nét đứt · ô không phải GOLD nét đứt mờ); chú giải = bộ lọc; bảng chi tiết hiện **crop gốc + crop chuẩn**, trạng thái, **lý do (tiếng Việt)**, **mức chứng cứ**, `cell_uid` |
+| 4. Tra cứu | Tìm theo âm (có/không dấu), chữ Nôm, Unicode; lọc theo bộ/nhóm (giao nộp · tập đánh giá · Borg nhãn người), tầng nhãn, **trạng thái GOLD chính xác**; bấm thẻ để mở đúng trang |
+| 5. Kết quả & đánh giá | Độ chính xác theo **mức chứng cứ** (ĐO trên nhãn người · ƯỚC LƯỢNG qua dị bản · SUY ĐOÁN), bảng GOLD chính xác 10 bộ, pitch decoding so với hộp legacy (box_ref), độ đúng OCR kim theo loại bản, bất biến, bộ crop nhãn người Borg, cây thư mục `dataset/`, danh sách nguồn còn thiếu |
 
-## 2. Hướng dẫn khởi chạy
+### 10 bộ + 2 mục xem nhãn người
 
-### Cách 1: Khởi chạy máy chủ API (Khuyên dùng khi báo cáo trên máy tính cá nhân)
-Sử dụng thư viện chuẩn của Python (`http.server.ThreadingHTTPServer`), không cần cài đặt thêm thư viện ngoài:
+| Nhóm | Bộ | Dữ liệu web đọc | Ảnh trang |
+| --- | --- | --- | --- |
+| Giao nộp | SachThanhTruyen 2 / 4 / 11 | `dataset/SachThanhTruyen/labels.csv` (cột `book` = stt2/stt4/stt11); vắng quyển nào thì lùi về bản xuất cũ `dataset/SachThanhTruyen{2,4,11}/` (23/09, ghi rõ "bản cũ", không ghép gold_exact) | `prepared/SachThanhTruyen{N}/pages/` |
+| Giao nộp | LucVanTien1883, KimVanKieu1884, Chrestomathie1872 | `dataset/<Bộ>/labels.csv` + `labels_trace.csv` | `prepared/<Bộ>/pages/` |
+| Đánh giá (IHR-NomDB) | LucVanTien1916, TruyenKieu1872 | như trên (`evaluation_only`) | `prepared/<Bộ>/pages/` |
+| Đánh giá (Borg, chép tay) | SachKinhThayCaBinh (Borg.tonch.18), SachDungLyHoThan (Borg.tonch.34) | như trên (`evaluation_only`) | `prepared/_auto/<Sách>/pages/` |
+| Borg — nhãn người | 2 mục xem riêng | `dataset/_BORG_NHAN_NGUOI/labels.csv` (+ `crops/`, `crops_chuan/`), tô màu theo `keep_level` | `prepared/<Sách>/pages/` |
+
+### GOLD chính xác (bước B8)
+
+- Nguồn: `dataset/_ALL/gold_exact.csv` (vắng thì `dataset/<Bộ>/gold_exact.csv`), khoá **`cell_uid`**. Dòng của
+  `dataset/<Bộ>/labels.csv` được gán `cell_uid` đúng như `pipeline/tools/merge_datasets._uid`
+  (`<bộ>/<book>/<page>/c<cột>/n<nom_idx>/s<syl_idx>`, `nom_idx`/`syl_idx` lấy từ `labels_trace.csv`); dự phòng ghép theo
+  (`book_set`, `image`). Nếu `gold_exact.csv` khác lượt dựng với `labels.csv`, trang ghi rõ "không khớp".
+- Crop chuẩn của ô `ok`: `dataset/_ALL/crops_chuan/…` (URL `/crops_chuan/…`).
+- Mức chứng cứ (`evidence_level`): **ĐO** ở LucVanTien1916, TruyenKieu1872, 2 bộ Borg (nhãn người) · **ƯỚC LƯỢNG** ở
+  LucVanTien1883, KimVanKieu1884 (dị bản người) · **SUY ĐOÁN** ở STT và Chrestomathie1872.
+- Lý do (`reason`) được dịch sang tiếng Việt trong `server.py` (`REASON_VI`); mã lạ hiển thị nguyên mã.
+
+### Nguồn số liệu (đọc từ tệp, thiếu -> "chưa có")
+
+`measure_out/SUMMARY.json` (bất biến) · `measure_out/gold_exact/summary.json` · `measure_out/<LVT1916|TK1872>/ihr_endtoend/summary.json`
+· `measure_out/<Borg>/borg_endtoend/summary.json` · `measure_out/box_ref/summary.json` · `measure_out/borg_human/summary.json`
+· `prepared/<LVT1883|KVK1884>/dataset_out/auto_precision_{verify,gated}/SUMMARY.json` · `dataset/_ALL/SOURCES.json`
+· `dataset/_BORG_NHAN_NGUOI/BUILD_INFO.json` · `Dict/QuocNgu_SinoNom.csv` (số mục từ) — cùng cách đọc với
+`scripts/bao_cao_tong_hop.py`.
+
+## 2. Chạy
+
+### Cách 1 — máy chủ API (khuyên dùng khi trình bày trên máy có repo)
 
 ```bash
-# Từ thư mục gốc của dự án:
-.venv/bin/python web/server.py 8088
+.venv/bin/python web/server.py 8088                  # http://localhost:8088
+.venv/bin/python web/server.py 8088 --host 127.0.0.1 # chỉ máy này truy cập
+GANNHANOCR_ROOT=/đường/dẫn/gốc .venv/bin/python web/server.py 8088   # hoặc --root <thư mục>: đọc dữ liệu ở gốc khác
 ```
 
-Mở trình duyệt truy cập: **`http://localhost:8088`**
+- Máy chủ **chỉ đọc**; nạp nhãn vào RAM lúc khởi động (log liệt kê từng bộ: số dòng, số trang, số ô ghép gold_exact).
+- Bộ chưa có dữ liệu (đang dựng lại) không làm sập máy chủ: giao diện ghi "chưa có dữ liệu (đang dựng lại…)".
+- Sau khi pipeline chạy xong: bấm **"Nạp lại dữ liệu"** trên thanh đầu trang (gọi `/api/reload`) — không cần khởi động lại.
+- API: `/api/stats` · `/api/books` · `/api/page?book=&page=` · `/api/search?q=&book=&tier=&gx=&limit=` ·
+  `/api/pipeline_flow` · `/api/benchmarks` · `/api/reload`. `book` nhận mã bộ, bí danh (`lvt1883`, `b18`…) hoặc nhóm
+  (`all`, `giao_nop`, `danh_gia`, `nhan_nguoi`); `gx` ∈ `ok|text_only|uncertified|review|chua_co`.
+- Tệp phục vụ (chặn đường dẫn thoát ra ngoài): `/crops/<bộ>/…`, `/crops_chuan/…`, `/borg_human/…`, `/page_scans/<bộ>/…`.
 
-*Ưu điểm:*
-- Kết nối trực tiếp vào toàn bộ 111.525 bản ghi nhãn trong thư mục `dataset/`.
-- Phục vụ ảnh quét trang gốc và ảnh trích xuất ký tự độ phân giải cao.
-- Tốc độ tra cứu tức thời nhờ nạp sẵn chỉ mục vào bộ nhớ RAM.
+### Cách 2 — mở trực tiếp `index.html` (máy trình chiếu không có Python)
 
----
+- Chép thư mục `web/` (cần `index.html`, `style.css`, `app.js`, `sample_data.json`, `sample_data.js`) rồi mở `index.html`.
+- Ứng dụng tự chuyển sang **chế độ dữ liệu mẫu**: 1 trang mẫu / bộ, ảnh trang thu nhỏ và crop của thẻ thư viện được nhúng
+  sẵn; số liệu = đúng API của máy chủ lúc sinh bản mẫu.
+- `sample_data.js` là bản bọc của `sample_data.json` (Chrome chặn `fetch()` tệp cục bộ khi mở bằng `file://`).
 
-### Cách 2: Mở trực tiếp tập tin tĩnh (Khi trình chiếu tại phòng máy không có Python)
-- Sao chép toàn bộ thư mục `web/` sang USB hoặc máy trình chiếu.
-- Nhấp đúp mở trực tiếp tệp `web/index.html` bằng trình duyệt web bất kỳ (Chrome, Safari, Edge, Firefox).
-- Ứng dụng tự động chuyển sang chế độ dữ liệu mẫu sử dụng tệp `web/sample_data.json` được gói sẵn.
+### Sinh lại `sample_data.json` (+ `sample_data.js`)
 
----
+Chạy **sau khi** lượt dựng lại dữ liệu đã xong (script tự dừng nếu `clean_rebuild_all.sh` / `run_pipeline.sh` còn chạy):
 
-## 3. Cấu trúc thư mục `web/`
-
+```bash
+.venv/bin/python web/build_sample_data.py                  # mặc định: ≤ 5 MB, ảnh trang rộng 720 px
+.venv/bin/python web/build_sample_data.py --max-mb 3 --page-width 640 --gallery-per-book 12
+.venv/bin/python web/build_sample_data.py --no-images      # không nhúng ảnh (chỉ đường dẫn ../dataset/…)
 ```
+
+## 3. Cấu trúc `web/`
+
+```text
 web/
-├── index.html            # Giao diện chính (chuẩn mực học thuật, hỗ trợ Sáng / Tối)
-├── style.css             # Định dạng phong cách tài liệu khoa học, phông chữ Noto Serif / Inter
-├── app.js                # Logic điều khiển: Trực quan hóa bản quét, Stepper quy trình, Tra cứu
-├── server.py             # Máy chủ HTTP / REST API nội bộ bằng thư viện chuẩn Python
-├── sample_data.json      # Cơ sở dữ liệu mẫu độc lập cho chế độ ngoại tuyến
-└── README.md             # Tài liệu thuyết minh này
+├── index.html            # giao diện (sáng/tối, co giãn tới màn hình điện thoại, không cuộn ngang)
+├── style.css             # phong cách tài liệu khoa học; màu tầng nhãn + GOLD chính xác + mức chứng cứ
+├── app.js                # logic: KPI, quy trình, trình soi (tô màu 2 chế độ), tra cứu, bảng số đo
+├── server.py             # máy chủ HTTP + REST API (thư viện chuẩn), chỉ đọc
+├── build_sample_data.py  # sinh sample_data.json/.js từ dữ liệu thật (dùng lại hàm API của server.py)
+├── sample_data.json      # dữ liệu mẫu cho chế độ ngoại tuyến
+└── sample_data.js        # bản bọc sample_data.json cho file:// (sinh cùng lúc)
 ```
 
----
+## 4. Gợi ý thuyết minh
 
-## 4. Các điểm nhấn khi thuyết minh trước Hội đồng
-1. **Quy mô và tính tự động:** Nêu bật bảng tổng hợp số liệu thực nghiệm với 111.525 ký tự được gán nhãn hoàn toàn theo quy tắc thuật toán, không can thiệp thủ công (`quyet_dinh_nguoi = 0`).
-2. **Khả năng định vị ký tự:** Chuyển sang mục **"3. Trực quan hóa bản quét"**, chọn một trang bất kỳ của *Lục Vân Tiên* hoặc *Kim Vân Kiều* để minh họa giải thuật giải mã nhịp (Pitch Decoding) giúp phân tách chính xác các vị trí chữ dính mực mà không cắt phạm vào nét chữ.
-3. **Chất lượng dữ liệu trích xuất:** Vào mục **"4. Tra cứu mẫu ký tự"**, tra cứu các âm phổ biến (ví dụ: *kieu*, *tien*, *troi*, *nguoi*) để minh chứng chất lượng ảnh cắt ký tự mức 1 (GOLD).
-4. **Đánh giá thực nghiệm:** Vào mục **"5. Kết quả & Đánh giá"** để trình bày các chỉ số cải thiện so với phương pháp cơ sở và tính toàn vẹn của tập dữ liệu giao nộp.
+1. **Quy mô + tính tự động** (tab 1): KPI đọc từ dữ liệu; nhấn mạnh tách **giao nộp** và **tập đánh giá** (IHR, Borg có
+   nhãn người, `evaluation_only`), nhãn người chỉ để đo.
+2. **GOLD chính xác** (tab 3): chọn một trang, bật "Tô theo GOLD chính xác", chỉ vào ô `text_only`/`review` và đọc lý do;
+   so crop gốc với crop chuẩn của ô `ok`.
+3. **Chữ viết tay** (tab 3, Borg / STT; tab 2 bước 8): profile handwriting — bỏ cổng CNT, bộ kiểm viết tay LOBO theo sách;
+   mở mục "Borg — nhãn người" để thấy hộp do người phiên.
+4. **Độ chính xác trung thực** (tab 5): mỗi con số đi kèm mức chứng cứ; chỉ bộ có nhãn người mới là **ĐO**.

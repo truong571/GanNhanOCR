@@ -25,7 +25,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .splits import eval_only_mask
 
 OUT_DIRNAME = "cong_bo"          # dataset/_ALL/cong_bo/ — bước gộp + gold_exact --publish dọn thư mục này (phụ thuộc gold_exact.csv)
 IMG_COLS = ["cell_uid", "image", "image_md5", "image_128", "image_goc", "book_set", "book", "page", "column", "syllable", "label",
@@ -37,6 +36,20 @@ COT_CHIA = ("split", "split_hint", "lobo_group")   # cột chia tập bị cấm
 
 class ReleaseError(RuntimeError):
     pass
+
+
+def eval_only_mask(df: pd.DataFrame, eval_books=None) -> pd.Series:
+    """Dòng thuộc bộ ĐÁNH GIÁ (có nhãn người): cột `evaluation_only` của bộ gộp HOẶC `book`/`book_set` ∈ eval_books.
+    Chỉ là CỜ vai trò — không phải chia tập."""
+    m = pd.Series(False, index=df.index)
+    if "evaluation_only" in df.columns:
+        m |= df["evaluation_only"].astype(str).str.strip().isin({"1", "True", "true"})
+    books = {str(b).lower() for b in (eval_books or ())}
+    if books:
+        for col in ("book", "book_set"):
+            if col in df.columns:
+                m |= df[col].fillna("").astype(str).str.lower().isin(books)
+    return m
 
 
 def _rd(p: Path) -> pd.DataFrame:

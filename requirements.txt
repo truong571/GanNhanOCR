@@ -46,8 +46,8 @@ fonttools==4.63.0
 pygame-ce==2.5.7          # thay cho pygame (py3.14 không có wheel pygame); import vẫn là "pygame"
 scikit-image==0.26.0
 
-# Giai đoạn 3 — publish (pipeline/publish/export.py import `datasets`; export Parquet
-# cần pyarrow). Thiếu 2 gói này thì pipeline chết ở BƯỚC CUỐI chứ không phải bước đầu.
+# HF datasets + pyarrow: dùng bởi font_diffusion/src/tools (xuất/đẩy HF dataset). pipeline/publish KHÔNG còn dùng
+# (30/09 xoá công cụ công bố cũ có chia tập).
 datasets==4.8.5
 pyarrow==24.0.0
 

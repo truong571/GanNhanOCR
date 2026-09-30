@@ -45,7 +45,8 @@
 ## KHÔNG chia tập + web chỉ tầng nhãn (2026-09-30)
 - Quyết định A-10 (16/09): **không** cột/tập chia (`split`, `split_hint`, `lobo_group`, train/val/test, LOBO) ở bất kỳ đầu ra
   nào (`dataset/<Bộ>/`, `dataset/_ALL/`, `cong_bo/`, `_BORG_NHAN_NGUOI/`); bộ có nhãn người chỉ mang cờ `evaluation_only`.
-  Bất biến `khong_cot_chia_tap` ở merge_datasets, publish gold-exact, borg_human_eval.
+  Bất biến `khong_cot_chia_tap` ở merge_datasets, publish gold-exact, borg_human_eval. Công cụ công bố cũ tháng 7
+  (`pipeline/publish/splits.py`, `export`/`validate`/`metadata`/`datasheet`) đã XOÁ — `pipeline.publish` chỉ còn `gold-exact`.
 - `web/` chỉ hiện tầng nhãn GOLD / SYLLABLE / REVIEW / QUARANTINE (như bản đầu); gold_exact vẫn sinh tệp phụ nhưng không hiện.
 
 ## Borg.Tonch.18/34 — chữ viết tay Công giáo có nhãn người (2026-09-27)

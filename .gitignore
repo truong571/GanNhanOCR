@@ -51,8 +51,6 @@ train_crop/kaggle_pkg/
 # Chỉ loại mẻ dựng ra rồi bỏ, chưa chấm ô nào:
 /dataset_out/human_audit/audit_label_only/
 
-# Bản đóng gói quốc tế: dựng lại bằng bước 8 publish từ labels_final.csv
-/dataset_out/release/
 
 # virtualenvs (never commit — purged from history 2026-07-14)
 .venv*/
@@ -62,12 +60,6 @@ tf_env/
 # Nội dung bên thứ ba, không phải bằng chứng luận văn -> không đưa vào git.
 chunom.html
 
-# GĐ3: parquet/imagefolder trong release/ là artifact BINARY nặng cho HF upload,
-# sinh bằng `python -m pipeline.publish export`. Manifest text (crops.csv,
-# labels_published.csv) VẪN track làm neo toàn vẹn.
-dataset_out/release/parquet/
-dataset_out/release/parquet_sample/
-dataset_out/release/imagefolder/
 ArcFace/nom-embed-arcface/
 
 # Font dự phòng tải thêm (2026-08-19): Plangothic P1/P2, ~33 MB, giấy phép OFL.

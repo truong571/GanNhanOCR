@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-30T05:32:02Z",
+ "generated_at": "2026-09-30T06:31:02Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "77ebf9904b",
+ "git_head": "679735f5bf",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 60,
@@ -17,7 +17,7 @@
   "pdf_readers": 2,
   "checkpoint_paths": 41,
   "checkpoint_exists": 7,
-  "git_dirty_pipeline_core": 0,
+  "git_dirty_pipeline_core": 11,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
  },
@@ -192,10 +192,10 @@
     "pipeline/tools/update_bang_so_lieu.py": 1
    },
    "discarded": {
-    "call_arg_no_column_context": 10,
-    "call_kwarg_no_column_context": 6,
+    "call_arg_no_column_context": 9,
+    "call_kwarg_no_column_context": 5,
     "compare_no_column_context": 1,
-    "other_no_column_context": 32
+    "other_no_column_context": 31
    },
    "discarded_examples": [
     "core/image/image_processing.py:14 cv2.bilateralFilter(d=9)",
@@ -206,8 +206,6 @@
     "pipeline/lab/selftest.py:136 P.anchor_retention(band_slack=9)",
     "pipeline/phase1_engine_selftest.py:338 Image.frombytes('L', (64, 64), px).save(compress_l",
     "pipeline/phase1_engine_selftest.py:565 range(… arg#0=9)",
-    "pipeline/publish/selftest.py:55 hashing.hamming(… arg#1=9)",
-    "pipeline/publish/selftest.py:103 split_mod.assign_page_disjoint(seed=9)",
     "pipeline/remediation/mechanism_gates_selftest.py:62 _row(… arg#0=9)",
     "pipeline/remediation/mechanism_gates_selftest.py:218 _row(… arg#0=9)",
     "pipeline/tools/ingest_borg_book.py:694 KimClient(budget=9)",
@@ -4609,10 +4607,55 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "77ebf9904b",
+   "head": "679735f5bf",
    "branch": "main",
-   "n_dirty_pipeline_core": 0,
-   "dirty_pipeline_core": [],
+   "n_dirty_pipeline_core": 11,
+   "dirty_pipeline_core": [
+    {
+     "file": "pipeline/publish/README.md",
+     "status": "M"
+    },
+    {
+     "file": "pipeline/publish/__init__.py",
+     "status": "M"
+    },
+    {
+     "file": "pipeline/publish/cli.py",
+     "status": "M"
+    },
+    {
+     "file": "pipeline/publish/datasheet.py",
+     "status": "D"
+    },
+    {
+     "file": "pipeline/publish/export.py",
+     "status": "D"
+    },
+    {
+     "file": "pipeline/publish/gold_exact_release.py",
+     "status": "M"
+    },
+    {
+     "file": "pipeline/publish/hashing.py",
+     "status": "D"
+    },
+    {
+     "file": "pipeline/publish/metadata.py",
+     "status": "D"
+    },
+    {
+     "file": "pipeline/publish/selftest.py",
+     "status": "M"
+    },
+    {
+     "file": "pipeline/publish/splits.py",
+     "status": "D"
+    },
+    {
+     "file": "pipeline/publish/validate.py",
+     "status": "D"
+    }
+   ],
    "untracked_pipeline_core": [],
    "ocr_api_guest_mode": {
     "file": "core/ocr/ocr_api.py",

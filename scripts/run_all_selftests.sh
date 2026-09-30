@@ -152,7 +152,7 @@ MODULES=(
   core.text.syllable_validation_selftest
   pipeline.ground_truth.selftest
   pipeline.consensus_fusion.selftest
-  pipeline.publish.selftest
+  pipeline.publish.selftest        # 30/09: chỉ còn gold-exact (13 phép kiểm; công cụ cũ có chia tập đã xoá — mốc 56 ở trên là lịch sử)
   pipeline.remediation.selftest
   pipeline.phase1_engine_selftest
   pipeline.align_engine.tier_v3_selftest

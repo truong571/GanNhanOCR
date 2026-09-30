@@ -74,8 +74,8 @@ pipeline/              LOGIC pipeline (package chính, chạy bằng python -m):
                        audit_grid dựng HTML làm mù, report_combined ra bảng headline.
   consensus_fusion/    Giai đoạn 2 — hợp phiếu nhiều kênh (Kish n_eff, stacking
                        hiệu chỉnh, gate bất đối xứng, qwen_verifier MCQ mù).
-  publish/             Giai đoạn 3 — split page-disjoint/LOBO, Frictionless
-                       datapackage.json, Croissant, datasheet Gebru, export HF.
+  publish/             Tập công bố theo GOLD chính xác (gold-exact: tập ảnh = ô ok,
+                       tập văn bản); KHÔNG chia tập (30/09 xoá công cụ cũ có split).
   tools/               dict_gap.py, gapcheck.py (ghép nghĩa Unihan kDefinition),
                        fix_tone.py (chỉ sửa nhóm A), merge_dicts.py.
   export_final_dataset.py  Xuất dataset/ tự chứa.
@@ -239,8 +239,8 @@ REVIEW = không đủ căn cứ, giữ trong manifest kèm bbox, không phải n
 · pipeline.consensus_fusion — hợp phiếu nhiều kênh có hiệu chỉnh, gate bất đối
   xứng, Kish n_eff cho các kênh tương quan; ghi vào dataset_out/fusion/, KHÔNG
   đụng bộ gốc.
-· pipeline.publish — split page-disjoint + LOBO, datapackage.json (Frictionless),
-  croissant.json, datasheet Gebru/JOHD, export HF Parquet, CI gate.
+· pipeline.publish — chỉ còn `gold-exact` (dataset/_ALL/cong_bo/: tập ảnh ô ok + tập văn
+  bản, không chia tập). Công cụ tháng 7 (split/metadata/datasheet/export/validate) đã xoá 30/09.
 · pipeline.tools.gapcheck / dict_gap — ghép nghĩa Unihan kDefinition vào các cặp
   (chữ, âm) từ điển không có, ra THỨ TỰ ƯU TIÊN CHẤM TAY (không sinh nhãn).
 · pipeline.tools.fix_tone — chỉ sửa dấu thanh nhóm A (88 ô, âm đọc ra không phải

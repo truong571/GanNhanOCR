@@ -55,7 +55,7 @@ def default_root() -> Path:
 # =====================================================================================================================
 TIER_ORDER = ["GOLD", "SYLLABLE", "GOLD_text_only", "REVIEW", "QUARANTINE"]
 TIER_ALWAYS = ("GOLD", "SYLLABLE", "REVIEW", "QUARANTINE")          # GOLD_text_only chỉ hiện khi có ô
-TIER_VI = {"GOLD": "Mức 1 · GOLD", "SYLLABLE": "Mức 2 · SYLLABLE", "GOLD_text_only": "Mức 3 · GOLD_text_only",
+TIER_VI = {"GOLD": "GOLD", "SYLLABLE": "SYLLABLE", "GOLD_text_only": "GOLD_text_only",
            "REVIEW": "REVIEW", "QUARANTINE": "QUARANTINE"}
 ROLE_VI = {"giao_nop": "Giao nộp", "danh_gia_ihr": "Đánh giá (IHR-NomDB)", "danh_gia_borg": "Đánh giá (Borg, Vatican)"}
 STATUS_VI = {"ok": "Có dữ liệu", "ban_cu": "Bản xuất cũ theo quyển (23/09)",
@@ -765,102 +765,64 @@ def api_search(st: Store, query: dict) -> dict:
 
 
 def api_pipeline_flow(st: Store) -> list[dict]:
+    """7 bước, mỗi bước một dòng: tên · đầu vào · phương pháp · đầu ra (+ số đo ngắn đọc từ tệp, thiếu thì bỏ)."""
     root = st.root
-    de = f"{fmt_int(st.dict_entries)} mục từ" if st.dict_entries else "từ điển Quốc ngữ ↔ Hán Nôm"
+    de = f"từ điển Quốc ngữ ↔ Hán Nôm ({fmt_int(st.dict_entries)} mục)" if st.dict_entries else "từ điển Quốc ngữ ↔ Hán Nôm"
 
     def m(label, value, source=""):
         return dict(label=label, value=value, source=source)
 
-    # Bước 2: hộp legacy -> pitch trên hộp tham chiếu tự động (chỉ hiện khi có measure_out/box_ref/summary.json)
+    # Bước 2: hộp legacy -> pitch trên hộp tham chiếu tự động (chỉ khi có measure_out/box_ref/summary.json)
     box_p = root / "measure_out" / "box_ref" / "summary.json"
     box, box_src = read_json(box_p), rel_to(box_p, root)
     det_metrics = []
     for bid in ("LucVanTien1883", "KimVanKieu1884"):
         cv = dig(box, "per_book", bid, "cells_verified") or {}
         a, b = (cv.get("legacy@0.15_prepared") or {}), (cv.get("pitch_prepared") or {})
-        for key, label in (("cut_glyph_pct", "hộp cắt vào thân chữ"), ("ok_iou50_pct", "ô khớp hộp tham chiếu IoU ≥ 0,5")):
+        for key, label in (("cut_glyph_pct", "hộp cắt vào chữ"), ("ok_iou50_pct", "hộp khớp tham chiếu (IoU ≥ 0,5)")):
             if a.get(key) is not None and b.get(key) is not None:
-                det_metrics.append(m(f"{BOOK_BY_ID[bid]['title']}: {label} (legacy → pitch)",
+                det_metrics.append(m(f"{BOOK_BY_ID[bid]['title']}: {label}, legacy → pitch",
                                      f"{fmt_pct(a[key], 1, 1)} → {fmt_pct(b[key], 1, 1)}", box_src))
 
-    # Bước 5: tỉ lệ GOLD trùng chữ dị bản người (cận dưới)
+    # Bước 5: tỉ lệ GOLD trùng chữ dị bản (cận dưới)
     gate_metrics = []
     for bid in ("LucVanTien1883", "KimVanKieu1884"):
         c, src = cross_summary(root, bid)
         for ref, blk in ((c or {}).get("refs") or {}).items():
             at = (blk or {}).get("all_tiers") or {}
             if "GOLD_eq_pct" in at:
-                gate_metrics.append(m(f"{BOOK_BY_ID[bid]['title']}: GOLD = chữ dị bản {ref}",
-                                      fmt_pct(at["GOLD_eq_pct"], 1, 1) + f" (n {fmt_int(at.get('n_GOLD'))})", src))
-
-    # Bước 6: số ô theo tầng của từng bộ (đọc từ labels.csv)
-    exp_metrics = []
-    for bid in AUTO_IDS:
-        bd = st.books.get(bid)
-        if not bd or not bd.rows:
-            continue
-        exp_metrics.append(m(bd.cfg["title"], f"{fmt_int(len(bd.rows))} ô · " + " · ".join(
-            f"{t} {fmt_int(bd.tiers[t])}" for t in tier_order(bd.tiers) if bd.tiers.get(t)), bd.source or ""))
+                gate_metrics.append(m(f"{BOOK_BY_ID[bid]['title']}: GOLD trùng chữ dị bản {ref} (cận dưới)",
+                                      fmt_pct(at["GOLD_eq_pct"], 1, 1) + f" (n = {fmt_int(at.get('n_GOLD'))})", src))
 
     # Bước 7: bộ gộp dataset/_ALL
     src_all, src_all_path = sources_all(root)
     merge_metrics = []
     if src_all:
         bb = src_all.get("bat_bien") or {}
-        merge_metrics = [m("Dòng trong dataset/_ALL/labels.csv", fmt_int(src_all.get("n_dong")), src_all_path),
-                         m("Dòng evaluation_only (tập đánh giá)", fmt_int(src_all.get("eval_only_dong")), src_all_path)]
+        merge_metrics = [m("Số dòng dataset/_ALL/labels.csv", fmt_int(src_all.get("n_dong")), src_all_path),
+                         m("Trong đó evaluation_only", fmt_int(src_all.get("eval_only_dong")), src_all_path)]
         if bb:
             merge_metrics.append(m("Bất biến bước gộp", f"{sum(1 for v in bb.values() if v is True)}/{len(bb)} PASS",
                                    src_all_path))
+
+    def step(n, id_, name, input_, method, output, metrics=()):
+        return dict(step=n, id=id_, name=name, input=input_, method=method, output=output, metrics=list(metrics))
+
     return [
-        dict(step=1, id="ingest", name="Tiền xử lý ảnh & OCR trang", tag="Chuẩn hoá ảnh · OCR có bộ đệm",
-             input="Ảnh quét trang gốc và bản phiên âm Quốc ngữ (Borg: phiên âm người theo trang).",
-             model="Kéo giãn tương phản / Otsu; OCR chữ Nôm (kim) và OCR Quốc ngữ, mọi lượt gọi lưu bộ đệm theo md5 ảnh.",
-             process="Chuẩn hoá nền giấy, tách biên trang, dựng bộ nạp theo loại sách (STT, thạch bản, văn xuôi, IHR, Borg). "
-                     "Chạy lại toàn bộ chỉ dùng bộ đệm: không gọi API.",
-             output="prepared/<Bộ>/pages, detected/*_ocr_cache.json, transcriptions/",
-             control="Chốt chặn chạy lại: mọi yêu cầu API bị chặn, bộ đệm gốc phải trùng sha256 trước/sau.",
-             metrics=[]),
-        dict(step=2, id="detect", name="Phát hiện & chọn hộp ký tự", tag="CenterNet · bộ giải mã hộp theo bộ",
-             input="Ảnh cột chữ dọc tách từ trang + chuỗi âm Quốc ngữ của cột.",
-             model="CenterNet (ResNet-34) tìm tâm chữ; bộ giải mã hộp (box_decoder) được chọn riêng cho từng bộ.",
-             process="Dự đoán tâm chữ qua bản đồ nhiệt, rồi ghép mỗi âm tiết với đúng một hộp ảnh của cột. "
-                     "Bộ giải mã hộp đang dùng của từng bộ ghi ở danh mục tài liệu (tab Tổng quan).",
-             output="Hộp bao [xmin, ymin, xmax, ymax] cho từng chữ trong cột.",
-             control="Hộp thạch bản được so với hộp tham chiếu tự động (box_ref).", metrics=det_metrics),
-        dict(step=3, id="align", name="Gióng hàng song ngữ", tag="Banded Dynamic Programming",
-             input="Chuỗi hộp chữ và chuỗi âm Quốc ngữ đối ứng.",
-             model=f"Quy hoạch động dải hẹp (Banded DP) + từ điển Quốc ngữ ↔ Hán Nôm ({de}).",
-             process="Tìm đường ghép tối ưu giữa hộp ảnh và âm tiết; ràng buộc nhịp thơ lục bát (6/8) với thơ; "
-                     "chặn trôi lệch xuyên cột.",
-             output="Nhãn sơ bộ cho từng hộp + mã luật ghép.",
-             control="Gán nhãn hoàn toàn theo luật, không có quyết định của người.", metrics=[]),
-        dict(step=4, id="remediate", name="Kiểm kê & hiệu chỉnh lỗi", tag="Xếp tầng nhãn",
-             input="Bảng nhãn sơ bộ.",
-             model="Kiểm kê trùng ảnh/chữ + bảng sửa nhầm lẫn có hệ thống (confusion_fix).",
-             process="Phát hiện chữ nhầm phổ biến (đồng âm, tự dạng gần), xếp tầng GOLD / SYLLABLE / REVIEW / QUARANTINE.",
-             output="Bảng nhãn đã chuẩn hoá (labels_remediated / labels_final).",
-             control="Lưu vết sha256 sau mỗi bước biến đổi (CHECKSUMS.txt).", metrics=[]),
-        dict(step=5, id="gates", name="Cổng cơ chế & đối soát dị bản", tag="Cổng (a') · dị bản 1871/1916",
-             input="Ô nghi vấn: lệch số chữ, lệch nhịp, hộp tràn biên.",
-             model="Cổng cơ chế + so chéo với bản khắc độc lập do người số hoá.",
-             process="Ô qua cổng giữ GOLD; ô không chắc ảnh nhưng chắc chữ -> GOLD_text_only; đo tỉ lệ khớp dị bản sau cổng.",
-             output="labels_gated.csv", control="Tỉ lệ GOLD trùng chữ dị bản là CẬN DƯỚI (dị bản khác chữ hợp lệ bị tính sai).",
-             metrics=gate_metrics),
-        dict(step=6, id="export", name="Đóng gói bộ theo sách", tag="dataset/<Bộ>/ · 12 cột",
-             input="Bảng nhãn đã qua cổng và ảnh crop.",
-             model="export_final_dataset + tài liệu tự sinh (README, DATASHEET, xlsx).",
-             process="Xuất crop theo tầng (gold/, syllable/), bảng 12 cột labels.csv; bộ IHR/Borg được đóng dấu "
-                     "evaluation_only (chỉ dùng để đánh giá).",
-             output="dataset/<Bộ>/labels.csv, gold/, syllable/, README.md, DATASHEET.md",
-             control="Số ô theo tầng của từng bộ đọc trực tiếp từ labels.csv.", metrics=exp_metrics),
-        dict(step=7, id="merge", name="Gộp bộ dataset/_ALL", tag="cell_uid · evaluation_only",
-             input="10 bộ dataset/<Bộ>/ (3 quyển STT trong một bộ).",
-             model="merge_datasets: khoá chính cell_uid = (bộ, sách, trang, cột, nom_idx, syl_idx).",
-             process="Gộp mọi bộ, gắn book_set / evaluation_only, kiểm bất biến (khoá duy nhất, ảnh tồn tại, "
-                     "cờ đánh giá đúng bộ).",
-             output="dataset/_ALL/labels.csv, crops/, SOURCES.json, CHECKSUMS.txt",
-             control="Bất biến bước gộp ghi trong SOURCES.json.", metrics=merge_metrics),
+        step(1, "ingest", "Tiền xử lý, OCR", "Ảnh quét; bản Quốc ngữ",
+             "Chuẩn hoá ảnh; OCR chữ Nôm và Quốc ngữ (lưu bộ đệm)", "Ảnh trang, kết quả OCR"),
+        step(2, "detect", "Phát hiện hộp chữ", "Ảnh cột chữ",
+             "CenterNet (ResNet-34) + bộ giải mã hộp", "Hộp bao từng chữ", det_metrics),
+        step(3, "align", "Gióng hàng", "Hộp chữ; chuỗi âm Quốc ngữ",
+             f"Quy hoạch động dải hẹp; {de}", "Nhãn sơ bộ, mã luật"),
+        step(4, "remediate", "Kiểm kê, xếp tầng", "Nhãn sơ bộ",
+             "Kiểm trùng; sửa nhầm lẫn có hệ thống", "Tầng nhãn của từng ô"),
+        step(5, "gates", "Cổng kiểm tra", "Ô nghi vấn",
+             "Cổng cơ chế; so với dị bản độc lập", "labels_gated.csv", gate_metrics),
+        step(6, "export", "Đóng gói theo bộ", "Nhãn; ảnh crop",
+             "Xuất bảng nhãn và crop theo tầng", "dataset/<Bộ>/"),
+        step(7, "merge", "Gộp các bộ", "10 bộ",
+             "Gộp theo khoá cell_uid; kiểm bất biến", "dataset/_ALL/", merge_metrics),
     ]
 
 

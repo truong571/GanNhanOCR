@@ -1,440 +1,182 @@
 <!DOCTYPE html>
-<html lang="vi" data-theme="light">
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GanNhanOCR — Hệ thống hỗ trợ gán nhãn tự động văn bản Hán Nôm cổ</title>
-  <meta name="description" content="Công cụ trực quan hoá quy trình xử lý và tầng nhãn của bộ dữ liệu thực nghiệm (10 bộ) phục vụ bảo vệ luận văn Thạc sĩ. Mọi con số đọc trực tiếp từ dữ liệu của dự án.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 32 32%22%3E%3Crect width=%2232%22 height=%2232%22 rx=%225%22 fill=%22%23991b1b%22/%3E%3Ctext x=%2216%22 y=%2223%22 font-size=%2220%22 text-anchor=%22middle%22 fill=%22white%22%3E%E5%96%83%3C/text%3E%3C/svg%3E">
+  <title>GanNhanOCR — bộ dữ liệu ký tự Hán Nôm</title>
+  <meta name="description" content="Bộ dữ liệu ký tự Hán Nôm gán nhãn tự động theo tầng (luận văn Thạc sĩ). Số liệu đọc trực tiếp từ dữ liệu của dự án.">
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <!-- Thanh điều hướng và tiêu đề đề tài -->
-  <header class="navbar">
-    <div class="nav-container">
-      <div class="brand">
-        <div class="brand-seal" title="Hán Nôm">喃</div>
-        <div class="brand-text">
-          <h1 class="brand-title">Hệ thống hỗ trợ gán nhãn tự động văn bản Hán Nôm cổ</h1>
-          <p class="brand-subtitle">Trực quan hoá quy trình xử lý và bộ dữ liệu thực nghiệm (<span id="hdrTotalChars">—</span> ký tự · <span id="hdrBooksCount">—</span> bộ)</p>
-        </div>
-      </div>
-      <div class="nav-actions">
-        <button class="btn-sm hidden" id="reloadDataBtn" title="Nạp lại dữ liệu sau khi pipeline chạy xong">Nạp lại dữ liệu</button>
-        <div class="connection-status" id="connectionBadge">
-          <span class="status-dot"></span>
-          <span class="status-text">Đang kết nối...</span>
-        </div>
-        <button class="theme-toggle" id="themeToggleBtn" title="Chuyển chế độ Giao diện Sáng / Tối" aria-label="Toggle theme">
-          <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
-          <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-        </button>
-      </div>
+  <header class="site-header">
+    <div class="wrap">
+      <h1>Gán nhãn tự động văn bản Hán Nôm cổ</h1>
+      <p class="subtitle">Bộ dữ liệu ký tự theo tầng nhãn · luận văn Thạc sĩ · <span id="hdrSummary">—</span></p>
+      <nav class="site-nav" aria-label="Mục">
+        <a href="#gioi-thieu" data-tab="overview">Giới thiệu</a>
+        <a href="#quy-trinh" data-tab="flow">Quy trình</a>
+        <a href="#ban-quet" data-tab="inspector">Bản quét</a>
+        <a href="#tra-cuu" data-tab="gallery">Tra cứu</a>
+        <a href="#so-lieu" data-tab="benchmarks">Số liệu</a>
+      </nav>
     </div>
   </header>
 
-  <!-- Khối tóm tắt số liệu thực nghiệm (điền từ /api/stats) -->
-  <section class="summary-section">
-    <div class="summary-container">
-      <div class="summary-header">
-        <span class="summary-label">TỔNG HỢP TẦNG NHÃN</span>
-        <span class="summary-tag"><span id="summaryTag">Ngữ liệu Hán Nôm · Xử lý tự động theo quy tắc</span> <span class="summary-inv hidden" id="summaryInvariants"></span></span>
+  <main class="wrap">
+
+    <!-- 1. Giới thiệu -->
+    <section class="tab-pane" id="tab-overview">
+      <h2>Giới thiệu</h2>
+      <p>Mỗi mẫu là ảnh cắt một chữ Hán Nôm kèm chữ và âm Quốc ngữ, gán nhãn tự động theo luật trên <span id="ovBooksCount">—</span> bộ sách.
+        Nhãn người (IHR-NomDB, Borg) chỉ dùng để đo, không tham gia gán nhãn.</p>
+
+      <div class="table-scroll">
+      <table class="bt" id="bookTable">
+        <caption>Bảng 1. Các bộ dữ liệu</caption>
+        <thead><tr><th>Bộ</th><th class="hide-narrow">Loại bản</th><th class="num">Số ô</th><th class="num">GOLD</th><th class="num">REVIEW</th></tr></thead>
+        <tbody id="bookTableBody"><tr><td colspan="5" class="dim">Đang tải…</td></tr></tbody>
+      </table>
       </div>
-      <div class="summary-grid">
-        <div class="summary-item">
-          <div class="summary-num" id="kpiTotalChars">—</div>
-          <div class="summary-title">Ký tự đã gán nhãn</div>
-          <div class="summary-desc" id="kpiTotalDesc">Tổng số vị trí ký tự được định vị và trích xuất</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-num highlight-gold" id="kpiGold">—</div>
-          <div class="summary-title">Mức 1 · GOLD</div>
-          <div class="summary-desc" id="kpiGoldDesc">Khớp cả tự dạng chữ Nôm và âm đọc</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-num highlight-syl" id="kpiSyl">—</div>
-          <div class="summary-title">Mức 2 · SYLLABLE</div>
-          <div class="summary-desc" id="kpiSylDesc">Định vị chắc chắn âm tiết đối ứng</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-num highlight-review" id="kpiReview">—</div>
-          <div class="summary-title">REVIEW</div>
-          <div class="summary-desc" id="kpiReviewDesc">Ô nghi vấn, cần xem lại</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-num highlight-quarantine" id="kpiQuarantine">—</div>
-          <div class="summary-title">QUARANTINE</div>
-          <div class="summary-desc" id="kpiQuarantineDesc">Ô cách ly</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-num" id="kpiBooksCount">—</div>
-          <div class="summary-title">Bộ thực nghiệm</div>
-          <div class="summary-desc" id="kpiBooksDesc">Giao nộp + tập đánh giá</div>
-        </div>
-      </div>
-    </div>
-  </section>
 
-  <!-- Thanh chuyển mục (Tabs) -->
-  <nav class="tabs-nav">
-    <div class="tabs-container">
-      <button class="tab-btn active" data-tab="overview">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
-        <span>1. Tổng quan đề tài</span>
-      </button>
-      <button class="tab-btn" data-tab="flow">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
-        <span>2. Quy trình xử lý (Pipeline)</span>
-      </button>
-      <button class="tab-btn" data-tab="inspector">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-        <span>3. Trực quan hóa bản quét</span>
-      </button>
-      <button class="tab-btn" data-tab="gallery">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
-        <span>4. Tra cứu mẫu ký tự</span>
-      </button>
-      <button class="tab-btn" data-tab="benchmarks">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
-        <span>5. Kết quả</span>
-      </button>
-    </div>
-  </nav>
-
-  <!-- Nội dung các Tab -->
-  <main class="main-content">
-
-    <!-- TAB 1: TỔNG QUAN ĐỀ TÀI -->
-    <section class="tab-pane active" id="tab-overview">
-      <div class="panel-grid">
-        <div class="panel-card col-span-8">
-          <div class="card-header">
-            <h2>Bối cảnh nghiên cứu và mục tiêu đề tài</h2>
-          </div>
-          <div class="card-body">
-            <p class="lead-text">
-              <strong>Mục tiêu:</strong> Xây dựng quy trình tự động hóa việc định vị, bóc tách và gán nhãn ký tự quang học (OCR) cho văn bản chữ Hán Nôm cổ từ các bản chép tay, mộc bản và thạch bản của Việt Nam (thế kỷ XVII – XX), phục vụ công tác số hóa và bảo tồn di sản văn hóa dân tộc.
-            </p>
-
-            <div class="academic-columns mt-16">
-              <div class="academic-col">
-                <h4 class="col-heading">Khó khăn trong thực tế</h4>
-                <ul class="academic-bullet-list">
-                  <li>Khối lượng tài liệu Hán Nôm cần số hóa rất lớn nhưng văn bản giấy dó đang đối mặt với nguy cơ xuống cấp vật lý theo thời gian.</li>
-                  <li>Bản cổ có chất lượng không đồng đều: nền giấy ố vàng, mực loang, nét khắc mòn; chữ viết tay không đều nét và không đều khoảng cách.</li>
-                  <li>Việc gán nhãn thủ công đòi hỏi nhân lực có chuyên môn sâu về chữ Hán Nôm, tốn nhiều thời gian và dễ phát sinh sai sót chủ quan.</li>
-                </ul>
-              </div>
-              <div class="academic-col">
-                <h4 class="col-heading">Phương pháp tiếp cận</h4>
-                <ul class="academic-bullet-list">
-                  <li>Ứng dụng mô hình học sâu CenterNet (Backbone ResNet-34) để dự đoán tâm và hồi quy kích thước hộp bao ký tự dọc theo từng cột.</li>
-                  <li>Giải thuật giải mã nhịp ký tự (Pitch Decoding) để phân tách chính xác các hộp dính nhau và giảm thiểu hiện tượng cắt phạm vào nét chữ.</li>
-                  <li>Gióng hàng song ngữ bằng quy hoạch động dải hẹp (Banded DP) kết hợp luật thơ 6/8 và từ điển Quốc ngữ ↔ Hán Nôm (<span id="ovDictEntries">—</span> mục từ).</li>
-                  <li>Xếp mỗi ô vào một <strong>tầng nhãn</strong> (GOLD / SYLLABLE / REVIEW / QUARANTINE) theo mức chắc chắn của chữ và âm.</li>
-                </ul>
-              </div>
-            </div>
-
-            <div class="academic-note mt-16">
-              <p>
-                <strong>Nguyên tắc thực nghiệm:</strong> Toàn bộ vị trí ký tự trên <span id="ovBooksCount">—</span> bộ tài liệu được xử lý hoàn toàn theo quy tắc thuật toán, không có quyết định thủ công (<code>quyet_dinh_nguoi = 0</code>). Nhãn người (IHR-NomDB, Borg) chỉ dùng để <strong>đo</strong>, không tham gia quyết định.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div class="panel-card col-span-4">
-          <div class="card-header">
-            <h2>Danh mục tài liệu thực nghiệm</h2>
-            <span class="badge badge-neutral" id="overviewBooksBadge">—</span>
-          </div>
-          <div class="card-body book-distribution-list" id="overviewBooksList">
-            <div class="skeleton-loader">Đang tải danh mục tài liệu...</div>
-          </div>
-        </div>
-
-        <!-- Quy ước phân loại mức độ tin cậy của nhãn -->
-        <div class="panel-card col-span-12">
-          <div class="card-header">
-            <h2>Quy ước phân loại mức độ tin cậy của nhãn</h2>
-            <span class="badge badge-neutral" id="tierCardsBadge">—</span>
-          </div>
-          <div class="card-body">
-            <div class="tier-cards-grid">
-              <div class="tier-card tier-gold">
-                <div class="tier-header">
-                  <span class="tier-badge badge-gold">Mức 1 · GOLD</span>
-                  <span class="tier-count" id="tierCountGold">—</span>
-                </div>
-                <h4>Nhãn xác thực đầy đủ (Chữ Nôm & Âm đọc)</h4>
-                <p>Khớp cả tự dạng chữ Nôm và âm Quốc ngữ qua từ điển chuẩn, hộp bao ký tự được định vị.</p>
-              </div>
-
-              <div class="tier-card tier-syllable">
-                <div class="tier-header">
-                  <span class="tier-badge badge-syl">Mức 2 · SYLLABLE</span>
-                  <span class="tier-count" id="tierCountSyl">—</span>
-                </div>
-                <h4>Nhãn xác định vị trí âm tiết (Anchor Syllable)</h4>
-                <p>Xác định chắc chắn vị trí âm Quốc ngữ theo chuỗi nhịp câu, nhưng chữ Nôm có tự dạng biến thể hoặc chưa có mã Unicode độc nhất.</p>
-              </div>
-
-              <div class="tier-card tier-textonly" id="tierCardTxt">
-                <div class="tier-header">
-                  <span class="tier-badge badge-txt">Mức 3 · GOLD_text_only</span>
-                  <span class="tier-count" id="tierCountTxt">—</span>
-                </div>
-                <h4>Nhãn đối soát văn bản qua dị bản</h4>
-                <p>Nhãn văn bản được đối soát qua bản in độc lập nhưng ảnh chưa chắc; không trích xuất ảnh crop.</p>
-              </div>
-
-              <div class="tier-card tier-review">
-                <div class="tier-header">
-                  <span class="tier-badge badge-review">REVIEW</span>
-                  <span class="tier-count" id="tierCountReview">—</span>
-                </div>
-                <h4>Nhãn nghi vấn</h4>
-                <p>Chữ hoặc âm chưa đủ chắc chắn (lệch số chữ, nhầm lẫn hệ thống); cần xem lại trước khi dùng.</p>
-              </div>
-
-              <div class="tier-card tier-quarantine">
-                <div class="tier-header">
-                  <span class="tier-badge badge-quarantine">QUARANTINE</span>
-                  <span class="tier-count" id="tierCountQuarantine">—</span>
-                </div>
-                <h4>Nhãn cách ly</h4>
-                <p>Ô bị phát hiện sai hoặc trùng lặp khi kiểm kê; tách riêng, không dùng.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <h3>Tầng nhãn</h3>
+      <dl class="tiers">
+        <dt><span class="sw t-GOLD"></span>GOLD</dt>
+        <dd>Chữ Nôm và âm đều khớp; có ảnh crop.</dd>
+        <dt><span class="sw t-SYLLABLE"></span>SYLLABLE</dt>
+        <dd>Âm chắc chắn, chữ Nôm chưa xác nhận; có ảnh crop.</dd>
+        <dt id="dtTextOnly"><span class="sw t-GOLD_text_only"></span>GOLD_text_only</dt>
+        <dd id="ddTextOnly">Chữ và âm khớp dị bản độc lập, ảnh chưa chắc; không có crop.</dd>
+        <dt><span class="sw t-REVIEW"></span>REVIEW</dt>
+        <dd>Chữ hoặc âm chưa chắc; không đóng gói.</dd>
+        <dt><span class="sw t-QUARANTINE"></span>QUARANTINE</dt>
+        <dd>Sai hoặc trùng khi kiểm kê; loại khỏi bộ dữ liệu.</dd>
+      </dl>
     </section>
 
-    <!-- TAB 2: QUY TRÌNH XỬ LÝ (PIPELINE FLOW) -->
+    <!-- 2. Quy trình -->
     <section class="tab-pane" id="tab-flow">
-      <div class="flow-wrapper">
-        <div class="flow-header">
-          <h2>Quy trình <span id="flowStepCount">—</span> giai đoạn gán nhãn tự động</h2>
-          <p>Mỗi giai đoạn chạy tuần tự với các ràng buộc kiểm tra độc lập; chỉ số kiểm soát đọc trực tiếp từ tệp của dự án.</p>
-        </div>
-
-        <div class="stepper-nav" id="stepperNav"></div>
-        <div class="step-detail-card" id="stepDetailContainer"></div>
-
-        <div class="flow-architecture mt-24">
-          <div class="card-header">
-            <h3>Sơ đồ tuần tự các bước xử lý dữ liệu</h3>
-          </div>
-          <div class="pipeline-visual-diagram">
-            <div class="diagram-step">
-              <div class="dia-step-num">01</div>
-              <div class="dia-title">Ảnh quét tài liệu</div>
-              <div class="dia-desc">Chép tay · mộc bản · thạch bản</div>
-            </div>
-            <div class="dia-arrow">&rarr;</div>
-            <div class="diagram-step">
-              <div class="dia-step-num">02</div>
-              <div class="dia-title">Tiền xử lý & OCR</div>
-              <div class="dia-desc">Khử nhiễu, bộ đệm OCR</div>
-            </div>
-            <div class="dia-arrow">&rarr;</div>
-            <div class="diagram-step highlight">
-              <div class="dia-step-num">03</div>
-              <div class="dia-title">CenterNet r34</div>
-              <div class="dia-desc">Định vị & chọn hộp</div>
-            </div>
-            <div class="dia-arrow">&rarr;</div>
-            <div class="diagram-step highlight">
-              <div class="dia-step-num">04</div>
-              <div class="dia-title">Banded-DP</div>
-              <div class="dia-desc">Gióng hàng theo luật thơ</div>
-            </div>
-            <div class="dia-arrow">&rarr;</div>
-            <div class="diagram-step">
-              <div class="dia-step-num">05</div>
-              <div class="dia-title">Kiểm kê & Hiệu chỉnh</div>
-              <div class="dia-desc">Sửa lỗi nhầm hệ thống</div>
-            </div>
-            <div class="dia-arrow">&rarr;</div>
-            <div class="diagram-step highlight">
-              <div class="dia-step-num">06</div>
-              <div class="dia-title">Kiểm soát biên</div>
-              <div class="dia-desc">Đối chiếu dị bản độc lập</div>
-            </div>
-            <div class="dia-arrow">&rarr;</div>
-            <div class="diagram-step">
-              <div class="dia-step-num">07</div>
-              <div class="dia-title">Đóng gói & Gộp</div>
-              <div class="dia-desc">dataset/&lt;Bộ&gt; → dataset/_ALL</div>
-            </div>
-            <div class="dia-arrow">&rarr;</div>
-            <div class="diagram-step success">
-              <div class="dia-step-num">08</div>
-              <div class="dia-title">Tập ngữ liệu chuẩn</div>
-              <div class="dia-desc">labels.csv theo tầng nhãn</div>
-            </div>
-          </div>
+      <h2>Quy trình</h2>
+      <p>Các bước chạy tuần tự, hoàn toàn tự động; không có quyết định của người.</p>
+      <div class="table-scroll">
+        <table class="bt">
+          <caption>Bảng 2. Các bước xử lý</caption>
+          <thead><tr><th class="num">#</th><th>Bước</th><th>Đầu vào</th><th>Phương pháp</th><th>Đầu ra</th></tr></thead>
+          <tbody id="flowTableBody"><tr><td colspan="5" class="dim">Đang tải…</td></tr></tbody>
+        </table>
+      </div>
+      <div id="flowMetricsBlock" class="hidden">
+        <div class="table-scroll">
+          <table class="bt">
+            <caption>Bảng 3. Số đo kèm theo (đọc từ tệp đo)</caption>
+            <thead><tr><th>Bước</th><th>Chỉ số</th><th class="num">Giá trị</th></tr></thead>
+            <tbody id="flowMetricsBody"></tbody>
+          </table>
         </div>
       </div>
     </section>
 
-    <!-- TAB 3: TRỰC QUAN HÓA BẢN QUÉT (MANUSCRIPT INSPECTOR) -->
+    <!-- 3. Bản quét -->
     <section class="tab-pane" id="tab-inspector">
-      <div class="inspector-layout">
-        <div class="inspector-controls">
-          <div class="control-group">
-            <label for="inspectorBookSelect">Chọn tài liệu:</label>
-            <select id="inspectorBookSelect" class="form-select">
-              <option value="LucVanTien1883">Lục Vân Tiên (1883)</option>
-            </select>
-            <div class="book-status-line" id="inspectorBookStatus"></div>
-          </div>
+      <h2>Bản quét</h2>
+      <p>Chọn bộ và trang; bấm một hộp để xem chi tiết ô.</p>
 
-          <div class="control-group">
-            <label for="inspectorPageSelect">Chọn trang bản quét:</label>
-            <div class="page-nav-row">
-              <button class="btn-sm" id="btnPrevPage" title="Trang trước" aria-label="Trang trước">&lsaquo;</button>
-              <select id="inspectorPageSelect" class="form-select">
-                <option value="page_0002">Trang 0002</option>
-              </select>
-              <button class="btn-sm" id="btnNextPage" title="Trang sau" aria-label="Trang sau">&rsaquo;</button>
-            </div>
-          </div>
+      <div class="controls">
+        <label>Bộ <select id="inspectorBookSelect"></select></label>
+        <span class="ctl-group">
+          <label for="inspectorPageSelect">Trang</label>
+          <button type="button" id="btnPrevPage" aria-label="Trang trước">‹</button>
+          <select id="inspectorPageSelect"></select>
+          <button type="button" id="btnNextPage" aria-label="Trang sau">›</button>
+        </span>
+        <span class="ctl-group">
+          Cỡ
+          <button type="button" id="btnZoomOut" aria-label="Thu nhỏ">−</button>
+          <button type="button" id="btnZoomReset">100%</button>
+          <button type="button" id="btnZoomIn" aria-label="Phóng to">+</button>
+        </span>
+      </div>
+      <p class="legend" id="legendFilters"></p>
+      <p class="note" id="inspectorBookStatus"></p>
 
-          <div class="control-group">
-            <label>Tầng nhãn — chú giải &amp; bộ lọc (bấm để ẩn/hiện):</label>
-            <div class="checkbox-group" id="legendFilters"></div>
-          </div>
-
-          <div class="control-group page-summary-box" id="pageSummaryBox">
-            <div class="box-title">Thống kê trang hiện tại</div>
-            <div class="stat-mini"><span class="lbl">Tổng số ký tự:</span> <strong id="pgTotalChars">0</strong></div>
-            <div class="stat-mini"><span class="lbl">Mức 1 (GOLD):</span> <strong id="pgGoldChars" class="text-gold">0</strong></div>
-            <div class="stat-mini"><span class="lbl">Mức 2 (SYLLABLE):</span> <strong id="pgSylChars" class="text-syl">0</strong></div>
-            <div class="page-status-msg hidden" id="pageStatusMsg"></div>
-          </div>
-
-          <!-- Thông tin ký tự đang được click / hover -->
-          <div class="character-preview-card" id="charPreviewCard">
-            <div class="box-title">Chi tiết ký tự được chọn</div>
-            <div class="preview-content-empty" id="previewEmpty">
-              Nhấp hoặc di chuột vào một ô ký tự bất kỳ trên bản quét để xem thông tin chi tiết.
-            </div>
-            <div class="preview-content-active hidden" id="previewActive">
-              <div class="preview-top">
-                <div class="preview-crop-frame"><img id="previewCropImg" src="" alt="Crop" class="preview-crop"></div>
-                <div class="preview-glyph-info">
-                  <div class="preview-nom-char" id="previewNomChar">字</div>
-                  <div class="preview-syl-text" id="previewSylText">âm đọc</div>
-                  <div class="preview-tier-badge" id="previewTierBadge">GOLD</div>
-                </div>
-              </div>
-              <div class="preview-details-list">
-                <div class="detail-row"><span class="dk">Mã Unicode:</span> <code id="previewUnicode">U+0000</code></div>
-                <div class="detail-row"><span class="dk">Nhận dạng sơ bộ:</span> <span id="previewOcrChar">-</span></div>
-                <div class="detail-row"><span class="dk">Vị trí cột:</span> <span id="previewColOrder">Cột 1</span></div>
-                <div class="detail-row"><span class="dk">Luật gán:</span> <span id="previewRule" class="code-sm">—</span></div>
-                <div class="detail-row"><span class="dk">Tọa độ hộp:</span> <span id="previewBbox" class="code-sm">[0,0,0,0]</span></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Khung xem ảnh scan với Bounding Box phủ trực tiếp -->
-        <div class="inspector-viewer">
-          <div class="viewer-toolbar">
-            <span class="viewer-title" id="viewerTitle">Bản quét tài liệu gốc và kết quả định vị ký tự</span>
-            <div class="viewer-actions">
-              <button class="btn-sm" id="btnZoomIn" title="Phóng to">+</button>
-              <button class="btn-sm" id="btnZoomOut" title="Thu nhỏ">-</button>
-              <button class="btn-sm" id="btnZoomReset" title="Kích thước ban đầu">100%</button>
-            </div>
-          </div>
-
+      <div class="viewer">
+        <figure class="scan-figure">
           <div class="viewer-stage" id="viewerStage">
             <div class="scan-container" id="scanContainer">
-              <img id="pageScanImage" src="" alt="Bản quét trang" class="scan-img">
+              <img id="pageScanImage" alt="Ảnh trang">
               <div id="bboxOverlay" class="bbox-overlay"></div>
             </div>
           </div>
-        </div>
+          <figcaption id="scanCaption">Hình 1.</figcaption>
+          <p class="note hidden" id="pageStatusMsg"></p>
+        </figure>
+
+        <aside class="detail">
+          <table class="bt detail-table">
+            <caption>Bảng 4. Ô được chọn</caption>
+            <tbody id="detailBody"><tr><td class="dim">Bấm một hộp trên ảnh.</td></tr></tbody>
+          </table>
+        </aside>
       </div>
     </section>
 
-    <!-- TAB 4: TRA CỨU MẪU KÝ TỰ (GALLERY & SEARCH) -->
+    <!-- 4. Tra cứu -->
     <section class="tab-pane" id="tab-gallery">
-      <div class="gallery-wrapper">
-        <div class="gallery-search-bar">
-          <div class="search-input-wrap">
-            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" id="gallerySearchInput" class="search-input" placeholder="Tìm theo âm Quốc ngữ (ví dụ: troi, kieu, nguoi, chua) hoặc chữ Nôm...">
-          </div>
-          <div class="gallery-filters">
-            <select id="galleryBookFilter" class="form-select form-select-sm" aria-label="Lọc theo tài liệu">
-              <option value="all">Tất cả 10 bộ</option>
-            </select>
-            <select id="galleryTierFilter" class="form-select form-select-sm" aria-label="Lọc theo tầng nhãn">
-              <option value="all">Tất cả tầng nhãn</option>
-              <option value="GOLD">Mức 1 · GOLD</option>
-              <option value="SYLLABLE">Mức 2 · SYLLABLE</option>
-              <option value="GOLD_text_only">Mức 3 · GOLD_text_only</option>
-              <option value="REVIEW">REVIEW</option>
-              <option value="QUARANTINE">QUARANTINE</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="gallery-status-bar">
-          <span id="galleryCountText">Hiển thị các mẫu ký tự từ bộ ngữ liệu thực nghiệm...</span>
-        </div>
-
-        <div class="character-cards-grid" id="galleryCardsGrid"></div>
+      <h2>Tra cứu</h2>
+      <p>Tìm theo âm (có hoặc không dấu), chữ Nôm hoặc mã Unicode. Bấm một dòng để mở trang chứa ô đó.</p>
+      <form class="controls" id="searchForm" onsubmit="return false;">
+        <label>Từ khoá <input type="search" id="gallerySearchInput" placeholder="vd. nguoi, 𠊛, U+2029B"></label>
+        <label>Bộ <select id="galleryBookFilter"><option value="all">Tất cả</option></select></label>
+        <label>Tầng
+          <select id="galleryTierFilter">
+            <option value="all">Tất cả</option>
+            <option value="GOLD">GOLD</option>
+            <option value="SYLLABLE">SYLLABLE</option>
+            <option value="GOLD_text_only">GOLD_text_only</option>
+            <option value="REVIEW">REVIEW</option>
+            <option value="QUARANTINE">QUARANTINE</option>
+          </select>
+        </label>
+      </form>
+      <p class="note" id="galleryCountText"></p>
+      <div class="table-scroll">
+        <table class="bt results">
+          <caption>Bảng 5. Kết quả tra cứu</caption>
+          <thead><tr><th>Ảnh</th><th>Chữ</th><th>Âm</th><th>Tầng</th><th class="hide-narrow">Unicode</th><th>Bộ</th><th>Trang · cột</th></tr></thead>
+          <tbody id="galleryBody"></tbody>
+        </table>
       </div>
     </section>
 
-    <!-- TAB 5: KẾT QUẢ (TẦNG NHÃN THEO BỘ) -->
+    <!-- 5. Số liệu -->
     <section class="tab-pane" id="tab-benchmarks">
-      <div class="benchmarks-wrapper">
-        <div class="benchmarks-header">
-          <h2>Kết quả gán nhãn theo tầng</h2>
-          <p>Số ô của từng tầng nhãn trong mỗi bộ, đếm trực tiếp trên <code>dataset/&lt;Bộ&gt;/labels.csv</code>.</p>
-        </div>
+      <h2>Số liệu</h2>
+      <p>Số ô theo tầng nhãn của từng bộ, đếm trực tiếp trên bảng nhãn.</p>
+      <div class="table-scroll">
+        <table class="bt">
+          <caption>Bảng 6. Số ô theo tầng nhãn</caption>
+          <thead id="tierTableHead"></thead>
+          <tbody id="tierTableBody"><tr><td class="dim">Đang tải…</td></tr></tbody>
+        </table>
+      </div>
+      <p class="note" id="tierTableNote"></p>
+      <p class="note hidden" id="invariantsLine"></p>
 
-        <div class="panel-card">
-          <div class="card-header">
-            <h3>Tầng nhãn theo bộ</h3>
-          </div>
-          <div class="table-wrap">
-            <table class="benchmark-table">
-              <thead id="tierTableHead"></thead>
-              <tbody id="tierTableBody"><tr><td class="td-dim">Đang tải...</td></tr></tbody>
-            </table>
-          </div>
-          <p class="table-note" id="tierTableNote"></p>
-        </div>
-
-        <div class="panel-card hidden" id="datasetTreeCard">
-          <div class="card-header">
-            <h3>Quy cách tổ chức bộ dữ liệu tự chứa</h3>
-          </div>
-          <div class="card-body">
-            <p>Mỗi thư mục trong <code>dataset/</code> là một bộ độc lập; <code>dataset/_ALL</code> gộp mọi bộ với khoá <code>cell_uid</code> và cờ <code>evaluation_only</code>:</p>
-            <div class="code-block-display mt-8"><code id="datasetTree">dataset/ …</code></div>
-          </div>
-        </div>
+      <div id="datasetTreeCard" class="hidden">
+        <h3>Thư mục <code>dataset/</code></h3>
+        <p>Mỗi thư mục con là một bộ; <code>_ALL/</code> gộp tất cả (khoá <code>cell_uid</code>, cờ <code>evaluation_only</code>).</p>
+        <pre id="datasetTree"></pre>
       </div>
     </section>
 
   </main>
 
-  <footer class="footer">
-    <div>GanNhanOCR — minh hoạ luận văn Thạc sĩ · dữ liệu nạp lúc <span id="footerLoadedAt">—</span></div>
-    <div class="footer-sub" id="footerRoot"></div>
+  <footer class="site-footer">
+    <div class="wrap">
+      <span id="connectionText">Đang kết nối…</span>
+      <button type="button" class="linkish hidden" id="reloadDataBtn">Nạp lại dữ liệu</button>
+      <span class="dim" id="footerRoot"></span>
+    </div>
   </footer>
 
   <script src="app.js"></script>

@@ -50,7 +50,7 @@ code, pre { font-family: var(--mono); font-size: 0.875em; }
 
 /* ---------- Đầu trang ---------- */
 .site-header { border-bottom: 1px solid var(--rule-light); padding-top: 28px; }
-.subtitle { color: var(--muted); margin: 0 0 16px; }
+.site-header h1 { margin-bottom: 16px; }
 .site-nav { display: flex; flex-wrap: wrap; gap: 4px 24px; }
 .site-nav a {
   color: var(--text);
@@ -86,7 +86,6 @@ table.bt th:first-child, table.bt td:first-child { padding-left: 0; }
 table.bt th:last-child, table.bt td:last-child { padding-right: 0; }
 table.bt thead th { font-weight: 600; border-bottom: 1px solid var(--rule); white-space: nowrap; }
 table.bt .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-table.bt tr.group td { padding-top: 12px; font-style: italic; color: var(--muted); }
 table.bt tr.total td { border-top: 1px solid var(--rule); font-weight: 600; }
 table.bt td.sub { color: var(--muted); font-size: 0.8125rem; }
 .table-scroll { overflow-x: auto; }

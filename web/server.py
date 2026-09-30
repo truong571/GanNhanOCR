@@ -808,21 +808,22 @@ def api_pipeline_flow(st: Store) -> list[dict]:
     def step(n, id_, name, input_, method, output, metrics=()):
         return dict(step=n, id=id_, name=name, input=input_, method=method, output=output, metrics=list(metrics))
 
+    # Mỗi bước một dòng, cùng kiểu câu; không kèm số đo (số liệu chính ở mục Số liệu).
     return [
-        step(1, "ingest", "Tiền xử lý, OCR", "Ảnh quét; bản Quốc ngữ",
-             "Chuẩn hoá ảnh; OCR chữ Nôm và Quốc ngữ (lưu bộ đệm)", "Ảnh trang, kết quả OCR"),
-        step(2, "detect", "Phát hiện hộp chữ", "Ảnh cột chữ",
-             "CenterNet (ResNet-34) + bộ giải mã hộp", "Hộp bao từng chữ", det_metrics),
-        step(3, "align", "Gióng hàng", "Hộp chữ; chuỗi âm Quốc ngữ",
-             f"Quy hoạch động dải hẹp; {de}", "Nhãn sơ bộ, mã luật"),
-        step(4, "remediate", "Kiểm kê, xếp tầng", "Nhãn sơ bộ",
-             "Kiểm trùng; sửa nhầm lẫn có hệ thống", "Tầng nhãn của từng ô"),
-        step(5, "gates", "Cổng kiểm tra", "Ô nghi vấn",
-             "Cổng cơ chế; so với dị bản độc lập", "labels_gated.csv", gate_metrics),
-        step(6, "export", "Đóng gói theo bộ", "Nhãn; ảnh crop",
-             "Xuất bảng nhãn và crop theo tầng", "dataset/<Bộ>/"),
-        step(7, "merge", "Gộp các bộ", "10 bộ",
-             "Gộp theo khoá cell_uid; kiểm bất biến", "dataset/_ALL/", merge_metrics),
+        step(1, "ingest", "Tiền xử lý và OCR", "Ảnh quét, bản Quốc ngữ",
+             "Chuẩn hoá ảnh; OCR chữ Nôm và chữ Quốc ngữ", "Kết quả OCR của từng trang"),
+        step(2, "detect", "Phát hiện hộp chữ", "Ảnh trang",
+             "CenterNet (ResNet-34); chọn hộp theo từng bộ", "Hộp bao của từng chữ"),
+        step(3, "align", "Gióng hàng chữ và âm", "Hộp chữ, chuỗi âm Quốc ngữ",
+             f"Quy hoạch động; {de}", "Nhãn sơ bộ của từng ô"),
+        step(4, "remediate", "Kiểm kê và xếp tầng", "Nhãn sơ bộ",
+             "Kiểm trùng; sửa nhầm lẫn thường gặp", "Tầng nhãn của từng ô"),
+        step(5, "gates", "Kiểm tra bổ sung", "Ô nghi vấn",
+             "Kiểm số chữ, nhịp, biên hộp; so với dị bản", "Tầng nhãn đã kiểm"),
+        step(6, "export", "Đóng gói theo bộ", "Nhãn, ảnh cắt",
+             "Xuất bảng nhãn và ảnh theo tầng", "Thư mục dataset/<Bộ>/"),
+        step(7, "merge", "Gộp các bộ", "Các thư mục dataset/<Bộ>/",
+             "Gộp theo khoá cell_uid; kiểm bất biến", "Thư mục dataset/_ALL/"),
     ]
 
 

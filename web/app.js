@@ -18,12 +18,7 @@ const AppState = {
 
 const NA = "—";
 const TIERS = ["GOLD", "SYLLABLE", "GOLD_text_only", "REVIEW", "QUARANTINE"];
-const ROLE_GROUPS = [
-  { role: "giao_nop", label: "Giao nộp" },
-  { role: "danh_gia_ihr", label: "Đánh giá (IHR-NomDB, có nhãn người)" },
-  { role: "danh_gia_borg", label: "Đánh giá (Borg, chép tay, có nhãn người)" },
-];
-const GROUP_ROLES = { giao_nop: ["giao_nop"], danh_gia: ["danh_gia_ihr", "danh_gia_borg"] };
+const ROLE_ORDER = ["giao_nop", "danh_gia_ihr", "danh_gia_borg"];
 const TAB_HASH = { overview: "gioi-thieu", flow: "quy-trinh", inspector: "ban-quet", gallery: "tra-cuu", benchmarks: "so-lieu" };
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -52,7 +47,6 @@ function setText(id, v) {
 }
 function tierKey(t) { return TIERS.includes(t) ? t : "OTHER"; }
 function pageNo(p) { return String(p || "").replace("page_", "").replace(/^0+(?=\d)/, ""); }
-function roleOfBook(id) { return (AppState.books.find((b) => b.id === id) || {}).role || "giao_nop"; }
 function stripAccents(s) {
   return String(s || "").replace(/đ/g, "d").replace(/Đ/g, "D").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 }
@@ -170,20 +164,14 @@ function renderAll() {
 
 /* ---------------- Đầu trang ---------------- */
 function renderHeader() {
-  const im = AppState.stats?.impact_metrics || {};
-  setText("hdrSummary", `${im.books_count ?? NA} bộ, ${fmtInt(im.total_characters)} ô`);
-  setText("footerRoot", AppState.stats?.data_root ? `Gốc dữ liệu: ${AppState.stats.data_root}` : "");
 }
 
 /* ---------------- 1. Giới thiệu ---------------- */
-function groupedRows(items, roleOf, colspan, rowHtml) {
-  let html = "";
-  ROLE_GROUPS.forEach((g) => {
-    const arr = items.filter((x) => (roleOf(x) || "giao_nop") === g.role);
-    if (!arr.length) return;
-    html += `<tr class="group"><td colspan="${colspan}">${esc(g.label)}</td></tr>` + arr.map(rowHtml).join("");
-  });
-  return html;
+// Danh sách bộ theo thứ tự cố định của máy chủ (không chèn dòng nhóm).
+function orderedRows(items, roleOf, rowHtml) {
+  const order = ROLE_ORDER;
+  return [...items].sort((a, b) => order.indexOf(roleOf(a) || "giao_nop") - order.indexOf(roleOf(b) || "giao_nop"))
+    .map(rowHtml).join("");
 }
 
 function bookKind(b) {
@@ -207,7 +195,7 @@ function renderOverview() {
   const row = (b) => `<tr><td>${esc(b.title)}<span class="dim">${esc(statusNote(b))}</span></td><td class="hide-narrow">${esc(bookKind(b))}</td>
     <td class="num">${b.total ? fmtInt(b.total) : NA}</td><td class="num">${b.total ? fmtInt(b.gold) : NA}</td>
     <td class="num">${b.total ? fmtInt(b.review) : NA}</td></tr>`;
-  document.getElementById("bookTableBody").innerHTML = groupedRows(books, (b) => b.role, 5, row)
+  document.getElementById("bookTableBody").innerHTML = orderedRows(books, (b) => b.role, row)
     + `<tr class="total"><td>Tổng</td><td class="hide-narrow"></td><td class="num">${fmtInt(im.total_characters)}</td>
        <td class="num">${fmtInt(im.total_gold)}</td><td class="num">${fmtInt(im.total_review)}</td></tr>`;
   const hasTxt = !!im.total_gold_text_only;
@@ -221,28 +209,16 @@ function renderFlow() {
   const body = document.getElementById("flowTableBody");
   if (!steps.length) {
     body.innerHTML = `<tr><td colspan="5" class="dim">Chưa có mô tả quy trình.</td></tr>`;
-    document.getElementById("flowMetricsBlock").classList.add("hidden");
     return;
   }
   body.innerHTML = steps.map((s) => `<tr><td class="num">${esc(s.step)}</td><td>${esc(s.name)}</td>
-    <td>${esc(s.input)}</td><td>${esc(s.method ?? s.model ?? "")}</td><td>${/[/.]/.test(s.output || "") ? `<code>${esc(s.output)}</code>` : esc(s.output)}</td></tr>`).join("");
-  const mrows = [];
-  steps.forEach((s) => (s.metrics || []).forEach((m) => mrows.push(
-    `<tr><td>${esc(s.step)}</td><td title="${esc(m.source || "")}">${esc(m.label)}</td><td class="num">${esc(m.value)}</td></tr>`)));
-  document.getElementById("flowMetricsBody").innerHTML = mrows.join("");
-  document.getElementById("flowMetricsBlock").classList.toggle("hidden", !mrows.length);
+    <td>${esc(s.input)}</td><td>${esc(s.method ?? s.model ?? "")}</td><td>${esc(s.output)}</td></tr>`).join("");
 }
 
 /* ---------------- 3. Bản quét ---------------- */
-function bookOptionsHtml(withGroups) {
-  let html = withGroups ? `<option value="all">Tất cả</option><option value="giao_nop">Nhóm giao nộp</option><option value="danh_gia">Nhóm đánh giá</option>` : "";
-  ROLE_GROUPS.forEach((g) => {
-    const arr = AppState.books.filter((b) => (b.role || "giao_nop") === g.role);
-    if (!arr.length) return;
-    html += `<optgroup label="${esc(g.label)}">` + arr.map((b) =>
-      `<option value="${esc(b.id)}">${esc(b.title)}${esc(statusNote(b))}</option>`).join("") + "</optgroup>";
-  });
-  return html;
+function bookOptionsHtml(withAll) {
+  return (withAll ? `<option value="all">Tất cả</option>` : "")
+    + orderedRows(AppState.books, (b) => b.role, (b) => `<option value="${esc(b.id)}">${esc(b.title)}${esc(statusNote(b))}</option>`);
 }
 
 function hasData(b) { return !!(b && (b.total_chars || b.total)); }
@@ -413,14 +389,14 @@ function selectChar(c, el) {
   if (el) el.classList.add("selected");
   const k = tierKey(c.tier);
   const rows = [
-    ["Ảnh cắt", c.crop_url ? `<img src="${esc(c.crop_url)}" alt="crop" onerror="this.replaceWith(document.createTextNode('—'))">` : `<span class="dim">không có</span>`],
+    ["Ảnh", c.crop_url ? `<img src="${esc(c.crop_url)}" alt="crop" onerror="this.replaceWith(document.createTextNode('—'))">` : `<span class="dim">không có</span>`],
     ["Chữ", `<span class="glyph">${esc(c.label || NA)}</span>`],
     ["Âm", esc(c.syllable || NA)],
     ["Tầng", `<span class="sw t-${k}"></span>${esc(c.tier || NA)}`],
-    ["Luật gán", `<span class="mono">${esc(c.rule || NA)}</span>`],
+    ["Luật", `<span class="mono">${esc(c.rule || NA)}</span>`],
     ["Unicode", `<span class="mono">${esc(c.unicode || NA)}</span>`],
-    ["OCR", `<span class="glyph" style="font-size:1.25rem">${esc(c.ocr_char || NA)}</span>`],
-    ["Cột · ô", `${esc(c.column ?? "?")} · ${esc(c.index ?? "?")}`],
+    ["Chữ OCR", `<span class="glyph" style="font-size:1.25rem">${esc(c.ocr_char || NA)}</span>`],
+    ["Cột", esc(c.column ?? NA)],
     ["Hộp (px)", `<span class="mono">${esc((c.bbox || []).map((v) => Math.round(v)).join(", "))}</span>`],
   ];
   document.getElementById("detailBody").innerHTML = rows.map(([a, b]) => `<tr><th>${a}</th><td>${b}</td></tr>`).join("");
@@ -452,8 +428,7 @@ async function executeSearch() {
     const q = query.toLowerCase();
     const qn = stripAccents(q);
     results = AppState.gallery.sample.filter((it) => {
-      if (GROUP_ROLES[book]) { if (!GROUP_ROLES[book].includes(roleOfBook(it.book))) return false; }
-      else if (book !== "all" && it.book !== book) return false;
+      if (book !== "all" && it.book !== book) return false;
       if (tier !== "all" && it.tier !== tier) return false;
       if (!q) return true;
       const syl = (it.syllable || "").toLowerCase();
@@ -463,7 +438,7 @@ async function executeSearch() {
   }
   AppState.gallery.loaded = true;
   setText("galleryCountText", total !== null && total > results.length
-    ? `${fmtInt(total)} ô khớp; hiện ${fmtInt(results.length)} (rải đều giữa các bộ).`
+    ? `${fmtInt(total)} ô khớp; hiện ${fmtInt(results.length)}.`
     : `${fmtInt(results.length)} ô khớp${AppState.isLiveServer ? "" : " trong dữ liệu mẫu"}.`);
   if (!results.length) {
     body.innerHTML = `<tr><td colspan="7" class="dim">Không có kết quả.</td></tr>`;
@@ -504,22 +479,21 @@ function renderNumbers() {
   } else {
     const cols = tt.columns || [];
     const n = cols.length + 3;
-    head.innerHTML = `<tr><th>Bộ</th><th class="num">Tổng</th>${cols.map((t) => `<th class="num">${esc(t)}</th>`).join("")}<th class="num">% GOLD</th></tr>`;
+    head.innerHTML = `<tr><th>Bộ</th><th class="num">Số ô</th>${cols.map((t) => `<th class="num">${esc(t)}</th>`).join("")}<th class="num">% GOLD</th></tr>`;
     const cells = (c) => cols.map((t) => `<td class="num">${fmtInt((c || {})[t] || 0)}</td>`).join("");
     const row = (r) => (r.total
       ? `<tr><td>${esc(r.book_title)}<span class="dim">${esc(statusNote(r))}</span></td><td class="num">${fmtInt(r.total)}</td>${cells(r.counts)}<td class="num">${fmtPct(r.gold_pct)}</td></tr>`
       : `<tr><td>${esc(r.book_title)} <span class="dim">(chưa có dữ liệu)</span></td>${"<td class=\"num dim\">—</td>".repeat(n - 1)}</tr>`);
     const t = tt.totals || {};
-    body.innerHTML = groupedRows(tt.rows || [], (r) => r.role, n, row)
+    body.innerHTML = orderedRows(tt.rows || [], (r) => r.role, row)
       + `<tr class="total"><td>Tổng</td><td class="num">${fmtInt(t.total)}</td>${cells(t.counts)}<td class="num">${fmtPct(t.gold_pct)}</td></tr>`;
     const empty = tt.empty_tiers || [];
-    note.textContent = "GOLD, SYLLABLE, GOLD_text_only: đếm trên dataset/<Bộ>/labels.csv. REVIEW, QUARANTINE (không đóng gói ảnh): đếm trên bảng mọi tầng của bản dựng."
+    note.textContent = "REVIEW và QUARANTINE không có ảnh; đếm từ bảng đầy đủ của pipeline."
       + (empty.length ? ` Tầng không có ô: ${empty.join(", ")}.` : "");
   }
   const im = AppState.stats?.impact_metrics || {};
   const inv = document.getElementById("invariantsLine");
-  inv.textContent = im.invariants_available && im.invariants_text
-    ? `${im.invariants_text} (measure_out/SUMMARY.json${im.invariants_generated_at ? `, ${im.invariants_generated_at.replace("T", " ")}` : ""}).` : "";
+  inv.textContent = im.invariants_available && im.invariants_text ? `${im.invariants_text}.` : "";
   inv.classList.toggle("hidden", !inv.textContent);
   renderDatasetTree();
 }
@@ -527,6 +501,8 @@ function renderNumbers() {
 function renderDatasetTree() {
   const card = document.getElementById("datasetTreeCard");
   const st = AppState.stats;
+  // Thư mục chỉ chứa ô có ảnh (không gồm REVIEW, QUARANTINE).
+  const packed = (b) => (b.total || 0) - (b.review || 0) - (b.quarantine || 0);
   const books = Object.values(st?.books || {}).filter((b) => b.total);
   if (!books.length) { card.classList.add("hidden"); return; }
   card.classList.remove("hidden");
@@ -534,12 +510,12 @@ function renderDatasetTree() {
   const stt = books.filter((b) => b.book_set === "SachThanhTruyen");
   const sttNew = stt.filter((b) => b.status === "ok");
   if (sttNew.length) {
-    entries.push(["SachThanhTruyen/", `${fmtInt(sttNew.reduce((a, b) => a + (b.total || 0), 0))} ô (${sttNew.map((b) => `${b.set8} ${fmtInt(b.total)}`).join(", ")})`]);
+    entries.push(["SachThanhTruyen/", `${fmtInt(sttNew.reduce((a, b) => a + packed(b), 0))} dòng (${sttNew.map((b) => `${b.set8} ${fmtInt(packed(b))}`).join(", ")})`]);
   }
-  stt.filter((b) => b.status === "ban_cu").forEach((b) => entries.push([`${b.id}/`, `bản cũ, ${fmtInt(b.total)} ô`]));
+  stt.filter((b) => b.status === "ban_cu").forEach((b) => entries.push([`${b.id}/`, `bản cũ, ${fmtInt(packed(b))} dòng`]));
   books.filter((b) => b.book_set !== "SachThanhTruyen").forEach((b) =>
-    entries.push([`${b.book_set || b.id}/`, `${fmtInt(b.total)} ô${b.role === "giao_nop" ? "" : ", evaluation_only"}`]));
-  if (st.all_dataset) entries.push(["_ALL/", `gộp: ${fmtInt(st.all_dataset.n_dong)} dòng, ${fmtInt(st.all_dataset.eval_only_dong)} evaluation_only`]);
+    entries.push([`${b.book_set || b.id}/`, `${fmtInt(packed(b))} dòng`]));
+  if (st.all_dataset) entries.push(["_ALL/", `gộp: ${fmtInt(st.all_dataset.n_dong)} dòng`]);
   const w = Math.max(...entries.map(([a]) => a.length)) + 2;
   document.getElementById("datasetTree").textContent = ["dataset/"].concat(entries.map(([a, b], i) =>
     `${i === entries.length - 1 ? "└── " : "├── "}${a.padEnd(w)}# ${b}`)).join("\n");

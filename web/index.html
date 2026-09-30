@@ -12,7 +12,6 @@
   <header class="site-header">
     <div class="wrap">
       <h1>Gán nhãn tự động văn bản Hán Nôm cổ</h1>
-      <p class="subtitle">Bộ dữ liệu ký tự theo tầng nhãn · luận văn Thạc sĩ · <span id="hdrSummary">—</span></p>
       <nav class="site-nav" aria-label="Mục">
         <a href="#gioi-thieu" data-tab="overview">Giới thiệu</a>
         <a href="#quy-trinh" data-tab="flow">Quy trình</a>
@@ -28,8 +27,7 @@
     <!-- 1. Giới thiệu -->
     <section class="tab-pane" id="tab-overview">
       <h2>Giới thiệu</h2>
-      <p>Mỗi mẫu là ảnh cắt một chữ Hán Nôm kèm chữ và âm Quốc ngữ, gán nhãn tự động theo luật trên <span id="ovBooksCount">—</span> bộ sách.
-        Nhãn người (IHR-NomDB, Borg) chỉ dùng để đo, không tham gia gán nhãn.</p>
+      <p>Mỗi ô là ảnh cắt một chữ Hán Nôm, kèm chữ và âm Quốc ngữ. Nhãn được gán tự động trên <span id="ovBooksCount">—</span> bộ sách.</p>
 
       <div class="table-scroll">
       <table class="bt" id="bookTable">
@@ -42,22 +40,22 @@
       <h3>Tầng nhãn</h3>
       <dl class="tiers">
         <dt><span class="sw t-GOLD"></span>GOLD</dt>
-        <dd>Chữ Nôm và âm đều khớp; có ảnh crop.</dd>
+        <dd>Chữ và âm đều khớp. Có ảnh.</dd>
         <dt><span class="sw t-SYLLABLE"></span>SYLLABLE</dt>
-        <dd>Âm chắc chắn, chữ Nôm chưa xác nhận; có ảnh crop.</dd>
+        <dd>Âm chắc chắn, chữ chưa xác nhận. Có ảnh.</dd>
         <dt id="dtTextOnly"><span class="sw t-GOLD_text_only"></span>GOLD_text_only</dt>
-        <dd id="ddTextOnly">Chữ và âm khớp dị bản độc lập, ảnh chưa chắc; không có crop.</dd>
+        <dd id="ddTextOnly">Chữ và âm khớp, vị trí ảnh chưa chắc. Không có ảnh.</dd>
         <dt><span class="sw t-REVIEW"></span>REVIEW</dt>
-        <dd>Chữ hoặc âm chưa chắc; không đóng gói.</dd>
+        <dd>Chữ hoặc âm chưa chắc. Không có ảnh.</dd>
         <dt><span class="sw t-QUARANTINE"></span>QUARANTINE</dt>
-        <dd>Sai hoặc trùng khi kiểm kê; loại khỏi bộ dữ liệu.</dd>
+        <dd>Sai hoặc trùng. Bị loại.</dd>
       </dl>
     </section>
 
     <!-- 2. Quy trình -->
     <section class="tab-pane" id="tab-flow">
       <h2>Quy trình</h2>
-      <p>Các bước chạy tuần tự, hoàn toàn tự động; không có quyết định của người.</p>
+      <p>Các bước chạy tuần tự và tự động.</p>
       <div class="table-scroll">
         <table class="bt">
           <caption>Bảng 2. Các bước xử lý</caption>
@@ -65,21 +63,12 @@
           <tbody id="flowTableBody"><tr><td colspan="5" class="dim">Đang tải…</td></tr></tbody>
         </table>
       </div>
-      <div id="flowMetricsBlock" class="hidden">
-        <div class="table-scroll">
-          <table class="bt">
-            <caption>Bảng 3. Số đo kèm theo (đọc từ tệp đo)</caption>
-            <thead><tr><th>Bước</th><th>Chỉ số</th><th class="num">Giá trị</th></tr></thead>
-            <tbody id="flowMetricsBody"></tbody>
-          </table>
-        </div>
-      </div>
     </section>
 
     <!-- 3. Bản quét -->
     <section class="tab-pane" id="tab-inspector">
       <h2>Bản quét</h2>
-      <p>Chọn bộ và trang; bấm một hộp để xem chi tiết ô.</p>
+      <p>Chọn bộ và trang. Bấm vào một hộp để xem chi tiết.</p>
 
       <div class="controls">
         <label>Bộ <select id="inspectorBookSelect"></select></label>
@@ -90,7 +79,7 @@
           <button type="button" id="btnNextPage" aria-label="Trang sau">›</button>
         </span>
         <span class="ctl-group">
-          Cỡ
+          <span>Thu phóng</span>
           <button type="button" id="btnZoomOut" aria-label="Thu nhỏ">−</button>
           <button type="button" id="btnZoomReset">100%</button>
           <button type="button" id="btnZoomIn" aria-label="Phóng to">+</button>
@@ -113,7 +102,7 @@
 
         <aside class="detail">
           <table class="bt detail-table">
-            <caption>Bảng 4. Ô được chọn</caption>
+            <caption>Bảng 3. Ô được chọn</caption>
             <tbody id="detailBody"><tr><td class="dim">Bấm một hộp trên ảnh.</td></tr></tbody>
           </table>
         </aside>
@@ -123,9 +112,9 @@
     <!-- 4. Tra cứu -->
     <section class="tab-pane" id="tab-gallery">
       <h2>Tra cứu</h2>
-      <p>Tìm theo âm (có hoặc không dấu), chữ Nôm hoặc mã Unicode. Bấm một dòng để mở trang chứa ô đó.</p>
+      <p>Tìm theo âm (có hoặc không dấu), chữ hoặc mã Unicode. Bấm vào một dòng để mở trang chứa ô đó.</p>
       <form class="controls" id="searchForm" onsubmit="return false;">
-        <label>Từ khoá <input type="search" id="gallerySearchInput" placeholder="vd. nguoi, 𠊛, U+2029B"></label>
+        <label>Từ khoá <input type="search" id="gallerySearchInput" placeholder="vd. nguoi, 人, U+4EBA"></label>
         <label>Bộ <select id="galleryBookFilter"><option value="all">Tất cả</option></select></label>
         <label>Tầng
           <select id="galleryTierFilter">
@@ -141,7 +130,7 @@
       <p class="note" id="galleryCountText"></p>
       <div class="table-scroll">
         <table class="bt results">
-          <caption>Bảng 5. Kết quả tra cứu</caption>
+          <caption>Bảng 4. Kết quả tra cứu</caption>
           <thead><tr><th>Ảnh</th><th>Chữ</th><th>Âm</th><th>Tầng</th><th class="hide-narrow">Unicode</th><th>Bộ</th><th>Trang · cột</th></tr></thead>
           <tbody id="galleryBody"></tbody>
         </table>
@@ -151,10 +140,10 @@
     <!-- 5. Số liệu -->
     <section class="tab-pane" id="tab-benchmarks">
       <h2>Số liệu</h2>
-      <p>Số ô theo tầng nhãn của từng bộ, đếm trực tiếp trên bảng nhãn.</p>
+      <p>Số ô theo tầng nhãn của từng bộ.</p>
       <div class="table-scroll">
         <table class="bt">
-          <caption>Bảng 6. Số ô theo tầng nhãn</caption>
+          <caption>Bảng 5. Số ô theo tầng nhãn</caption>
           <thead id="tierTableHead"></thead>
           <tbody id="tierTableBody"><tr><td class="dim">Đang tải…</td></tr></tbody>
         </table>
@@ -164,7 +153,7 @@
 
       <div id="datasetTreeCard" class="hidden">
         <h3>Thư mục <code>dataset/</code></h3>
-        <p>Mỗi thư mục con là một bộ; <code>_ALL/</code> gộp tất cả (khoá <code>cell_uid</code>, cờ <code>evaluation_only</code>).</p>
+        <p>Mỗi thư mục con là một bộ, chỉ gồm các ô có ảnh; <code>_ALL/</code> gộp tất cả các bộ.</p>
         <pre id="datasetTree"></pre>
       </div>
     </section>
@@ -175,7 +164,6 @@
     <div class="wrap">
       <span id="connectionText">Đang kết nối…</span>
       <button type="button" class="linkish hidden" id="reloadDataBtn">Nạp lại dữ liệu</button>
-      <span class="dim" id="footerRoot"></span>
     </div>
   </footer>
 

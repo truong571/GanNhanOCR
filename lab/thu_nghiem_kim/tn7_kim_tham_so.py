@@ -52,7 +52,10 @@ SEED = 20260930
 BORG = {"SachKinhThayCaBinh": 30, "SachDungLyHoThan": 10}          # số trang mẫu
 STT = {"stt2": "SachThanhTruyen2", "stt4": "SachThanhTruyen4", "stt11": "SachThanhTruyen11"}
 STT_N = 10                                                           # trang mẫu mỗi quyển
-BORG_VARIANTS = {"lt2_viettay": dict(lang_type=2, font_type=2, scale=1),
+BORG_VARIANTS = {# TN10 (30/09): đề xuất "đọc 2 lượt" — lượt 1 Hán (lt1, có/không phóng ×2) để đủ số chữ, lượt 2 Nôm (lt2 sẵn có)
+                 "lt1_in": dict(lang_type=1, font_type=1, scale=1),
+                 "lt1_x2": dict(lang_type=1, font_type=1, scale=2),
+                 "lt2_viettay": dict(lang_type=2, font_type=2, scale=1),
                  "lt2_tudong": dict(lang_type=2, font_type=0, scale=1),
                  "lt2_viettay_x2": dict(lang_type=2, font_type=2, scale=2),
                  # TN7b (30/09): font_type bị máy chủ bỏ qua (kết quả y hệt) -> thử các núm còn lại
@@ -288,6 +291,70 @@ def chars_of_boxes(boxes: list[dict]) -> list[str]:
     return [c["char"] for col in cols for c in col]
 
 
+def page_char_boxes(book: str, page: str, variant: str):
+    """[(chữ, x0, y0, x1, y1)] toạ độ ảnh GỐC (chia `scale`); None nếu thiếu tệp. variant 'hien_tai_lt2_in' = cache pipeline."""
+    from pipeline.tools.ingest_lithograph_book import expand_box_chars
+    if variant == "hien_tai_lt2_in":
+        from borg_endtoend_eval import _kim_sfx, AUTO
+        f = AUTO / book / "kim_raw" / f"{page}{_kim_sfx(str(AUTO), book)}.json"
+        sc = 1.0
+    else:
+        f = OUT / book / variant / f"{page}.json"
+        sc = None
+    if not f.exists():
+        return None
+    d = json.loads(f.read_text(encoding="utf-8"))
+    sc = sc or float(d.get("scale", 1) or 1)
+    out = []
+    for b in d.get("boxes") or []:
+        for c in expand_box_chars(b):
+            x0, y0, x1, y1 = c["bbox"]
+            out.append((c["char"], x0 / sc, y0 / sc, x1 / sc, y1 / sc))
+    return out
+
+
+def read_order(items) -> list[str]:
+    """Chữ theo thứ tự đọc: gom cột theo tâm x (khe > 0,6 × bề rộng chữ trung vị), cột PHẢI→TRÁI, chữ TRÊN→DƯỚI."""
+    if not items:
+        return []
+    import numpy as np
+    w = float(np.median([x1 - x0 for _, x0, _, x1, _ in items])) or 1.0
+    it = sorted(items, key=lambda t: -(t[1] + t[3]) / 2)
+    cols, cur, last = [], [], None
+    for t in it:
+        cx = (t[1] + t[3]) / 2
+        if last is not None and last - cx > 0.6 * w:
+            cols.append(cur); cur = []
+        cur.append(t); last = cx
+    cols.append(cur)
+    return [t[0] for col in cols for t in sorted(col, key=lambda t: (t[2] + t[4]) / 2)]
+
+
+def merge_two_pass(skel, nom):
+    """Ghép theo đề xuất: khung = lượt 1 (Hán, đủ số chữ); tại mỗi vị trí khung, có chữ lượt 2 (Nôm) tâm nằm trong hộp khung
+    (nới 30 %) thì lấy chữ Nôm, không thì giữ chữ Hán; chữ Nôm không rơi vào hộp khung nào (lượt 1 sót) được thêm vào."""
+    used = set()
+    out = []
+    for ch, x0, y0, x1, y1 in skel:
+        w, h = x1 - x0, y1 - y0
+        best, bd = None, None
+        for j, (c2, a0, b0, a1, b1) in enumerate(nom):
+            if j in used:
+                continue
+            cx, cy = (a0 + a1) / 2, (b0 + b1) / 2
+            if x0 - 0.3 * w <= cx <= x1 + 0.3 * w and y0 - 0.3 * h <= cy <= y1 + 0.3 * h:
+                d = abs(cy - (y0 + y1) / 2) + abs(cx - (x0 + x1) / 2)
+                if bd is None or d < bd:
+                    best, bd = j, d
+        if best is not None:
+            used.add(best)
+            out.append((nom[best][0], x0, y0, x1, y1))
+        else:
+            out.append((ch, x0, y0, x1, y1))
+    out += [t for j, t in enumerate(nom) if j not in used]
+    return out
+
+
 def stt_baseline_chars(key: str, page: str, which: str) -> list[str] | None:
     if which == "hien_tai_lt1_in":
         f = REPO / "prepared" / STT[key] / "detected" / f"{page}_ocr_cache.json"
@@ -327,12 +394,16 @@ def evaluate() -> int:
     for (kind, book), pages in sorted(pages_by.items()):
         if kind == "borg":
             H = Hc.setdefault(book, human_pages(book))
-            variants = ["hien_tai_lt2_in"] + list(BORG_VARIANTS)
+            variants = ["hien_tai_lt2_in"] + list(BORG_VARIANTS) + ["hop_lt1_lt2", "hop_lt1x2_lt2"]
         else:
             variants = ["hien_tai_lt1_in", "hien_tai_lt2_in"] + list(STT_VARIANTS)
         for pg in sorted(pages):
             for v in variants:
-                if v.startswith("hien_tai"):
+                if v.startswith("hop_"):
+                    sk = page_char_boxes(book, pg, "lt1_in" if v == "hop_lt1_lt2" else "lt1_x2")
+                    nm = page_char_boxes(book, pg, "hien_tai_lt2_in")
+                    kc = read_order(merge_two_pass(sk, nm)) if sk is not None and nm is not None else None
+                elif v.startswith("hien_tai"):
                     kc = kim_page_chars(book, pg) if kind == "borg" else stt_baseline_chars(book, pg, v)
                 else:
                     f = OUT / book / v / f"{pg}.json"

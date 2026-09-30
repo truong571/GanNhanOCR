@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-30T17:02:09Z",
+ "generated_at": "2026-09-30T18:28:13Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "5829f4da42",
+ "git_head": "4310a59c38",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 60,
@@ -17,7 +17,7 @@
   "pdf_readers": 2,
   "checkpoint_paths": 50,
   "checkpoint_exists": 7,
-  "git_dirty_pipeline_core": 5,
+  "git_dirty_pipeline_core": 0,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
  },
@@ -212,7 +212,7 @@
     "pipeline/tools/ingest_borg_book.py:694 KimClient(budget=9)",
     "pipeline/tools/ingest_prose_selftest.py:43 ing.sino_number(… arg#0=9)",
     "pipeline/tools/merge_datasets.py:555 _bo_gia(… arg#2=9)",
-    "pipeline/tools/selftest.py:717 bbox(… arg#0=9)",
+    "pipeline/tools/selftest.py:722 bbox(… arg#0=9)",
     "pipeline/tools/stt_reocr_lt2.py:322 range(… arg#0=9)"
    ],
    "known_pins_check": [
@@ -778,7 +778,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 511,
+     "line": 512,
      "category": "compare",
      "context": "line",
      "detail": "len(v) != 9",
@@ -787,7 +787,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 528,
+     "line": 529,
      "category": "compare",
      "context": "line",
      "detail": "len(v) != 9",
@@ -796,7 +796,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 540,
+     "line": 541,
      "category": "call_arg",
      "context": "line",
      "detail": "range(… arg#1=9)",
@@ -805,7 +805,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 543,
+     "line": 544,
      "category": "compare",
      "context": "line",
      "detail": "len({r['column'] for r in all_rows}) != 9",
@@ -814,7 +814,7 @@
     },
     {
      "file": "pipeline/tools/selftest.py",
-     "line": 544,
+     "line": 545,
      "category": "compare",
      "context": "line",
      "detail": "len({r['column'] for r in loc}) != 9",
@@ -1310,7 +1310,7 @@
        "cmd": "X \"$PY\" -m pipeline.step0_setup \"$CONFIG\""
       },
       {
-       "line": 739,
+       "line": 741,
        "cmd": "R \"$PY\" -m pipeline.step0_setup \"$BK_CONFIG\""
       }
      ]
@@ -1673,7 +1673,7 @@
        "cmd": "X \"$PY\" -m pipeline.align_engine.build_dataset --config \"$CONFIG\" --reseg \"$RESEG\" --qd01-cells none --force --out \"$DS_OUT\""
       },
       {
-       "line": 836,
+       "line": 838,
        "cmd": "R \"$PY\" -m pipeline.align_engine.build_dataset --config \"$BK_CONFIG\" --reseg detector --qd01-cells none --decisions none --use-s3 --two-pass --box-rule syl_index --force --out \"$ds_out\""
       }
      ]
@@ -1744,11 +1744,11 @@
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" apply --tau \"$TAU_REMEDIATE\""
       },
       {
-       "line": 845,
+       "line": 847,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" census"
       },
       {
-       "line": 846,
+       "line": 848,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" apply --tau \"$TAU_REMEDIATE\""
       }
      ],
@@ -1810,7 +1810,7 @@
        "cmd": "X \"$PY\" -m pipeline.remediation.confusion_fix --in \"$LABELS_REMED\" --out \"$LABELS_FINAL\" --fixes \"$CONFUSION_FIXES\" --measure"
       },
       {
-       "line": 849,
+       "line": 851,
        "cmd": "R \"$PY\" -m pipeline.remediation.confusion_fix --in \"$labels_remed\" --out \"$labels_final\" --fixes \"$CONFUSION_FIXES\" --measure"
       }
      ]
@@ -1975,7 +1975,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 857,
+       "line": 859,
        "cmd": "cmd=(\"$PY\" -m pipeline.remediation.mechanism_gates --in \"$labels_final\" --out \"$labels_gated\""
       }
      ]
@@ -2169,7 +2169,7 @@
        "cmd": "X \"$PY\" pipeline/export_final_dataset.py --labels \"$LABELS_FINAL\" --src-root \"$DS_OUT\" --out \"$FINAL_DIR\""
       },
       {
-       "line": 888,
+       "line": 890,
        "cmd": "R \"$PY\" pipeline/export_final_dataset.py --labels \"$labels_gated\" --src-root \"$ds_out\" --out \"$final_dir\" --n-columns \"$BK_NCOL\""
       }
      ]
@@ -2230,7 +2230,7 @@
        "cmd": "X \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$LABELS_RAW\" --src-root \"$DS_OUT\""
       },
       {
-       "line": 839,
+       "line": 841,
        "cmd": "R \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$labels_raw\" --src-root \"$ds_out\""
       }
      ]
@@ -2461,7 +2461,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 823,
+       "line": 825,
        "cmd": "cmd=(\"$PY\" -m pipeline.tools.ingest_lithograph_book --book \"$book\" --ocr \"$ocr\" --out \"$BK_DATA_DIR\""
       }
      ]
@@ -4779,51 +4779,11 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "5829f4da42",
+   "head": "4310a59c38",
    "branch": "main",
-   "n_dirty_pipeline_core": 5,
-   "dirty_pipeline_core": [
-    {
-     "file": "pipeline/export_final_dataset.py",
-     "status": "M",
-     "ins": 3,
-     "del": 0
-    },
-    {
-     "file": "pipeline/remediation/mechanism_gates.py",
-     "status": "M",
-     "ins": 120,
-     "del": 6
-    },
-    {
-     "file": "pipeline/remediation/mechanism_gates_selftest.py",
-     "status": "M",
-     "ins": 95,
-     "del": 1
-    },
-    {
-     "file": "pipeline/tools/duong_chay.py",
-     "status": "M",
-     "ins": 31,
-     "del": 5
-    },
-    {
-     "file": "pipeline/chon_chu/",
-     "status": "??"
-    }
-   ],
-   "untracked_pipeline_core": [
-    "pipeline/chon_chu/__init__.py",
-    "pipeline/chon_chu/__main__.py",
-    "pipeline/chon_chu/crops.py",
-    "pipeline/chon_chu/embed.py",
-    "pipeline/chon_chu/export_assets.py",
-    "pipeline/chon_chu/features.py",
-    "pipeline/chon_chu/model.py",
-    "pipeline/chon_chu/policy.py",
-    "pipeline/chon_chu/selftest.py",
-    "pipeline/chon_chu/stt.py"
-   ],
+   "n_dirty_pipeline_core": 0,
+   "dirty_pipeline_core": [],
+   "untracked_pipeline_core": [],
    "ocr_api_guest_mode": {
     "file": "core/ocr/ocr_api.py",
     "has_uncommitted_diff": false,

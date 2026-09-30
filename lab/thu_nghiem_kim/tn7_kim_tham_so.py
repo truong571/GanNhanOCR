@@ -56,13 +56,12 @@ BORG_VARIANTS = {"lt2_viettay": dict(lang_type=2, font_type=2, scale=1),
                  "lt2_tudong": dict(lang_type=2, font_type=0, scale=1),
                  "lt2_viettay_x2": dict(lang_type=2, font_type=2, scale=2),
                  # TN7b (30/09): font_type bị máy chủ bỏ qua (kết quả y hệt) -> thử các núm còn lại
-                 "lt2_hanhchinh": dict(lang_type=2, font_type=1, scale=1, ocr_id=2),
-                 "tudong_het": dict(lang_type=0, font_type=0, scale=1, ocr_id=-1),
+                 # ocr_id 2 cho kết quả Y HỆT trên 30 trang Kinh (máy chủ bỏ qua ocr_id) -> không gọi thêm ở bộ khác
+                 "lt2_hanhchinh": dict(lang_type=2, font_type=1, scale=1, ocr_id=2, only=("SachKinhThayCaBinh",)),
                  "lt2_khunhieu": dict(lang_type=2, font_type=1, scale=1, src="denoised"),
                  "lt2_theo_dong": dict(lang_type=2, font_type=1, scale=1, mode="lines", max_pages=6)}
 STT_VARIANTS = {"lt2_viettay": dict(lang_type=2, font_type=2, scale=1),
-                "lt1_viettay": dict(lang_type=1, font_type=2, scale=1),
-                "lt2_hanhchinh": dict(lang_type=2, font_type=1, scale=1, ocr_id=2)}
+                "lt1_viettay": dict(lang_type=1, font_type=2, scale=1)}
 LINE_PAD_X, LINE_PAD_Y = 0.35, 0.03          # lề thêm quanh hộp dòng kim (tỉ lệ bề rộng / bề cao dòng)
 FRAME_PAD = 12
 MAX_CONSEC_FAIL = 3
@@ -120,6 +119,8 @@ def plan() -> list[dict]:
     for b, n in BORG.items():
         pages = borg_pages(b, n)
         for v, prm in BORG_VARIANTS.items():
+            if prm.get("only") and b not in prm["only"]:
+                continue
             lim = prm.get("max_pages")
             sel = pages[:: max(1, len(pages) // lim)][:lim] if lim else pages
             if lim and b == "SachDungLyHoThan":
@@ -171,7 +172,10 @@ def run(budget: int | None) -> int:
     print(f"[tn7] cần gọi {len(jobs)} trang (đã có bỏ qua) · ước ≈ {len(jobs) * 6.5 / 60:.0f} phút")
     OUT.mkdir(parents=True, exist_ok=True)
     fails, done, t0 = 0, 0, time.time()
+    vfail, skip = defaultdict(int), set()          # lỗi liên tiếp theo biến thể; biến thể bị máy chủ từ chối -> bỏ qua, chạy tiếp
     for i, j in enumerate(jobs, 1):
+        if j["variant"] in skip:
+            continue
         err = ""
         if j.get("mode") == "lines":
             boxes, err = ocr_by_lines(A, j)
@@ -204,12 +208,17 @@ def run(budget: int | None) -> int:
             return 2
         if boxes is None:
             fails += 1
+            vfail[j["variant"]] += 1
             print(f"  [{i}/{len(jobs)}] LỖI {j['book']} {j['page']} {j['variant']} {err}")
-            if fails >= MAX_CONSEC_FAIL:
-                print(f"[tn7] DỪNG: {MAX_CONSEC_FAIL} trang lỗi liên tiếp — chạy lại --run sau (trang đã xong được giữ).")
+            if vfail[j["variant"]] >= MAX_CONSEC_FAIL:
+                skip.add(j["variant"])
+                print(f"[tn7] BỎ QUA biến thể {j['variant']}: {MAX_CONSEC_FAIL} lần lỗi liên tiếp (máy chủ từ chối tham số?)")
+            if fails >= 3 * MAX_CONSEC_FAIL:
+                print("[tn7] DỪNG: quá nhiều lỗi liên tiếp ở nhiều biến thể — kiểm tra mạng/tài khoản rồi chạy lại --run.")
                 return 3
             continue
         fails = 0
+        vfail[j["variant"]] = 0
         of = out_file(j); of.parent.mkdir(parents=True, exist_ok=True)
         tmpf = of.with_suffix(".tmp")
         tmpf.write_text(json.dumps(dict(book=j["book"], page=j["page"], variant=j["variant"], image=j["image"],

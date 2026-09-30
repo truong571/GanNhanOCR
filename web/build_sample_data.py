@@ -2,7 +2,8 @@
 """web/build_sample_data.py — sinh lại web/sample_data.json (+ sample_data.js) cho chế độ MỞ index.html TRỰC TIẾP.
 
 Dùng CHÍNH các hàm API của web/server.py trên dữ liệu thật (chỉ đọc), nên số liệu trong bản mẫu trùng với máy chủ:
-  stats · books · pipeline_flow · benchmarks · 1 trang mẫu / bộ (10 bộ + 2 mục nhãn người Borg) · thư viện ký tự mẫu.
+  stats · books · pipeline_flow · benchmarks (bảng tầng nhãn) · 1 trang mẫu / bộ (10 bộ) · thư viện ký tự mẫu
+  (rải đều theo tầng nhãn).
 
   .venv/bin/python web/build_sample_data.py                    # -> web/sample_data.json + web/sample_data.js
   .venv/bin/python web/build_sample_data.py --max-mb 3 --page-width 640
@@ -103,14 +104,12 @@ class Builder:
         return self.rel_url(url)
 
     def pick_gallery(self, chars: list[dict], k: int) -> list[dict]:
-        """Chọn k ô đa dạng trạng thái/tầng, vòng tròn qua các nhóm (ok, text_only, uncertified, review, SYLLABLE, khác)."""
-        groups: OrderedDict = OrderedDict((g, []) for g in ("ok", "text_only", "uncertified", "review", "chua_co",
-                                                             "SYLLABLE", "keep_v5", "keep", "other"))
+        """Chọn k ô có crop, đa dạng tầng nhãn: vòng tròn qua các tầng (GOLD, SYLLABLE, REVIEW, QUARANTINE, khác)."""
+        groups: OrderedDict = OrderedDict((g, []) for g in S.TIER_ORDER + ["other"])
         for c in chars:
-            if not (c.get("crop_url") or c.get("crop_chuan_url")):
+            if not c.get("crop_url"):
                 continue
-            g = c.get("gold_exact") or (c["tier"] if c.get("tier") in groups else "other")
-            groups.setdefault(g, []).append(c)
+            groups[c["tier"] if c.get("tier") in groups else "other"].append(c)
         out = []
         while len(out) < k and any(groups.values()):
             for g in list(groups):
@@ -151,12 +150,7 @@ class Builder:
             picks = self.pick_gallery(chars, self.a.gallery_per_book)
             picked_ids = {id(c) for c in picks}
             for c in chars:
-                if id(c) in picked_ids:
-                    c["crop_url"] = self.crop_uri(c.get("crop_url"))
-                    c["crop_chuan_url"] = self.crop_uri(c.get("crop_chuan_url"))
-                else:
-                    c["crop_url"] = self.rel_url(c.get("crop_url"))
-                    c["crop_chuan_url"] = self.rel_url(c.get("crop_chuan_url"))
+                c["crop_url"] = self.crop_uri(c.get("crop_url")) if id(c) in picked_ids else self.rel_url(c.get("crop_url"))
             for c in picks:
                 g = dict(c)
                 g.pop("rect", None)
@@ -197,8 +191,6 @@ def main(argv=None) -> int:
         print("[build_sample_data] Không có Pillow -> không nhúng ảnh (--no-images).")
     root = Path(a.root).expanduser().resolve() if a.root else S.default_root()
     st = S.load_store(root)
-    if not st.ge.available:
-        print("[build_sample_data] CẢNH BÁO: chưa có gold_exact.csv — bản mẫu sẽ không có trạng thái GOLD chính xác.")
     B = Builder(st, a)
     width, quality, max_chars = a.page_width, a.quality, a.max_chars
     limit = int(a.max_mb * 1e6)
@@ -233,8 +225,9 @@ def main(argv=None) -> int:
     print(f"[build_sample_data] -> {out} ({size / 1e6:.2f} MB){' + ' + str(js_out) if js_out else ''}")
     print(f"  {len(data['pages'])} trang mẫu · {len(data['gallery'])} thẻ thư viện · ảnh nhúng: "
           f"{data['images']['embedded_pages']} trang (rộng {data['images']['page_width']} px), {data['images']['embedded_crops']} crop")
-    print(f"  tổng {im['total_characters']:,} ký tự · GOLD {im['total_gold']:,} · gold_exact ok "
-          f"{im['gold_exact_ok'] if im['gold_exact_ok'] is not None else 'chưa có'} · bất biến {im['invariants_text']}")
+    print(f"  tổng {im['total_characters']:,} ký tự · " + " · ".join(
+        f"{t} {im['tier_totals'].get(t, 0):,}" for t in im["tier_columns"])
+          + (f" · {im['invariants_text']}" if im.get("invariants_text") else ""))
     return 0
 
 

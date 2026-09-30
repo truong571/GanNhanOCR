@@ -1,48 +1,42 @@
 # GanNhanOCR — ứng dụng web minh hoạ luận văn
 
 Ứng dụng một trang (HTML/CSS/JS thuần + máy chủ Python chỉ dùng thư viện chuẩn) phục vụ buổi bảo vệ luận văn Thạc sĩ
-*Hệ thống hỗ trợ gán nhãn tự động văn bản Hán Nôm cổ*. **Không có con số nào gõ cứng**: mọi số liệu (số ký tự, tầng nhãn,
-GOLD chính xác, độ chính xác, bất biến) được máy chủ đọc trực tiếp từ dữ liệu của dự án; tệp nguồn thiếu thì giao diện ghi
-**"chưa có"** thay vì bịa số.
+*Hệ thống hỗ trợ gán nhãn tự động văn bản Hán Nôm cổ*. Giao diện chỉ trình bày **tầng nhãn** của bộ dữ liệu:
+**GOLD** · **SYLLABLE** · **GOLD_text_only** (chỉ hiện khi có ô) · **REVIEW** · **QUARANTINE**.
+
+**Không có con số nào gõ cứng**: số ký tự, số ô theo tầng, số trang… được máy chủ đọc trực tiếp từ dữ liệu của dự án;
+tệp nguồn thiếu thì mục tương ứng không hiển thị (hoặc ghi "chưa có dữ liệu" cho bộ chưa dựng) thay vì bịa số.
 
 ## 1. Nội dung trình bày
 
 | Tab | Nội dung |
 | --- | --- |
-| 1. Tổng quan | KPI (ký tự, GOLD, SYLLABLE, **GOLD chính xác ok**, số bộ, bất biến), danh mục **10 bộ** theo vai trò, quy ước 3 tầng nhãn, **4 trạng thái GOLD chính xác** và 3 mức chứng cứ |
-| 2. Quy trình | **9 giai đoạn**: tiền xử lý & OCR → phát hiện & **chọn hộp theo từng bộ** (legacy / pitch / visual_dp / visual_dp_hybrid — đọc đúng bảng ĐƯỜNG CHẠY của `run_pipeline.sh` + số đo TN6) → gióng hàng (Banded DP) → kiểm kê → cổng & dị bản → đóng gói → gộp `dataset/_ALL` → **GOLD chính xác (B8)** kèm **profile chữ viết tay + lần đọc thứ hai lt2 (STT)** → **công bố** `dataset/_ALL/cong_bo` (ảnh = ô ok); mỗi bước có chỉ số đọc từ `measure_out/` |
-| 3. Trực quan hoá bản quét | Ảnh trang + hộp ký tự; **công tắc tô màu theo tầng nhãn HOẶC theo GOLD chính xác** (ok xanh · text_only vàng · uncertified xám · review đỏ · GOLD chưa có gold_exact tím nét đứt · ô không phải GOLD nét đứt mờ); chú giải = bộ lọc; bảng chi tiết hiện **crop gốc + crop chuẩn**, trạng thái, **lý do (tiếng Việt)**, **mức chứng cứ**, `cell_uid` |
-| 4. Tra cứu | Tìm theo âm (có/không dấu), chữ Nôm, Unicode; lọc theo bộ/nhóm (giao nộp · tập đánh giá · Borg nhãn người), tầng nhãn, **trạng thái GOLD chính xác**; bấm thẻ để mở đúng trang |
-| 5. Kết quả & đánh giá | Độ chính xác theo **mức chứng cứ** (ĐO trên nhãn người · ƯỚC LƯỢNG qua dị bản · SUY ĐOÁN), bảng GOLD chính xác 10 bộ, pitch decoding so với hộp legacy (box_ref), độ đúng OCR kim theo loại bản, bất biến, bộ crop nhãn người Borg, cây thư mục `dataset/`, danh sách nguồn còn thiếu |
+| 1. Tổng quan | KPI (tổng ký tự, GOLD, SYLLABLE, REVIEW, QUARANTINE, số bộ; kèm một dòng "Bất biến bộ đo: N PASS / M FAIL" nếu có `measure_out/SUMMARY.json`), danh mục **10 bộ** theo vai trò (giao nộp · đánh giá IHR · đánh giá Borg; thẻ sách ghi bộ giải mã hộp đang dùng, ví dụ "· hộp visual_dp"), quy ước các tầng nhãn kèm số ô |
+| 2. Quy trình | **7 giai đoạn**: tiền xử lý & OCR → phát hiện & chọn hộp ký tự (CenterNet + bộ giải mã hộp theo bộ) → gióng hàng (Banded DP) → kiểm kê & xếp tầng → cổng cơ chế & đối soát dị bản → đóng gói `dataset/<Bộ>/` → gộp `dataset/_ALL`; chỉ số của từng bước đọc từ tệp (thiếu thì bỏ qua) |
+| 3. Trực quan hoá bản quét | Ảnh trang + hộp ký tự **tô màu theo tầng nhãn**; chú giải = bộ lọc (bấm để ẩn/hiện từng tầng, kèm số ô trên trang); bảng chi tiết hiện crop, chữ Nôm, âm, tầng, Unicode, luật gán, toạ độ hộp |
+| 4. Tra cứu | Tìm theo âm (có/không dấu), chữ Nôm, Unicode; lọc theo bộ/nhóm (giao nộp · tập đánh giá) và tầng nhãn; bấm thẻ để mở đúng trang |
+| 5. Kết quả | Bảng **tầng nhãn theo bộ** (10 bộ + dòng tổng: tổng ô, GOLD, SYLLABLE, [GOLD_text_only], REVIEW, QUARANTINE, % GOLD) và cây thư mục `dataset/` |
 
-### 10 bộ + 2 mục xem nhãn người
+### 10 bộ
 
 | Nhóm | Bộ | Dữ liệu web đọc | Ảnh trang |
 | --- | --- | --- | --- |
-| Giao nộp | SachThanhTruyen 2 / 4 / 11 | `dataset/SachThanhTruyen/labels.csv` (cột `book` = stt2/stt4/stt11); vắng quyển nào thì lùi về bản xuất cũ `dataset/SachThanhTruyen{2,4,11}/` (23/09, ghi rõ "bản cũ", không ghép gold_exact) | `prepared/SachThanhTruyen{N}/pages/` |
-| Giao nộp | LucVanTien1883, KimVanKieu1884, Chrestomathie1872 | `dataset/<Bộ>/labels.csv` + `labels_trace.csv` | `prepared/<Bộ>/pages/` |
+| Giao nộp | SachThanhTruyen 2 / 4 / 11 | `dataset/SachThanhTruyen/labels.csv` (cột `book` = stt2/stt4/stt11); vắng quyển nào thì lùi về bản xuất cũ `dataset/SachThanhTruyen{2,4,11}/` (ghi rõ "bản cũ") | `prepared/SachThanhTruyen{N}/pages/` |
+| Giao nộp | LucVanTien1883, KimVanKieu1884, Chrestomathie1872 | `dataset/<Bộ>/labels.csv` | `prepared/<Bộ>/pages/` |
 | Đánh giá (IHR-NomDB) | LucVanTien1916, TruyenKieu1872 | như trên (`evaluation_only`) | `prepared/<Bộ>/pages/` |
 | Đánh giá (Borg, chép tay) | SachKinhThayCaBinh (Borg.tonch.18), SachDungLyHoThan (Borg.tonch.34) | như trên (`evaluation_only`) | `prepared/_auto/<Sách>/pages/` |
-| Borg — nhãn người | 2 mục xem riêng | `dataset/_BORG_NHAN_NGUOI/labels.csv` (+ `crops/`, `crops_chuan/`), tô màu theo `keep_level` | `prepared/<Sách>/pages/` |
 
-### GOLD chính xác (bước B8)
+Vắng hẳn `dataset/<Bộ>/labels.csv` thì máy chủ lọc bộ đó từ bộ gộp `dataset/_ALL/labels.csv` (cột `book_set`).
 
-- Nguồn: `dataset/_ALL/gold_exact.csv` (vắng thì `dataset/<Bộ>/gold_exact.csv`), khoá **`cell_uid`**. Dòng của
-  `dataset/<Bộ>/labels.csv` được gán `cell_uid` đúng như `pipeline/tools/merge_datasets._uid`
-  (`<bộ>/<book>/<page>/c<cột>/n<nom_idx>/s<syl_idx>`, `nom_idx`/`syl_idx` lấy từ `labels_trace.csv`); dự phòng ghép theo
-  (`book_set`, `image`). Nếu `gold_exact.csv` khác lượt dựng với `labels.csv`, trang ghi rõ "không khớp".
-- Crop chuẩn của ô `ok`: `dataset/_ALL/crops_chuan/…` (URL `/crops_chuan/…`).
-- Mức chứng cứ (`evidence_level`): **ĐO** ở LucVanTien1916, TruyenKieu1872, 2 bộ Borg (nhãn người) · **ƯỚC LƯỢNG** ở
-  LucVanTien1883, KimVanKieu1884 (dị bản người) · **SUY ĐOÁN** ở STT và Chrestomathie1872.
-- Lý do (`reason`) được dịch sang tiếng Việt trong `server.py` (`REASON_VI`); mã lạ hiển thị nguyên mã.
+Ô **REVIEW / QUARANTINE** không được đóng gói vào `labels.csv` (không giao ảnh), nên máy chủ lấy thêm từ bảng mọi tầng của bản dựng — `dataset_out/labels_final.csv` (STT, cột `book`) và `<ds_out>/labels_gated.csv` (sách khác), cùng nguồn với `scripts/bao_cao_tong_hop.py`: hiện hộp + nhãn trên bản quét, không có crop.
 
-### Nguồn số liệu (đọc từ tệp, thiếu -> "chưa có")
+### Nguồn số liệu (đọc từ tệp)
 
-`measure_out/SUMMARY.json` (bất biến) · `measure_out/gold_exact/summary.json` · `measure_out/<LVT1916|TK1872>/ihr_endtoend/summary.json`
-· `measure_out/<Borg>/borg_endtoend/summary.json` · `measure_out/box_ref/summary.json` · `measure_out/borg_human/summary.json`
-· `prepared/<LVT1883|KVK1884>/dataset_out/auto_precision_{verify,gated}/SUMMARY.json` · `dataset/_ALL/SOURCES.json`
-· `dataset/_BORG_NHAN_NGUOI/BUILD_INFO.json` · `Dict/QuocNgu_SinoNom.csv` (số mục từ) · `measure_out/_tn6/table.json` (TN6: hộp trước/sau) · `measure_out/stt_lt2/summary.json` (hiệu chuẩn lt2) · `dataset/_ALL/cong_bo/EXCLUSIONS.json` (tập công bố) · đường chạy từng bộ = `pipeline/tools/duong_chay.py` (cần .venv; thiếu -> "chưa có") — cùng cách đọc với
-`scripts/bao_cao_tong_hop.py`.
+`dataset/<Bộ>/labels.csv` (cột `tier`, chỉ đọc 11 cột cần) · `dataset/_ALL/SOURCES.json` (bộ gộp) ·
+`measure_out/SUMMARY.json` (dòng bất biến) · `measure_out/box_ref/summary.json` (hộp legacy → pitch, giai đoạn 2) ·
+`prepared/<LVT1883|KVK1884>/dataset_out/auto_precision_*/SUMMARY.json` (đối soát dị bản, giai đoạn 5) ·
+`Dict/QuocNgu_SinoNom.csv` (số mục từ) · bộ giải mã hộp của từng bộ = `pipeline/tools/duong_chay.py` (tuỳ chọn, cần .venv;
+thiếu thì thẻ sách không ghi phần "hộp …").
 
 ## 2. Chạy
 
@@ -54,13 +48,13 @@ GOLD chính xác, độ chính xác, bất biến) được máy chủ đọc tr
 GANNHANOCR_ROOT=/đường/dẫn/gốc .venv/bin/python web/server.py 8088   # hoặc --root <thư mục>: đọc dữ liệu ở gốc khác
 ```
 
-- Máy chủ **chỉ đọc**; nạp nhãn vào RAM lúc khởi động (log liệt kê từng bộ: số dòng, số trang, số ô ghép gold_exact).
+- Máy chủ **chỉ đọc**; nạp nhãn vào RAM lúc khởi động (log liệt kê từng bộ: số dòng theo tầng, số trang, số ảnh trang).
 - Bộ chưa có dữ liệu (đang dựng lại) không làm sập máy chủ: giao diện ghi "chưa có dữ liệu (đang dựng lại…)".
 - Sau khi pipeline chạy xong: bấm **"Nạp lại dữ liệu"** trên thanh đầu trang (gọi `/api/reload`) — không cần khởi động lại.
-- API: `/api/stats` · `/api/books` · `/api/page?book=&page=` · `/api/search?q=&book=&tier=&gx=&limit=` ·
+- API: `/api/stats` · `/api/books` · `/api/page?book=&page=` · `/api/search?q=&book=&tier=&limit=` ·
   `/api/pipeline_flow` · `/api/benchmarks` · `/api/reload`. `book` nhận mã bộ, bí danh (`lvt1883`, `b18`…) hoặc nhóm
-  (`all`, `giao_nop`, `danh_gia`, `nhan_nguoi`); `gx` ∈ `ok|text_only|uncertified|review|chua_co`.
-- Tệp phục vụ (chặn đường dẫn thoát ra ngoài): `/crops/<bộ>/…`, `/crops_chuan/…`, `/borg_human/…`, `/page_scans/<bộ>/…`.
+  (`all`, `giao_nop`, `danh_gia`); `tier` ∈ `GOLD|SYLLABLE|GOLD_text_only|REVIEW|QUARANTINE|all`.
+- Tệp phục vụ (chỉ ảnh, chặn đường dẫn thoát ra ngoài): `/crops/<bộ>/…`, `/page_scans/<bộ>/…`.
 
 ### Cách 2 — mở trực tiếp `index.html` (máy trình chiếu không có Python)
 
@@ -84,8 +78,8 @@ Chạy **sau khi** lượt dựng lại dữ liệu đã xong (script tự dừn
 ```text
 web/
 ├── index.html            # giao diện (sáng/tối, co giãn tới màn hình điện thoại, không cuộn ngang)
-├── style.css             # phong cách tài liệu khoa học; màu tầng nhãn + GOLD chính xác + mức chứng cứ
-├── app.js                # logic: KPI, quy trình, trình soi (tô màu 2 chế độ), tra cứu, bảng số đo
+├── style.css             # phong cách tài liệu khoa học; màu theo tầng nhãn
+├── app.js                # logic: KPI, quy trình, trình soi (tô màu theo tầng), tra cứu, bảng tầng nhãn
 ├── server.py             # máy chủ HTTP + REST API (thư viện chuẩn), chỉ đọc
 ├── build_sample_data.py  # sinh sample_data.json/.js từ dữ liệu thật (dùng lại hàm API của server.py)
 ├── sample_data.json      # dữ liệu mẫu cho chế độ ngoại tuyến
@@ -94,10 +88,9 @@ web/
 
 ## 4. Gợi ý thuyết minh
 
-1. **Quy mô + tính tự động** (tab 1): KPI đọc từ dữ liệu; nhấn mạnh tách **giao nộp** và **tập đánh giá** (IHR, Borg có
-   nhãn người, `evaluation_only`), nhãn người chỉ để đo.
-2. **GOLD chính xác** (tab 3): chọn một trang, bật "Tô theo GOLD chính xác", chỉ vào ô `text_only`/`review` và đọc lý do;
-   so crop gốc với crop chuẩn của ô `ok`.
-3. **Chữ viết tay** (tab 3, Borg / STT; tab 2 bước 8): profile handwriting — bỏ cổng CNT, bộ kiểm viết tay LOBO theo sách;
-   mở mục "Borg — nhãn người" để thấy hộp do người phiên.
-4. **Độ chính xác trung thực** (tab 5): mỗi con số đi kèm mức chứng cứ; chỉ bộ có nhãn người mới là **ĐO**.
+1. **Quy mô + tính tự động** (tab 1): KPI đọc từ dữ liệu; nhấn mạnh tách **giao nộp** và **tập đánh giá** (IHR, Borg,
+   `evaluation_only`); mọi nhãn do luật gán, không có quyết định của người.
+2. **Tầng nhãn trên trang thật** (tab 3): chọn một trang, bật/tắt từng tầng trong chú giải để thấy ô GOLD và SYLLABLE
+   nằm ở đâu; bấm một ô để xem crop, âm và luật gán.
+3. **Tra cứu** (tab 4): gõ một âm (ví dụ `nguoi`), lọc theo tầng, bấm thẻ để mở đúng trang.
+4. **Kết quả** (tab 5): so tỉ lệ GOLD giữa các bộ (chép tay, thạch bản, mộc bản, sách in).

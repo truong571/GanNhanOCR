@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GanNhanOCR — Hệ thống hỗ trợ gán nhãn tự động văn bản Hán Nôm cổ</title>
-  <meta name="description" content="Công cụ trực quan hoá quy trình xử lý, bộ dữ liệu thực nghiệm (10 bộ) và GOLD chính xác phục vụ bảo vệ luận văn Thạc sĩ. Mọi con số đọc trực tiếp từ dữ liệu của dự án.">
+  <meta name="description" content="Công cụ trực quan hoá quy trình xử lý và tầng nhãn của bộ dữ liệu thực nghiệm (10 bộ) phục vụ bảo vệ luận văn Thạc sĩ. Mọi con số đọc trực tiếp từ dữ liệu của dự án.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -40,8 +40,8 @@
   <section class="summary-section">
     <div class="summary-container">
       <div class="summary-header">
-        <span class="summary-label">TỔNG HỢP KẾT QUẢ THỰC NGHIỆM</span>
-        <span class="summary-tag" id="summaryTag">Ngữ liệu Hán Nôm · Xử lý tự động theo quy tắc</span>
+        <span class="summary-label">TỔNG HỢP TẦNG NHÃN</span>
+        <span class="summary-tag"><span id="summaryTag">Ngữ liệu Hán Nôm · Xử lý tự động theo quy tắc</span> <span class="summary-inv hidden" id="summaryInvariants"></span></span>
       </div>
       <div class="summary-grid">
         <div class="summary-item">
@@ -50,29 +50,29 @@
           <div class="summary-desc" id="kpiTotalDesc">Tổng số vị trí ký tự được định vị và trích xuất</div>
         </div>
         <div class="summary-item">
-          <div class="summary-num highlight-gold" id="kpiGoldRate">—</div>
-          <div class="summary-title">Nhãn mức 1 (GOLD)</div>
+          <div class="summary-num highlight-gold" id="kpiGold">—</div>
+          <div class="summary-title">Mức 1 · GOLD</div>
           <div class="summary-desc" id="kpiGoldDesc">Khớp cả tự dạng chữ Nôm và âm đọc</div>
         </div>
         <div class="summary-item">
-          <div class="summary-num highlight-syl" id="kpiSylChars">—</div>
-          <div class="summary-title">Nhãn mức 2 (SYLLABLE)</div>
-          <div class="summary-desc">Định vị chắc chắn âm tiết đối ứng trong câu</div>
+          <div class="summary-num highlight-syl" id="kpiSyl">—</div>
+          <div class="summary-title">Mức 2 · SYLLABLE</div>
+          <div class="summary-desc" id="kpiSylDesc">Định vị chắc chắn âm tiết đối ứng</div>
         </div>
         <div class="summary-item">
-          <div class="summary-num highlight-gx" id="kpiGoldExactOk">—</div>
-          <div class="summary-title">GOLD chính xác (ok)</div>
-          <div class="summary-desc" id="kpiGoldExactDesc">Ảnh đúng một chữ + chữ được chứng nhận</div>
+          <div class="summary-num highlight-review" id="kpiReview">—</div>
+          <div class="summary-title">REVIEW</div>
+          <div class="summary-desc" id="kpiReviewDesc">Ô nghi vấn, cần xem lại</div>
+        </div>
+        <div class="summary-item">
+          <div class="summary-num highlight-quarantine" id="kpiQuarantine">—</div>
+          <div class="summary-title">QUARANTINE</div>
+          <div class="summary-desc" id="kpiQuarantineDesc">Ô cách ly</div>
         </div>
         <div class="summary-item">
           <div class="summary-num" id="kpiBooksCount">—</div>
           <div class="summary-title">Bộ thực nghiệm</div>
-          <div class="summary-desc" id="kpiBooksDesc">Giao nộp và tập đánh giá có nhãn người</div>
-        </div>
-        <div class="summary-item">
-          <div class="summary-num highlight-status" id="kpiInvariants">—</div>
-          <div class="summary-title">Bất biến (invariants)</div>
-          <div class="summary-desc" id="kpiInvDesc">Bộ đo tái lập measure_out/SUMMARY.json</div>
+          <div class="summary-desc" id="kpiBooksDesc">Giao nộp + tập đánh giá</div>
         </div>
       </div>
     </div>
@@ -99,7 +99,7 @@
       </button>
       <button class="tab-btn" data-tab="benchmarks">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 20V10"></path><path d="M12 20V4"></path><path d="M6 20v-6"></path></svg>
-        <span>5. Kết quả & Đánh giá</span>
+        <span>5. Kết quả</span>
       </button>
     </div>
   </nav>
@@ -134,7 +134,7 @@
                   <li>Ứng dụng mô hình học sâu CenterNet (Backbone ResNet-34) để dự đoán tâm và hồi quy kích thước hộp bao ký tự dọc theo từng cột.</li>
                   <li>Giải thuật giải mã nhịp ký tự (Pitch Decoding) để phân tách chính xác các hộp dính nhau và giảm thiểu hiện tượng cắt phạm vào nét chữ.</li>
                   <li>Gióng hàng song ngữ bằng quy hoạch động dải hẹp (Banded DP) kết hợp luật thơ 6/8 và từ điển Quốc ngữ ↔ Hán Nôm (<span id="ovDictEntries">—</span> mục từ).</li>
-                  <li>Bước <strong>GOLD chính xác</strong>: chứng nhận tự động cả ảnh (đúng một chữ của đúng ô) lẫn chữ, kèm mức chứng cứ ĐO / ƯỚC LƯỢNG / SUY ĐOÁN.</li>
+                  <li>Xếp mỗi ô vào một <strong>tầng nhãn</strong> (GOLD / SYLLABLE / REVIEW / QUARANTINE) theo mức chắc chắn của chữ và âm.</li>
                 </ul>
               </div>
             </div>
@@ -161,7 +161,7 @@
         <div class="panel-card col-span-12">
           <div class="card-header">
             <h2>Quy ước phân loại mức độ tin cậy của nhãn</h2>
-            <span class="badge badge-neutral">3 mức nhãn</span>
+            <span class="badge badge-neutral" id="tierCardsBadge">—</span>
           </div>
           <div class="card-body">
             <div class="tier-cards-grid">
@@ -171,7 +171,7 @@
                   <span class="tier-count" id="tierCountGold">—</span>
                 </div>
                 <h4>Nhãn xác thực đầy đủ (Chữ Nôm & Âm đọc)</h4>
-                <p>Khớp cả tự dạng chữ Nôm và âm Quốc ngữ qua từ điển chuẩn, hộp bao ký tự được định vị. Bước GOLD chính xác (bên dưới) chứng nhận thêm ảnh của từng ô GOLD.</p>
+                <p>Khớp cả tự dạng chữ Nôm và âm Quốc ngữ qua từ điển chuẩn, hộp bao ký tự được định vị.</p>
               </div>
 
               <div class="tier-card tier-syllable">
@@ -180,33 +180,36 @@
                   <span class="tier-count" id="tierCountSyl">—</span>
                 </div>
                 <h4>Nhãn xác định vị trí âm tiết (Anchor Syllable)</h4>
-                <p>Xác định chắc chắn vị trí âm Quốc ngữ theo chuỗi nhịp câu, nhưng chữ Nôm có tự dạng biến thể hoặc chưa có mã Unicode độc nhất. Phục vụ bài toán nhận dạng âm tiết và gióng hàng câu.</p>
+                <p>Xác định chắc chắn vị trí âm Quốc ngữ theo chuỗi nhịp câu, nhưng chữ Nôm có tự dạng biến thể hoặc chưa có mã Unicode độc nhất.</p>
               </div>
 
-              <div class="tier-card tier-textonly">
+              <div class="tier-card tier-textonly" id="tierCardTxt">
                 <div class="tier-header">
-                  <span class="tier-badge badge-txt">Mức 3 · Text-only</span>
+                  <span class="tier-badge badge-txt">Mức 3 · GOLD_text_only</span>
                   <span class="tier-count" id="tierCountTxt">—</span>
                 </div>
                 <h4>Nhãn đối soát văn bản qua dị bản</h4>
-                <p>Nhãn văn bản được đối soát qua bản in độc lập (1871, 1916) nhưng ảnh chưa chắc; không trích xuất ảnh crop để tránh làm nhiễu tập huấn luyện thị giác.</p>
+                <p>Nhãn văn bản được đối soát qua bản in độc lập nhưng ảnh chưa chắc; không trích xuất ảnh crop.</p>
+              </div>
+
+              <div class="tier-card tier-review">
+                <div class="tier-header">
+                  <span class="tier-badge badge-review">REVIEW</span>
+                  <span class="tier-count" id="tierCountReview">—</span>
+                </div>
+                <h4>Nhãn nghi vấn</h4>
+                <p>Chữ hoặc âm chưa đủ chắc chắn (lệch số chữ, nhầm lẫn hệ thống); cần xem lại trước khi dùng.</p>
+              </div>
+
+              <div class="tier-card tier-quarantine">
+                <div class="tier-header">
+                  <span class="tier-badge badge-quarantine">QUARANTINE</span>
+                  <span class="tier-count" id="tierCountQuarantine">—</span>
+                </div>
+                <h4>Nhãn cách ly</h4>
+                <p>Ô bị phát hiện sai hoặc trùng lặp khi kiểm kê; tách riêng, không dùng.</p>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- GOLD chính xác (B8) -->
-        <div class="panel-card col-span-12">
-          <div class="card-header">
-            <h2>GOLD chính xác — ảnh + chữ (bước B8)</h2>
-            <span class="badge badge-neutral" id="gxPolicyBadge">—</span>
-          </div>
-          <div class="card-body">
-            <p class="lead-text">Mỗi ô GOLD được gắn đúng <strong>một</strong> trong 4 trạng thái (luật đầu tiên khớp thắng: review → text_only → uncertified → ok). Bước này <strong>không sửa nhãn</strong> và không đổi <code>labels.csv</code>; ô <code>ok</code> được giao kèm <strong>crop chuẩn</strong> (khung vuông đúng một chữ).</p>
-            <div class="gx-cards-grid mt-16" id="gxCardsGrid">
-              <div class="skeleton-loader">Đang tải trạng thái GOLD chính xác...</div>
-            </div>
-            <div class="evidence-legend mt-16" id="evidenceLegend"></div>
           </div>
         </div>
       </div>
@@ -217,7 +220,7 @@
       <div class="flow-wrapper">
         <div class="flow-header">
           <h2>Quy trình <span id="flowStepCount">—</span> giai đoạn gán nhãn tự động</h2>
-          <p>Mỗi giai đoạn chạy tuần tự với các ràng buộc kiểm tra độc lập; chỉ số kiểm soát đọc trực tiếp từ bộ đo <code>measure_out/</code>.</p>
+          <p>Mỗi giai đoạn chạy tuần tự với các ràng buộc kiểm tra độc lập; chỉ số kiểm soát đọc trực tiếp từ tệp của dự án.</p>
         </div>
 
         <div class="stepper-nav" id="stepperNav"></div>
@@ -243,7 +246,7 @@
             <div class="diagram-step highlight">
               <div class="dia-step-num">03</div>
               <div class="dia-title">CenterNet r34</div>
-              <div class="dia-desc">Định vị & Pitch Decode</div>
+              <div class="dia-desc">Định vị & chọn hộp</div>
             </div>
             <div class="dia-arrow">&rarr;</div>
             <div class="diagram-step highlight">
@@ -270,16 +273,10 @@
               <div class="dia-desc">dataset/&lt;Bộ&gt; → dataset/_ALL</div>
             </div>
             <div class="dia-arrow">&rarr;</div>
-            <div class="diagram-step highlight">
-              <div class="dia-step-num">08</div>
-              <div class="dia-title">GOLD chính xác</div>
-              <div class="dia-desc">Ảnh + chữ · profile viết tay</div>
-            </div>
-            <div class="dia-arrow">&rarr;</div>
             <div class="diagram-step success">
-              <div class="dia-step-num">09</div>
+              <div class="dia-step-num">08</div>
               <div class="dia-title">Tập ngữ liệu chuẩn</div>
-              <div class="dia-desc">labels.csv + gold_exact.csv</div>
+              <div class="dia-desc">labels.csv theo tầng nhãn</div>
             </div>
           </div>
         </div>
@@ -310,12 +307,7 @@
           </div>
 
           <div class="control-group">
-            <label>Tô màu hộp ký tự theo:</label>
-            <div class="seg-toggle" role="radiogroup" aria-label="Chế độ tô màu">
-              <label class="seg-opt"><input type="radio" name="colorMode" value="tier" checked> <span>Mức nhãn (tier)</span></label>
-              <label class="seg-opt"><input type="radio" name="colorMode" value="gold_exact"> <span>GOLD chính xác</span></label>
-            </div>
-            <label class="mt-8">Chú giải &amp; bộ lọc (bấm để ẩn/hiện):</label>
+            <label>Tầng nhãn — chú giải &amp; bộ lọc (bấm để ẩn/hiện):</label>
             <div class="checkbox-group" id="legendFilters"></div>
           </div>
 
@@ -324,7 +316,6 @@
             <div class="stat-mini"><span class="lbl">Tổng số ký tự:</span> <strong id="pgTotalChars">0</strong></div>
             <div class="stat-mini"><span class="lbl">Mức 1 (GOLD):</span> <strong id="pgGoldChars" class="text-gold">0</strong></div>
             <div class="stat-mini"><span class="lbl">Mức 2 (SYLLABLE):</span> <strong id="pgSylChars" class="text-syl">0</strong></div>
-            <div class="stat-mini"><span class="lbl">GOLD chính xác (ok):</span> <strong id="pgGxOk" class="text-gx">0</strong></div>
             <div class="page-status-msg hidden" id="pageStatusMsg"></div>
           </div>
 
@@ -336,29 +327,12 @@
             </div>
             <div class="preview-content-active hidden" id="previewActive">
               <div class="preview-top">
-                <div class="preview-crops">
-                  <figure class="preview-crop-fig">
-                    <div class="preview-crop-frame"><img id="previewCropImg" src="" alt="Crop gốc" class="preview-crop"></div>
-                    <figcaption>crop gốc</figcaption>
-                  </figure>
-                  <figure class="preview-crop-fig" id="previewChuanFig">
-                    <div class="preview-crop-frame chuan"><img id="previewCropChuanImg" src="" alt="Crop chuẩn" class="preview-crop"></div>
-                    <figcaption>crop chuẩn</figcaption>
-                  </figure>
-                </div>
+                <div class="preview-crop-frame"><img id="previewCropImg" src="" alt="Crop" class="preview-crop"></div>
                 <div class="preview-glyph-info">
                   <div class="preview-nom-char" id="previewNomChar">字</div>
                   <div class="preview-syl-text" id="previewSylText">âm đọc</div>
-                  <div class="preview-badges">
-                    <span class="preview-tier-badge" id="previewTierBadge">GOLD</span>
-                    <span class="gx-pill" id="previewGxBadge"></span>
-                  </div>
+                  <div class="preview-tier-badge" id="previewTierBadge">GOLD</div>
                 </div>
-              </div>
-              <div class="preview-gx-box" id="previewGxBox">
-                <div class="gx-box-row"><span class="dk">GOLD chính xác:</span> <strong id="previewGxStatus">—</strong></div>
-                <div class="gx-box-reason" id="previewGxReason">—</div>
-                <div class="gx-box-row"><span class="dk">Mức chứng cứ:</span> <span id="previewEvidence" class="ev-badge">—</span></div>
               </div>
               <div class="preview-details-list">
                 <div class="detail-row"><span class="dk">Mã Unicode:</span> <code id="previewUnicode">U+0000</code></div>
@@ -366,7 +340,6 @@
                 <div class="detail-row"><span class="dk">Vị trí cột:</span> <span id="previewColOrder">Cột 1</span></div>
                 <div class="detail-row"><span class="dk">Luật gán:</span> <span id="previewRule" class="code-sm">—</span></div>
                 <div class="detail-row"><span class="dk">Tọa độ hộp:</span> <span id="previewBbox" class="code-sm">[0,0,0,0]</span></div>
-                <div class="detail-row detail-uid"><span class="dk">cell_uid:</span> <span id="previewUid" class="code-sm">—</span></div>
               </div>
             </div>
           </div>
@@ -405,22 +378,13 @@
             <select id="galleryBookFilter" class="form-select form-select-sm" aria-label="Lọc theo tài liệu">
               <option value="all">Tất cả 10 bộ</option>
             </select>
-            <select id="galleryTierFilter" class="form-select form-select-sm" aria-label="Lọc theo mức nhãn">
-              <option value="all">Tất cả mức nhãn</option>
-              <option value="GOLD">Mức 1 (GOLD)</option>
-              <option value="SYLLABLE">Mức 2 (SYLLABLE)</option>
-              <option value="GOLD_text_only">Mức 3 (text_only)</option>
+            <select id="galleryTierFilter" class="form-select form-select-sm" aria-label="Lọc theo tầng nhãn">
+              <option value="all">Tất cả tầng nhãn</option>
+              <option value="GOLD">Mức 1 · GOLD</option>
+              <option value="SYLLABLE">Mức 2 · SYLLABLE</option>
+              <option value="GOLD_text_only">Mức 3 · GOLD_text_only</option>
               <option value="REVIEW">REVIEW</option>
-              <option value="keep_v5">Nhãn người: keep_v5</option>
-              <option value="keep">Nhãn người: keep</option>
-            </select>
-            <select id="galleryGxFilter" class="form-select form-select-sm" aria-label="Lọc theo GOLD chính xác">
-              <option value="all">Mọi trạng thái GOLD chính xác</option>
-              <option value="ok">ok — GOLD chính xác</option>
-              <option value="text_only">text_only — chỉ tin chữ</option>
-              <option value="uncertified">uncertified — chưa chứng nhận</option>
-              <option value="review">review — cần xem lại</option>
-              <option value="chua_co">GOLD chưa có gold_exact</option>
+              <option value="QUARANTINE">QUARANTINE</option>
             </select>
           </div>
         </div>
@@ -433,119 +397,34 @@
       </div>
     </section>
 
-    <!-- TAB 5: KẾT QUẢ & ĐÁNH GIÁ (BENCHMARKS) -->
+    <!-- TAB 5: KẾT QUẢ (TẦNG NHÃN THEO BỘ) -->
     <section class="tab-pane" id="tab-benchmarks">
       <div class="benchmarks-wrapper">
         <div class="benchmarks-header">
-          <h2>Đánh giá thực nghiệm và kiểm tra tính toàn vẹn</h2>
-          <p>Mọi con số đọc trực tiếp từ bộ đo tái lập (<code>measure_out/</code>) và bộ dữ liệu; ô ghi <strong>chưa có</strong> nghĩa là tệp nguồn chưa được sinh. Mức chứng cứ ghi rõ ở từng dòng.</p>
+          <h2>Kết quả gán nhãn theo tầng</h2>
+          <p>Số ô của từng tầng nhãn trong mỗi bộ, đếm trực tiếp trên <code>dataset/&lt;Bộ&gt;/labels.csv</code>.</p>
         </div>
 
         <div class="panel-card">
           <div class="card-header">
-            <h3>Độ chính xác nhãn theo mức chứng cứ</h3>
-            <span class="badge badge-neutral">ĐO · ƯỚC LƯỢNG · SUY ĐOÁN</span>
+            <h3>Tầng nhãn theo bộ</h3>
           </div>
           <div class="table-wrap">
             <table class="benchmark-table">
-              <thead>
-                <tr><th>Bộ</th><th>Mức chứng cứ</th><th>Đại lượng</th><th>Giá trị</th><th>CI 95 %</th><th>n</th><th>Nguồn</th></tr>
-              </thead>
-              <tbody id="accTableBody"><tr><td colspan="7" class="td-dim">Đang tải...</td></tr></tbody>
+              <thead id="tierTableHead"></thead>
+              <tbody id="tierTableBody"><tr><td class="td-dim">Đang tải...</td></tr></tbody>
             </table>
           </div>
-          <p class="table-note" id="accNote"></p>
+          <p class="table-note" id="tierTableNote"></p>
         </div>
 
-        <div class="panel-card">
-          <div class="card-header">
-            <h3>GOLD chính xác theo bộ</h3>
-            <span class="badge badge-neutral" id="gxTableBadge">—</span>
-          </div>
-          <div class="table-wrap">
-            <table class="benchmark-table">
-              <thead>
-                <tr><th>Bộ</th><th>Vai trò</th><th>Ô GOLD</th><th>ok</th><th>text_only</th><th>uncertified</th><th>review</th><th>% ok</th><th>Mức chứng cứ của ô ok</th></tr>
-              </thead>
-              <tbody id="gxTableBody"><tr><td colspan="9" class="td-dim">Đang tải...</td></tr></tbody>
-            </table>
-          </div>
-          <p class="table-note" id="gxTableNote"></p>
-        </div>
-
-        <div class="panel-card">
-          <div class="card-header">
-            <h3>Phương pháp đề xuất so với phương pháp cơ sở</h3>
-          </div>
-          <div class="benchmark-table-card no-border">
-            <table class="benchmark-table">
-              <thead>
-                <tr>
-                  <th>Chỉ số đánh giá</th>
-                  <th>Phương pháp cơ sở (Baseline)</th>
-                  <th>Đề xuất (GanNhanOCR)</th>
-                  <th>Mức độ cải thiện</th>
-                  <th>Ghi chú & mức chứng cứ</th>
-                </tr>
-              </thead>
-              <tbody id="benchmarkTableBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="panel-card">
-          <div class="card-header">
-            <h3>Độ đúng OCR chữ Nôm (kim) theo loại bản</h3>
-          </div>
-          <div class="table-wrap">
-            <table class="benchmark-table">
-              <thead>
-                <tr><th>Bộ</th><th>Mức chứng cứ</th><th>Đại lượng</th><th>Giá trị</th><th>CI 95 %</th><th>n</th><th>Loại bản</th></tr>
-              </thead>
-              <tbody id="kimTableBody"><tr><td colspan="7" class="td-dim">Đang tải...</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="grid-2col gap-20">
-          <div class="panel-card">
-            <div class="card-header">
-              <h3>Kiểm tra tính toàn vẹn (invariants)</h3>
-              <span class="badge badge-neutral" id="invBadge">—</span>
-            </div>
-            <div class="card-body" id="invCardBody">
-              <div class="skeleton-loader">Đang tải...</div>
-            </div>
-          </div>
-
-          <div class="panel-card">
-            <div class="card-header">
-              <h3>Bộ crop nhãn người Borg</h3>
-              <span class="badge badge-neutral">dataset/_BORG_NHAN_NGUOI</span>
-            </div>
-            <div class="card-body" id="borgHumanBody">
-              <div class="skeleton-loader">Đang tải...</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="panel-card">
+        <div class="panel-card hidden" id="datasetTreeCard">
           <div class="card-header">
             <h3>Quy cách tổ chức bộ dữ liệu tự chứa</h3>
           </div>
           <div class="card-body">
             <p>Mỗi thư mục trong <code>dataset/</code> là một bộ độc lập; <code>dataset/_ALL</code> gộp mọi bộ với khoá <code>cell_uid</code> và cờ <code>evaluation_only</code>:</p>
             <div class="code-block-display mt-8"><code id="datasetTree">dataset/ …</code></div>
-          </div>
-        </div>
-
-        <div class="panel-card hidden" id="missingSourcesCard">
-          <div class="card-header">
-            <h3>Nguồn số liệu chưa có</h3>
-          </div>
-          <div class="card-body">
-            <p class="table-note">Các ô tương ứng hiển thị "chưa có". Sinh lại bằng <code>./run_pipeline.sh --book all --yes</code> rồi <code>.venv/bin/python scripts/measure/measure.py --all</code>, sau đó bấm "Nạp lại dữ liệu".</p>
-            <ul class="academic-checklist mt-8" id="missingSourcesList"></ul>
           </div>
         </div>
       </div>

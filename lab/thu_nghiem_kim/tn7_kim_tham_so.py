@@ -64,7 +64,9 @@ BORG_VARIANTS = {# TN10 (30/09): đề xuất "đọc 2 lượt" — lượt 1 H
                  "lt2_khunhieu": dict(lang_type=2, font_type=1, scale=1, src="denoised"),
                  "lt2_theo_dong": dict(lang_type=2, font_type=1, scale=1, mode="lines", max_pages=6)}
 STT_VARIANTS = {"lt2_viettay": dict(lang_type=2, font_type=2, scale=1),
-                "lt1_viettay": dict(lang_type=1, font_type=2, scale=1)}
+                "lt1_viettay": dict(lang_type=1, font_type=2, scale=1),
+                # đề xuất "đọc 2 lượt" (30/09): lượt 1 Hán trên ảnh phóng ×2 làm khung đủ số chữ
+                "lt1_x2": dict(lang_type=1, font_type=1, scale=2)}
 LINE_PAD_X, LINE_PAD_Y = 0.35, 0.03          # lề thêm quanh hộp dòng kim (tỉ lệ bề rộng / bề cao dòng)
 FRAME_PAD = 12
 MAX_CONSEC_FAIL = 3
@@ -149,6 +151,8 @@ def prepare_image(j: dict) -> tuple[str, str | None]:
         from core.image.frame_detector import crop_to_frame
         bgr = cv2.imread(j["image"])
         crop = crop_to_frame(bgr, pad=FRAME_PAD)
+        if j.get("scale", 1) != 1:
+            crop = cv2.resize(crop, (crop.shape[1] * j["scale"], crop.shape[0] * j["scale"]), interpolation=cv2.INTER_LANCZOS4)
         t = tempfile.NamedTemporaryFile(suffix=".png", delete=False); t.close()
         cv2.imwrite(t.name, crop)
         return t.name, t.name
@@ -396,12 +400,16 @@ def evaluate() -> int:
             H = Hc.setdefault(book, human_pages(book))
             variants = ["hien_tai_lt2_in"] + list(BORG_VARIANTS) + ["hop_lt1_lt2", "hop_lt1x2_lt2"]
         else:
-            variants = ["hien_tai_lt1_in", "hien_tai_lt2_in"] + list(STT_VARIANTS)
+            variants = ["hien_tai_lt1_in", "hien_tai_lt2_in"] + list(STT_VARIANTS) + ["hop_lt1_lt2", "hop_lt1x2_lt2"]
         for pg in sorted(pages):
             for v in variants:
                 if v.startswith("hop_"):
-                    sk = page_char_boxes(book, pg, "lt1_in" if v == "hop_lt1_lt2" else "lt1_x2")
-                    nm = page_char_boxes(book, pg, "hien_tai_lt2_in")
+                    if kind == "borg":
+                        sk = page_char_boxes(book, pg, "lt1_in" if v == "hop_lt1_lt2" else "lt1_x2")
+                        nm = page_char_boxes(book, pg, "hien_tai_lt2_in")
+                    else:      # STT: hai lượt TN7 cùng cắt khung (cùng hệ toạ độ sau khi chia scale)
+                        sk = page_char_boxes(book, pg, "lt1_viettay" if v == "hop_lt1_lt2" else "lt1_x2")
+                        nm = page_char_boxes(book, pg, "lt2_viettay")
                     kc = read_order(merge_two_pass(sk, nm)) if sk is not None and nm is not None else None
                 elif v.startswith("hien_tai"):
                     kc = kim_page_chars(book, pg) if kind == "borg" else stt_baseline_chars(book, pg, v)

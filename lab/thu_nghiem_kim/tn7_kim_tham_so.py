@@ -54,9 +54,16 @@ STT = {"stt2": "SachThanhTruyen2", "stt4": "SachThanhTruyen4", "stt11": "SachTha
 STT_N = 10                                                           # trang mẫu mỗi quyển
 BORG_VARIANTS = {"lt2_viettay": dict(lang_type=2, font_type=2, scale=1),
                  "lt2_tudong": dict(lang_type=2, font_type=0, scale=1),
-                 "lt2_viettay_x2": dict(lang_type=2, font_type=2, scale=2)}
+                 "lt2_viettay_x2": dict(lang_type=2, font_type=2, scale=2),
+                 # TN7b (30/09): font_type bị máy chủ bỏ qua (kết quả y hệt) -> thử các núm còn lại
+                 "lt2_hanhchinh": dict(lang_type=2, font_type=1, scale=1, ocr_id=2),
+                 "tudong_het": dict(lang_type=0, font_type=0, scale=1, ocr_id=-1),
+                 "lt2_khunhieu": dict(lang_type=2, font_type=1, scale=1, src="denoised"),
+                 "lt2_theo_dong": dict(lang_type=2, font_type=1, scale=1, mode="lines", max_pages=6)}
 STT_VARIANTS = {"lt2_viettay": dict(lang_type=2, font_type=2, scale=1),
-                "lt1_viettay": dict(lang_type=1, font_type=2, scale=1)}
+                "lt1_viettay": dict(lang_type=1, font_type=2, scale=1),
+                "lt2_hanhchinh": dict(lang_type=2, font_type=1, scale=1, ocr_id=2)}
+LINE_PAD_X, LINE_PAD_Y = 0.35, 0.03          # lề thêm quanh hộp dòng kim (tỉ lệ bề rộng / bề cao dòng)
 FRAME_PAD = 12
 MAX_CONSEC_FAIL = 3
 
@@ -111,8 +118,13 @@ def _resolve(lt1: dict):
 def plan() -> list[dict]:
     jobs = []
     for b, n in BORG.items():
-        for p in borg_pages(b, n):
-            for v, prm in BORG_VARIANTS.items():
+        pages = borg_pages(b, n)
+        for v, prm in BORG_VARIANTS.items():
+            lim = prm.get("max_pages")
+            sel = pages[:: max(1, len(pages) // lim)][:lim] if lim else pages
+            if lim and b == "SachDungLyHoThan":
+                sel = sel[:3]
+            for p in sel:
                 jobs.append(dict(p, kind="borg", variant=v, **prm))
     for k in STT:
         for p in stt_pages(k, STT_N):
@@ -136,6 +148,11 @@ def prepare_image(j: dict) -> tuple[str, str | None]:
         t = tempfile.NamedTemporaryFile(suffix=".png", delete=False); t.close()
         cv2.imwrite(t.name, crop)
         return t.name, t.name
+    if j.get("src") == "denoised":
+        d = REPO / "prepared" / "_auto" / j["book"] / "pages_denoised" / f"{j['page']}.png"
+        if not d.exists():
+            raise FileNotFoundError(f"thiếu ảnh khử nhiễu {d}")
+        return str(d), None
     if j["scale"] == 1:
         return j["image"], None
     from PIL import Image
@@ -155,19 +172,28 @@ def run(budget: int | None) -> int:
     OUT.mkdir(parents=True, exist_ok=True)
     fails, done, t0 = 0, 0, time.time()
     for i, j in enumerate(jobs, 1):
-        path, tmp = prepare_image(j)
         err = ""
-        try:
-            fname = A.upload_image(path)
-            boxes = A.recognize(fname, lang_type=j["lang_type"], font_type=j["font_type"]) if fname else None
-        except Exception as e:  # noqa: BLE001
-            boxes, err = None, f"{type(e).__name__}: {e}"
-        finally:
-            if tmp:
+        if j.get("mode") == "lines":
+            boxes, err = ocr_by_lines(A, j)
+        else:
+            try:
+                path, tmp = prepare_image(j)
+            except Exception as e:  # noqa: BLE001
+                path, tmp, err = None, None, f"{type(e).__name__}: {e}"
+            boxes = None
+            if path:
                 try:
-                    os.unlink(tmp)
-                except OSError:
-                    pass
+                    fname = A.upload_image(path)
+                    boxes = A.recognize(fname, lang_type=j["lang_type"], font_type=j["font_type"],
+                                        ocr_id=j.get("ocr_id", 1)) if fname else None
+                except Exception as e:  # noqa: BLE001
+                    boxes, err = None, f"{type(e).__name__}: {e}"
+                finally:
+                    if tmp:
+                        try:
+                            os.unlink(tmp)
+                        except OSError:
+                            pass
         guest = bool(getattr(A, "is_guest_mode", lambda: False)())
         rec = dict(t=time.strftime("%Y-%m-%dT%H:%M:%S"), book=j["book"], page=j["page"], variant=j["variant"],
                    ok=boxes is not None and not guest, err=err or ("guest_mode" if guest else ""))
@@ -188,7 +214,8 @@ def run(budget: int | None) -> int:
         tmpf = of.with_suffix(".tmp")
         tmpf.write_text(json.dumps(dict(book=j["book"], page=j["page"], variant=j["variant"], image=j["image"],
                                         kim_params=dict(lang_type=j["lang_type"], font_type=j["font_type"],
-                                                        ocr_id=1, reading_direction=1),
+                                                        ocr_id=j.get("ocr_id", 1), reading_direction=1),
+                                        src=j.get("src", "goc"), mode=j.get("mode", "trang"),
                                         scale=j["scale"], framed=j["kind"] == "stt", boxes=boxes),
                                    ensure_ascii=False), encoding="utf-8")
         tmpf.replace(of)
@@ -198,6 +225,38 @@ def run(budget: int | None) -> int:
             print(f"  [{i}/{len(jobs)}] xong {done} · {el / 60:.1f} phút · còn ≈ {(len(jobs) - i) * el / i / 60:.0f} phút")
     print(f"[tn7] XONG {done} trang. Chấm: .venv/bin/python lab/thu_nghiem_kim/tn7_kim_tham_so.py --eval")
     return 0
+
+
+def ocr_by_lines(A, j: dict):
+    """Gửi TỪNG DÒNG (hộp dòng của lần đọc hiện tại, nới lề) -> gộp hộp về toạ độ trang. Nhiều lượt / trang."""
+    from PIL import Image
+    from borg_endtoend_eval import _kim_sfx, AUTO
+    raw = AUTO / j["book"] / "kim_raw" / f"{j['page']}{_kim_sfx(str(AUTO), j['book'])}.json"
+    lines = json.loads(raw.read_text(encoding="utf-8")).get("boxes") or []
+    im = Image.open(j["image"]).convert("RGB")
+    out, n_fail = [], 0
+    for b in lines:
+        xs = [p[0] for p in b["points"]]; ys = [p[1] for p in b["points"]]
+        w, h = max(xs) - min(xs), max(ys) - min(ys)
+        x0 = max(0, int(min(xs) - LINE_PAD_X * w)); x1 = min(im.width, int(max(xs) + LINE_PAD_X * w))
+        y0 = max(0, int(min(ys) - LINE_PAD_Y * h)); y1 = min(im.height, int(max(ys) + LINE_PAD_Y * h))
+        t = tempfile.NamedTemporaryFile(suffix=".png", delete=False); t.close()
+        im.crop((x0, y0, x1, y1)).save(t.name)
+        try:
+            fname = A.upload_image(t.name)
+            bx = A.recognize(fname, lang_type=j["lang_type"], font_type=j["font_type"]) if fname else None
+        except Exception:  # noqa: BLE001
+            bx = None
+        finally:
+            os.unlink(t.name)
+        if bx is None:
+            n_fail += 1
+            continue
+        for q in bx:
+            out.append(dict(q, points=[[pt[0] + x0, pt[1] + y0] for pt in q["points"]]))
+    if n_fail > len(lines) // 2:
+        return None, f"{n_fail}/{len(lines)} dòng lỗi"
+    return out, (f"{n_fail} dòng lỗi" if n_fail else "")
 
 
 def status() -> int:

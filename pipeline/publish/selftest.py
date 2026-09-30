@@ -340,8 +340,8 @@ def test_integration_real():
 
 def test_gold_exact_release():
     """28/09: tập công bố theo GOLD chính xác — tập ẢNH chỉ ô gold_exact = ok (ảnh = crop chuẩn), mọi dòng khác vào tập VĂN BẢN
-    kèm lý do; page-disjoint trên hợp hai tập; bộ đánh giá eval_only; gold_exact.csv lệch labels -> ReleaseError; ghi đĩa +
-    thiếu ảnh -> không ghi."""
+    kèm lý do; KHÔNG chia tập (30/09, A-10: không cột split/lobo_group, cột split_hint cũ bị bỏ); bộ đánh giá chỉ mang
+    evaluation_only; gold_exact.csv lệch labels -> ReleaseError; ghi đĩa + thiếu ảnh -> không ghi."""
     import hashlib
     import tempfile
     from . import gold_exact_release as GR
@@ -377,15 +377,15 @@ def test_gold_exact_release():
     check("release: bất biến PASS", all(v is True for k, v in rep.items() if isinstance(v, bool)),
           {k: v for k, v in rep.items() if isinstance(v, bool)})
     ev = L.book_set == "LucVanTien1916"
-    check("release: bộ đánh giá -> eval_only (ảnh + văn bản)", (I.split[I.book_set == "LucVanTien1916"] == "eval_only").all()
-          and (T.split[T.book_set == "LucVanTien1916"] == "eval_only").all() and ev.any())
-    allrows = pd.concat([I[["book_set", "book", "page", "split"]], T[["book_set", "book", "page", "split"]]])
-    check("release: page-disjoint trên hợp hai tập", int(allrows.groupby(["book_set", "book", "page"]).split.nunique().max()) == 1)
+    check("release: bộ đánh giá -> evaluation_only = 1 (ảnh + văn bản)",
+          (I.evaluation_only[I.book_set == "LucVanTien1916"] == "1").all()
+          and (T.evaluation_only[T.book_set == "LucVanTien1916"] == "1").all() and ev.any())
+    chia = {"split", "split_hint", "lobo_group"}
+    check("release: KHÔNG có cột chia tập (kể cả khi labels.csv cũ còn split_hint)",
+          not (chia & (set(I.columns) | set(T.columns))) and rep.get("khong_cot_chia_tap") is True
+          and not {"split_images", "split_text", "lobo", "classes_train"} & set(rep))
     I2, _, _ = GR.build(L, E, eval_books={"lucvantien1916"})
-    check("release: tất định", I2.split.equals(I.split))
-    check("release: LOBO đếm theo book", set(rep["lobo"]) == set(L.book)
-          and rep["lobo"]["stt2"]["train_anh"] + rep["lobo"]["stt2"]["test_anh"] + rep["lobo"]["stt2"]["danh_gia_giu_ngoai_train"]
-          == len(I))
+    check("release: tất định", I2.equals(I))
     with tempfile.TemporaryDirectory() as td:
         d = Path(td)
         L.to_csv(d / "labels.csv", index=False)

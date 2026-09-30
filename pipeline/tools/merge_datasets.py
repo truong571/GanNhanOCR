@@ -6,7 +6,7 @@ Mỗi lần chạy pipeline xuất **một thư mục một bộ** (`dataset/Sac
 `dataset/LucVanTien1883/`…). Người nhận muốn *một* `labels.csv` để nạp thẳng vào
 DataLoader thì phải tự ghép 6 thư mục, và chỗ ghép tay đó là nơi **tập ĐÁNH GIÁ lọt vào
 tập huấn luyện** (2 bộ IHR-NomDB có nhãn người). Công cụ này ghép sẵn, **mang theo cờ**
-`evaluation_only` / `split_hint` để hạ nguồn không trộn nhầm, và **không** đụng vào các
+`evaluation_only` để hạ nguồn không trộn nhầm, và **không** đụng vào các
 thư mục nguồn (chỉ ĐỌC).
 
 BỘ GỘP KHÔNG PHẢI NGUỒN SỰ THẬT. Nguồn là `dataset/<Bộ>/`; `_ALL/` dựng lại được bằng
@@ -27,7 +27,9 @@ BA CHỖ DỄ SAI, ĐÃ CHẶN BẰNG BẤT BIẾN
 2. **Ảnh không có tệp.** Tầng `GOLD_text_only` có `image` nhưng **cố ý không giao ảnh**
    (cổng cơ chế B4'). Bất biến "ảnh tồn tại 100 %" chỉ tính dòng ngoài tầng này.
 3. **Cờ đánh giá.** Bộ nào có `evaluation_only.json` (pipeline/tools/mark_eval_dataset.py)
-   thì MỌI dòng của nó mang `evaluation_only=1`, `split_hint=eval`.
+   thì MỌI dòng của nó mang `evaluation_only=1`.
+4. **Không chia tập.** Quyết định A-10 (16/09, docs/DANH_MUC_SUA_DOI_CUOI_2026-09-16.md): bộ giao
+   nộp KHÔNG có cột chia train/val/test (bỏ `split_hint` 30/09); ai cần chia thì tự chia theo trang.
 
 Chạy:
     .venv/bin/python -m pipeline.tools.merge_datasets --out dataset/_ALL
@@ -64,10 +66,11 @@ BO_BO_QUA = ("_",)
 HAU_TO_CU = ("probe",)
 
 # Cột thêm vào so với 12 cột giao nộp. `cell_uid` là KHOÁ CHÍNH của bộ gộp.
-COT_THEM = ["cell_uid", "book_set", "evaluation_only", "split_hint", "image_dup"]
+COT_THEM = ["cell_uid", "book_set", "evaluation_only", "image_dup"]   # KHÔNG cột chia tập (A-10)
 COT_RA = ["cell_uid", "image", "book_set"] + [c for c in GIAO_NOP if c != "image"] \
-    + ["evaluation_only", "split_hint", "image_dup"]
+    + ["evaluation_only", "image_dup"]
 CROPS = "crops"
+COT_CHIA = ("split", "split_hint", "lobo_group")   # cột chia tập bị cấm (A-10)
 # Đúng những gì bước gộp sinh ra — chỉ chừng này được xoá khi ghi lại.
 SINH_BOI_BUOC_NAY = {CROPS, "labels.csv", "labels_trace.csv", "columns.csv", "labels.xlsx",
                      "SOURCES.json", "CHECKSUMS.txt", "README.md", "DATASHEET.md",
@@ -151,7 +154,6 @@ def gop(root: Path, bo_list: list[str], out: Path, che_do: str = "copy",
             o["cell_uid"] = _uid(bo, r, t, i)
             o["book_set"] = bo
             o["evaluation_only"] = "1" if eval_only else "0"
-            o["split_hint"] = "eval" if eval_only else "train"
             o["image_dup"] = "0"
             rows_out.append(o)
             tr = {"cell_uid": o["cell_uid"], "image": img}
@@ -310,14 +312,12 @@ def kiem_bat_bien(rows: list[dict], nguon: dict, root: Path, bo_list: list[str])
     for bo, v in nguon.items():
         rs = [r for r in rows if r["book_set"] == bo]
         if v["evaluation_only"]:
-            bb[f"eval_co_co_{bo}"] = all(r["evaluation_only"] == "1" and r["split_hint"] == "eval"
-                                         for r in rs)
+            bb[f"eval_co_co_{bo}"] = all(r["evaluation_only"] == "1" for r in rs)
         else:
-            bb[f"khong_co_co_eval_{bo}"] = all(r["evaluation_only"] == "0" and r["split_hint"] == "train"
-                                               for r in rs)
+            bb[f"khong_co_co_eval_{bo}"] = all(r["evaluation_only"] == "0" for r in rs)
         bb[f"so_dong_{bo}"] = len(rs) == v["n_dong"]
     bb["text_only_khong_giao_anh"] = True      # kiểm ở bước copy (bỏ qua tier này)
-    bb["split_hint_chi_train_hoac_eval"] = {r["split_hint"] for r in rows} <= {"train", "eval"}
+    bb["khong_cot_chia_tap"] = not any(k in r for r in rows[:1] for k in COT_CHIA)
     return bb
 
 
@@ -353,11 +353,11 @@ def kiem_tren_dia(out: Path) -> dict:
         rs = [r for r in L if r["book_set"] == bo]
         bb[f"so_dong_{bo}"] = len(rs) == v["n_dong"]
         if v["evaluation_only"]:
-            bb[f"co_eval_{bo}"] = bool(rs) and all(r["evaluation_only"] == "1"
-                                                   and r["split_hint"] == "eval" for r in rs)
+            bb[f"co_eval_{bo}"] = bool(rs) and all(r["evaluation_only"] == "1" for r in rs)
+        else:
+            bb[f"khong_co_eval_{bo}"] = all(r["evaluation_only"] == "0" for r in rs)
     bb["co_it_nhat_1_bo_danh_gia"] = any(v["evaluation_only"] for v in src["nguon"].values())
-    bb["khong_dong_train_nao_mang_co_eval"] = not [
-        r for r in L if r["split_hint"] == "train" and r["evaluation_only"] == "1"]
+    bb["khong_cot_chia_tap"] = not any(k in r for r in L[:1] for k in COT_CHIA)
     return bb
 
 
@@ -385,15 +385,14 @@ def _readme(t: dict) -> str:
     khoi_eval = "" if not bo_eval else f"""
 ## ⚠️ {len(bo_eval)} bộ là TẬP ĐÁNH GIÁ: {', '.join(f'`{b}`' for b in bo_eval)}
 
-{_n(t['eval_only_dong'])} dòng mang `evaluation_only = 1` và `split_hint = eval`.
-**Không** đưa chúng vào train/val của bất kỳ mô hình nào — xem `TAP_DANH_GIA.md`.
-Lọc đúng một dòng lệnh:
+{_n(t['eval_only_dong'])} dòng mang `evaluation_only = 1` (bộ có nhãn người, dùng để ĐO) — xem `TAP_DANH_GIA.md`.
+Bộ gộp **không chia tập** (không có cột train/val/test). Tách bộ giao nộp và bộ đánh giá:
 
 ```python
 import pandas as pd
 df = pd.read_csv("labels.csv", keep_default_na=False)
-train = df[df.split_hint == "train"]        # {_n(t['n_dong'] - t['eval_only_dong'])} dòng
-eval_ = df[df.split_hint == "eval"]         # {_n(t['eval_only_dong'])} dòng
+giao_nop = df[df.evaluation_only == 0]      # {_n(t['n_dong'] - t['eval_only_dong'])} dòng
+danh_gia = df[df.evaluation_only == 1]      # {_n(t['eval_only_dong'])} dòng
 ```
 """
     bo_trung = sorted({r for r in t.get("bo_co_image_trung", [])})
@@ -424,7 +423,6 @@ Tầng: {tiers}.
 | `book_set` | tên thư mục bộ nguồn ({', '.join(t['bo'])}) |
 | `book` | quyển trong bộ (bộ STT có 3 quyển: `stt2`/`stt4`/`stt11`) |
 | `evaluation_only` | `1` = bộ đã đóng dấu tập đánh giá (`evaluation_only.json`) |
-| `split_hint` | `train` \\| `eval` — gợi ý chia, KHÔNG phải split chính thức |
 | `image_dup` | `1` = đường dẫn ảnh này bị **hai dòng** dùng chung (xem `TRUNG_ANH.csv`) |
 | 12 cột còn lại | y hệt `labels.csv` của bộ nguồn (schema giao nộp A-9) |
 
@@ -475,8 +473,8 @@ Tầng: {' · '.join(f'{k} {_n(v)}' for k, v in t['tiers'].items())}
 
 ## 3. Dùng cho việc gì
 
-- **Được**: huấn luyện / hiệu chỉnh trên phần `split_hint == "train"`.
-- **Không được**: đưa phần `eval` vào train — mọi con số precision công bố sẽ vô nghĩa.
+- **Được**: dùng phần `evaluation_only == 0` (bộ giao nộp); bộ gộp không chia tập — người dùng tự chia nếu cần.
+- **Không được**: trộn phần `evaluation_only == 1` vào dữ liệu học — mọi con số precision công bố sẽ vô nghĩa.
 - **Không được**: coi bộ gộp là nguồn sự thật; nguồn là `dataset/<Bộ>/`.
 
 ## 4. Giới hạn
@@ -505,7 +503,7 @@ không phải để lấy dữ liệu huấn luyện.
 **Lọc trước khi huấn luyện:**
 
 ```python
-train = df[df.split_hint == "train"]     # hoặc df[df.evaluation_only == 0]
+giao_nop = df[df.evaluation_only == 0]   # bộ gộp KHÔNG có cột chia tập
 ```
 
 Nếu trộn, mọi phép đo "precision so nhãn người" về sau đều vô nghĩa vì mô hình đã thấy
@@ -575,9 +573,9 @@ def selftest() -> int:
         chk("ảnh tồn tại 100 % (trừ GOLD_text_only)", not thieu, thieu[:3])
         chk("GOLD_text_only KHÔNG được copy ảnh",
             not (out / f"{CROPS}/BoA/gold/c000.png").exists())
-        chk("bộ đóng dấu -> evaluation_only=1 + split_hint=eval trên MỌI dòng",
-            all(r["evaluation_only"] == "1" and r["split_hint"] == "eval"
-                for r in L if r["book_set"] == "BoEval") and
+        chk("bộ đóng dấu -> evaluation_only=1 trên MỌI dòng; không có cột chia tập",
+            all(r["evaluation_only"] == "1" for r in L if r["book_set"] == "BoEval") and
+            not any(k in L[0] for k in COT_CHIA) and
             sum(1 for r in L if r["evaluation_only"] == "1") == 7)
         chk("bộ KHÔNG đóng dấu -> 0 dòng eval",
             not [r for r in L if r["book_set"] in ("BoA", "BoB") and r["evaluation_only"] != "0"])

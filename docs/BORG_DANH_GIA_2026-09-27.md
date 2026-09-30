@@ -40,7 +40,7 @@ trong `.env`), rồi chạy §2.
 | cấu hình | `config/pipeline_SachKinhThayCaBinh.yaml`, `config/pipeline_SachDungLyHoThan.yaml` | `run.ingest: borg`, `paths.data_dir: prepared/_auto`, `run.dataset_out: prepared/_auto/<Sách>/dataset_out`, `kim_lang_type: 2`, `box_decoder: pitch`, `mechanism_gates`, `qn_count_gate: review`, `crop_source: original` |
 | bí danh | `config/pipeline_MSS_Borg_tonch_{18,34}.yaml` | giữ tệp (đã commit) nhưng thêm `run.alias_of` → `run_pipeline.sh --book MSS_Borg_tonch_18` **từ chối** (không chạy trùng) |
 | chạy | `run_pipeline.sh` | nhánh `ingest=borg` (không đi `ingest_prose_book` — adapter đó viết riêng cho Chrestomathie); `--book all-borg`; `--borg auto\|require\|off` |
-| đóng dấu | `pipeline/tools/mark_eval_dataset.py --kind borg` | `dataset/<Sách>/{evaluation_only.json,TAP_DANH_GIA.md}` → bộ gộp `evaluation_only = 1`, `split_hint = eval` |
+| đóng dấu | `pipeline/tools/mark_eval_dataset.py --kind borg` | `dataset/<Sách>/{evaluation_only.json,TAP_DANH_GIA.md}` → bộ gộp `evaluation_only = 1` (không chia tập) |
 | gộp | `run_merge` | Borg nối SAU 8 bộ cũ, CHỈ khi bộ đã xuất + đóng dấu + `manifest.gates.kim_cache_complete` |
 | GOLD chính xác | `pipeline/gold_exact/` + `config/gold_exact.yaml` | B18/B34, LOBO-sách (§4), `evidence_level = do_tren_nhan_nguoi` |
 | đo | `scripts/measure/borg_endtoend_eval.py` | đăng ký trong `measure.py` (bước `borg_endtoend`) + `run_pipeline.sh --verify` + B6 |

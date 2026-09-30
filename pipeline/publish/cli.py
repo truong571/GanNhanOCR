@@ -186,8 +186,7 @@ def cmd_gold_exact(args) -> None:
     """Tập công bố theo GOLD chính xác (dataset/_ALL/{labels,gold_exact}.csv -> cong_bo/). Bất biến FAIL -> exit 1."""
     from . import gold_exact_release as GR
     try:
-        GR.run(Path(args.all_dir), Path(args.out) if args.out else None, check_files=not args.no_files,
-               seed=args.seed)
+        GR.run(Path(args.all_dir), Path(args.out) if args.out else None, check_files=not args.no_files)
     except GR.ReleaseError as e:
         print(f"[công bố] LỖI: {e}")
         raise SystemExit(1)
@@ -212,7 +211,6 @@ def build_parser() -> argparse.ArgumentParser:
     g.add_argument("--all-dir", default=str(REPO / "dataset" / "_ALL"))
     g.add_argument("--out", default=None, help="mặc định <all-dir>/cong_bo")
     g.add_argument("--no-files", action="store_true", help="không kiểm tệp crop chuẩn trên đĩa")
-    g.add_argument("--seed", type=int, default=42)
     g.set_defaults(func=cmd_gold_exact)
     a = sub.add_parser("all")
     a.add_argument("--sample", type=int, default=0, help="export only N crops (smoke)")

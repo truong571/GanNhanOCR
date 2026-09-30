@@ -11,7 +11,7 @@
 # kim TOÀN TRANG lang_type 2 (×1, cache prepared/_auto/SachKinhThayCaBinh/kim_raw/*_lt2.json), QN = âm tiết NGƯỜI của trang (Excel
 # ChuQN_txt), ghép chữ kim ↔ âm bằng DP đơn điệu. Adapter KHÔNG đọc cột SinoNom_Char (nhãn người chỉ để ĐO:
 # scripts/measure/borg_endtoend_eval.py). Đầu ra prepared/_auto/SachKinhThayCaBinh/ — prepared/SachKinhThayCaBinh/ (ingest_borg_tonch, nhãn người)
-# không bị ghi. Bộ xuất đóng dấu evaluation_only (mark_eval_dataset --kind borg) -> bộ gộp evaluation_only=1, split_hint=eval.
+# không bị ghi. Bộ xuất đóng dấu evaluation_only (mark_eval_dataset --kind borg) -> bộ gộp evaluation_only=1 (không chia tập).
 # config/pipeline_MSS_Borg_tonch_18.yaml = BÍ DANH trùng (run.alias_of) — run_pipeline từ chối chạy nó.
 books:
   - name: SachKinhThayCaBinh

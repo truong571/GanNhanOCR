@@ -69,8 +69,7 @@ PROBE_PAIRS = {"𢧚": "年", "𠸜": "先", "𠀧": "巴", "𧘇": "意", "𠰺
 KNOWN_NORMALISED = {"𠸜": ("先", 0.7158, (0.6208, 0.8023)), "𢧚": ("年", 0.1812, (0.1387, 0.2228)),
                     "𠀧": ("巴", 0.0619, (0.0366, 0.0899)), "𧘇": ("意", 0.0504, (0.0384, 0.0645))}
 
-# ---- xuất: split theo TRANG (sha256("book/page") mod 20: 0-1 test, 2-3 val, còn lại train) — không phụ thuộc thứ tự
-SPLIT = dict(mod=20, test=(0, 1), val=(2, 3))
+# ---- xuất: KHÔNG chia tập train/val/test (quyết định A-10; bỏ split_hint 30/09)
 KEEP_LEVELS = ("keep_v5", "keep", "keep_high", "khong")      # mức cao nhất đạt được (keep_v5 ⊂ keep ⊂ keep_high)
 CROP_LEVELS = ("keep_v5", "keep")    # mức có ảnh crop + crop chuẩn (keep_high thêm ≈ 16 k ô ⇒ vượt ~1 GB: không kèm ảnh)
 

@@ -52,7 +52,7 @@ TRÙNG 159.291/159.291 đơn vị (uid, y1, y2, ảo) trước khi dùng. **Hai 
 
 Luỹ kế (keep_v5 ⊂ keep ⊂ keep_high). Có ảnh (crops + crops_chuan): 56.261 ô mức keep trở lên (crop chuẩn ok 56.171;
 `one_char_ok` = 1: 55.376, trong keep_v5 54.030). keep_high chỉ ghi hộp (thêm ảnh ≈ +16 k ô, không được yêu cầu).
-Dung lượng 465 MB (byte; ≈ 580 MB theo `du`). `split_hint` theo trang: 506 train / 61 val / 74 test.
+Dung lượng 465 MB (byte; ≈ 580 MB theo `du`). Không chia tập (30/09 bỏ cột `split_hint`, quyết định A-10).
 
 **Tỉ lệ trượt ±1 ô (Paddle, bộ đọc độc lập):** keep **1,32 %** [0,94–1,69]; keep_high 1,88 % [1,47–2,28]
 (riêng keep_high − keep 3,99 %); ô thật ngoài keep_high 19,4 %. Trên keep_v5 phép đo Paddle bị chọn lệch (ô lệch đã bỏ,
@@ -65,7 +65,7 @@ Dung lượng 465 MB (byte; ≈ 580 MB theo `du`). `split_hint` theo trang: 506 
 ## 4. Nghiệm thu (`borg_human_eval.py`, 20/20 PASS)
 Số dòng = số chữ Lo của bản phiên (đếm lại độc lập); nhãn dòng (page, idx) == chữ/âm người tại idx; khoá duy nhất, idx liền;
 luật keep TÍNH LẠI từ cột == keep/keep_high; keep_v5 == keep − Paddle lệch − chuẩn hoá; ảnh đúng mức, 112.432 tệp tồn tại + md5
-khớp; θ tính lại từ `paddle_test` == BUILD_INFO và ∈ [0,94; 1,69] %; split theo trang tính lại; CHECKSUMS; không lọt vào
+khớp; θ tính lại từ `paddle_test` == BUILD_INFO và ∈ [0,94; 1,69] %; không có cột chia tập; CHECKSUMS; không lọt vào
 `dataset/_ALL`; ≤ 1 GB; (mềm) tái lập từng ô r4/r5.
 
 ## 5. Giới hạn / việc mở

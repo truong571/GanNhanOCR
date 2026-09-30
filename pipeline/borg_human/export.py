@@ -9,12 +9,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .params import BOOKS, KEEP, KNOWN_NORMALISED, PADDLE, PROBE_PAIRS, REPO, SPLIT
+from .params import BOOKS, KEEP, KNOWN_NORMALISED, PADDLE, PROBE_PAIRS, REPO
 
 COLS = ["cell_uid", "book", "shelfmark", "page", "folio", "source_file", "column", "idx", "sent", "char", "codepoint", "syllable",
         "kind", "bbox", "image", "image_md5", "crop_chuan", "crop_chuan_md5", "crop_chuan_flags", "one_char_ok",
         "align_conf", "post_v1", "post_v2", "agree_v2", "det_score", "keep_level", "paddle_test",
-        "chuan_hoa_nguoi_phien", "split_hint", "khoi_trang", "nguon_nhan"]
+        "chuan_hoa_nguoi_phien", "khoi_trang", "nguon_nhan"]   # KHÔNG cột chia tập (A-10, 30/09)
 
 
 def sha256_file(p: Path) -> str:
@@ -23,11 +23,6 @@ def sha256_file(p: Path) -> str:
         for b in iter(lambda: f.read(1 << 22), b""):
             h.update(b)
     return h.hexdigest()
-
-
-def split_of(book: str, page: str) -> str:
-    v = int(hashlib.sha256(f"{book}/{page}".encode()).hexdigest(), 16) % SPLIT["mod"]
-    return "test" if v in SPLIT["test"] else ("val" if v in SPLIT["val"] else "train")
 
 
 def keep_level(r) -> str:
@@ -79,7 +74,6 @@ def labels_frame(A: pd.DataFrame, R: pd.DataFrame, ok1: pd.Series) -> pd.DataFra
         "keep_level": [keep_level(r) for r in X.itertuples()],
         "paddle_test": X.paddle_test.fillna(""),
         "chuan_hoa_nguoi_phien": [norm_flag(c, h) for c, h in zip(X.char, X.paddle_han.fillna(""))],
-        "split_hint": [split_of(b, p) for b, p in zip(X.book, X.page)],
         "khoi_trang": X.fold.astype(int), "nguon_nhan": "nguoi_phien",
     })
     return out[COLS]
@@ -160,8 +154,8 @@ def readme(info: dict) -> str:
   (âm người phiên; rỗng khi câu có số chữ ≠ số âm), `bbox` [x1,y1,x2,y2] toạ độ ảnh gốc 720 px, `image` + `image_md5`
   (crop luật save_crop), `crop_chuan` + `crop_chuan_md5` (crop chuẩn v2, vuông), `align_conf` = min(hậu nghiệm căn v1, v2)
   khi hai bộ căn chọn CÙNG hộp (ngược lại 0), `keep_level` ∈ {{keep_v5, keep, keep_high, khong}}, `paddle_test`
-  (`ok` / `lech±d` / rỗng = không thử được), `chuan_hoa_nguoi_phien`, `one_char_ok`, `split_hint` (theo TRANG), `khoi_trang`
-  (5 khối trang liền nhau/sách dùng khi dựng nguyên mẫu — dùng nếu muốn tách theo khối).
+  (`ok` / `lech±d` / rỗng = không thử được), `chuan_hoa_nguoi_phien`, `one_char_ok`, `khoi_trang`
+  (5 khối trang liền nhau/sách dùng nội bộ khi dựng nguyên mẫu). Bộ này KHÔNG chia tập train/val/test.
 - `crops/<book>/<page>_c<col>_<idx>.png` — crop theo luật `save_crop` của pipeline (pad 0,12, carve mực láng giềng, tighten,
   điểm ảnh ẢNH GỐC); `crops_chuan/…` — crop chuẩn v2 (`pipeline/gold_exact/crop_chuan.py`), cho mọi ô mức keep trở lên (keep_high chỉ có hộp, không kèm ảnh).
 - `README.md`, `DATASHEET.md`, `BUILD_INFO.json` (tham số, số đếm, θ, kiểm tái lập), `CHECKSUMS.txt` (sha256 tệp gốc).
@@ -235,7 +229,7 @@ Khi huấn luyện nhận dạng HÌNH, nên gộp N và L thành một lớp, h
 
 ## 6. Thành phần
 {_n(c['cells'])} chữ người; {_n(c['with_image'])} ô có ảnh (mức keep trở lên: keep {_n(c['keep'])}, trong đó keep_v5 {_n(c['keep_v5'])}); keep_high {_n(c['keep_high'])} (chỉ hộp);
-one_char_ok = 1: {_n(c['one_char_ok'])}. `split_hint` theo TRANG (sha256("sách/trang") mod 20: 0–1 test, 2–3 val, còn lại train).
+one_char_ok = 1: {_n(c['one_char_ok'])}. Không chia tập (không có cột train/val/test).
 
 ## 7. Giới hạn — ĐỌC TRƯỚC KHI DÙNG
 - **Không phải nhãn máy, nhưng cũng không phải chấm từng ô**: mỗi ô là (chữ người phiên, hộp máy chọn). Sai vị trí ±1 là rủi ro

@@ -55,7 +55,7 @@
 #   gold_exact tự bật lần đọc thứ hai STT (kim lt2, luật CHỈ HẠ) cho bộ STT có ĐỦ cache prepared/SachThanhTruyenN/kim_raw_lt2/
 #   (config profiles.handwriting.second_read.mode: auto); thiếu -> tắt, ghi rõ trong GOLD_EXACT.md.
 #   --publish (tuỳ chọn, 0 API): sau gold_exact dựng tập công bố dataset/_ALL/cong_bo/ (tập ẢNH = ô gold_exact ok, crop chuẩn;
-#   tập VĂN BẢN = phần còn lại kèm lý do; page-disjoint + LOBO) — `python -m pipeline.publish gold-exact`.
+#   tập VĂN BẢN = phần còn lại kèm lý do; KHÔNG chia tập) — `python -m pipeline.publish gold-exact`.
 #   Bộ gộp CHẶN CỨNG ảnh bị các dòng khác nhãn dùng chung (gốc self_training_rescue va tên tệp — đã sửa 28/09).
 #
 # Viết cho bash 3.2 (bash mặc định của macOS).
@@ -551,7 +551,7 @@ run_pipeline.sh — GanNhanOCR
                                   bước gộp chạy cùng lượt): dataset/_ALL/{gold_exact.csv,GOLD_EXACT.md,crops_chuan*/}
                                   + dataset/<Bộ>/gold_exact.csv; STT có ĐỦ cache kim lt2 -> tự bật lần đọc thứ hai (chỉ hạ)
   --publish                       B9 (tuỳ chọn, 0 API) sau gold_exact: tập công bố dataset/_ALL/cong_bo/ — tập ẢNH chỉ ô
-                                  gold_exact = ok (crop chuẩn), tập VĂN BẢN = phần còn lại + lý do; page-disjoint + LOBO
+                                  gold_exact = ok (crop chuẩn), tập VĂN BẢN = phần còn lại + lý do; không chia tập
   --prune [--keep-old N]          CHUYỂN bản dựng cũ (dataset/<Bộ>_v*, *probe, prepared/*/dataset_out_*)
                                   vào archive/ — in danh sách + dung lượng rồi hỏi (--yes bỏ hỏi);
                                   N = số bản mới nhất được giữ lại (mặc định 0 = dọn hết)
@@ -875,7 +875,7 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
     R "$PY" -m pipeline.tools.mark_eval_dataset --dataset "$final_dir" --book "$book" \
         --gt "data/$book/manifest.tsv"
   elif [[ "$BK_INGEST" == "borg" ]]; then
-    # Borg: bản chép tay có nhãn Nôm người (Excel) -> TẬP ĐÁNH GIÁ chữ viết tay (bộ gộp: evaluation_only=1, split_hint=eval)
+    # Borg: bản chép tay có nhãn Nôm người (Excel) -> TẬP ĐÁNH GIÁ chữ viết tay (bộ gộp: evaluation_only=1)
     R "$PY" -m pipeline.tools.mark_eval_dataset --dataset "$final_dir" --book "$book" --kind borg \
         --gt "data/$book/$book.xlsx"
   fi
@@ -918,10 +918,10 @@ stt_dry_run() {   # STT --dry-run: in đúng chuỗi 6 bước cũ; X/die/assert
 
 # ===================== B7: BỘ GỘP CHUNG dataset/_ALL =========================
 # Hợp nhất 6 thư mục bộ (`dataset/<Bộ>/`) thành MỘT bộ để bàn giao: labels.csv duy nhất
-# (khoá `cell_uid`, cột `book_set`/`evaluation_only`/`split_hint`), crops/ COPY hẳn,
+# (khoá `cell_uid`, cột `book_set`/`evaluation_only`; không cột chia tập), crops/ COPY hẳn,
 # labels.xlsx, README, DATASHEET, CHECKSUMS. Chỉ ĐỌC các bộ nguồn.
 # 2 bộ IHR-NomDB đã đóng dấu `evaluation_only.json` -> mọi dòng của chúng mang
-# evaluation_only=1 + split_hint=eval để hạ nguồn không trộn vào tập huấn luyện.
+# evaluation_only=1 để hạ nguồn không trộn bộ có nhãn người vào dữ liệu giao nộp.
 ALL_SETS="$STT_SET $NEW_BOOKS_ALL $EVAL_BOOKS_IHR"
 
 run_merge() {   # run_merge [chế-độ-ảnh]  (copy mặc định)

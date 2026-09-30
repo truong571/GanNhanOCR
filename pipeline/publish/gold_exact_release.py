@@ -6,16 +6,14 @@ các ô còn lại (text_only / uncertified / review, SYLLABLE, GOLD_text_only�
 không được đi kèm ảnh vào tập huấn luyện ảnh.
 
   images.csv  1 dòng / ô `gold_exact == ok`: `image` = `crops_chuan/…` (tương đối `dataset/_ALL/`), `image_md5` = md5 crop chuẩn,
-              `image_128`, nhãn, âm, `evidence_level`, `policy_version`, `split` (page-disjoint), `lobo_group` (= book).
+              `image_128`, nhãn, âm, `evidence_level`, `policy_version`, `evaluation_only`.
   text.csv    MỌI dòng còn lại của labels.csv: nhãn/âm/tầng + `gold_exact` (trống nếu không phải GOLD) + `ly_do_khong_anh`
-              (vì sao không vào tập ảnh) + `split` — KHÔNG có cột ảnh.
-  EXCLUSIONS.json / RELEASE.md  số đếm theo lý do loại (LOẠI TRỪ PHẢI ỒN ÀO: in ra màn hình từng lý do), theo bộ, split, LOBO.
+              (vì sao không vào tập ảnh) — KHÔNG có cột ảnh.
+  EXCLUSIONS.json / RELEASE.md  số đếm theo lý do loại (LOẠI TRỪ PHẢI ỒN ÀO: in ra màn hình từng lý do), theo bộ.
 
-Chia tập (giữ nguyên nguyên tắc của splits.py): PAGE-DISJOINT trên HỢP hai tập (một trang nằm trọn một split cho cả ảnh lẫn văn
-bản, khoá trang = book_set|book|page), lớp singleton (< 2 ảnh trong tập ảnh) -> trang về train; bộ đóng dấu TẬP ĐÁNH GIÁ
-(`evaluation_only`) -> `eval_only`, không bao giờ train/val/test; LOBO theo `book` (test = quyển giữ lại, bộ đánh giá không vào
-train). Bất biến (fail loud): tập ảnh ⊂ GOLD ∧ ok; hai tập rời nhau và phủ đủ labels.csv; không trang/md5 crop nào vắt qua hai split;
-0 dòng đánh giá trong train/val/test; mọi ảnh của tập ảnh tồn tại (tuỳ chọn) và md5 khớp gold_exact.csv.
+KHÔNG CHIA TẬP (30/09, quyết định A-10 ngày 16/09 — docs/DANH_MUC_SUA_DOI_CUOI_2026-09-16.md): không có cột train/val/test hay
+LOBO; bộ đánh giá chỉ mang cờ `evaluation_only`. Bất biến (fail loud): tập ảnh ⊂ GOLD ∧ ok; hai tập rời nhau và phủ đủ labels.csv;
+không có cột chia tập; mọi ảnh của tập ảnh tồn tại (tuỳ chọn) và md5 khớp gold_exact.csv.
 """
 from __future__ import annotations
 
@@ -27,13 +25,14 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .splits import EVAL_SPLIT, _bucket, eval_only_mask
+from .splits import eval_only_mask
 
 OUT_DIRNAME = "cong_bo"          # dataset/_ALL/cong_bo/ — bước gộp + gold_exact --publish dọn thư mục này (phụ thuộc gold_exact.csv)
 IMG_COLS = ["cell_uid", "image", "image_md5", "image_128", "image_goc", "book_set", "book", "page", "column", "syllable", "label",
-            "unicode", "tier", "rule", "gold_exact", "evidence_level", "policy_version", "evaluation_only", "split", "lobo_group"]
+            "unicode", "tier", "rule", "gold_exact", "evidence_level", "policy_version", "evaluation_only"]
 TXT_COLS = ["cell_uid", "book_set", "book", "page", "column", "syllable", "label", "unicode", "tier", "rule", "gold_exact",
-            "gold_exact_reason", "evidence_level", "ly_do_khong_anh", "evaluation_only", "split", "lobo_group"]
+            "gold_exact_reason", "evidence_level", "ly_do_khong_anh", "evaluation_only"]
+COT_CHIA = ("split", "split_hint", "lobo_group")   # cột chia tập bị cấm (A-10)
 
 
 class ReleaseError(RuntimeError):
@@ -64,15 +63,9 @@ def load(all_dir: Path):
     return L, E
 
 
-def _page_key(df: pd.DataFrame) -> pd.Series:
-    return df.book_set.astype(str) + "|" + df.book.astype(str) + "|" + df.page.astype(str)
-
-
-def build(L: pd.DataFrame, E: pd.DataFrame, ratios=(0.8, 0.1, 0.1), seed: int = 42, eval_books=None):
-    """-> (images, text, report). images = ô gold_exact ok; text = mọi dòng còn lại. Split page-disjoint trên hợp hai tập."""
-    if abs(sum(ratios) - 1.0) > 1e-9:
-        raise ValueError("ratios phải cộng = 1")
-    L = L.reset_index(drop=True).copy()
+def build(L: pd.DataFrame, E: pd.DataFrame, eval_books=None):
+    """-> (images, text, report). images = ô gold_exact ok; text = mọi dòng còn lại. KHÔNG chia tập."""
+    L = L.reset_index(drop=True).drop(columns=[c for c in COT_CHIA if c in L.columns]).copy()
     Ex = E.set_index("cell_uid")
     ge = L.cell_uid.map(Ex.gold_exact).fillna("")
     gr = L.cell_uid.map(Ex.reason).fillna("")
@@ -81,22 +74,6 @@ def build(L: pd.DataFrame, E: pd.DataFrame, ratios=(0.8, 0.1, 0.1), seed: int = 
     # lý do không vào tập ảnh (ồn ào): GOLD không ok -> "<trạng thái>:<lý do>"; không GOLD -> "tier:<tầng>"
     why = np.where(L.tier == "GOLD", ge + ":" + gr, "tier:" + L.tier.astype(str))
     why = np.where(is_img, "", why)
-    # ---- split page-disjoint trên HỢP hai tập (một trang = một split cho cả ảnh lẫn văn bản)
-    pk = _page_key(L)
-    img_lab = L.label[is_img & ~ev]
-    cnt = img_lab.value_counts()
-    singleton = set(cnt[cnt < 2].index)
-    force_train = set(pk[is_img & ~ev & L.label.isin(singleton)])
-    tr_hi, va_hi = ratios[0], ratios[0] + ratios[1]
-    page_split = {}
-    for p in sorted(set(pk[~ev])):
-        if p in force_train:
-            page_split[p] = "train"; continue
-        r = _bucket(p, seed)
-        page_split[p] = "train" if r < tr_hi else ("val" if r < va_hi else "test")
-    split = pk.map(page_split).where(~ev, EVAL_SPLIT).fillna(EVAL_SPLIT)
-    L["split"] = split.values
-    L["lobo_group"] = L.book.values
     L["gold_exact"], L["gold_exact_reason"], L["ly_do_khong_anh"] = ge.values, gr.values, why
     L["evaluation_only"] = np.where(ev, "1", "0")
     L["evidence_level"] = L.cell_uid.map(Ex.evidence_level).fillna("").values if "evidence_level" in Ex else ""
@@ -108,13 +85,12 @@ def build(L: pd.DataFrame, E: pd.DataFrame, ratios=(0.8, 0.1, 0.1), seed: int = 
         I[dst] = I.cell_uid.map(Ex[src]).fillna("").values
     I = I[IMG_COLS].reset_index(drop=True)
     T = L[~is_img][TXT_COLS].reset_index(drop=True)
-    rep = verify(L, I, T, is_img, ev, pk)
+    rep = verify(L, I, T, is_img)
     rep.update(counts(L, I, T, why, is_img, ev))
-    rep["split_params"] = dict(ratios=list(ratios), seed=seed, singleton_classes_forced_train=len(singleton))
     return I, T, rep
 
 
-def verify(L, I, T, is_img, ev, pk) -> dict:
+def verify(L, I, T, is_img) -> dict:
     """Bất biến; mỗi khoá True = PASS. ReleaseError nếu có khoá False (gọi ở run())."""
     inv = {}
     inv["tap_anh_la_GOLD_ok"] = bool(((L.tier == "GOLD") & (L.gold_exact == "ok"))[is_img].all())
@@ -122,12 +98,7 @@ def verify(L, I, T, is_img, ev, pk) -> dict:
     inv["tap_anh_co_crop_chuan_va_md5"] = bool((I.image != "").all() and (I.image_md5.str.len() == 32).all()
                                                and I.image.str.startswith("crops_chuan/").all())
     inv["tap_van_ban_khong_co_cot_anh"] = not ({"image", "image_md5", "image_128"} & set(T.columns))
-    sp = L.split
-    inv["khong_trang_vat_hai_split"] = int((L.assign(_p=pk, _s=sp)[~ev.values].groupby("_p")._s.nunique() > 1).sum()) == 0
-    md = I[I.split != EVAL_SPLIT]
-    inv["khong_md5_crop_vat_hai_split"] = int((md.groupby("image_md5").split.nunique() > 1).sum()) == 0
-    inv["danh_gia_khong_vao_train_val_test"] = not bool(sp[ev.values].isin(("train", "val", "test")).any())
-    inv["moi_dong_co_split"] = bool((sp != "").all())
+    inv["khong_cot_chia_tap"] = not (set(COT_CHIA) & (set(I.columns) | set(T.columns)))
     return inv
 
 
@@ -138,18 +109,9 @@ def counts(L, I, T, why, is_img, ev) -> dict:
         m = L.book_set == bs
         by_set[bs] = dict(dong=int(m.sum()), anh=int((is_img & m).sum()), van_ban=int((~is_img & m).sum()),
                           evaluation_only=bool(ev[m].all()))
-    sp_img = {k: int(v) for k, v in I.split.value_counts().items()}
-    sp_txt = {k: int(v) for k, v in T.split.value_counts().items()}
-    lobo = {}
-    for b in sorted(set(L.book)):
-        test = L.book == b
-        lobo[b] = dict(test_anh=int((is_img & test).sum()),
-                       train_anh=int((is_img & ~test & ~ev).sum()),
-                       danh_gia_giu_ngoai_train=int((is_img & ~test & ev).sum()))
     return dict(n_labels=int(len(L)), n_images=int(len(I)), n_text=int(len(T)), n_eval_only_images=int((is_img & ev).sum()),
                 loai_khoi_tap_anh=dict(sorted(ex.items(), key=lambda kv: -kv[1])), theo_bo=by_set,
-                split_images=sp_img, split_text=sp_txt, lobo=lobo,
-                classes_train=int(I[I.split == "train"].label.nunique()), classes_all=int(I.label.nunique()))
+                classes_all=int(I.label.nunique()))
 
 
 def _sha(p: Path) -> str:
@@ -160,14 +122,13 @@ def _sha(p: Path) -> str:
     return h.hexdigest()
 
 
-def run(all_dir: Path, out: Path | None = None, check_files: bool = True, ratios=(0.8, 0.1, 0.1), seed: int = 42,
-        log=print) -> dict:
+def run(all_dir: Path, out: Path | None = None, check_files: bool = True, log=print) -> dict:
     """Dựng tập công bố vào out (mặc định <all_dir>/cong_bo/). Bất biến FAIL -> ReleaseError, KHÔNG ghi gì."""
     all_dir = Path(all_dir)
     out = Path(out) if out else all_dir / OUT_DIRNAME
     L, E = load(all_dir)
     eb = set(L.book[L.get("evaluation_only", pd.Series("0", index=L.index)) == "1"].str.lower())
-    I, T, rep = build(L, E, ratios, seed, eval_books=eb)
+    I, T, rep = build(L, E, eval_books=eb)
     if check_files:
         miss = [p for p in I.image if not (all_dir / p).is_file()]
         rep["anh_ton_tai"] = dict(thieu=len(miss), vd=miss[:3])
@@ -184,11 +145,10 @@ def run(all_dir: Path, out: Path | None = None, check_files: bool = True, ratios
     fail = [k for k, v in inv.items() if v is False]
     # LOẠI TRỪ PHẢI ỒN ÀO
     log(f"[công bố] labels.csv {rep['n_labels']:,} dòng -> TẬP ẢNH {rep['n_images']:,} (gold_exact = ok; trong đó "
-        f"{rep['n_eval_only_images']:,} ô tập đánh giá, split eval_only) · TẬP VĂN BẢN {rep['n_text']:,}")
+        f"{rep['n_eval_only_images']:,} ô tập đánh giá) · TẬP VĂN BẢN {rep['n_text']:,} · không chia tập")
     for k, n in rep["loai_khoi_tap_anh"].items():
         log(f"[công bố] LOẠI khỏi tập ẢNH (chỉ vào tập văn bản): {k:58s} {n:>8,}")
-    log(f"[công bố] split ảnh {rep['split_images']} · văn bản {rep['split_text']} · lớp (train/tất cả) "
-        f"{rep['classes_train']}/{rep['classes_all']}")
+    log(f"[công bố] số lớp (chữ khác nhau) trong tập ảnh: {rep['classes_all']:,}")
     log(f"[công bố] bất biến: {sum(v is True for v in inv.values())}/{len(inv)} PASS" + (f" · FAIL {fail}" if fail else ""))
     if fail:
         raise ReleaseError(f"bất biến FAIL {fail} — KHÔNG ghi {out}")
@@ -221,14 +181,9 @@ def release_md(r: dict) -> str:
     L += ["", "## Theo bộ", "", "| bộ | dòng | ảnh | văn bản | tập đánh giá |", "|---|---:|---:|---:|---|"]
     L += [f"| {b} | {n(v['dong'])} | {n(v['anh'])} | {n(v['van_ban'])} | {'có' if v['evaluation_only'] else ''} |"
           for b, v in r["theo_bo"].items()]
-    L += ["", "## Split", "",
-          f"Page-disjoint (khoá trang = book_set|book|page, seed {r['split_params']['seed']}, tỉ lệ {r['split_params']['ratios']}) "
-          f"trên HỢP hai tập; {r['split_params']['singleton_classes_forced_train']} lớp singleton -> train; bộ tập đánh giá -> "
-          "`eval_only` (không bao giờ train/val/test).", "",
-          f"- ảnh: {r['split_images']}", f"- văn bản: {r['split_text']}", "",
-          "LOBO (`lobo_group` = book; test = quyển giữ lại, bộ đánh giá không vào train):", "",
-          "| quyển giữ lại | test (ảnh) | train (ảnh) | ảnh bộ đánh giá giữ ngoài train |", "|---|---:|---:|---:|"]
-    L += [f"| {b} | {n(v['test_anh'])} | {n(v['train_anh'])} | {n(v['danh_gia_giu_ngoai_train'])} |" for b, v in r["lobo"].items()]
+    L += ["", "## Không chia tập", "",
+          "Theo quyết định A-10 (16/09): KHÔNG có cột train/val/test hay LOBO. Bộ có nhãn người (IHR, Borg) chỉ mang cờ "
+          "`evaluation_only = 1` — dùng để ĐO, không trộn vào dữ liệu học. Ai cần chia thì tự chia theo trang."]
     L += ["", "## Bất biến", ""] + [f"- `{k}` = {v}" for k, v in r["invariants"].items()]
     L += ["", "Độ chính xác của ô ok chỉ ĐO được ở L16/TK (nhãn người IHR; `GOLD_EXACT.md` §2); KVK/L83 ước lượng; STT/Chr suy đoán.", ""]
     return "\n".join(L)

@@ -40,7 +40,7 @@ lt2 `auto`) → [`--publish`] tập công bố `dataset/_ALL/cong_bo/` → nghi�
 | 7 | **Engine OCR khác** (tesseract / Apple Vision / PaddleOCR / GLM-OCR / NomNaOCR / ROVER) | tesseract+Vision đúng 12–14 % trên IHR, cứu 0–4/60 lỗi kim; Paddle/GLM phủ quyết kim precision 47–59 %; NomNaOCR đã học trên IHR (rò dữ liệu) (r3_digest C4–C6) | **BÁC** | "không engine cục bộ nào bổ trợ được kim" (r3_digest §ROVER) |
 | 8 | **LM / tiên nghiệm ngữ cảnh** P(x \| âm, câu) | cứu ô kim ∉ R đúng 37–41 %, không ngưỡng nào đạt 90 % LOBO (r3_digest L6) | **BÁC** | `tier_v3.py` không đổi |
 | 9 | **Lần đọc thứ hai STT (kim lt2)** — mục A | hiệu chuẩn thạch bản (ước lượng cận dưới): P(nhãn đúng \| lt1 = lt2) 89,8 % [89,3; 90,3] vs 11,3 % khi lệch, nền 81,8 % (`docs/STT_LT2_2026-09-28.md` §4) | **ÁP DỤNG** (`second_read: auto`, CHỈ HẠ) | `pipeline/gold_exact/signals_lt2.py` (`:106` `activation`, `:253` `signal`); `policy.py:194` luật; `config/gold_exact.yaml:39`; `__main__.py:276` tín hiệu, `:352` đối chứng + invariant `lt2_chi_ha` — §2 |
-| 10 | **Tập công bố tách ẢNH / VĂN BẢN** — mục B | 173.973 dòng → tập ảnh 27.369 ô ok (13.081 train/val/test + 14.288 eval_only) · tập văn bản 146.604; 10/10 bất biến — §3 | **ÁP DỤNG** (cờ `--publish`, tuỳ chọn) | `pipeline/publish/gold_exact_release.py` (`:71` `build`, `:117` `verify`, `:163` `run`); `pipeline/publish/cli.py:185`; `run_pipeline.sh:1029` `run_publish` |
+| 10 | **Tập công bố tách ẢNH / VĂN BẢN** — mục B | 173.973 dòng → tập ảnh 27.369 ô ok (14.288 thuộc bộ đánh giá; **30/09: bỏ chia tập**) · tập văn bản 146.604; 10/10 bất biến — §3 | **ÁP DỤNG** (cờ `--publish`, tuỳ chọn) | `pipeline/publish/gold_exact_release.py` (`:71` `build`, `:117` `verify`, `:163` `run`); `pipeline/publish/cli.py:185`; `run_pipeline.sh:1029` `run_publish` |
 | 11 | **Rescue va tên tệp** — mục C | 22 ô rescue mang ảnh của ô khác; 21 đường ảnh dùng chung giữa hai nhãn khác nhau (42 dòng) → 0 / 0 — §4 | **SỬA GỐC + chặn cứng** | `pipeline/remediation/self_training_rescue.py:49` `rescue_name`, `:58` `write_rescue_png`, `:297` bỏ ô không crop; `pipeline/tools/merge_datasets.py:306/344` bất biến `anh_khong_dung_chung_giua_nhan_khac` (gộp + `--check`), `:324` |
 | 12 | **Hộp ảnh theo thị giác (TN6)** — DP trang âm QN ↔ đơn vị detector, phát xạ R(âm) + nguyên mẫu tự học; biến thể lai (ô không tự tin lệch pitch → hộp pitch) | đúng vị trí so hộp người Borg 61,5 → 99,4 % (Kinh), 58,6 → 99,8 % (DungLy); khe người IHR TK 98,69 → 98,91 %, L16 (lai) 95,77 → 96,65 %; Chr chỉ gián tiếp (`docs/HOP_ANH_TN6_2026-09-28.md` §1, §6) | **ÁP DỤNG theo bộ** | `box_decoder: visual_dp` Kinh/DungLy/TK/Chr, `visual_dp_hybrid` L16; GIỮ pitch L83 + KVK_b1 (proxy không chứng được lợi), legacy STT (chưa thắng rõ theo đăng ký trước ⇒ md5 `59e436d7…` giữ). Mã `pipeline/align_engine/visual_dp.py` (`apply_book`), nối ở `align_production.align_page` + `build_dataset` (sau PASS 1); cổng (a') `mechanism_gates.BOX_LOW_CONF` |
 
@@ -69,15 +69,15 @@ lt2 `auto`) → [`--publish`] tập công bố `dataset/_ALL/cong_bo/` → nghi�
 
 `python -m pipeline.publish gold-exact` (hoặc `--publish`): `images.csv` = ô `gold_exact = ok`, `image` = crop chuẩn, `image_goc` =
 đường gốc (tham khảo); `text.csv` = mọi dòng khác (không cột ảnh) + `gold_exact`, `gold_exact_reason`, `ly_do_khong_anh`;
-`EXCLUSIONS.json`, `RELEASE.md`, `CHECKSUMS.txt`. In từng lý do loại ra màn hình ("loại trừ phải ồn ào"). Split page-disjoint
-trên HỢP hai tập (khoá book_set|book|page), lớp singleton → train, bộ tập đánh giá → `eval_only`, LOBO theo `book`. Bất biến
-(fail loud, không ghi gì nếu FAIL): tập ảnh ⊂ GOLD ∧ ok, hai tập rời + phủ đủ, không trang/md5 crop vắt hai split, 0 dòng đánh
-giá trong train/val/test, mọi crop tồn tại + md5 khớp `gold_exact.csv`. Thư mục `cong_bo/` bị bước gộp và `gold_exact --publish`
+`EXCLUSIONS.json`, `RELEASE.md`, `CHECKSUMS.txt`. In từng lý do loại ra màn hình ("loại trừ phải ồn ào"). **30/09: KHÔNG chia
+tập** (quyết định A-10 ngày 16/09 — bỏ cột `split`/`lobo_group` của tập công bố và `split_hint` của bộ gộp); bộ đánh giá chỉ mang
+cờ `evaluation_only`. Bất biến (fail loud, không ghi gì nếu FAIL): tập ảnh ⊂ GOLD ∧ ok, hai tập rời + phủ đủ, không có cột chia
+tập, mọi crop tồn tại + md5 khớp `gold_exact.csv`. Thư mục `cong_bo/` bị bước gộp và `gold_exact --publish`
 dọn (phụ thuộc `gold_exact.csv`).
 
 Đo trên bộ gộp hiện tại (ghi ra thư mục tạm): **173.973 dòng → ảnh 27.369 / văn bản 146.604**; lý do loại lớn nhất:
 `tier:SYLLABLE` 42.237, `uncertified:U_bo_kiem_anh_duoi_nguong_TN1` 34.292, `uncertified:U_STT_bo_kiem_viet_tay_khong_chung_nhan`
-27.363, `text_only:BC_truot_theo_hop_kim_vis` 7.550…; split ảnh train 11.140 / val 978 / test 963 / eval_only 14.288; 10/10 bất
+27.363, `text_only:BC_truot_theo_hop_kim_vis` 7.550…; (bản 28/09 còn chia train/val/test — đã bỏ 30/09); bất
 biến PASS. Trước: người dùng lấy `labels.csv` của bộ gộp sẽ nhận 173.132 dòng có ảnh (mọi GOLD/SYLLABLE) — không tách ô được
 chứng nhận ảnh + chữ. Đường cũ `pipeline.publish all` (dataset_out/ STT theo tầng) giữ nguyên.
 
@@ -133,6 +133,6 @@ chứng nhận ảnh + chữ. Đường cũ `pipeline.publish all` (dataset_out/
 - lt2: hiệu chuẩn trên thạch bản so dị bản (ước lượng cận dưới); STT chép tay KHÔNG có sự thật người → số ô ok mới của STT vẫn
   là suy đoán. lt1/lt2 cùng engine, cùng ảnh, cùng bộ dò dòng — "đồng ý" không phải hai phiếu độc lập. Ghép vị trí là xấp xỉ
   (hộp chữ kim = chia đều hộp dòng); chọn `unmatched: demote` là bảo thủ, đổi sang `keep` bằng config.
-- Tập công bố: tập ảnh chỉ đo được độ chính xác ở L16/TK (và Borg) — đều là tập đánh giá (`eval_only`); phần train/val/test
-  (STT, Chr, L83, KVK) là ước lượng/suy đoán theo `evidence_level`.
+- Tập công bố: tập ảnh chỉ đo được độ chính xác ở L16/TK (và Borg) — đều là bộ đánh giá (`evaluation_only = 1`); phần giao
+  nộp (STT, Chr, L83, KVK) là ước lượng/suy đoán theo `evidence_level`.
 - Sau `--book <Bộ>` đơn lẻ, bộ gộp + gold_exact + công bố cũ bị dọn khi gộp lại; luôn kết thúc bằng `--merge`.

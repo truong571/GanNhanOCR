@@ -42,6 +42,12 @@
   (ảnh chỉ ô ok). Bảng kết quả nghiên cứu → đã/không áp dụng: `docs/DIEU_HUONG_PIPELINE_2026-09-28.md`.
 - Dọn + dựng lại toàn bộ đúng thứ tự: `bash scripts/clean_rebuild_all.sh --yes --run` (giữ cache OCR/lt2, chặn API, đo, nghiệm thu, báo cáo).
 
+## KHÔNG chia tập + web chỉ tầng nhãn (2026-09-30)
+- Quyết định A-10 (16/09): **không** cột/tập chia (`split`, `split_hint`, `lobo_group`, train/val/test, LOBO) ở bất kỳ đầu ra
+  nào (`dataset/<Bộ>/`, `dataset/_ALL/`, `cong_bo/`, `_BORG_NHAN_NGUOI/`); bộ có nhãn người chỉ mang cờ `evaluation_only`.
+  Bất biến `khong_cot_chia_tap` ở merge_datasets, publish gold-exact, borg_human_eval.
+- `web/` chỉ hiện tầng nhãn GOLD / SYLLABLE / REVIEW / QUARANTINE (như bản đầu); gold_exact vẫn sinh tệp phụ nhưng không hiện.
+
 ## Borg.Tonch.18/34 — chữ viết tay Công giáo có nhãn người (2026-09-27)
 - Sách `SachKinhThayCaBinh` (Borg.18) và `SachDungLyHoThan` (Borg.34); `data/MSS_Borg.tonch.*` là symlink, config
   `pipeline_MSS_Borg_tonch_*` bị `run_pipeline.sh` từ chối (dùng tên Sach*).

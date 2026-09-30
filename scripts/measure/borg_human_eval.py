@@ -10,7 +10,7 @@ Invariant cứng (không khoá số đếm cố định — số kỳ vọng tí
   luật keep TÍNH LẠI từ cột (kind, det_score, post_v1, post_v2, agree_v2, tỉ lệ bỏ chữ của trang) == tập keep ∪ keep_v5 ·
   keep_v5 == keep − (paddle_test lệch) − (chuẩn hoá '|paddle') ⇒ keep_v5 ⊆ keep ⊆ keep_high · mọi ô mức có ảnh đều có
   crops/ + crops_chuan/ tồn tại và md5 khớp cột; ô `khong` không có ảnh · θ trượt ±1 (Paddle) TÍNH LẠI từ cột paddle_test
-  trên keep == BUILD_INFO và nằm trong khoảng đã biết của vòng 5 [0,94 %; 1,69 %] · split_hint theo TRANG (tính lại) ·
+  trên keep == BUILD_INFO và nằm trong khoảng đã biết của vòng 5 [0,94 %; 1,69 %] · không cột chia tập ·
   sha256 tệp gốc == CHECKSUMS.txt · không cell_uid nào lọt vào dataset/_ALL · tổng dung lượng ≤ 1 GB.
 Mềm: tái lập ĐÚNG từng ô so với r4/r5 (BUILD_INFO.repro.exact_reproduction).
 
@@ -190,13 +190,9 @@ def main(argv=None) -> int:
     add("theta_trong_khoang_da_biet", list(THETA_KNOWN), dict(theta=round(float(th), 4), ci95=ci),
         THETA_KNOWN[0] <= th <= THETA_KNOWN[1], "θ(keep) nằm trong CI 95 % của vòng 5 (q06 D|borg_keep|mid+delay)")
 
-    # 6. split theo trang, checksums, tách khỏi _ALL, dung lượng
-    sp = L.groupby(["book", "page"]).split_hint.nunique().max() == 1
-    re_sp = [("test" if v in (0, 1) else "val" if v in (2, 3) else "train")
-             for v in (int(hashlib.sha256(f"{b}/{p}".encode()).hexdigest(), 16) % 20 for b, p in zip(L.book, L.page))]
-    add("split_theo_trang", True, dict(mot_gia_tri_moi_trang=bool(sp), tinh_lai_lech=int((np.array(re_sp) != L.split_hint.to_numpy()).sum()),
-                                       dem=L.drop_duplicates(["book", "page"]).split_hint.value_counts().to_dict()),
-        bool(sp) and all(x == y for x, y in zip(re_sp, L.split_hint)), "sha256('sách/trang') mod 20: 0–1 test, 2–3 val, còn lại train")
+    # 6. KHÔNG chia tập (A-10), checksums, tách khỏi _ALL, dung lượng
+    chia = sorted({"split", "split_hint", "lobo_group"} & set(L.columns))
+    add("khong_cot_chia_tap", [], chia, not chia, "quyết định A-10 (16/09): bộ giao không có cột train/val/test")
     ck = {}
     for line in (D / "CHECKSUMS.txt").read_text(encoding="utf-8").splitlines():
         if line and not line.startswith("#"):

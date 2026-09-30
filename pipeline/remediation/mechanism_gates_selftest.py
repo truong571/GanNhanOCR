@@ -6,7 +6,8 @@ Dữ liệu GIẢ (không đọc dataset_out*), kiểm: bật/tắt theo config,
 ưu tiên, không mutate, idempotent, bản sao byte khi tắt, "nan" là âm 難 không bị nuốt, export
 ghi GOLD_text_only vào labels.csv nhưng KHÔNG copy ảnh, export không có tầng mới = như cũ,
 make_dataset_docs chỉ thêm khối khi có tầng; [5] luật (a') chế độ pitch (2026-09-22): nhận biết
-chế độ (cli > config > summary > labels), ink_cut/detector_low → text_only, n_det≠N chỉ cờ, legacy không đổi.
+chế độ (cli > config > summary > labels), ink_cut/detector_low → text_only, n_det≠N chỉ cờ, legacy không đổi;
+[7] (c') kiểm lại cờ crop blank/truncated trên ẢNH GỐC (TN8 L1): ảnh gốc ổn -> giữ tầng, không crops_bin -> như cũ.
 """
 from __future__ import annotations
 
@@ -448,6 +449,98 @@ def test_qn_count():
         check("apply_gates qn_count sai -> ValueError", True)
 
 
+def _img_faint(h=60, w=60):
+    """Crop GỐC có chữ nét MẢNH (mức 150 trên nền 200): nhị phân <128 -> trắng, Otsu -> đủ mực."""
+    import numpy as np
+    g = np.full((h, w), 200, np.uint8)
+    g[15:45, 28:32] = 150
+    g[28:32, 12:48] = 150
+    g[18:22, 16:44] = 150
+    return g
+
+
+def test_recheck(tmp: Path) -> None:
+    print("[7] (c') kiểm lại cờ crop blank/truncated trên ẢNH GỐC (TN8 L1, 2026-09-30)")
+    import cv2
+    import numpy as np
+    v, m = mg.recheck_original(_img_faint())
+    check("ảnh gốc nét mảnh (nhị phân 128 = trắng) -> ok", v == "ok" and (_img_faint() < 128).mean() == 0, f"{v} {m}")
+    rng = np.random.default_rng(0)
+    blank = (200 + rng.integers(-2, 3, (60, 60))).astype(np.uint8)
+    check("ảnh gốc trắng thật (tương phản < 30) -> blank", mg.recheck_original(blank)[0] == "blank")
+    trunc = _img_faint().copy(); trunc[0:3, 5:45] = 40
+    check("mực chạm mép trên > 0,30 bề ngang -> truncated", mg.recheck_original(trunc)[0] == "truncated",
+          str(mg.recheck_original(trunc)))
+    check("ảnh None -> blank", mg.recheck_original(None)[0] == "blank")
+    # apply_gates với bản đồ kiểm lại
+    img = lambda i: f"gold/b_page_0001_c01_{i:03d}.png"
+    df = pd.DataFrame([_row(1, crop_quality_flag="blank"), _row(2, crop_quality_flag="blank"),
+                       _row(3, crop_quality_flag="truncated"),
+                       _row(4, tier="SYLLABLE", label="", unicode="", label_level="syllable",
+                            image="syllable/b_page_0001_c01_004.png", rule="syl_ctx:tone", crop_quality_flag="truncated"),
+                       _row(5, tier="REVIEW", label="", rule="no_context", image="", crop_quality_flag="blank"),
+                       _row(6)], dtype=str)
+    rc = {img(1): ("ok", {}), img(2): ("blank", {}), img(3): ("thieu_anh", {}), "syllable/b_page_0001_c01_004.png": ("ok", {})}
+    snap = df.copy()
+    out, rep = mg.apply_gates(df, None, recheck=rc)
+    T = dict(zip(out["nom_idx"], out["tier"])); R = dict(zip(out["nom_idx"], out["gate_reason"]))
+    K = dict(zip(out["nom_idx"], out[mg.COL_CROP_RECHECK]))
+    check("(c') không mutate đầu vào", df.equals(snap))
+    check("(c') ảnh gốc ổn -> GIỮ GOLD, không gate_reason, crop_recheck ok_goc:blank",
+          T["1"] == "GOLD" and R["1"] == "" and K["1"] == "ok_goc:blank", f"{T['1']} {R['1']} {K['1']}")
+    check("(c') ảnh gốc cũng trắng -> REVIEW crop_bad:blank, xau_goc:blank",
+          T["2"] == "REVIEW" and R["2"] == "crop_bad:blank" and K["2"] == "xau_goc:blank")
+    check("(c') thiếu ảnh gốc -> vẫn hạ như cũ", T["3"] == "REVIEW" and K["3"] == "xau_goc:truncated")
+    check("(c') SYLLABLE ảnh gốc ổn -> giữ SYLLABLE", T["4"] == "SYLLABLE" and R["4"] == "" and K["4"] == "ok_goc:truncated")
+    check("(c') REVIEW không đụng, ô sạch không cờ", T["5"] == "REVIEW" and K["5"] == "" and T["6"] == "GOLD" and K["6"] == "")
+    rcr = rep["gates_raw_hits"]["crop_recheck"]
+    check("(c') báo cáo: kiểm lại 4, giữ 2, vẫn hạ 2",
+          rcr["kiem_lai"] == 4 and rcr["giu_tang_ok_goc"] == 2 and rcr["van_ha_xau_goc"] == 2, str(rcr))
+    out0, rep0 = mg.apply_gates(df, None)
+    check("(c') recheck=None -> hành vi cũ, không thêm cột",
+          mg.COL_CROP_RECHECK not in out0.columns and dict(zip(out0["nom_idx"], out0["tier"]))["1"] == "REVIEW")
+    out2, _ = mg.apply_gates(out, None, recheck=rc)
+    check("(c') idempotent", out2.equals(out))
+    # build_crop_recheck: auto chỉ khi có crops_bin/<image>; on = mọi ô có tệp; off = None
+    root = tmp / "rc"
+    (root / "gold").mkdir(parents=True); (root / "crops_bin" / "gold").mkdir(parents=True)
+    cv2.imwrite(str(root / img(1)), _img_faint()); cv2.imwrite(str(root / "crops_bin" / img(1)), np.full((60, 60), 255, np.uint8))
+    cv2.imwrite(str(root / img(2)), blank)                      # KHÔNG có bản nhị phân -> auto bỏ qua
+    m_auto = mg.build_crop_recheck(df, root, "auto")
+    check("build auto: chỉ ô có crops_bin/", m_auto is not None and set(m_auto) == {img(1)} and m_auto[img(1)][0] == "ok",
+          str(m_auto))
+    m_on = mg.build_crop_recheck(df, root, "on")
+    check("build on: mọi ô trúng (c) có ảnh; thiếu tệp -> thieu_anh",
+          m_on[img(2)][0] == "blank" and m_on[img(3)][0] == "thieu_anh" and m_on[img(1)][0] == "ok")
+    check("build off -> None", mg.build_crop_recheck(df, root, "off") is None)
+    check("build auto không có crops_bin -> None (sách processed/STT như cũ)",
+          mg.build_crop_recheck(df, tmp / "khong_co", "auto") is None)
+    check("recheck_mode: config true/false ghi đè auto",
+          mg.recheck_mode({"crop_recheck": False}) == "off" and mg.recheck_mode({"crop_recheck": True}) == "on"
+          and mg.recheck_mode(None) == "auto" and mg.recheck_mode({"crop_recheck": True}, "off") == "off")
+    for bad in ({"crop_recheck": "yes"},):
+        try:
+            mg.recheck_mode(bad); check("recheck_mode sai kiểu -> ValueError", False)
+        except ValueError:
+            check("recheck_mode sai kiểu -> ValueError", True)
+    try:
+        mg.recheck_mode(None, "bậy"); check("--crop-recheck sai -> ValueError", False)
+    except ValueError:
+        check("--crop-recheck sai -> ValueError", True)
+    # run(): sách lithograph có crops_bin -> áp; cùng dữ liệu --crop-recheck off -> y hệt bản cũ
+    src = root / "labels_final.csv"; df.to_csv(src, index=False)
+    cfg = tmp / "rc.yaml"; cfg.write_text("books:\n  - name: LVT\n    layout: lithograph\n", encoding="utf-8")
+    with redirect_stdout(io.StringIO()):
+        rep1 = mg.run(src, root / "on.csv", cfg, "LVT", None, "auto", root / "on.json")
+        rep2 = mg.run(src, root / "off.csv", cfg, "LVT", None, "auto", root / "off.json", crop_recheck="off")
+    on = pd.read_csv(root / "on.csv", dtype=str, keep_default_na=False)
+    off = pd.read_csv(root / "off.csv", dtype=str, keep_default_na=False)
+    check("run auto: ô 1 giữ GOLD nhờ ảnh gốc", dict(zip(on["nom_idx"], on["tier"]))["1"] == "GOLD"
+          and rep1["crop_recheck_mode"] == "auto")
+    check("run --crop-recheck off: như bản cũ (ô 1 REVIEW, không cột crop_recheck)",
+          dict(zip(off["nom_idx"], off["tier"]))["1"] == "REVIEW" and mg.COL_CROP_RECHECK not in off.columns)
+
+
 def main() -> int:
     print("=" * 64)
     print("MECHANISM GATES SELFTEST")
@@ -460,6 +553,7 @@ def main() -> int:
         test_export(tmp)
         test_pitch(tmp)
         test_qn_count()
+        test_recheck(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("=" * 64)

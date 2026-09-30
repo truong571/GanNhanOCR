@@ -1,0 +1,97 @@
+# config/chon_chu.yaml — bước CHỌN CHỮ BẰNG ẢNH (pipeline/chon_chu, TN8 30/09/2026), 0 API.
+#
+# Vị trí: run_new_book B4 gates -> [B4b chon_chu] -> B5 export (sửa labels_gated.csv TẠI CHỖ, bản trước giữ ở
+# labels_gated_truoc_chon_chu.csv). Đường STT gọi bước này giữa rescue và export nhưng STT TẮT (enabled: false) => không ghi gì.
+# Số đo + cách chọn mọi giá trị dưới đây: measure_out/_tn8/KET_QUA.md (lab/thu_nghiem_kim/TN8_chon_chu/).
+#
+# Quyết định cho ô KHÔNG GOLD:  nâng GOLD (nhãn = top-1 của bộ chọn) khi
+#   nhóm ô ∈ promo_groups của họ chữ  ∧  gate_reason ∉ excl_gates  ∧  P(tầng 2) ≥ tau_in (phần kim ∈ R) / tau_out (kim ∉ R).
+#   tau_out: null = phần kim ∉ R TẮT.
+# L5 (họ viết tay, relabel: true): ô GOLD hiện tại, phần kim ∈ R, top-1 ≠ nhãn (V1+) và P ≥ tau_relabel -> nhãn := top-1.
+# Ngưỡng = tiêu chí biên 0,80 (ô tệ nhất được nhận vẫn đúng ≥ 80 %) chọn trên dự đoán NGOÀI-KHỐI của bộ HỌC
+# (measure_out/_tn8/summary_t12_b80.json). Bộ có nhãn người (Borg, IHR) dùng mô hình học trên SÁCH KIA (LOBO).
+# KHÔNG BAO GIỜ: GOLD_text_only, not_plausible, QUARANTINE; KHÔNG vft trên Borg (vft học crop người Borg).
+version: "2026-09-30"
+device: mps                      # cpu nếu không có MPS (tự rơi về)
+cache_dir: prepared/_chon_chu    # nhúng crop theo md5 (dựng lại được, gitignore)
+models_dir: models/chon_chu      # chooser_*.npz + hum_*.pt + MANIFEST.json (kiểm sha256 lúc khởi động)
+tau_relabel: 0.80
+excl_gates: [cross_similar, am_sua_dau, bridge_similar]
+families:
+  hand:                          # chữ viết tay: L1 crop_bad · L2 qn_count_unfixed · L2b · L4 kim ∉ R · L5 sửa nhãn GOLD
+    promo_groups: [direct_qn, direct_crop, direct_other, similar, other, syl, nocontext, lowpost, syl_cropbad]
+    relabel: true
+  print:                         # sách in/khắc: chỉ L1 crop_bad + confusion_fix (L2/L4 đo trên IHR là KHÔNG đạt)
+    promo_groups: [direct_crop, other]
+    relabel: false
+books:
+  SachKinhThayCaBinh:            # B18 — mô hình + ngưỡng học trên B34 (LOBO); nguyên mẫu người B34
+    enabled: true
+    family: hand
+    model: hand_B34
+    verifiers: [hand_T_DungLy, hand_L_DungLy]
+    human: [B34]
+    tau_in: 0.132865
+    tau_out: 0.584112
+  SachDungLyHoThan:              # B34 — mô hình + ngưỡng học trên B18 (LOBO); nguyên mẫu người B18
+    enabled: true
+    family: hand
+    model: hand_B18
+    verifiers: [hand_T_Kinh, hand_L_Kinh]
+    human: [B18]
+    tau_in: 0.63108
+    tau_out: 0.786492
+  LucVanTien1916:                # L16 — mô hình + ngưỡng học trên TK (LOBO); vft_T (học TK + Borg, sạch với L16)
+    enabled: true
+    family: print
+    model: print_TK
+    verifiers: [vft_T]
+    human: []
+    tau_in: 0.437759
+    tau_out: null
+  TruyenKieu1872:                # TK — mô hình + ngưỡng học trên L16 (LOBO); vft_L
+    enabled: true
+    family: print
+    model: print_L16
+    verifiers: [vft_L]
+    human: []
+    tau_in: 0.743915
+    tau_out: null
+  Chrestomathie1872:
+    enabled: true
+    family: print
+    model: print_all
+    verifiers: [vft_T, vft_L]
+    human: []
+    tau_in: 0.460057
+    tau_out: null
+  LucVanTien1883:
+    enabled: true
+    family: print
+    model: print_all
+    verifiers: [vft_T, vft_L]
+    human: []
+    tau_in: 0.460057
+    tau_out: null
+  KimVanKieu1884:
+    enabled: true
+    family: print
+    model: print_all
+    verifiers: [vft_T, vft_L]
+    human: []
+    tau_in: 0.460057
+    tau_out: null
+  # STT: đường mã có, TẮT mặc định (chờ nghiên cứu riêng; KHÔNG đổi đầu ra / mốc md5 STT). stt_mode: bao_thu = chỉ nâng ô
+  # lt1 ∉ R ∧ lt2 ∈ R ∧ top-1 chỉ-ảnh == lt2 (nhãn lt2); manh = bộ chọn hand_all chế độ union (KHÔNG khuyến nghị — TN8 §4).
+  SachThanhTruyen2: &stt
+    enabled: false
+    family: hand
+    model: hand_all
+    vis_model: vis_hand_all
+    verifiers: [hand_T_Kinh, hand_L_Kinh]
+    human: [B18, B34]
+    tau_in: 0.645974
+    tau_out: 0.79708
+    stt_mode: bao_thu
+  SachThanhTruyen4: *stt
+  SachThanhTruyen11: *stt

@@ -20,6 +20,7 @@
 #   3 build       align_engine.build_dataset -> labels.csv + crops (100% tự động)
 #   4 remediate   pipeline.remediation (census AE-1/F1) + confusion_fix
 #   5 rescue      pipeline.remediation.self_training_rescue (MỚI: giải cứu REVIEW bằng mô hình nội bộ)
+#   5b chon_chu   pipeline.chon_chu (30/09, TN8) — STT TẮT mặc định trong config/chon_chu.yaml: không đọc/ghi gì
 #   6 export      pipeline/export_final_dataset.py -> dataset/ (usable: GOLD+SYLLABLE)
 #
 # SÁCH MỚI (thạch bản/văn xuôi, 2026-09-22 — xem khối "SÁCH MỚI" dưới, đường STT trên KHÔNG đổi):
@@ -403,6 +404,13 @@ step_rescue() {
   X "$PY" -m pipeline.remediation.self_training_rescue "${_args[@]}"
 }
 
+# ---- 5b chon_chu (TN8, 30/09) — STT TẮT mặc định (config/chon_chu.yaml: enabled false -> không đọc/ghi gì) ------
+step_chon_chu() {
+  banner 5b chon_chu "chọn chữ bằng ảnh (config/chon_chu.yaml; STT TẮT mặc định -> không đọc/ghi gì)"
+  # shellcheck disable=SC2086  # $BOOKS = danh sách sách STT đã chọn (tách theo khoảng trắng)
+  X "$PY" -m pipeline.chon_chu --labels "$LABELS_FINAL" --book $BOOKS
+}
+
 # ---- 6/6 export -------------------------------------------------------------
 step_export() {
   banner 6 export "xuất bộ dữ liệu CUỐI CÙNG (100% tự động) -> $FINAL_DIR/ (tự chứa)"
@@ -478,7 +486,11 @@ evidence() {
 #   -> 1 ingest (ingest_lithograph_book | ingest_prose_book, --ocr kim, cache kim_raw/)
 #   -> 2 build (build_dataset --use-s3 --two-pass --box-rule syl_index + enrich_crop_quality)
 #   -> 3 remediate (census; apply --tau 0,62 --out dataset_out_<Book>; confusion_fix)
-#   -> 4 gates (auto_precision cross,gates trên labels_final -> mechanism_gates --cross ... -> labels_gated.csv)
+#   -> 4 gates (auto_precision cross,gates trên labels_final -> mechanism_gates --cross ... -> labels_gated.csv;
+#        (c') 30/09: cờ crop blank/truncated đo trên bản nhị phân được KIỂM LẠI trên ảnh gốc — ảnh gốc ổn thì không hạ)
+#   -> 4b chon_chu (30/09, TN8: python -m pipeline.chon_chu, config/chon_chu.yaml, 0 API) — bộ chọn chữ bằng ảnh sửa
+#        labels_gated.csv TẠI CHỖ (bản trước: labels_gated_truoc_chon_chu.csv): viết tay (Borg) L1/L2/L2b/L4 + L5 sửa nhãn
+#        GOLD, mô hình LOBO; in/khắc chỉ L1 crop_bad + confusion_fix; rule += "|chon_chu:<đòn>"; STT TẮT (không đọc/ghi)
 #   -> 5 export (export_final_dataset --n-columns; make_dataset_docs; make_xlsx)
 #   -> 6 measure (auto_precision cross trên labels_gated = B6, chỉ sách có CROSS_BOOKS)
 # Mỗi lệnh thật ghi vào logs/run_<Book>_<thời điểm>.log (kèm stdout/stderr); sha256 vào dataset_out_<Book>/CHECKSUMS.txt.
@@ -861,6 +873,15 @@ run_new_book() {   # run_new_book <Book>: B0→B6 cho một sách mới
   (( DRY_RUN )) || checkpoint gates "$labels_gated"
   bk_tick "gates"
 
+  # ---- 4b chon_chu (TN8, 30/09) ---------------------------------------------
+  # Bộ chọn chữ bằng ảnh (0 API): sửa labels_gated.csv TẠI CHỖ theo config/chon_chu.yaml (sách TẮT -> không đọc/ghi gì);
+  # bản trước ở labels_gated_truoc_chon_chu.csv, báo cáo $ds_out/chon_chu_report.json.
+  banner_bk 4b chon_chu "chọn chữ bằng ảnh (config/chon_chu.yaml: viết tay L1/L2/L4/L5 LOBO · in L1+confusion_fix) -> $labels_gated"
+  R "$PY" -m pipeline.chon_chu --labels "$labels_gated" --book "$book"
+  need_file "$labels_gated" "chon_chu"
+  (( DRY_RUN )) || checkpoint chon_chu "$labels_gated"
+  bk_tick "chon_chu"
+
   # ---- 5/6 export -----------------------------------------------------------
   banner_bk 5 export "export_final_dataset --n-columns $BK_NCOL -> $final_dir/ + README/DATASHEET + xlsx"
   (( DRY_RUN )) || archive_prev "$final_dir"
@@ -905,12 +926,12 @@ stt_dry_run() {   # STT --dry-run: in đúng chuỗi 6 bước cũ; X/die/assert
   log ""
   log "${BLD}[DRY-RUN STT] sách: $BOOKS_LABEL · cache OCR: dùng cache cũ · DS_OUT=$DS_OUT · không chạy gì${RST}"
   (( RUN_ALL )) || print_route $STT_BOOKS_ALL
-  log "${BLD}Sẽ chạy 6 bước:${RST} setup -> extract($BOOKS_LABEL) -> build(100% tự động) -> remediate & confusion -> rescue (Self-Training) -> export"
+  log "${BLD}Sẽ chạy 6 bước:${RST} setup -> extract($BOOKS_LABEL) -> build(100% tự động) -> remediate & confusion -> rescue (Self-Training) -> [chon_chu: TẮT theo config] -> export"
   (
     X() { printf '    %s$%s %s\n' "$CYA" "$RST" "$*"; }
     die() { printf '    %s(dry-run: sẽ dừng nếu thiếu)%s %s\n' "$YEL" "$RST" "$*"; }
     assert_qd01() { printf '    %s(dry-run)%s assert_qd01 %s (%s)\n' "$CYA" "$RST" "$1" "$2"; }
-    step_setup; step_extract; step_build; step_remediate; step_rescue; step_export
+    step_setup; step_extract; step_build; step_remediate; step_rescue; step_chon_chu; step_export
     log ""
     log "  (sau export: checkpoint/evidence sha256 -> $CHECKSUMS, $EVIDENCE)"
   )
@@ -1512,6 +1533,7 @@ stt_pipeline() {
   step_rescue
   checkpoint rescue "$LABELS_FINAL"; tick rescue
   assert_qd01 "$LABELS_FINAL" rescue
+  step_chon_chu
   step_export
   checkpoint export "${FINAL_OUT:-$FINAL_DIR}/labels.csv"; tick export
 

@@ -35,6 +35,15 @@ tự động được và proxy văn bản (khớp dị bản) MÙ với nó; ch
 Thứ tự ưu tiên khi một ô trúng nhiều cổng: (c) > (d) > (b) > (a); `gate_reason` ghi cổng quyết định,
 báo cáo JSON ghi số trúng THÔ từng cổng. Ô QUARANTINE/REVIEW không đụng.
 
+(c') KIỂM LẠI TRÊN ẢNH GỐC (2026-09-30, TN8 đòn bẩy L1 — lab/thu_nghiem_kim/TN8_chon_chu/t15_l1_recheck.py): ở sách
+`crop_source: original`, `crop_quality_flag` đo trên bản NHỊ PHÂN (`crops_bin/`, ngưỡng cố định 128) — nét mảnh mất khi nhị phân
+nên crop bị gắn `blank` dù ảnh gốc giao nộp vẫn đủ chữ. Đo trên nhãn người: ô `crop_bad:blank` L16/TK đúng chữ 97,1 / 99,0 %
+(GOLD 'ok' 98,3 / 99,0 %). Nên ô trúng (c) được đo lại trên CHÍNH tệp crop gốc (`<src_root>/<image>`) bằng ngưỡng Otsu riêng từng
+crop: tương phản p95−p5 ≥ 30, mực ≥ 0,03, mực chạm mép trên/dưới ≤ 0,30 (ngưỡng đặt dưới p5 / trên p95 của GOLD 'ok' mọi bộ) ->
+KHÔNG hạ (giữ tầng), ghi cột `crop_recheck = ok_goc:<cờ>`; ảnh gốc cũng hỏng -> hạ như cũ, `crop_recheck = xau_goc:<cờ>`.
+Chỉ chạy khi cờ đo trên ảnh KHÁC ảnh giao (có `crops_bin/<image>`) — sách `processed` (STT) không có bản thứ hai nên y như cũ.
+`books[].crop_recheck: true|false` hoặc `--crop-recheck on|off` ghi đè.
+
 Bật/tắt: đọc `books[].mechanism_gates` (bool) trong config; vắng khoá → bật khi `layout == lithograph`,
 tắt với sách STT (không khai layout). Khi TẮT: --out là BẢN SAO BYTE của --in (shutil.copyfile) — STT
 byte-identical. `--enable on|off` ghi đè config (thí nghiệm).
@@ -105,6 +114,14 @@ G_QNCOUNT = "qn_count_unfixed"                    # (e) cột có SỐ ĐẾM Â
 # GOLD_text_only vẫn giao nộp nhãn, tức vẫn giao nộp ~50 % nhãn sai.
 COL_QN_UNFIXED = "qn_count_unfixed"
 QN_COUNT_MODES = ("review", "text_only", "off")
+
+# (c') kiểm lại cờ crop trên ẢNH GỐC (xem docstring). Ngưỡng đặt ở đuôi GOLD 'ok' đo trên 7 bộ (t15_l1_recheck):
+# tương phản p5 = 69…133 (≥ 30 mọi bộ), mực Otsu p5 = 0,079…0,174 (≥ 0,03), mực chạm mép p95 = 0,0…0,125 (≤ 0,30).
+COL_CROP_RECHECK = "crop_recheck"
+RECHECK_MODES = ("auto", "on", "off")
+RECHECK_CONTRAST_MIN = 30.0
+RECHECK_INK_MIN = 0.03
+RECHECK_BORDER_MAX = 0.30
 
 
 # --------------------------------------------------------------------------- config
@@ -190,6 +207,69 @@ def detect_pitch_mode(df: pd.DataFrame | None, book_cfg: dict | None, summary_pa
     return False, "legacy"
 
 
+# --------------------------------------------------------------------------- (c') kiểm lại trên ảnh gốc
+def recheck_original(gray) -> tuple[str, dict]:
+    """Đo lại một crop GỐC (ảnh xám, điểm ảnh quét, nền giấy còn nguyên) bằng ngưỡng Otsu RIÊNG crop.
+    Trả ('ok' | 'blank' | 'truncated', số đo). 'blank' = tương phản thấp hoặc gần như không mực; 'truncated' = mực Otsu
+    chạm 2 hàng mép trên/dưới quá RECHECK_BORDER_MAX (cùng định nghĩa border_ink của crop_quality, khác ngưỡng mực)."""
+    import cv2
+    import numpy as np
+    if gray is None or getattr(gray, "size", 0) == 0:
+        return "blank", {"contrast": 0.0, "ink": 0.0, "border": 0.0}
+    g = np.asarray(gray, dtype=np.uint8)
+    contrast = float(np.percentile(g, 95) - np.percentile(g, 5))
+    thr, _ = cv2.threshold(g, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    bw = g <= thr                          # = phần THRESH_BINARY đặt 0 (mực); '<' làm mất lớp mực ở ảnh hai mức
+    ink = float(bw.mean())
+    border = float(max(bw[:2, :].mean(), bw[-2:, :].mean())) if g.shape[0] >= 4 else 0.0
+    m = {"contrast": round(contrast, 1), "ink": round(ink, 4), "border": round(border, 4)}
+    if contrast < RECHECK_CONTRAST_MIN or ink < RECHECK_INK_MIN:
+        return "blank", m
+    if border > RECHECK_BORDER_MAX:
+        return "truncated", m
+    return "ok", m
+
+
+def recheck_mode(book_cfg: dict | None, override: str = "auto") -> str:
+    """'auto' (mặc định: chạy khi có crops_bin/<image>) | 'on' | 'off'. books[].crop_recheck: true|false ghi đè auto."""
+    if override not in RECHECK_MODES:
+        raise ValueError(f"--crop-recheck = {override!r}; chỉ nhận {RECHECK_MODES}")
+    if override != "auto":
+        return override
+    if book_cfg and "crop_recheck" in book_cfg:
+        v = book_cfg.get("crop_recheck")
+        if not isinstance(v, bool):
+            raise ValueError(f"books[{book_cfg.get('name')}].crop_recheck = {v!r}; cần true/false")
+        return "on" if v else "off"
+    return "auto"
+
+
+def build_crop_recheck(df: pd.DataFrame, src_root: Path, mode: str = "auto") -> dict | None:
+    """{image: (verdict, số đo)} cho ô tầng có ảnh trúng (c). mode 'auto': chỉ ô có bản nhị phân `crops_bin/<image>`
+    (tức cờ đo trên ảnh KHÁC ảnh giao); 'on': mọi ô trúng (c) có tệp ảnh; 'off' -> None (hành vi cũ, không thêm cột).
+    Trả None khi không ô nào đủ điều kiện ở chế độ auto (sách processed/STT: schema không đổi)."""
+    if mode == "off":
+        return None
+    import cv2
+    col = lambda name: df[name].map(_s) if name in df.columns else pd.Series([""] * len(df), index=df.index)
+    tier, flag, image = col("tier"), col("crop_quality_flag"), col("image")
+    hit = tier.isin(IMAGE_TIERS) & flag.isin(BAD_CROP) & (image != "")
+    out: dict = {}
+    bin_root = Path(src_root) / "crops_bin"
+    for img in dict.fromkeys(image[hit]):
+        if mode == "auto" and not (bin_root / img).exists():
+            continue
+        p = Path(src_root) / img
+        g = cv2.imread(str(p), cv2.IMREAD_GRAYSCALE) if p.exists() else None
+        if g is None:
+            out[img] = ("thieu_anh", {})
+            continue
+        out[img] = recheck_original(g)
+    if mode == "auto" and not out:
+        return None
+    return out
+
+
 # --------------------------------------------------------------------------- cross (d)
 def load_cross(path: Path) -> dict[str, dict]:
     """cells.csv (hoặc disagreements*.csv cùng schema) → {image: {agree, similar_dis, other_dis, refs}}.
@@ -223,10 +303,12 @@ def load_cross(path: Path) -> dict[str, dict]:
 
 # --------------------------------------------------------------------------- áp cổng
 def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
-                pitch: bool = False, qn_count: str = "off") -> tuple[pd.DataFrame, dict]:
+                pitch: bool = False, qn_count: str = "off",
+                recheck: dict | None = None) -> tuple[pd.DataFrame, dict]:
     """Hàm THUẦN (không mutate df). Trả (df mới, báo cáo dict). `pitch=True` = luật (a') thay (a):
     hạ theo Ô box_source ink_cut/detector_low (+ midpoint/split), n_det ≠ n_qn chỉ ghi cờ.
-    `qn_count` = luật (e): 'review' | 'text_only' | 'off' (xem `qn_count_mode`)."""
+    `qn_count` = luật (e): 'review' | 'text_only' | 'off' (xem `qn_count_mode`).
+    `recheck` = (c') {image: (verdict, số đo)} của `build_crop_recheck`; verdict 'ok' -> ô KHÔNG bị (c) hạ; None -> như cũ."""
     if qn_count not in QN_COUNT_MODES:
         raise ValueError(f"qn_count = {qn_count!r}; chỉ nhận {QN_COUNT_MODES}")
     out = df.copy()
@@ -234,6 +316,8 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
     for c in ("gate_reason", "di_ban_khac"):
         if c not in out.columns:
             out[c] = ""
+    if recheck is not None and COL_CROP_RECHECK not in out.columns:
+        out[COL_CROP_RECHECK] = ""           # chỉ khi (c') chạy (sách processed/STT: schema không đổi)
     if pitch and COL_NDET_MISMATCH not in out.columns:
         out[COL_NDET_MISMATCH] = ""          # chỉ chế độ pitch mới có cột này (legacy không đổi schema)
     # đọc cột an toàn (thế hệ cũ có thể thiếu cột → coi như rỗng, cổng đó không trúng)
@@ -250,7 +334,20 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
     is_img_tier = tier.isin(IMAGE_TIERS)
 
     # trúng THÔ từng cổng (đếm trên tầng liên quan, TRƯỚC khi áp ưu tiên)
-    hit_crop = is_img_tier & flag.isin(BAD_CROP)
+    hit_crop_raw = is_img_tier & flag.isin(BAD_CROP)
+    hit_crop = hit_crop_raw
+    rc_n = {}
+    if recheck is not None:
+        verdict = image.map(lambda i: (recheck.get(i) or ("", {}))[0])
+        rc_ok = hit_crop_raw & (verdict == "ok")
+        rc_bad = hit_crop_raw & verdict.isin(("blank", "truncated", "thieu_anh"))
+        out.loc[rc_ok, COL_CROP_RECHECK] = "ok_goc:" + flag[rc_ok]
+        out.loc[rc_bad, COL_CROP_RECHECK] = "xau_goc:" + flag[rc_bad]
+        hit_crop = hit_crop_raw & ~rc_ok
+        rc_n = {"kiem_lai": int((rc_ok | rc_bad).sum()), "giu_tang_ok_goc": int(rc_ok.sum()),
+                "van_ha_xau_goc": int(rc_bad.sum()),
+                "giu_theo_co": {k: int((rc_ok & (flag == k)).sum()) for k in BAD_CROP},
+                "giu_theo_tang": {t: int((rc_ok & (tier == t)).sum()) for t in IMAGE_TIERS}}
     hit_bridge = is_gold & ((rule == RULE_BRIDGE) | (tier_v3 == TIER_V3_BRIDGE))
     hit_tone = is_gold & (rule == RULE_AM_SUA_DAU)
     ndet_mismatch = (n_det != n_qn)                     # thô, mọi tầng
@@ -275,6 +372,8 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
 
     raw = {
         G_CROP: {t: int((hit_crop & (tier == t)).sum()) for t in IMAGE_TIERS},
+        "crop_bad_truoc_kiem_lai": {t: int((hit_crop_raw & (tier == t)).sum()) for t in IMAGE_TIERS},
+        "crop_recheck": rc_n or None,
         G_CROSS: int(hit_cross.sum()),
         "cross_di_ban_khac": int(hit_khac.sum()),
         "cross_agree_GOLD": int((is_gold & agree).sum()) if cross is not None else None,
@@ -402,7 +501,8 @@ def apply_gates(df: pd.DataFrame, cross: dict[str, dict] | None = None,
 # --------------------------------------------------------------------------- CLI
 def run(in_csv: Path, out_csv: Path, config: Path | None, book: str | None, cross: Path | None,
         enable: str, report_path: Path | None, box_decoder: str = "auto",
-        summary_path: Path | None = None, qn_count_gate: str | None = None) -> dict:
+        summary_path: Path | None = None, qn_count_gate: str | None = None,
+        crop_recheck: str = "auto", src_root: Path | None = None) -> dict:
     book_cfg = load_book_cfg(config, book) if (config and book) else None
     enabled = gates_enabled(book_cfg, enable)
     if summary_path is None:
@@ -426,7 +526,10 @@ def run(in_csv: Path, out_csv: Path, config: Path | None, book: str | None, cros
         rep["pitch_mode_source"] = pitch_src
         qn_mode = qn_count_mode(book_cfg, qn_count_gate)
         rep["qn_count_gate_arg"] = qn_count_gate
-        out, r = apply_gates(df, cx, pitch=pitch, qn_count=qn_mode)
+        rc_mode = recheck_mode(book_cfg, crop_recheck)
+        rc = build_crop_recheck(df, src_root or in_csv.parent, rc_mode)
+        rep["crop_recheck_mode"] = rc_mode
+        out, r = apply_gates(df, cx, pitch=pitch, qn_count=qn_mode, recheck=rc)
         out.to_csv(out_csv, index=False)
         rep.update(r)
         g = r["gold_image"]
@@ -435,6 +538,12 @@ def run(in_csv: Path, out_csv: Path, config: Path | None, book: str | None, cros
         print(f"[gates] {book}: chế độ hộp = {mode_txt} [nguồn: {pitch_src}]")
         print(f"[gates] {book}: GOLD ảnh {g['before']:,} → {g['after']:,} ({g['coverage_pct']} %); "
               f"GOLD_text_only {r['gold_text_only']:,}; quyết định theo cổng {r['gates_decided']}")
+        rcn = r["gates_raw_hits"].get("crop_recheck")
+        if rcn:
+            print(f"[gates] (c') kiểm lại crop trên ảnh gốc ({rc_mode}): {rcn['kiem_lai']:,} ô trúng (c) -> giữ tầng "
+                  f"{rcn['giu_tang_ok_goc']:,} (ảnh gốc ổn: {rcn['giu_theo_co']}), vẫn hạ {rcn['van_ha_xau_goc']:,}")
+        else:
+            print(f"[gates] (c') kiểm lại crop trên ảnh gốc: không áp ({rc_mode}; không có crops_bin/ hoặc 0 ô trúng (c))")
         print(f"[gates] (e) qn_count_unfixed = {qn_mode}: cờ {r['gates_raw_hits']['qn_count_unfixed_rows']:,} dòng "
               f"(GOLD trúng thô {r['gates_raw_hits'][G_QNCOUNT]:,}) -> hạ {r['qn_count_decided']:,} ô")
         if pitch:
@@ -477,6 +586,10 @@ def main(argv: list[str] | None = None) -> int:
                          "text_only | off (mặc định prose/STT). Vắng = theo books[].qn_count_gate > layout")
     ap.add_argument("--summary", default=None,
                     help="summary.json của build_dataset (mặc định cạnh --in) — đọc detector_params_by_book[book].box_decoder")
+    ap.add_argument("--crop-recheck", choices=RECHECK_MODES, default="auto",
+                    help="(c') kiểm lại cờ crop blank/truncated trên ẢNH GỐC: auto (mặc định: khi có crops_bin/<image>, "
+                         "books[].crop_recheck ghi đè) | on | off (hành vi cũ)")
+    ap.add_argument("--src-root", default=None, help="gốc đường dẫn cột image (mặc định: thư mục của --in)")
     a = ap.parse_args(argv)
     if a.enable == "auto" and not (a.config and a.book):
         print("[gates] --enable auto cần --config và --book (hoặc dùng --enable on|off)", file=sys.stderr)
@@ -484,7 +597,8 @@ def main(argv: list[str] | None = None) -> int:
     run(Path(a.in_csv), Path(a.out), Path(a.config) if a.config else None, a.book,
         Path(a.cross) if a.cross else None, a.enable, Path(a.report) if a.report else None,
         box_decoder=a.box_decoder, summary_path=Path(a.summary) if a.summary else None,
-        qn_count_gate=a.qn_count_gate)
+        qn_count_gate=a.qn_count_gate, crop_recheck=a.crop_recheck,
+        src_root=Path(a.src_root) if a.src_root else None)
     return 0
 
 

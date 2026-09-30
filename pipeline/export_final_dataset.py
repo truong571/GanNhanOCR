@@ -49,6 +49,9 @@ TRACE = ["image", "nom_idx", "syl_idx", "syllable_ocr", "syllable_raw", "qn_fix_
          # B4' cổng cơ chế (mechanism_gates): chỉ có ở sách lithograph đã qua cổng;
          # n_det_mismatch chỉ có khi cổng chạy ở chế độ pitch (luật a', 2026-09-22)
          "gate_reason", "di_ban_khac", "n_det_mismatch",
+         # (c') 30/09: kiểm lại cờ crop trên ảnh gốc (mechanism_gates) + bước 4b chọn chữ bằng ảnh (pipeline.chon_chu):
+         # chỉ có khi bước đó chạy cho sách — STT (tắt) không có cột nào mới
+         "crop_recheck", "chon_chu", "chon_chu_p", "chon_chu_truoc",
          # B-2 (--visual-emission): chỉ có khi build bật cờ; tắt cờ -> không ghi (không bịa cột)
          "p_visual_syl", "visual_fold", "visual_argmax", "visual_max_p"]
 # columns.csv: khoá (book,page,column) + các đại lượng cấp CỘT (giá trị đầu tiên gặp).

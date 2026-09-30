@@ -9,6 +9,7 @@ và cache lt2 của STT (pipeline.gold_exact.signals_lt2.activation — cùng h�
     .venv/bin/python -m pipeline.tools.duong_chay --selftest
 
 Cột: bộ · config · layout · box_decoder (hộp ảnh) · kim lang_type (1 = Hán, 2 = Nôm) · crop_source (ảnh crop của labels.csv) ·
+chon_chu (30/09, bước 4b chọn chữ bằng ảnh — config/chon_chu.yaml: BẬT họ/đòn bẩy/mô hình | TẮT) ·
 gold_exact profile (printed | handwriting) · second_read (lt2 STT: BẬT khi đủ cache, TẮT + lý do) · ảnh giao ô ok (crop chuẩn v2).
 """
 from __future__ import annotations
@@ -44,6 +45,23 @@ def book_cfg(book: str):
     return p, b
 
 
+def chon_chu_route(book: str, ccfg: dict | None) -> str:
+    """Ô 'chon_chu' của bảng: TẮT | BẬT (họ: đòn bẩy; mô hình) — đọc config/chon_chu.yaml qua pipeline.chon_chu.policy."""
+    if ccfg is None:
+        return "— (không có config/chon_chu.yaml)"
+    from pipeline.chon_chu import policy as CP
+    try:
+        b = CP.book_cfg(ccfg, book)
+    except ValueError as e:
+        return f"LỖI config: {e}"
+    if b is None:
+        return "— (không khai)"
+    if not b["enabled"]:
+        return "TẮT"
+    lv = "L1/L2/L2b/L4+L5" if b["family"] == "hand" else "L1+confusion_fix"
+    return f"BẬT {b['family']}: {lv}; {b['model']}"
+
+
 def routes(books, gold_exact=True):
     from pipeline.align_engine.book_layout import book_layout
     from pipeline.gold_exact import policy as POL
@@ -57,6 +75,8 @@ def routes(books, gold_exact=True):
         _, lt2, _ = SL.activation([s for s in s8s if s in SL.STT_SETS], gcfg)
     except Exception as e:  # noqa: BLE001
         lt2 = {s: dict(active=False, why=f"lỗi đọc cache lt2: {type(e).__name__}") for s in s8s if s in SL.STT_SETS}
+    cc_path = REPO / "config/chon_chu.yaml"
+    ccfg = yaml.safe_load(cc_path.read_text(encoding="utf-8")) if cc_path.exists() else None
     rows = []
     for b, s8 in zip(books, s8s):
         try:
@@ -75,12 +95,13 @@ def routes(books, gold_exact=True):
                   else f"TẮT ({r.get('pages_lt2')}/{r.get('pages_lt1')} trang lt2)")
         else:
             sr = "—"
-        rows.append((b, cfgs, layout, dec, lang, src, pf if gold_exact else "— (off)", sr))
+        rows.append((b, cfgs, layout, dec, lang, src, chon_chu_route(b, ccfg), pf if gold_exact else "— (off)", sr))
     return rows, gcfg, prof
 
 
 def render(rows, gcfg, prof, gold_exact=True, publish=False, merge=True) -> str:
-    hdr = ("bộ", "config", "layout", "box_decoder", "kim lang_type", "crop_source", "gold_exact profile", "second_read (lt2)")
+    hdr = ("bộ", "config", "layout", "box_decoder", "kim lang_type", "crop_source", "chon_chu (4b)", "gold_exact profile",
+           "second_read (lt2)")
     tb = [hdr] + [tuple(str(x) for x in r) for r in rows]
     w = [max(len(r[i]) for r in tb) for i in range(len(hdr))]
     out = ["ĐƯỜNG CHẠY (config hiện hành; đổi config = đổi đường):"]
@@ -89,7 +110,7 @@ def render(rows, gcfg, prof, gold_exact=True, publish=False, merge=True) -> str:
         if k == 0:
             out.append("  |" + "|".join("-" * (w[i] + 2) for i in range(len(hdr))) + "|")
     sr = ((gcfg.get("profiles") or {}).get("handwriting") or {}).get("second_read") or {}
-    chain = ["các bộ"] + (["gộp dataset/_ALL"] if merge else [])
+    chain = ["các bộ (… cổng -> chon_chu 4b -> export)"] + (["gộp dataset/_ALL"] if merge else [])
     if merge and gold_exact:
         chain.append(f"gold_exact (policy {gcfg.get('version')}; ô ok -> crop chuẩn v2; lt2 {sr.get('mode', 'off') if isinstance(sr, dict) else sr})")
     if merge and gold_exact and publish:
@@ -116,9 +137,14 @@ def selftest() -> int:
     chk("du_10_bo_doc_duoc_config", all("LỖI" not in r[1] for r in rows) and len(rows) == 10)
     chk("stt_kim_lang_type_1", all(by[b][4] == "1" for b in STT))
     chk("sach_moi_kim_lang_type_2", all(by[b][4] == "2" for b in ALL10 if b not in STT))
-    chk("profile_handwriting_stt_borg", all(by[b][6] == ("handwriting" if SET8[b] in (prof or {}).get("sets", []) else "printed")
+    chk("profile_handwriting_stt_borg", all(by[b][7] == ("handwriting" if SET8[b] in (prof or {}).get("sets", []) else "printed")
                                             for b in ALL10))
-    chk("second_read_chi_stt", all((by[b][7] != "—") == (b in STT) for b in ALL10))
+    chk("second_read_chi_stt", all((by[b][8] != "—") == (b in STT) for b in ALL10))
+    chk("chon_chu_stt_tat", all(by[b][6] == "TẮT" for b in STT))
+    chk("chon_chu_borg_viet_tay_lobo", by["SachKinhThayCaBinh"][6].startswith("BẬT hand") and "hand_B34" in by["SachKinhThayCaBinh"][6]
+        and "hand_B18" in by["SachDungLyHoThan"][6])
+    chk("chon_chu_sach_in_chi_L1", all(by[b][6].startswith("BẬT print: L1+confusion_fix")
+                                        for b in ("Chrestomathie1872", "LucVanTien1883", "KimVanKieu1884", "LucVanTien1916", "TruyenKieu1872")))
     txt = render(rows, gcfg, prof, publish=True)
     chk("render_co_chuoi", "ĐƯỜNG CHẠY" in txt and "cong_bo" in txt and "gold_exact" in txt)
     print(f"RESULT: {ok} passed, {len(fail)} failed" + (f" {fail}" if fail else ""))

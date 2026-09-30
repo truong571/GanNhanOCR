@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-09-30T06:31:02Z",
+ "generated_at": "2026-09-30T17:02:09Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "679735f5bf",
+ "git_head": "5829f4da42",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 60,
@@ -10,14 +10,14 @@
   "identifier_refs": 72,
   "known_pins_found": "9/9",
   "cli_steps": 11,
-  "cli_arguments": 85,
+  "cli_arguments": 87,
   "json_keys": 24,
   "json_keys_never_read": 8,
   "config_books": 3,
   "pdf_readers": 2,
-  "checkpoint_paths": 41,
+  "checkpoint_paths": 50,
   "checkpoint_exists": 7,
-  "git_dirty_pipeline_core": 11,
+  "git_dirty_pipeline_core": 5,
   "dataset_out_deleted": 0,
   "invariants_pass": "18/18"
  },
@@ -195,7 +195,8 @@
     "call_arg_no_column_context": 9,
     "call_kwarg_no_column_context": 5,
     "compare_no_column_context": 1,
-    "other_no_column_context": 31
+    "other_no_column_context": 31,
+    "subscript_index": 4
    },
    "discarded_examples": [
     "core/image/image_processing.py:14 cv2.bilateralFilter(d=9)",
@@ -206,8 +207,8 @@
     "pipeline/lab/selftest.py:136 P.anchor_retention(band_slack=9)",
     "pipeline/phase1_engine_selftest.py:338 Image.frombytes('L', (64, 64), px).save(compress_l",
     "pipeline/phase1_engine_selftest.py:565 range(… arg#0=9)",
-    "pipeline/remediation/mechanism_gates_selftest.py:62 _row(… arg#0=9)",
-    "pipeline/remediation/mechanism_gates_selftest.py:218 _row(… arg#0=9)",
+    "pipeline/remediation/mechanism_gates_selftest.py:63 _row(… arg#0=9)",
+    "pipeline/remediation/mechanism_gates_selftest.py:219 _row(… arg#0=9)",
     "pipeline/tools/ingest_borg_book.py:694 KimClient(budget=9)",
     "pipeline/tools/ingest_prose_selftest.py:43 ing.sino_number(… arg#0=9)",
     "pipeline/tools/merge_datasets.py:555 _bo_gia(… arg#2=9)",
@@ -651,7 +652,7 @@
     },
     {
      "file": "pipeline/export_final_dataset.py",
-     "line": 59,
+     "line": 62,
      "category": "default_param",
      "context": "line",
      "detail": "export_dataset(n_columns=9)",
@@ -660,7 +661,7 @@
     },
     {
      "file": "pipeline/export_final_dataset.py",
-     "line": 232,
+     "line": 235,
      "category": "call_kwarg",
      "context": "line",
      "detail": "ap.add_argument(default=9)",
@@ -1199,19 +1200,19 @@
     },
     {
      "file": "pipeline/export_final_dataset.py",
-     "line": 59,
+     "line": 62,
      "ident": "n_columns",
      "code": "def export_dataset(labels_path: Path, src_root: Path, out_root: Path, n_columns: int = 9) -> int:"
     },
     {
      "file": "pipeline/export_final_dataset.py",
-     "line": 142,
+     "line": 145,
      "ident": "n_columns",
      "code": "_trang_lech = {k for k, v in _cot_theo_trang.items() if len(v) != n_columns}"
     },
     {
      "file": "pipeline/export_final_dataset.py",
-     "line": 203,
+     "line": 206,
      "ident": "n_columns",
      "code": "print(f\"[export] 🔴 trang KHÔNG đủ {n_columns} cột: {_n_lech:,} ô trên {len(_trang_lech)} trang \""
     },
@@ -1281,7 +1282,7 @@
   "cli": {
    "how": "AST: ast.Call .add_argument trong từng tệp CLI; cờ = literal vị trí; keyword default/action/type/choices/dest/help lấy literal, ước lượng tĩnh (REPO / 'x' -> '<REPO>/x', hằng module, import alias) hoặc giữ mã nguồn `src`. Subparser: gán biến từ .add_parser(name). Dòng gọi thật: regex `-m <module>` hoặc `<file.py>` trong run_pipeline.sh (nối dòng \\).",
    "n_steps": 11,
-   "n_arguments_total": 85,
+   "n_arguments_total": 87,
    "run_pipeline_sh_exists": true,
    "steps": [
     {
@@ -1305,11 +1306,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 288,
+       "line": 289,
        "cmd": "X \"$PY\" -m pipeline.step0_setup \"$CONFIG\""
       },
       {
-       "line": 727,
+       "line": 739,
        "cmd": "R \"$PY\" -m pipeline.step0_setup \"$BK_CONFIG\""
       }
      ]
@@ -1354,7 +1355,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 302,
+       "line": 303,
        "cmd": "X \"$PY\" -m pipeline.step1_extract \"$CONFIG\" \"$b\""
       }
      ]
@@ -1668,11 +1669,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 315,
+       "line": 316,
        "cmd": "X \"$PY\" -m pipeline.align_engine.build_dataset --config \"$CONFIG\" --reseg \"$RESEG\" --qd01-cells none --force --out \"$DS_OUT\""
       },
       {
-       "line": 824,
+       "line": 836,
        "cmd": "R \"$PY\" -m pipeline.align_engine.build_dataset --config \"$BK_CONFIG\" --reseg detector --qd01-cells none --decisions none --use-s3 --two-pass --box-rule syl_index --force --out \"$ds_out\""
       }
      ]
@@ -1735,19 +1736,19 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 356,
+       "line": 357,
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" census"
       },
       {
-       "line": 357,
+       "line": 358,
        "cmd": "X \"$PY\" -m pipeline.remediation --labels \"$LABELS_RAW\" --out \"$DS_OUT\" apply --tau \"$TAU_REMEDIATE\""
       },
       {
-       "line": 833,
+       "line": 845,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" census"
       },
       {
-       "line": 834,
+       "line": 846,
        "cmd": "R \"$PY\" -m pipeline.remediation --labels \"$labels_raw\" --out \"$ds_out\" apply --tau \"$TAU_REMEDIATE\""
       }
      ],
@@ -1805,11 +1806,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 361,
+       "line": 362,
        "cmd": "X \"$PY\" -m pipeline.remediation.confusion_fix --in \"$LABELS_REMED\" --out \"$LABELS_FINAL\" --fixes \"$CONFUSION_FIXES\" --measure"
       },
       {
-       "line": 837,
+       "line": 849,
        "cmd": "R \"$PY\" -m pipeline.remediation.confusion_fix --in \"$labels_remed\" --out \"$labels_final\" --fixes \"$CONFUSION_FIXES\" --measure"
       }
      ]
@@ -1822,7 +1823,7 @@
      "prog": "pipeline.remediation.mechanism_gates",
      "description": "B4' cổng theo cơ chế (lithograph): labels_final.csv -> labels_gated.csv",
      "subcommands": [],
-     "n_arguments": 10,
+     "n_arguments": 12,
      "arguments": [
       {
        "flags": [
@@ -1831,7 +1832,7 @@
        "dest": "in_csv",
        "required": true,
        "help": "labels_final.csv (sau confusion_fix)",
-       "line": 463
+       "line": 572
       },
       {
        "flags": [
@@ -1839,7 +1840,7 @@
        ],
        "required": true,
        "help": "labels_gated.csv (đầu vào export_final_dataset)",
-       "line": 464
+       "line": 573
       },
       {
        "flags": [
@@ -1850,7 +1851,7 @@
         "resolved": null
        },
        "help": "config/pipeline_<BOOK>.yaml (đọc books[].layout / mechanism_gates)",
-       "line": 465
+       "line": 574
       },
       {
        "flags": [
@@ -1861,7 +1862,7 @@
         "resolved": null
        },
        "help": "tên sách trong books[] (không phân biệt hoa/thường)",
-       "line": 466
+       "line": 575
       },
       {
        "flags": [
@@ -1872,7 +1873,7 @@
         "resolved": null
        },
        "help": "measure_out/auto_precision/cross/<BOOK>/cells.csv (cổng (d) bất đồng dị bản gần hình)",
-       "line": 467
+       "line": 576
       },
       {
        "flags": [
@@ -1888,7 +1889,7 @@
         "resolved": "auto"
        },
        "help": "auto (mặc định: theo config) | on | off (ghi đè, thí nghiệm)",
-       "line": 469
+       "line": 578
       },
       {
        "flags": [
@@ -1899,7 +1900,7 @@
         "resolved": null
        },
        "help": "JSON báo cáo (mặc định <out dir>/mechanism_gates_report.json)",
-       "line": 471
+       "line": 580
       },
       {
        "flags": [
@@ -1915,7 +1916,7 @@
         "resolved": "auto"
        },
        "help": "auto (mặc định: config books[].box_decoder > summary.json > labels) | legacy | pitch — pitch = luật (a') theo ô box_source ink_cut/detector_",
-       "line": 472
+       "line": 581
       },
       {
        "flags": [
@@ -1931,7 +1932,7 @@
         "resolved": null
        },
        "help": "(e) cột có SỐ ĐẾM ÂM QN hỏng (cờ qn_count_unfixed): review (mặc định thạch bản) | text_only | off (mặc định prose/STT). Vắng = theo books[].",
-       "line": 475
+       "line": 584
       },
       {
        "flags": [
@@ -1942,12 +1943,39 @@
         "resolved": null
        },
        "help": "summary.json của build_dataset (mặc định cạnh --in) — đọc detector_params_by_book[book].box_decoder",
-       "line": 478
+       "line": 587
+      },
+      {
+       "flags": [
+        "--crop-recheck"
+       ],
+       "choices": [
+        "auto",
+        "on",
+        "off"
+       ],
+       "default": {
+        "src": "'auto'",
+        "resolved": "auto"
+       },
+       "help": "(c') kiểm lại cờ crop blank/truncated trên ẢNH GỐC: auto (mặc định: khi có crops_bin/<image>, books[].crop_recheck ghi đè) | on | off (hành ",
+       "line": 589
+      },
+      {
+       "flags": [
+        "--src-root"
+       ],
+       "default": {
+        "src": "None",
+        "resolved": null
+       },
+       "help": "gốc đường dẫn cột image (mặc định: thư mục của --in)",
+       "line": 592
       }
      ],
      "run_pipeline_sh": [
       {
-       "line": 845,
+       "line": 857,
        "cmd": "cmd=(\"$PY\" -m pipeline.remediation.mechanism_gates --in \"$labels_final\" --out \"$labels_gated\""
       }
      ]
@@ -2073,7 +2101,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 403,
+       "line": 404,
        "cmd": "X \"$PY\" -m pipeline.remediation.self_training_rescue \"${_args[@]}\""
       }
      ]
@@ -2096,7 +2124,7 @@
         "src": "'dataset_out/labels_remediated.csv'",
         "resolved": "dataset_out/labels_remediated.csv"
        },
-       "line": 229
+       "line": 232
       },
       {
        "flags": [
@@ -2106,7 +2134,7 @@
         "src": "'dataset_out'",
         "resolved": "dataset_out"
        },
-       "line": 230
+       "line": 233
       },
       {
        "flags": [
@@ -2116,7 +2144,7 @@
         "src": "'dataset'",
         "resolved": "dataset"
        },
-       "line": 231
+       "line": 234
       },
       {
        "flags": [
@@ -2128,20 +2156,20 @@
         "resolved": 9
        },
        "help": "số cột kỳ vọng mỗi trang cho LOG trang thiếu cột (STT 9 mặc định; thạch bản 10)",
-       "line": 232
+       "line": 235
       }
      ],
      "run_pipeline_sh": [
       {
-       "line": 23,
+       "line": 24,
        "cmd": "#   6 export      pipeline/export_final_dataset.py -> dataset/ (usable: GOLD+SYLLABLE)"
       },
       {
-       "line": 412,
+       "line": 420,
        "cmd": "X \"$PY\" pipeline/export_final_dataset.py --labels \"$LABELS_FINAL\" --src-root \"$DS_OUT\" --out \"$FINAL_DIR\""
       },
       {
-       "line": 867,
+       "line": 888,
        "cmd": "R \"$PY\" pipeline/export_final_dataset.py --labels \"$labels_gated\" --src-root \"$ds_out\" --out \"$final_dir\" --n-columns \"$BK_NCOL\""
       }
      ]
@@ -2198,11 +2226,11 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 319,
+       "line": 320,
        "cmd": "X \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$LABELS_RAW\" --src-root \"$DS_OUT\""
       },
       {
-       "line": 827,
+       "line": 839,
        "cmd": "R \"$PY\" -m pipeline.tools.enrich_crop_quality --labels \"$labels_raw\" --src-root \"$ds_out\""
       }
      ]
@@ -2433,7 +2461,7 @@
      ],
      "run_pipeline_sh": [
       {
-       "line": 811,
+       "line": 823,
        "cmd": "cmd=(\"$PY\" -m pipeline.tools.ingest_lithograph_book --book \"$book\" --ocr \"$ocr\" --out \"$BK_DATA_DIR\""
       }
      ]
@@ -3582,6 +3610,7 @@
    ],
    "optional_keys": [
     "box_decoder",
+    "crop_recheck",
     "crop_source",
     "detector_ckpt",
     "detector_resize",
@@ -3783,7 +3812,7 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 116,
+     "line": 133,
      "key": "name",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3791,7 +3820,7 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 131,
+     "line": 148,
      "key": "mechanism_gates",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3799,7 +3828,7 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 133,
+     "line": 150,
      "key": "name",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3807,7 +3836,7 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 135,
+     "line": 152,
      "key": "layout",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3815,7 +3844,7 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 150,
+     "line": 167,
      "key": "qn_count_gate",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3823,7 +3852,7 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 152,
+     "line": 169,
      "key": "name",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3831,7 +3860,7 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 155,
+     "line": 172,
      "key": "layout",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3839,7 +3868,7 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 171,
+     "line": 188,
      "key": "box_decoder",
      "access": "get",
      "keyerror_if_missing": false,
@@ -3847,11 +3876,27 @@
     },
     {
      "file": "pipeline/remediation/mechanism_gates.py",
-     "line": 173,
+     "line": 190,
      "key": "name",
      "access": "get",
      "keyerror_if_missing": false,
      "code": "raise ValueError(f\"books[{book_cfg.get('name')}].box_decoder = {v!r}; chỉ nhận legacy|pitch|visual_dp|visual_dp_hybrid\")"
+    },
+    {
+     "file": "pipeline/remediation/mechanism_gates.py",
+     "line": 240,
+     "key": "crop_recheck",
+     "access": "get",
+     "keyerror_if_missing": false,
+     "code": "v = book_cfg.get(\"crop_recheck\")"
+    },
+    {
+     "file": "pipeline/remediation/mechanism_gates.py",
+     "line": 242,
+     "key": "name",
+     "access": "get",
+     "keyerror_if_missing": false,
+     "code": "raise ValueError(f\"books[{book_cfg.get('name')}].crop_recheck = {v!r}; cần true/false\")"
     },
     {
      "file": "pipeline/step0_setup.py",
@@ -3964,9 +4009,10 @@
   },
   "checkpoints": {
    "how": "AST: ast.Constant/JoinedStr khớp /\\.(?:pt|pth|h5|ckpt|keras|onnx|safetensors)$/ trong pipeline/ core/; leo qua chuỗi BinOp '/' rồi ước lượng tĩnh (REPO, __file__, Path().parent, hằng module) -> đường dẫn; kiểm tồn tại + kích thước. f-string (fold{k}.pt) -> glob trong tuple/list Path cùng tệp (vd DEFAULT_MODEL_DIRS) và CKPT_DIR_HINTS. env_overrides: os.environ.get('*CKPT*').",
-   "n_paths": 41,
+   "n_paths": 50,
    "n_exists": 7,
    "missing": [
+    ".pt",
     "/a/b/detector_r34_v2_litho.pt",
     "OUT / 'lexicon.pt'",
     "OUT / 'mocr_refs.pt'",
@@ -3976,6 +4022,10 @@
     "a.pt",
     "b.pt",
     "c.pt",
+    "hand_model_L_DungLy.pt",
+    "hand_model_L_Kinh.pt",
+    "hand_model_T_DungLy.pt",
+    "hand_model_T_Kinh.pt",
     "hand_model_{FT}.pt",
     "hand_model_{t}_{var}.pt",
     "hand_tables_L_{bk_}.pt",
@@ -3985,6 +4035,8 @@
     "hand_tables_{t}_{variant}.pt",
     "hand_tables_{t}_{var}.pt",
     "hand_tables_{t}_{v}.pt",
+    "hum_{code}.pt",
+    "hum_{c}.pt",
     "lexicon.pt",
     "md / 'fold0.pt'",
     "mocr_refs.pt",
@@ -3997,12 +4049,28 @@
     "td / 'a.pt'",
     "td / 'b.pt'",
     "train_crop/khong_co_tep_nay.pt",
+    "vft_model_L.pt",
+    "vft_model_T.pt",
     "vft_model_{t}.pt",
     "vft_tables_{t}.pt",
     "vft_universe.pt",
     "viss_params.pt"
    ],
    "items": [
+    {
+     "path": ".pt",
+     "literal": ".pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/chon_chu/features.py:168",
+      "pipeline/chon_chu/selftest.py:200"
+     ],
+     "src": "'.pt'",
+     "resolved": ".pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
     {
      "path": "/a/b/detector_r34_v2_litho.pt",
      "literal": "/a/b/detector_r34_v2_litho.pt",
@@ -4176,6 +4244,58 @@
      "exists": true
     },
     {
+     "path": "hand_model_L_DungLy.pt",
+     "literal": "hand_model_L_DungLy.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/chon_chu/embed.py:16"
+     ],
+     "src": "'hand_model_L_DungLy.pt'",
+     "resolved": "hand_model_L_DungLy.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "hand_model_L_Kinh.pt",
+     "literal": "hand_model_L_Kinh.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/chon_chu/embed.py:15"
+     ],
+     "src": "'hand_model_L_Kinh.pt'",
+     "resolved": "hand_model_L_Kinh.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "hand_model_T_DungLy.pt",
+     "literal": "hand_model_T_DungLy.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/chon_chu/embed.py:16"
+     ],
+     "src": "'hand_model_T_DungLy.pt'",
+     "resolved": "hand_model_T_DungLy.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "hand_model_T_Kinh.pt",
+     "literal": "hand_model_T_Kinh.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/chon_chu/embed.py:15"
+     ],
+     "src": "'hand_model_T_Kinh.pt'",
+     "resolved": "hand_model_T_Kinh.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
      "path": "hand_model_{FT}.pt",
      "literal": "hand_model_{FT}.pt",
      "fstring": true,
@@ -4285,6 +4405,31 @@
      ],
      "src": "f'hand_tables_{t}_{v}.pt'",
      "glob_pattern": "hand_tables_*_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "hum_{code}.pt",
+     "literal": "hum_{code}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/chon_chu/export_assets.py:152"
+     ],
+     "src": "out / f'hum_{code}.pt'",
+     "glob_pattern": "hum_*.pt",
+     "matches": [],
+     "exists": false
+    },
+    {
+     "path": "hum_{c}.pt",
+     "literal": "hum_{c}.pt",
+     "fstring": true,
+     "referenced_in": [
+      "pipeline/chon_chu/__main__.py:125",
+      "pipeline/chon_chu/__main__.py:81"
+     ],
+     "src": "f'hum_{c}.pt'",
+     "glob_pattern": "hum_*.pt",
      "matches": [],
      "exists": false
     },
@@ -4517,6 +4662,32 @@
      "size_mb": null
     },
     {
+     "path": "vft_model_L.pt",
+     "literal": "vft_model_L.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/chon_chu/embed.py:14"
+     ],
+     "src": "'vft_model_L.pt'",
+     "resolved": "vft_model_L.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
+     "path": "vft_model_T.pt",
+     "literal": "vft_model_T.pt",
+     "fstring": false,
+     "referenced_in": [
+      "pipeline/chon_chu/embed.py:14"
+     ],
+     "src": "'vft_model_T.pt'",
+     "resolved": "vft_model_T.pt",
+     "unresolved_expr": false,
+     "exists": false,
+     "size_mb": null
+    },
+    {
      "path": "vft_model_{t}.pt",
      "literal": "vft_model_{t}.pt",
      "fstring": true,
@@ -4549,6 +4720,7 @@
      "literal": "vft_universe.pt",
      "fstring": false,
      "referenced_in": [
+      "pipeline/chon_chu/features.py:163",
       "pipeline/gold_exact/__main__.py:304",
       "pipeline/gold_exact/export_assets.py:253"
      ],
@@ -4607,56 +4779,51 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "679735f5bf",
+   "head": "5829f4da42",
    "branch": "main",
-   "n_dirty_pipeline_core": 11,
+   "n_dirty_pipeline_core": 5,
    "dirty_pipeline_core": [
     {
-     "file": "pipeline/publish/README.md",
-     "status": "M"
+     "file": "pipeline/export_final_dataset.py",
+     "status": "M",
+     "ins": 3,
+     "del": 0
     },
     {
-     "file": "pipeline/publish/__init__.py",
-     "status": "M"
+     "file": "pipeline/remediation/mechanism_gates.py",
+     "status": "M",
+     "ins": 120,
+     "del": 6
     },
     {
-     "file": "pipeline/publish/cli.py",
-     "status": "M"
+     "file": "pipeline/remediation/mechanism_gates_selftest.py",
+     "status": "M",
+     "ins": 95,
+     "del": 1
     },
     {
-     "file": "pipeline/publish/datasheet.py",
-     "status": "D"
+     "file": "pipeline/tools/duong_chay.py",
+     "status": "M",
+     "ins": 31,
+     "del": 5
     },
     {
-     "file": "pipeline/publish/export.py",
-     "status": "D"
-    },
-    {
-     "file": "pipeline/publish/gold_exact_release.py",
-     "status": "M"
-    },
-    {
-     "file": "pipeline/publish/hashing.py",
-     "status": "D"
-    },
-    {
-     "file": "pipeline/publish/metadata.py",
-     "status": "D"
-    },
-    {
-     "file": "pipeline/publish/selftest.py",
-     "status": "M"
-    },
-    {
-     "file": "pipeline/publish/splits.py",
-     "status": "D"
-    },
-    {
-     "file": "pipeline/publish/validate.py",
-     "status": "D"
+     "file": "pipeline/chon_chu/",
+     "status": "??"
     }
    ],
-   "untracked_pipeline_core": [],
+   "untracked_pipeline_core": [
+    "pipeline/chon_chu/__init__.py",
+    "pipeline/chon_chu/__main__.py",
+    "pipeline/chon_chu/crops.py",
+    "pipeline/chon_chu/embed.py",
+    "pipeline/chon_chu/export_assets.py",
+    "pipeline/chon_chu/features.py",
+    "pipeline/chon_chu/model.py",
+    "pipeline/chon_chu/policy.py",
+    "pipeline/chon_chu/selftest.py",
+    "pipeline/chon_chu/stt.py"
+   ],
    "ocr_api_guest_mode": {
     "file": "core/ocr/ocr_api.py",
     "has_uncommitted_diff": false,

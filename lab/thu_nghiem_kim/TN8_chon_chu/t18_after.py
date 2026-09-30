@@ -38,7 +38,7 @@ def metrics(D: pd.DataFrame, C) -> dict:
 def main():
     C = T.lex()
     out = {}
-    for b in ("B18", "B34", "L16", "TK", "Chr", "L83", "KVK"):
+    for b in (sys.argv[1:] or ("B18", "B34", "L16", "TK", "Chr", "L83", "KVK")):
         D = B0.base_of(b)                      # đọc labels_gated.csv HIỆN TẠI (đã qua chon_chu)
         r = metrics(D, C)
         if "chon_chu" in D.columns or True:
@@ -53,7 +53,10 @@ def main():
         print(f"[t18] {b}: GOLD {r['gold']:,}/{r['N']:,} = {r['share']:.4f} (TN8 {p[0]}) | hai vế {r.get('both')} {r.get('both_ci')} "
               f"(TN8 {p[1]}) | chữ {r.get('text')} {r.get('text_ci')} (TN8 {p[2]}) | {r.get('chon_chu')} | (c') {r.get('crop_recheck')}",
               flush=True)
-    T.jdump(out, T.OUT / "impl" / "after.json")
+    f = T.OUT / "impl" / "after.json"
+    old = json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+    old.update(out)
+    T.jdump(old, f)
 
 
 if __name__ == "__main__":

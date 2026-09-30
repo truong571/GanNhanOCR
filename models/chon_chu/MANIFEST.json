@@ -1,0 +1,83 @@
+{
+ "version": "2026-09-30",
+ "created": "2026-09-30T19:52:19",
+ "note": "Tài sản bước pipeline.chon_chu (TN8). *.pt (nguyên mẫu người, ~74 MB) bị gitignore — dựng lại bằng lệnh dưới; chooser_*.npz nhỏ (commit được).",
+ "rebuild": [
+  "cd lab/thu_nghiem_kim/TN8_chon_chu && ../../../.venv/bin/python t00_base.py B18 B34 L16 TK && ../../../.venv/bin/python t02_embed.py B18 B34 L16 TK && ../../../.venv/bin/python t04_human.py && ../../../.venv/bin/python t05_feats.py B18 B34 L16 TK && ../../../.venv/bin/python t05c_knn.py B18 B34 L16 TK",
+  ".venv/bin/python -m pipeline.chon_chu.export_assets --out models/chon_chu"
+ ],
+ "thresholds_source": "measure_out/_tn8/summary_t12_b80.json (t12_final.py 0.8: tiêu chí biên 0,80 trên dự đoán ngoài-khối của bộ học — LOBO) -> config/chon_chu.yaml",
+ "files": {
+  "chooser_hand_B34.npz": {
+   "bytes": 9256,
+   "sha256": "14993eacdb035f665fe54c3e4fcd3e1c2511bc57f5850585fdaa424ba4f8092a",
+   "desc": "bộ chọn 2 tầng (in/out) học trên sự thật B34",
+   "train_books": [
+    "B34"
+   ]
+  },
+  "chooser_hand_B18.npz": {
+   "bytes": 9256,
+   "sha256": "2188ed1002c45a18769f80e79707296248bda804e486e8df657a8075b4e0859d",
+   "desc": "bộ chọn 2 tầng (in/out) học trên sự thật B18",
+   "train_books": [
+    "B18"
+   ]
+  },
+  "chooser_hand_all.npz": {
+   "bytes": 9284,
+   "sha256": "6782b6c20d4be7c7f213c87f342a3d8dbc6fc2e44489806720a4caa12e22eb60",
+   "desc": "bộ chọn 2 tầng (in/out) học trên sự thật B18+B34",
+   "train_books": [
+    "B18",
+    "B34"
+   ]
+  },
+  "chooser_print_TK.npz": {
+   "bytes": 9252,
+   "sha256": "8cbc2020a721b75d4c4a800f3be440ac0d127da93036fbe54ce236a7dea67ca7",
+   "desc": "bộ chọn 2 tầng (in/out) học trên sự thật TK",
+   "train_books": [
+    "TK"
+   ]
+  },
+  "chooser_print_L16.npz": {
+   "bytes": 9260,
+   "sha256": "60778d4d1b31744df6093dc21716457ad347f06bcf0cf1ca2c4c0df44314b891",
+   "desc": "bộ chọn 2 tầng (in/out) học trên sự thật L16",
+   "train_books": [
+    "L16"
+   ]
+  },
+  "chooser_print_all.npz": {
+   "bytes": 9284,
+   "sha256": "534f888f8b3efc6f7a768e9fbf87d534769ce21d209e8cb0a6b5edf40c84bedd",
+   "desc": "bộ chọn 2 tầng (in/out) học trên sự thật L16+TK",
+   "train_books": [
+    "L16",
+    "TK"
+   ]
+  },
+  "chooser_vis_hand_all.npz": {
+   "bytes": 3556,
+   "sha256": "2adc7a7701e9134e35c4aa817c52dc91df9de29419194fe12908934bd96520fe",
+   "desc": "bộ chọn CHỈ ẢNH (tầng 1, không cột kim) học B18+B34 — quy tắc STT bảo thủ",
+   "train_books": [
+    "B18",
+    "B34"
+   ]
+  },
+  "hum_B18.pt": {
+   "bytes": 67865321,
+   "sha256": "073b2c883aeeaf0fc608eadfdeb255cd5a09045071852de2cd5d138b234078bf",
+   "desc": "nhúng MultiEnc crop NGƯỜI SachKinhThayCaBinh (keep_high+, real) — nguyên mẫu người LOBO",
+   "n": 64258
+  },
+  "hum_B34.pt": {
+   "bytes": 8125673,
+   "sha256": "6ed62dcb34b92eae684cf2d0a4e25072b5e4e2a1d8a81ba7a383a927f5e3b2d5",
+   "desc": "nhúng MultiEnc crop NGƯỜI SachDungLyHoThan (keep_high+, real) — nguyên mẫu người LOBO",
+   "n": 7693
+  }
+ }
+}

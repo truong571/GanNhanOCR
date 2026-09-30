@@ -491,6 +491,8 @@ evidence() {
 #   -> 4b chon_chu (30/09, TN8: python -m pipeline.chon_chu, config/chon_chu.yaml, 0 API) — bộ chọn chữ bằng ảnh sửa
 #        labels_gated.csv TẠI CHỖ (bản trước: labels_gated_truoc_chon_chu.csv): viết tay (Borg) L1/L2/L2b/L4 + L5 sửa nhãn
 #        GOLD, mô hình LOBO; in/khắc chỉ L1 crop_bad + confusion_fix; rule += "|chon_chu:<đòn>"; STT TẮT (không đọc/ghi)
+#        + luật TN9 (01/10, kim_geo: tâm crop trong hộp chia đều của chữ kim ≡ kim): qn_geo (L83/KVK/Chr: REVIEW qn_count_unfixed,
+#        kim ∈ R -> GOLD nhãn kim, cờ âm không tin) · np_geo (chỉ KVK: REVIEW not_plausible -> GOLD nhãn kim, âm để trống)
 #   -> 5 export (export_final_dataset --n-columns; make_dataset_docs; make_xlsx)
 #   -> 6 measure (auto_precision cross trên labels_gated = B6, chỉ sách có CROSS_BOOKS)
 # Mỗi lệnh thật ghi vào logs/run_<Book>_<thời điểm>.log (kèm stdout/stderr); sha256 vào dataset_out_<Book>/CHECKSUMS.txt.

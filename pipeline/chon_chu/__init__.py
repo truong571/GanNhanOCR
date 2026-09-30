@@ -16,9 +16,12 @@ Thành phần:
   model.py     tầng 1 logit có điều kiện + tầng 2 logistic (46 đặc trưng) — tham số models/chon_chu/chooser_<tên>.npz
   policy.py    config/chon_chu.yaml (kiểm LOBO: không vft trên Borg, không nhãn người của chính sách), quyết định nâng/L5, STT bảo thủ
   stt.py       chữ kim lt2 của ô STT (chỉ dùng khi bật STT)
+  geo.py       kim_geo: chữ kim có hộp chia đều (detected/<trang>_ocr_cache.json) chứa tâm crop (TN9 t06.geo_for)
   export_assets.py  dựng models/chon_chu + MANIFEST (sha256, lệnh dựng lại)
   selftest.py  python -m pipeline.chon_chu --selftest
 
 Đòn bẩy: L1 crop_bad · L2 qn_count_unfixed · L2b cầu/confusion_fix/direct khác · L4 kim ∉ R (SYLLABLE, no_context, low_posterior,
-syl_ctx|crop_bad) · L5 sửa nhãn GOLD (viết tay) · L3 STT bảo thủ (lt2 ∧ ảnh). Họ in: chỉ L1 + confusion_fix.
+syl_ctx|crop_bad) · L5 sửa nhãn GOLD (viết tay) · L3 STT bảo thủ (lt2 ∧ ảnh). Họ in: chỉ L1 + confusion_fix, cộng luật TN9 (01/10,
+geo.py + policy.decide_geo, bật theo sách): qn_geo (P2: REVIEW qn_count_unfixed, kim ∈ R, kim_geo ≡ kim -> GOLD nhãn kim, cờ âm không
+tin) · np_geo (P3, chỉ KVK: REVIEW not_plausible, kim_geo ≡ kim -> GOLD nhãn kim, âm để trống).
 """

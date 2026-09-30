@@ -445,11 +445,12 @@ def test_proto_index_ro_ri_split() -> None:
 
 
 def test_publish_doc_csv_phong_ve() -> None:
-    """publish/ đọc CSV phải phòng vệ y như remediation/ — 'nan' là âm Việt thật."""
+    """publish/ đọc CSV phải phòng vệ y như remediation/ — 'nan' là âm Việt thật.
+    (01/10: công cụ công bố cũ đã xoá; kiểm module còn lại gold_exact_release.py.)"""
     print("[publish đọc CSV]")
-    src = (REPO / "pipeline" / "publish" / "cli.py").read_text(encoding="utf-8")
-    check("publish/cli.py dùng keep_default_na=False", "keep_default_na=False" in src)
-    check("publish/cli.py đọc cột cờ là chuỗi", '"label_in_train": str' in src)
+    src = (REPO / "pipeline" / "publish" / "gold_exact_release.py").read_text(encoding="utf-8")
+    check("publish/gold_exact_release.py dùng keep_default_na=False", "keep_default_na=False" in src)
+    check("publish/gold_exact_release.py đọc mọi cột là chuỗi (dtype=str)", "dtype=str" in src)
 
 
 def test_step1_khong_mat_trang() -> None:
@@ -559,7 +560,11 @@ def test_run_pipeline_grep_dem() -> None:
     src = (REPO / "run_pipeline.sh").read_text(encoding="utf-8")
     check("không còn `grep -c ... || echo 0`",
           "|| echo 0)" not in src.replace("|| echo 0 )", "|| echo 0)"))
-    check("dùng gán rồi mới chữa mã thoát", "|| n_old=0" in src and "|| n_new=0" in src)
+    # 01/10: khối đếm yen/stt đã bị gỡ (0f3aa095ef) -> kiểm LUẬT CHUNG: mọi `x=$(grep -c …)` phải chữa mã thoát bằng `|| x=0`
+    import re as _re
+    gan = _re.findall(r"(\w+)=\$\(grep -c [^\n]*", src)
+    bad = [v for v in gan if not _re.search(rf"{v}=\$\(grep -c [^\n]*\|\| {v}=0", src)]
+    check("mọi phép đếm grep -c gán rồi mới chữa mã thoát (|| x=0)", not bad, str(bad))
     import subprocess
     r = subprocess.run(["bash", "-n", str(REPO / "run_pipeline.sh")], capture_output=True)
     check("run_pipeline.sh qua `bash -n`", r.returncode == 0, r.stderr.decode()[:200])

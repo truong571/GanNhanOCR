@@ -316,7 +316,7 @@ def run_rescue(
             df.at[idx, "image"] = crop_rel_path
             df.at[idx, "label_level"] = "char"
             if md5_hex:
-                df.at[idx, "image_md5"] = md5_hex
+                df.at[idx, "image_md5"] = md5_hex[:12]   # cùng quy ước 12 hex với build_dataset (01/10: trước ghi đủ 32)
 
             if orig_tier == "REVIEW":
                 rescued_rv_count += 1
@@ -454,7 +454,8 @@ def selftest() -> int:
         chk("anh_moi_tep_rieng", g.image.is_unique and all(i.startswith("gold/rescue_") for i in g.image))
         chk("khong_dung_tep_build", build_png.read_bytes() == b"BUILD-OTHER-CELL"
             and "gold/stt2_page_0001_c01_002.png" not in set(out.image))
-        chk("md5_la_cua_crop_o", all(hashlib.md5((td / i).read_bytes()).hexdigest() == m for i, m in zip(g.image, g.image_md5)))
+        chk("md5_la_cua_crop_o_12hex", all(hashlib.md5((td / i).read_bytes()).hexdigest()[:12] == m and len(m) == 12
+                                           for i, m in zip(g.image, g.image_md5)))
         # chạy lại trên cùng thư mục (trùng byte) -> dùng lại, không lỗi
         run_rescue(in_csv=td / "labels.csv", out_csv=td / "out2.csv", **args)
         chk("chay_lai_trung_byte", json.loads((td / "rep.json").read_text(encoding="utf-8"))["tep_da_co_trung_byte"] == 3

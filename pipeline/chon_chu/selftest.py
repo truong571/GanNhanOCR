@@ -205,6 +205,85 @@ def test_real_config():
         abs(cfg["books"]["SachKinhThayCaBinh"]["tau_in"] - 0.132865) < 1e-6 and abs(cfg["books"]["TruyenKieu1872"]["tau_in"] - 0.743915) < 1e-6)
 
 
+def test_geo(tmp: Path):
+    print("[5] luật TN9 sách in: kim_geo + P2 qn_geo / P3 np_geo (01/10)")
+    from pipeline.chon_chu import geo as GEO
+    cache = {"columns": [[{"char": "甲", "bbox": [100, 0, 140, 40]}, {"char": "乙", "bbox": [100, 40, 140, 80]}],
+                         [{"char": "丙", "bbox": [50, 0, 90, 40]}, {"char": "丁", "bbox": [60, 0, 95, 45]}]]}
+    det = tmp / "detected"; det.mkdir()
+    (det / "p1_ocr_cache.json").write_text(json.dumps(cache, ensure_ascii=False), encoding="utf-8")
+    L = pd.DataFrame(dict(page=["p1", "p1", "p1", "p2", "p1"],
+                          bbox=["[105, 5, 135, 35]", "[105, 45, 135, 75]", "[200, 0, 220, 20]", "[105, 5, 135, 35]",
+                                "[70, 10, 90, 40]"]))
+    g = GEO.geo_for(L, lambda pg: det / f"{pg}_ocr_cache.json")
+    chk("kim_geo: tâm trong hộp chia đều -> chữ đó; ngoài mọi hộp / trang không cache -> ''", list(g[:4]) == ["甲", "乙", "", ""],
+        str(list(g)))
+    chk("kim_geo: hai hộp cùng chứa tâm -> hộp có tâm gần nhất", g[4] == "丁", str(g[4]))
+    cfg = _cfg()
+    kvk = POL.book_cfg(cfg, "KimVanKieu1884"); l83 = POL.book_cfg(cfg, "LucVanTien1883")
+    chk("config: qn_geo L83/KVK/Chr, np_geo CHỈ KVK, IHR/Borg/STT tắt",
+        kvk["qn_geo"] and kvk["np_geo"] and l83["qn_geo"] and not l83["np_geo"] and POL.book_cfg(cfg, "Chrestomathie1872")["qn_geo"]
+        and not POL.book_cfg(cfg, "LucVanTien1916")["qn_geo"] and not POL.book_cfg(cfg, "SachKinhThayCaBinh")["qn_geo"])
+    bad = json.loads(json.dumps(cfg)); bad["books"]["SachKinhThayCaBinh"]["qn_geo"] = True
+    try:
+        POL.book_cfg(bad, "SachKinhThayCaBinh"); chk("qn_geo cho họ viết tay -> ValueError", False)
+    except ValueError:
+        chk("qn_geo cho họ viết tay -> ValueError", True)
+    bad = json.loads(json.dumps(cfg)); bad["books"]["KimVanKieu1884"]["np_geo"] = "yes"
+    try:
+        POL.book_cfg(bad, "KimVanKieu1884"); chk("np_geo sai kiểu -> ValueError", False)
+    except ValueError:
+        chk("np_geo sai kiểu -> ValueError", True)
+    R = {"thành": {"城", "成"}}
+    tier = np.array(["REVIEW"] * 7 + ["GOLD"])
+    grp = np.array(["direct_qn", "direct_qn", "direct_qn", "direct_qn", "notplaus", "notplaus", "nocontext", "GOLD"])
+    kim = np.array(["城", "城", "城", "X", "城", "", "城", "城"], dtype=object)
+    syl = np.array(["thành", "thành", "thành", "thành", "khongdocx", "khongdocx", "thành", "thành"], dtype=object)
+    geo = np.array(["城", "成", "城", "X", "城", "城", "城", "城"], dtype=object)
+    already = np.array([False, False, True, False, False, False, False, False])
+    veq = lambda u, v: u == v  # noqa: E731
+    p2, p3 = POL.decide_geo(tier, grp, kim, syl, geo, already, kvk, lambda x: R.get(x, set()), veq)
+    chk("P2: direct_qn ∧ kim ∈ R ∧ kim_geo ≡ kim -> nâng; geo khác / đã nâng / kim ∉ R -> không",
+        list(p2) == [True, False, False, False, False, False, False, False], str(list(p2)))
+    chk("P3: not_plausible có kim ∧ geo ≡ kim -> nâng (KVK); không kim -> không; no_context/GOLD không bao giờ",
+        list(p3) == [False, False, False, False, True, False, False, False], str(list(p3)))
+    q2, q3 = POL.decide_geo(tier, grp, kim, syl, geo, already, l83, lambda x: R.get(x, set()), veq)
+    chk("L83: P2 có, P3 TẮT", q2[0] and not q3.any())
+    # ghi vào bảng nhãn qua run() với process_book giả (không cần mô hình/ảnh)
+    Lb = pd.DataFrame(dict(image=["gold/a.png", "", "gold/c.png"], book=["kvk"] * 3, page=["p1"] * 3, column=["1"] * 3,
+                           ocr_char=["城", "城", "甲"], syllable=["thành", "khongdocx", "giáp"], label=["城", "", "甲"],
+                           unicode=["U+57CE", "", "U+7532"], tier=["REVIEW", "REVIEW", "GOLD"],
+                           rule=["s1_inter_s2_direct|gate:qn_count_unfixed", "not_plausible", "s1_inter_s2_direct"],
+                           bbox=["[0,0,1,1]"] * 3, image_md5=["m1", "", "m3"], label_level=["", "", "char"],
+                           label_canonical=["城", "", "甲"], nom_idx=["0", "1", "2"], syl_idx=["0", "1", "2"]))
+    f = tmp / "labels_gated.csv"; Lb.to_csv(f, index=False)
+
+    def fake(D, book, bcfg, cfg_, crop_root, log=print, dump_pred=None):
+        n = len(D)
+        return dict(promote=np.array([True, True, False]), relabel=np.zeros(n, bool),
+                    lever=np.array(["qn_geo", "np_geo", ""], dtype=object), P=np.array([0.3, np.nan, np.nan]),
+                    top1=np.array(["城", "城", ""], dtype=object),
+                    wrote={1: dict(image="gold/chon_chu/x.png", image_md5="abcdef012345")}, rep={"promote": 2, "relabel": 0,
+                    "theo_don_bay": {}, "crop_moi": 1, "seconds": 0}, blank_syl=np.array([False, True, False]))
+    real = CM.process_book
+    CM.process_book = fake
+    try:
+        with redirect_stdout(io.StringIO()):
+            CM.run(f, "KimVanKieu1884", REPO / "config/chon_chu.yaml")
+    finally:
+        CM.process_book = real
+    O = pd.read_csv(f, dtype=str, keep_default_na=False)
+    chk("qn_geo: GOLD, nhãn kim giữ nguyên, rule += |chon_chu:qn_geo, âm giữ",
+        O.tier[0] == "GOLD" and O.label[0] == "城" and O.rule[0].endswith("|chon_chu:qn_geo") and O.syllable[0] == "thành")
+    chk("np_geo: GOLD, nhãn = kim, ÂM ĐỂ TRỐNG, âm gốc trong vết, ảnh mới + md5, unicode",
+        O.tier[1] == "GOLD" and O.label[1] == "城" and O.syllable[1] == "" and O.rule[1] == "not_plausible|chon_chu:np_geo"
+        and O.chon_chu_truoc[1] == "REVIEW||âm:khongdocx" and O.image[1] == "gold/chon_chu/x.png"
+        and O.image_md5[1] == "abcdef012345" and O.unicode[1] == "U+57CE" and O.label_level[1] == "char", str(O.iloc[1].to_dict()))
+    chk("ô không quyết giữ nguyên, 12 cột giao nộp còn đủ",
+        O.tier[2] == "GOLD" and O.rule[2] == "s1_inter_s2_direct" and all(c in O.columns for c in
+        ["image", "book", "page", "column", "ocr_char", "syllable", "label", "unicode", "tier", "rule", "bbox", "image_md5"]))
+
+
 def main() -> int:
     print("=" * 64 + "\nCHON_CHU SELFTEST\n" + "=" * 64)
     tmp = Path(tempfile.mkdtemp(prefix="chon_chu_st_"))
@@ -213,6 +292,7 @@ def main() -> int:
         test_policy()
         test_io(tmp)
         test_real_config()
+        test_geo(tmp)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
     print("=" * 64 + f"\nRESULT: {_ok} passed, {len(_fail)} failed" + (f" {_fail}" if _fail else "") + "\n" + "=" * 64)

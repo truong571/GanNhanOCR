@@ -9,7 +9,8 @@ import pandas as pd
 LEVER = {"direct_crop": "L1", "direct_qn": "L2", "direct_other": "L2b", "similar": "L2b", "other": "L2b",
          "syl": "L4", "nocontext": "L4", "lowpost": "L4", "syl_cropbad": "L4"}
 NEVER = ("GOLD", "textonly", "notplaus", "quarantine", "syl_bridge")
-BOOK_KEYS = {"enabled", "family", "model", "verifiers", "human", "tau_in", "tau_out", "vis_model", "stt_mode"}
+BOOK_KEYS = {"enabled", "family", "model", "verifiers", "human", "tau_in", "tau_out", "vis_model", "stt_mode", "qn_geo", "np_geo"}
+GEO_LEVERS = ("qn_geo", "np_geo")          # luật TN9 sách in (measure_out/_tn9/KET_QUA.md §7): P2 / P3
 VERIFIERS = ("vft_T", "vft_L", "hand_T_Kinh", "hand_L_Kinh", "hand_T_DungLy", "hand_L_DungLy")
 BORG = ("SachKinhThayCaBinh", "SachDungLyHoThan")
 STT = ("SachThanhTruyen2", "SachThanhTruyen4", "SachThanhTruyen11")
@@ -53,6 +54,13 @@ def book_cfg(cfg: dict, book: str) -> dict | None:
     if hit[0] in STT or b.get("stt_mode") is not None:
         if b.get("stt_mode", "bao_thu") not in STT_MODES:
             raise ValueError(f"config chon_chu books[{book}].stt_mode phải thuộc {STT_MODES}")
+    for k in GEO_LEVERS:
+        v = b.get(k, False)
+        if not isinstance(v, bool):
+            raise ValueError(f"config chon_chu books[{book}].{k} = {v!r}; cần true/false")
+        if v and fam != "print":
+            raise ValueError(f"config chon_chu books[{book}].{k}: luật kim_geo TN9 chỉ cho họ in (family: print)")
+        b[k] = v
     b["name"] = hit[0]
     b["promo_groups"] = list((cfg["families"][fam] or {}).get("promo_groups") or [])
     b["relabel"] = bool((cfg["families"][fam] or {}).get("relabel", False))
@@ -99,6 +107,25 @@ def decide(tier, grp, gate, part, P, top1, label, bcfg: dict, veq) -> tuple[np.n
 def new_labels(top1, label, veq) -> np.ndarray:
     """Nhãn sau bước: top-1, NHƯNG giữ nhãn đang có khi top-1 ≡ nhãn (V1+) — chỉ đổi chữ khi ảnh chọn chữ KHÁC hẳn."""
     return np.array([l if (l and t and (t == l or veq(t, l))) else t for t, l in zip(top1, label)], dtype=object)
+
+
+def decide_geo(tier, grp, kim, syllable, geo, already, bcfg: dict, R_of, veq) -> tuple[np.ndarray, np.ndarray]:
+    """Luật TN9 sách in (measure_out/_tn9/KET_QUA.md §7), chỉ ô CHƯA được nâng (already) và kim_geo ≡ kim (V1+):
+      P2 qn_geo  ô REVIEW nhóm direct_qn (rule s1_inter_s2_direct*|gate:qn_count_unfixed), kim ∈ R(âm) -> GOLD, nhãn = kim
+                 (không đổi); âm QN của hàng KHÔNG tin được (vị trí âm lệch) -> cờ rule |chon_chu:qn_geo.
+      P3 np_geo  ô REVIEW not_plausible (âm QN là rác OCR), có chữ kim -> GOLD, nhãn = kim, âm BỎ TRỐNG, cờ |chon_chu:np_geo.
+    Trả (p2, p3) — mặt nạ theo ô."""
+    n = len(tier)
+    tier = np.asarray(tier); grp = np.asarray(grp)
+    geo_ok = np.array([bool(g) and bool(k) and len(k) == 1 and (g == k or veq(g, k)) for g, k in zip(geo, kim)])
+    free = (tier == "REVIEW") & ~np.asarray(already, bool) & geo_ok
+    p2 = np.zeros(n, bool); p3 = np.zeros(n, bool)
+    if bcfg.get("qn_geo"):
+        kin = np.array([bool(k) and k in R_of(s) for k, s in zip(kim, syllable)])
+        p2 = free & (grp == "direct_qn") & kin
+    if bcfg.get("np_geo"):
+        p3 = free & (grp == "notplaus")
+    return p2, p3
 
 
 def decide_stt_bao_thu(tier, grp, kim, lt2, syllable, vtop, R_of, veq) -> tuple[np.ndarray, np.ndarray]:

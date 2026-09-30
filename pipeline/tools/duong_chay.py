@@ -59,6 +59,7 @@ def chon_chu_route(book: str, ccfg: dict | None) -> str:
     if not b["enabled"]:
         return "TẮT"
     lv = "L1/L2/L2b/L4+L5" if b["family"] == "hand" else "L1+confusion_fix"
+    lv += "".join(f"+{k}" for k in ("qn_geo", "np_geo") if b.get(k))      # luật TN9 sách in (kim_geo)
     return f"BẬT {b['family']}: {lv}; {b['model']}"
 
 
@@ -145,6 +146,8 @@ def selftest() -> int:
         and "hand_B18" in by["SachDungLyHoThan"][6])
     chk("chon_chu_sach_in_chi_L1", all(by[b][6].startswith("BẬT print: L1+confusion_fix")
                                         for b in ("Chrestomathie1872", "LucVanTien1883", "KimVanKieu1884", "LucVanTien1916", "TruyenKieu1872")))
+    chk("chon_chu_tn9_geo", "+qn_geo+np_geo" in by["KimVanKieu1884"][6] and "+qn_geo" in by["LucVanTien1883"][6]
+        and "np_geo" not in by["LucVanTien1883"][6] and "qn_geo" not in by["TruyenKieu1872"][6])
     txt = render(rows, gcfg, prof, publish=True)
     chk("render_co_chuoi", "ĐƯỜNG CHẠY" in txt and "cong_bo" in txt and "gold_exact" in txt)
     print(f"RESULT: {ok} passed, {len(fail)} failed" + (f" {fail}" if fail else ""))

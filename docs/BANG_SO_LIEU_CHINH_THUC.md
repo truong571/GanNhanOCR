@@ -1,7 +1,7 @@
 # BẢNG SỐ LIỆU CHÍNH THỨC
 
 <!-- AUTO:HEADER:START -->
-**Bộ nhãn sinh ngày**: 2026-09-28 · **Commit chạm bộ nhãn gần nhất**: `0f3aa095ef` · **Bộ nhãn**: `dataset_out/labels_final.csv` (83.239 dòng)
+**Bộ nhãn sinh ngày**: 2026-10-01 · **Commit chạm bộ nhãn gần nhất**: `c5e5170624` · **Bộ nhãn**: `dataset_out/labels_final.csv` (83.239 dòng)
 <!-- AUTO:HEADER:END -->
 
 > **QUY TẮC BẤT DI BẤT DỊCH**: mọi con số trong luận văn (mọi chương, mọi bảng, mọi slide) **chỉ
@@ -40,8 +40,8 @@ labels.csv --[4 remediate]--> labels_remediated.csv --[5 confusion_fix]--> label
 |---|---|---|---|
 | `dataset_out/labels.csv` | 83.239 | `7f4572bf8e1ee848` | `python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --reseg detector  (S3 tắt từ 16/09)` |
 | `dataset_out/labels_remediated.csv` | 83.239 | `3f0cad5d5835226c` | `python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62` |
-| `dataset_out/labels_final.csv` | 83.239 | `ee9fcb573035564e` | `python -m pipeline.remediation.confusion_fix … rồi python -m pipeline.remediation.s3_unwind … --apply` |
-| `dataset/SachThanhTruyen/labels.csv` (**bộ giao nộp**) | **71.610** | `611ecd82383d46d4` | `python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset/SachThanhTruyen` |
+| `dataset_out/labels_final.csv` | 83.239 | `5c4235e12f458f16` | `python -m pipeline.remediation.confusion_fix … rồi python -m pipeline.remediation.s3_unwind … --apply` |
+| `dataset/SachThanhTruyen/labels.csv` (**bộ giao nộp**) | **71.610** | `ff4477ec29b5a82a` | `python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset/SachThanhTruyen` |
 <!-- AUTO:NGUON_GOC:END -->
 
 **Đối chiếu**: `bash scripts/check_evidence.sh` → khớp 4 · lệch 0 · thiếu 0.
@@ -102,7 +102,7 @@ Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('datase
 | **Trang cho đủ 9 cột có nhãn** | **445/448** |
 | Lớp ký tự phân biệt (mọi tier có nhãn) | 1.332 |
 | **Lớp trong bộ giao nộp** | **1.331** |
-| **Selftest** | **1316 passed, 8 failed** |
+| **Selftest** | **1250 passed, 6 failed** |
 <!-- AUTO:PHAM_VI:END -->
 
 ### 2.4 Vá lỗi (bước 4–6)

@@ -11,6 +11,13 @@
 # Ngưỡng = tiêu chí biên 0,80 (ô tệ nhất được nhận vẫn đúng ≥ 80 %) chọn trên dự đoán NGOÀI-KHỐI của bộ HỌC
 # (measure_out/_tn8/summary_t12_b80.json). Bộ có nhãn người (Borg, IHR) dùng mô hình học trên SÁCH KIA (LOBO).
 # KHÔNG BAO GIỜ: GOLD_text_only, not_plausible, QUARANTINE; KHÔNG vft trên Borg (vft học crop người Borg).
+# Luật TN9 sách in (01/10, measure_out/_tn9/KET_QUA.md §7; lab/thu_nghiem_kim/TN9_stt_in t10/t12/t14), chỉ họ print, chỉ ô CHƯA
+# được bộ chọn nâng, cần kim_geo ≡ kim (chữ kim có hộp chia đều trong detected/<trang>_ocr_cache.json chứa TÂM crop):
+#   qn_geo (P2): REVIEW s1_inter_s2_direct*|gate:qn_count_unfixed, kim ∈ R(âm) -> GOLD, nhãn = kim (không đổi), rule
+#                += '|chon_chu:qn_geo' = âm QN của hàng KHÔNG tin được (vị trí âm lệch; cặp (chữ, âm) vẫn là cặp đọc hợp lệ).
+#                IHR [ĐO]: crop đúng chữ kim 97,3 / 97,9 %; dị bản [ƯL]: KVK 89,5 % vs GOLD 90,4 %; L83 72 % vs 77 %.
+#   np_geo (P3): REVIEW not_plausible (âm QN là rác OCR) -> GOLD, nhãn = kim, ÂM ĐỂ TRỐNG, rule += '|chon_chu:np_geo'
+#                (âm gốc giữ ở cột vết chon_chu_truoc). Chỉ KVK (dị bản 91,5 % ≈ GOLD; L83 chỉ 61,9 % -> tắt).
 version: "2026-09-30"
 device: mps                      # cpu nếu không có MPS (tự rơi về)
 cache_dir: prepared/_chon_chu    # nhúng crop theo md5 (dựng lại được, gitignore)
@@ -65,6 +72,7 @@ books:
     human: []
     tau_in: 0.460057
     tau_out: null
+    qn_geo: true
   LucVanTien1883:
     enabled: true
     family: print
@@ -73,6 +81,9 @@ books:
     human: []
     tau_in: 0.460057
     tau_out: null
+    # 01/10: TẮT — ô qn_geo mới chỉ trùng dị bản 72,1 % [59,7–85,0] (n 68) < GOLD 77,4 % − 3 điểm (cổng TN9, ưu tiên độ đúng).
+    #        Bật lại = true (+266 ô, GOLD 75,4 -> 77,2 %). Dị bản L83 yếu (âm QN mượn bản 1916) nên phép kiểm chưa kết luận.
+    qn_geo: false
   KimVanKieu1884:
     enabled: true
     family: print
@@ -81,6 +92,8 @@ books:
     human: []
     tau_in: 0.460057
     tau_out: null
+    qn_geo: true
+    np_geo: true
   # STT: đường mã có, TẮT mặc định (chờ nghiên cứu riêng; KHÔNG đổi đầu ra / mốc md5 STT). stt_mode: bao_thu = chỉ nâng ô
   # lt1 ∉ R ∧ lt2 ∈ R ∧ top-1 chỉ-ảnh == lt2 (nhãn lt2); manh = bộ chọn hand_all chế độ union (KHÔNG khuyến nghị — TN8 §4).
   SachThanhTruyen2: &stt

@@ -204,6 +204,22 @@ def process_book(D: pd.DataFrame, book: str, bcfg: dict, cfg: dict, crop_root: P
         top1 = np.where(promote, lab_new, top1)
     else:
         promote, relabel, lever = POL.decide(tier, grp, gate, part, P, top1, D.label.values, bcfg, C.var_eq_plus)
+    blank_syl = np.zeros(N, bool)
+    if bcfg.get("qn_geo") or bcfg.get("np_geo"):
+        # luật TN9 sách in: kim_geo (chữ kim có hộp chia đều chứa tâm crop) ≡ kim -> P2 qn_geo / P3 np_geo (policy.decide_geo)
+        from pipeline.chon_chu.geo import kim_geo
+        geo = kim_geo(D, prep)
+        p2, p3 = POL.decide_geo(tier, grp, D.ocr_char.values, D.syllable.values, geo, promote | relabel, bcfg, C.R_of,
+                                C.var_eq_plus)
+        promote = promote | p2 | p3
+        lever = np.where(p2, "qn_geo", np.where(p3, "np_geo", lever)).astype(object)
+        top1 = np.where(p2 | p3, D.ocr_char.values, top1).astype(object)
+        blank_syl = p3.copy()
+        geo_ok = np.array([bool(g) and bool(k) and (g == k or C.var_eq_plus(g, k)) for g, k in zip(geo, D.ocr_char.values)])
+        rep["kim_geo"] = dict(co_hop=int((geo != "").sum()), trung_kim=int(geo_ok.sum()),
+                              direct_qn=int((grp == "direct_qn").sum()), direct_qn_geo=int(((grp == "direct_qn") & geo_ok).sum()),
+                              notplaus=int((grp == "notplaus").sum()), notplaus_geo=int(((grp == "notplaus") & geo_ok).sum()),
+                              qn_geo=int(p2.sum()), np_geo=int(p3.sum()))
     if dump_pred:
         pd.DataFrame(dict(P=P, top1=top1, part=part, grp=grp, promote=promote, relabel=relabel, lever=lever)).to_pickle(dump_pred)
     # ---- cắt crop (ảnh giao + đo chất lượng trên bản ĐÃ XỬ LÝ như enrich_crop_quality) cho ô nâng chưa có ảnh
@@ -232,12 +248,13 @@ def process_book(D: pd.DataFrame, book: str, bcfg: dict, cfg: dict, crop_root: P
     no_img = need_img & ~np.isin(np.arange(N), list(wrote))
     promote = promote & ~no_img               # không cắt được ảnh -> không nâng (N5: ô GOLD phải có ảnh)
     lever = np.where(no_img, "", lever).astype(object)
+    blank_syl = blank_syl & promote
     rep.update(n_rows=N, crop_ok=int(ok_c.sum()), promote=int(promote.sum()), relabel=int(relabel.sum()),
                khong_cat_duoc_anh=int(no_img.sum()), crop_moi=len(wrote),
                theo_don_bay={k: int(v) for k, v in pd.Series(lever[promote | relabel]).value_counts().items()},
                theo_nhom={k: int(v) for k, v in pd.Series(grp[promote]).value_counts().items()},
                seconds=round(time.time() - t0, 1))
-    return dict(promote=promote, relabel=relabel, lever=lever, P=P, top1=top1, wrote=wrote, rep=rep)
+    return dict(promote=promote, relabel=relabel, lever=lever, P=P, top1=top1, wrote=wrote, rep=rep, blank_syl=blank_syl)
 
 
 def book_code(L: pd.DataFrame, book: str) -> str | None:
@@ -289,6 +306,10 @@ def run(labels: Path, books, cfg_path: Path, out: Path | None = None, report: Pa
         ch = pro | rel
         g = rows[ch]
         Lo.loc[g, "chon_chu_truoc"] = (Lo.tier.values[g] + "|" + Lo.label.values[g])
+        bs_ = rows[r["blank_syl"]]
+        if len(bs_):                          # P3 np_geo: âm QN rác -> để trống; âm gốc giữ trong vết
+            Lo.loc[bs_, "chon_chu_truoc"] = Lo.tier.values[bs_] + "|" + Lo.label.values[bs_] + "|âm:" + Lo.syllable.values[bs_]
+            Lo.loc[bs_, "syllable"] = ""
         Lo.loc[g, "chon_chu"] = lev[ch]
         Lo.loc[g, "chon_chu_p"] = [f"{x:.4f}" if x == x else "" for x in P[ch]]
         Lo.loc[g, "label"] = top1[ch]

@@ -169,8 +169,11 @@ def apply(A: pd.DataFrame, prof: Prof, log=print) -> tuple[pd.DataFrame, dict]:
     # θ trượt ±1 (q06): trên keep, cửa sổ mid+delay, thứ tự (key, idx), bootstrap cụm trang seed cố định
     th = {}
     kh = A.keep_high.to_numpy() == 1
+    lvx = [(lv, A[lv].to_numpy() == 1) for lv in ("rong_995", "rong_95") if lv in A]
+    top = lvx[-1][1] if lvx else kh
     for name, m in (("keep", kp), ("keep_v5", A.keep_v5.to_numpy() == 1), ("keep_high", kh),
-                    ("keep_high_tru_keep", kh & ~kp), ("khong_real", real.to_numpy() & ~kh)):
+                    ("keep_high_tru_keep", kh & ~kp), *lvx, *((f"{n}_tru_keep", m & ~kp) for n, m in lvx),
+                    ("khong_real", real.to_numpy() & ~kh), ("ngoai_rong_real", real.to_numpy() & ~top)):
         o, g = [], []
         for key, t in zip(A.key[m], test[m]):
             if t:

@@ -79,10 +79,12 @@ def build_proto(st: dict, prev: pd.DataFrame) -> dict:
     return PROTO
 
 
-def _init(work, enc, emis, proto_path):
+def _init(work, enc, emis, proto_path, kim_path="", kim_beta=0.0):
     st = load_state(Path(work), enc)
     st["emis"] = emis
     st["PROTO"] = pickle.load(open(proto_path, "rb")) if proto_path else None
+    st["KIM"] = pickle.load(open(kim_path, "rb")) if kim_path and kim_beta else None   # TN10: mốc kim (tắt mặc định)
+    st["kim_beta"] = float(kim_beta or 0.0)
     _S.update(st)
 
 
@@ -122,6 +124,10 @@ def align_page(key):
         jj = np.array([col[c] for c in chars])
         Z = Z0[:, jj] * P["alpha"]
         S = S0[:, jj]
+    if _S.get("KIM") and _S.get("kim_beta"):
+        Z = np.array(Z, dtype=float, copy=True)
+        for i, j in _S["KIM"].get(key, ()):   # TN10: kim đọc đúng chữ người j tại đơn vị i -> cộng beta (mốc vị trí)
+            Z[i, j] += _S["kim_beta"]
     virt = np.array([u["virtual"] for u in uu])
     sc = np.array([u["score"] for u in uu])
     colid = np.array([u["col"] for u in uu])
@@ -219,7 +225,8 @@ def align_page(key):
     return rows, info
 
 
-def run_pass(work: Path, tag: str, emis: str, enc: str, prev: pd.DataFrame | None, workers: int = 3, log=print):
+def run_pass(work: Path, tag: str, emis: str, enc: str, prev: pd.DataFrame | None, workers: int = 3, log=print,
+             kim_path: str = "", kim_beta: float = 0.0):
     """Một lượt căn toàn bộ 641 trang -> DataFrame (mỗi chữ người 1 dòng, thứ tự trang sắp xếp, rồi j) + info trang."""
     t0 = time.time()
     proto_path = ""
@@ -236,7 +243,7 @@ def run_pass(work: Path, tag: str, emis: str, enc: str, prev: pd.DataFrame | Non
         keys = sorted({f"{u['book']}/{u['page']}" for u in D["units"]})
         del D
     ctx = get_context("spawn")
-    with ctx.Pool(workers, initializer=_init, initargs=(str(work), enc, emis, proto_path)) as pool:
+    with ctx.Pool(workers, initializer=_init, initargs=(str(work), enc, emis, proto_path, kim_path, kim_beta)) as pool:
         res = pool.map(align_page, keys, chunksize=4)
     if proto_path:
         Path(proto_path).unlink(missing_ok=True)

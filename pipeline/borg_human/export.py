@@ -26,12 +26,15 @@ def sha256_file(p: Path) -> str:
 
 
 def keep_level(r) -> str:
+    """Mức CAO NHẤT: keep_v5 ⊂ keep ⊂ rong_995 ⊂ rong_95 (TN10; keep_high cũ ⊂ rong_95, còn giữ ở cột cờ nội bộ)."""
     if r.keep_v5 == 1:
         return "keep_v5"
     if r.keep == 1:
         return "keep"
-    if r.keep_high == 1:
-        return "keep_high"
+    if getattr(r, "rong_995", 0) == 1:
+        return "rong_995"
+    if getattr(r, "rong_95", 0) == 1:
+        return "rong_95"
     return "khong"
 
 
@@ -87,7 +90,8 @@ def counts(L: pd.DataFrame) -> dict:
         s = L if b == "tong" else L[L.book == b]
         cum[b] = dict(cells=int(len(s)), keep_v5=int((s.keep_level == "keep_v5").sum()),
                       keep=int(s.keep_level.isin(["keep_v5", "keep"]).sum()),
-                      keep_high=int(s.keep_level.isin(["keep_v5", "keep", "keep_high"]).sum()),
+                      rong_995=int(s.keep_level.isin(["keep_v5", "keep", "rong_995"]).sum()),
+                      rong_95=int(s.keep_level.isin(["keep_v5", "keep", "rong_995", "rong_95"]).sum()),
                       with_image=int((s.image != "").sum()), one_char_ok=int((s.one_char_ok == "1").sum()),
                       pages=int(s.groupby(["book", "page"]).ngroups))
     return dict(level_exclusive=dict(by_book=lv, total=tot), cumulative=cum)
@@ -126,8 +130,10 @@ def readme(info: dict) -> str:
     c = info["counts"]["cumulative"]
     th = info["theta"]["paddle"]["keep"]
     t1 = info["theta"].get("encoder", {}).get("T1_v2|keep", {})
-    rows = "\n".join(f"| {b} ({BOOKS[b]['shelfmark']}) | {_n(c[b]['pages'])} | {_n(c[b]['cells'])} | {_n(c[b]['keep_high'])} | "
-                     f"{_n(c[b]['keep'])} | {_n(c[b]['keep_v5'])} |" for b in BOOKS)
+    rows = "\n".join(f"| {b} ({BOOKS[b]['shelfmark']}) | {_n(c[b]['pages'])} | {_n(c[b]['cells'])} | {_n(c[b]['rong_95'])} | "
+                     f"{_n(c[b]['rong_995'])} | {_n(c[b]['keep'])} | {_n(c[b]['keep_v5'])} |" for b in BOOKS)
+    thp = info["theta"]["paddle"]
+    acc = {lv: thp.get(lv, {}).get("theta") for lv in ("keep", "rong_995", "rong_95")}
     t = c["tong"]
     return f"""# _BORG_NHAN_NGUOI — bộ crop NHÃN NGƯỜI từ 2 bản chép tay Vatican Borgiano Tonchinese
 
@@ -135,12 +141,14 @@ def readme(info: dict) -> str:
 > chuỗi chữ người của mỗi trang với các hộp chữ trên ảnh (0 API). Bộ này TÁCH khỏi GOLD tự động (`dataset/<Bộ>/`,
 > `dataset/_ALL/`) — không gộp, không dùng chung `cell_uid`.
 
-| sách | trang | ô chữ người | keep_high | keep | keep_v5 |
-|---|---:|---:|---:|---:|---:|
+| sách | trang | ô chữ người | rong_95 | rong_995 | keep | keep_v5 |
+|---|---:|---:|---:|---:|---:|---:|
 {rows}
-| **tổng** | {_n(t['pages'])} | {_n(t['cells'])} | {_n(t['keep_high'])} | {_n(t['keep'])} | {_n(t['keep_v5'])} |
+| **tổng** | {_n(t['pages'])} | {_n(t['cells'])} | {_n(t['rong_95'])} | {_n(t['rong_995'])} | {_n(t['keep'])} | {_n(t['keep_v5'])} |
 
-(Các cột mức là LUỸ KẾ: keep_v5 ⊂ keep ⊂ keep_high. Cột `keep_level` trong `labels.csv` ghi mức CAO NHẤT đạt được.)
+(Các cột mức là LUỸ KẾ: keep_v5 ⊂ keep ⊂ rong_995 ⊂ rong_95; mọi mức đều CÓ ẢNH. Cột `keep_level` ghi mức CAO NHẤT đạt được.
+Trượt ±1 ô ước bằng Paddle: keep {_pct(acc['keep'])}, rong_995 {_pct(acc['rong_995'])}, rong_95 {_pct(acc['rong_95'])} — chọn mức
+theo độ chính xác vị trí mình cần; mức mở rộng rong_* thêm từ 30/09/2026, TN10.)
 
 **Khuyên dùng:** `keep_level == "keep_v5"` (và `one_char_ok == "1"` nếu cần ảnh đúng một chữ). Tỉ lệ trượt ±1 ô ước trên
 `keep` bằng bộ đọc độc lập Paddle: **θ ≈ {_pct(th['theta'])} [CI 95 % {_pct(th['theta_ci'][0])}–{_pct(th['theta_ci'][1])}]**
@@ -153,11 +161,11 @@ def readme(info: dict) -> str:
   `column` (cột detector, 0 = PHẢI nhất), `idx` (vị trí chữ trong chuỗi người của trang), `char` (chữ người phiên), `syllable`
   (âm người phiên; rỗng khi câu có số chữ ≠ số âm), `bbox` [x1,y1,x2,y2] toạ độ ảnh gốc 720 px, `image` + `image_md5`
   (crop luật save_crop), `crop_chuan` + `crop_chuan_md5` (crop chuẩn v2, vuông), `align_conf` = min(hậu nghiệm căn v1, v2)
-  khi hai bộ căn chọn CÙNG hộp (ngược lại 0), `keep_level` ∈ {{keep_v5, keep, keep_high, khong}}, `paddle_test`
+  khi hai bộ căn chọn CÙNG hộp (ngược lại 0), `keep_level` ∈ {{keep_v5, keep, rong_995, rong_95, khong}}, `paddle_test`
   (`ok` / `lech±d` / rỗng = không thử được), `chuan_hoa_nguoi_phien`, `one_char_ok`, `khoi_trang`
   (5 khối trang liền nhau/sách dùng nội bộ khi dựng nguyên mẫu). Bộ này KHÔNG chia tập train/val/test.
 - `crops/<book>/<page>_c<col>_<idx>.png` — crop theo luật `save_crop` của pipeline (pad 0,12, carve mực láng giềng, tighten,
-  điểm ảnh ẢNH GỐC); `crops_chuan/…` — crop chuẩn v2 (`pipeline/gold_exact/crop_chuan.py`), cho mọi ô mức keep trở lên (keep_high chỉ có hộp, không kèm ảnh).
+  điểm ảnh ẢNH GỐC); `crops_chuan/…` — crop chuẩn v2 (`pipeline/gold_exact/crop_chuan.py`), cho mọi ô mức rong_95 trở lên (trước 30/09: keep_high chỉ có hộp, không kèm ảnh).
 - `README.md`, `DATASHEET.md`, `BUILD_INFO.json` (tham số, số đếm, θ, kiểm tái lập), `CHECKSUMS.txt` (sha256 tệp gốc).
 
 ## Tái lập (0 API)
@@ -198,7 +206,8 @@ và bộ kiểm ảnh↔nhãn, (b) làm nguồn nguyên mẫu viết tay độc 
    thật/ô ảo/gộp 2 hộp, bỏ hộp, bỏ chữ; phát xạ thị giác = cos giữa crop và glyph font, rồi nguyên mẫu dựng từ các KHỐI TRANG
    KHÁC (2 vòng) — làm riêng với encoder v1 (`nom-embed`) và v2 (`ArcFace`).
 3. **keep**: hộp detector thật, điểm ≥ {_d(KEEP['det_min'])}, trang bỏ chữ < {_pct(KEEP['page_skip_max'])}, hậu nghiệm căn v1 ≥ {_d(KEEP['post_v1'])},
-   căn v2 chọn CÙNG hộp với hậu nghiệm ≥ {_d(KEEP['post_v2'])}; **keep_high** như keep nhưng hậu nghiệm v2 ≥ {_d(KEEP['post_v2_high'])}.
+   căn v2 chọn CÙNG hộp với hậu nghiệm ≥ {_d(KEEP['post_v2'])}. **rong_995** / **rong_95** (mở rộng, 30/09): cùng điều kiện hộp,
+   hai bộ căn chọn CÙNG hộp, hậu nghiệm NHỎ HƠN của hai bộ căn ≥ {_d(KEEP['rong_995'])} / ≥ {_d(KEEP['rong_95'])} (lồng nhau, đều có ảnh).
 4. **keep_v5** = keep − ô bộ đọc ĐỘC LẬP Paddle PP-OCRv6 (không học trên STT/Borg) thấy chữ HÀNG XÓM khớp hơn chữ nhãn
    trong cửa sổ 7 chữ ({_n(ps['keep_paddle_flagged'])} ô) − ô người phiên đã chuẩn hoá tự dạng mà Paddle thấy dạng Hán ({_n(ps['removed_normalised'])} ô:
    {', '.join(f'{k} {v}' for k, v in ps['removed_by_char'].items())}). Cửa sổ Paddle dời theo trễ đỉnh CTC đo trên nhãn người IHR
@@ -209,10 +218,10 @@ và bộ kiểm ảnh↔nhãn, (b) làm nguồn nguyên mẫu viết tay độc 
   [CI 95 % bootstrap cụm trang {_pct(th['keep']['theta_ci'][0])}–{_pct(th['keep']['theta_ci'][1])}]. Trên keep_v5 phép đo này thiên lệch
   (các ô Paddle báo lệch đã bị bỏ) — đọc là "phần trượt còn lại ≤ θ(keep)"; ô không thử được (cửa sổ không đủ 7 chữ khác nhau
   hoặc chữ ngoài bảng Paddle) mang tỉ lệ chưa biết, giả định ≈ θ(keep).
-- Cùng phép đo Paddle cho các mức KHÔNG kèm ảnh (chỉ có hộp, để tra cứu vị trí): keep_high {_pct(th['keep_high']['theta'])}
-  [{_pct(th['keep_high']['theta_ci'][0])}–{_pct(th['keep_high']['theta_ci'][1])}] (riêng phần keep_high − keep:
-  {_pct(th['keep_high_tru_keep']['theta'])}); ô thật ngoài keep_high (`khong`): {_pct(th['khong_real']['theta'])}
-  [{_pct(th['khong_real']['theta_ci'][0])}–{_pct(th['khong_real']['theta_ci'][1])}] — KHÔNG dùng làm nhãn ảnh.
+- Cùng phép đo Paddle cho mức mở rộng: rong_995 {_pct(th['rong_995']['theta'])} [{_pct(th['rong_995']['theta_ci'][0])}–{_pct(th['rong_995']['theta_ci'][1])}]
+  (riêng phần ngoài keep: {_pct(th['rong_995_tru_keep']['theta'])}); rong_95 {_pct(th['rong_95']['theta'])} [{_pct(th['rong_95']['theta_ci'][0])}–{_pct(th['rong_95']['theta_ci'][1])}]
+  (riêng phần ngoài keep: {_pct(th['rong_95_tru_keep']['theta'])}); ô thật ngoài rong_95 (`khong`): {_pct(th['ngoai_rong_real']['theta'])} — KHÔNG dùng làm
+  nhãn ảnh. θ chỉ tính trượt ±1; sai số tổng (gồm lệch ±2/±3) ước thận trọng ở mức rong_95 ≈ 10 % (TN10 t04).
 - Sai số khác không đo được bằng máy: người phiên gõ nhầm chữ; hộp detector cắt thiếu nét (xem `one_char_ok`).
 
 ## 5. Quy ước chuẩn hoá của người phiên (quan trọng khi dùng làm nhãn ảnh)
@@ -228,7 +237,7 @@ dạng L ngay trong hộp này (11 cặp thăm dò {''.join(PROBE_PAIRS)}); các
 Khi huấn luyện nhận dạng HÌNH, nên gộp N và L thành một lớp, hoặc bỏ các ô `N~L`.
 
 ## 6. Thành phần
-{_n(c['cells'])} chữ người; {_n(c['with_image'])} ô có ảnh (mức keep trở lên: keep {_n(c['keep'])}, trong đó keep_v5 {_n(c['keep_v5'])}); keep_high {_n(c['keep_high'])} (chỉ hộp);
+{_n(c['cells'])} chữ người; {_n(c['with_image'])} ô có ảnh (rong_95 {_n(c['rong_95'])} ⊃ rong_995 {_n(c['rong_995'])} ⊃ keep {_n(c['keep'])} ⊃ keep_v5 {_n(c['keep_v5'])});
 one_char_ok = 1: {_n(c['one_char_ok'])}. Không chia tập (không có cột train/val/test).
 
 ## 7. Giới hạn — ĐỌC TRƯỚC KHI DÙNG

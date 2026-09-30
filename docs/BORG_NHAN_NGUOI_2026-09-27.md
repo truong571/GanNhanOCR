@@ -74,3 +74,24 @@ khớp; θ tính lại từ `paddle_test` == BUILD_INFO và ∈ [0,94; 1,69] %; 
   chính sách nó học; encoder v1/v2 tham gia chọn keep.
 - Bước Paddle phụ thuộc hồ sơ đóng băng; muốn đổi đơn vị (detector/tham số) phải dựng lại hồ sơ bằng venv Paddle
   (`measure_out/_borg_human_src/q02_paddle_profiles.py`) — mã sẽ tự chặn (units_match ≠ 0 ⇒ trang lệch không được keep_v5).
+
+## TN10 (30/09/2026) — đánh giá đề xuất "đọc 2 lượt + cắt ×2" và mở rộng mức có ảnh
+
+Đo 0 API (mã `lab/thu_nghiem_kim/TN10_borg_nguoi/`, kết quả `measure_out/_tn10/`):
+- **Cắt ×2 (phóng Lanczos rồi dò hộp):** không lợi. Detector hiện tại đã dò ≈ 101 % số chữ người, 0 % hộp dính 2 chữ, phủ 100 %
+  ô keep_v5; phóng ×2 rồi dò (detector luôn thu về 1024) ra 1,02 / 3,8 % lệch / phủ 99,6 %; dò thật ở 2048 hỏng (40 % số chữ).
+  Cắt trên ảnh gốc thì pipeline đã làm từ trước.
+- **Nút thắt thật** là độ chắc của bước gióng: 50,5 % số ô bị loại vì hậu nghiệm < 0,999; detector sót chỉ ≈ 3–4 %.
+- **Mốc kim (lượt Nôm lt2 sẵn có) trong bước gióng** (`KIM.beta`, `--kim-beta`, mặc định 0 = tắt): +5–11 % ô keep nhưng θ tăng
+  theo; ở CÙNG độ đúng vị trí, kim gần như không thêm ô (≤ 1,3 k). Lượt Hán lt1 / lt1×2 trên Borg chưa đo (cần API, TN7).
+- **Mức mở rộng có ảnh** (lồng nhau keep_v5 ⊂ keep ⊂ rong_995 ⊂ rong_95; min hậu nghiệm hai bộ căn ≥ 0,995 / ≥ 0,95):
+
+| mức | ô có ảnh | tỉ lệ / 143.043 | θ trượt ±1 (Paddle) | θ encoder T1 / T2 |
+|---|---:|---:|---:|---:|
+| keep_v5 | 54.884 | 38 % | ≈ 0 (đã lọc Paddle) | 1,1 % / 0,1 % |
+| keep | 56.261 | 39 % | 1,3 % [0,9–1,7] | 1,3 % / 0,1 % |
+| rong_995 | 84.657 | 59 % | 2,4 % [2,0–2,8] | 2,7 % / 0,9 % |
+| rong_95 | 108.539 | 76 % | 4,5 % [4,1–5,0] | 4,2 % / 2,6 % |
+
+  Sai số TỔNG thận trọng (gồm lệch ±2/±3, nhiễu Paddle lấy từ tập keep) ở rong_95 ≈ 9,7 % (đúng vị trí ≈ 90 %). Giữ MỌI ô có hộp
+  (90 % số chữ) chỉ còn đúng ≈ 86 % → chuẩn 90/90 chưa đạt cho bộ này. keep_v5 tái lập đúng từng ô; 890 MB; borg_human_eval 20/20.

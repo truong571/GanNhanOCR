@@ -49,7 +49,12 @@ PASSES = [("f_v1", "font", "v1", None), ("q1_v1", "proto", "v1", "f_v1"), ("q2_v
 FINAL, CHECK = "q2_v1", "q2_v2"                              # bộ căn cuối (v1) và bộ căn kiểm chéo (v2)
 
 # ---- a12_final.py: luật keep (ưu tiên precision)
-KEEP = dict(det_min=0.2, page_skip_max=0.1, post_v1=0.999, post_v2=0.999, post_v2_high=0.99)
+KEEP = dict(det_min=0.2, page_skip_max=0.1, post_v1=0.999, post_v2=0.999, post_v2_high=0.99,
+            # TN10 (30/09): 2 mức MỞ RỘNG có ảnh (độ đúng vị trí ước qua Paddle ~95 % / ~90 %), lồng nhau keep ⊂ rong_995 ⊂ rong_95
+            rong_995=0.995, rong_95=0.95)
+# ---- TN10 (30/09): mốc vị trí từ kim trong bước gióng (kim_anchor.py). beta = điểm cộng vào phát xạ Z[i, j] khi chữ kim tại
+#      đơn vị i trùng (V1+) chữ người j; 0 = TẮT (hành vi r4/r5, tái lập byte). src: lt2 | lt1x2 | lt2+lt1x2.
+KIM = dict(beta=0.0, src="lt2", pad=0.25)
 
 # ---- a08_crops.py: crop giao = pipeline.align_engine.build_dataset.save_crop (pad 0.12 = step2.crop_pad_frac, carve láng
 #      giềng prev/next cùng cột theo y, tighten; hình học trên prepared, điểm ảnh jpg gốc)
@@ -70,8 +75,8 @@ KNOWN_NORMALISED = {"𠸜": ("先", 0.7158, (0.6208, 0.8023)), "𢧚": ("年", 0
                     "𠀧": ("巴", 0.0619, (0.0366, 0.0899)), "𧘇": ("意", 0.0504, (0.0384, 0.0645))}
 
 # ---- xuất: KHÔNG chia tập train/val/test (quyết định A-10; bỏ split_hint 30/09)
-KEEP_LEVELS = ("keep_v5", "keep", "keep_high", "khong")      # mức cao nhất đạt được (keep_v5 ⊂ keep ⊂ keep_high)
-CROP_LEVELS = ("keep_v5", "keep")    # mức có ảnh crop + crop chuẩn (keep_high thêm ≈ 16 k ô ⇒ vượt ~1 GB: không kèm ảnh)
+KEEP_LEVELS = ("keep_v5", "keep", "rong_995", "rong_95", "khong")   # mức cao nhất; keep_v5 ⊂ keep ⊂ rong_995 ⊂ rong_95 (keep_high ⊂ rong_95)
+CROP_LEVELS = ("keep_v5", "keep", "rong_995", "rong_95")    # mức có ảnh crop + crop chuẩn (TN10: thêm 2 mức mở rộng)
 
 # ---- số đo GỐC để kiểm tái lập (r4 summary.json / borg_cells.csv, r5 q14.json / q06_borg_slip.json / q07)
 REF = dict(

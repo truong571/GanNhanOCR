@@ -33,7 +33,7 @@ from . import crops as CR
 from . import export as EX
 from . import paddle as PD
 from .geom import crop_gray, stretch, units_for_page
-from .params import (BOOKS, CHECK, CROP_LEVELS, DETECTOR, FINAL, KEEP, OUT, PADDLE, PASSES, R4, R5, REF, REPO, SRC, WORK)
+from .params import (BOOKS, CHECK, CROP_LEVELS, DETECTOR, FINAL, KEEP, KIM, OUT, PADDLE, PASSES, R4, R5, REF, REPO, SRC, WORK)
 
 STAGES = ["detect", "units", "glyphs", "align", "keep", "paddle", "crops", "validate", "repro", "export"]
 
@@ -141,10 +141,17 @@ def st_glyphs(work: Path, dev: str):
 
 
 # ------------------------------------------------------------------------------------------------ align (a05)
-def st_align(work: Path, workers: int):
+def st_align(work: Path, workers: int, kim: dict | None = None):
+    kim = dict(KIM, **(kim or {}))
+    kim_path = ""
+    if kim["beta"]:
+        from .kim_anchor import build_pairs
+        kim_path = str(build_pairs(work, kim["src"], kim["pad"], log=log))
+        log(f"align: mốc kim BẬT (beta {kim['beta']}, nguồn {kim['src']}, pad {kim['pad']})")
     prev = {}
     for tag, emis, enc, pv in PASSES:
-        df = AL.run_pass(work, tag, emis, enc, prev.get(pv), workers=workers, log=log)
+        df = AL.run_pass(work, tag, emis, enc, prev.get(pv), workers=workers, log=log, kim_path=kim_path,
+                         kim_beta=kim["beta"])
         prev[tag] = df
 
 
@@ -162,8 +169,13 @@ def st_keep(work: Path):
     A["keep_high"] = (base & (A.post >= KEEP["post_v1"]) & (A.agree2 == 1) & (A.post2 >= KEEP["post_v2_high"])).astype(int)
     A["conf"] = np.where(A.agree2 == 1, np.minimum(A.post, A.post2), 0.0).round(5)
     A.loc[A.kind == "skip", "conf"] = 0.0
+    # TN10: mức mở rộng lồng nhau (cùng base + agree2; ngưỡng trên min(post, post2)); keep_high ⊂ rong_95 vì 0,99 ≥ 0,95
+    rg = base & (A.agree2 == 1)
+    A["rong_995"] = ((A.keep == 1) | (rg & (np.minimum(A.post, A.post2) >= KEEP["rong_995"]))).astype(int)
+    A["rong_95"] = ((A.rong_995 == 1) | (A.keep_high == 1) | (rg & (np.minimum(A.post, A.post2) >= KEEP["rong_95"]))).astype(int)
     A.to_csv(work / "cells_keep.csv.gz", index=False)
-    log(f"keep: {len(A)} ô, keep {int(A.keep.sum())}, keep_high {int(A.keep_high.sum())}, {A.kind.value_counts().to_dict()}")
+    log(f"keep: {len(A)} ô, keep {int(A.keep.sum())}, keep_high {int(A.keep_high.sum())}, rong_995 {int(A.rong_995.sum())}, "
+        f"rong_95 {int(A.rong_95.sum())}, {A.kind.value_counts().to_dict()}")
 
 
 # ------------------------------------------------------------------------------------------------ paddle (r5 q06/q07/q14)
@@ -192,7 +204,7 @@ def st_crops(work: Path, out: Path, workers: int):
         if (out / sub).exists():
             shutil.rmtree(out / sub)
     sel = np.zeros(len(A), bool)
-    for lv in CROP_LEVELS:                       # keep_v5 ⊂ keep ⊂ keep_high: cột cờ cùng tên
+    for lv in CROP_LEVELS:                       # keep_v5 ⊂ keep ⊂ rong_995 ⊂ rong_95: cột cờ cùng tên
         sel |= (A[lv] == 1).to_numpy()
     R = CR.run(A, sel, out, CR.page_source_files(), workers=workers, log=log)
     R = R.merge(A[["book", "page", "idx", "char"]], on=["book", "page", "idx"], how="left")
@@ -220,11 +232,16 @@ def st_validate(work: Path, out: Path, dev: str):
                     win[i, k] = ch[t + d]
     win_ok = np.array([all(w) and len(set(w)) == 2 * D + 1 for w in win])
     kp = ((A.keep == 1) & (A.kind == "real") & (A.image != "")).to_numpy()
+    lv_rong = {lv: ((A[lv] == 1) & (A.kind == "real") & (A.image != "")).to_numpy() for lv in ("rong_995", "rong_95") if lv in A}
+    emb_m = kp.copy()
+    for m in lv_rong.values():
+        emb_m |= m
     enc = Enc("v2", dev, True)
-    rows = np.nonzero(kp)[0]
+    rows = np.nonzero(kp)[0]                     # nguyên mẫu T2 CHỈ từ ô keep (như a07) — mức mở rộng chỉ được ĐO
+    emb_rows = np.nonzero(emb_m)[0]
     E = np.zeros((len(A), 256), np.float32)
-    for s in range(0, len(rows), 4096):
-        rr = rows[s:s + 4096]
+    for s in range(0, len(emb_rows), 4096):
+        rr = emb_rows[s:s + 4096]
         gs = [cv2.imread(str(out / A.image.iat[i]), cv2.IMREAD_GRAYSCALE) for i in rr]
         e = (enc.embed(gs) / np.sqrt(2)).astype(np.float16).astype(np.float32)   # == a08: ghép [v1,v2]/√2 lưu float16
         E[rr] = e
@@ -257,7 +274,9 @@ def st_validate(work: Path, out: Path, dev: str):
             grp.append(A.book.iat[i] + "/" + A.page.iat[i])
         return np.array(o), np.array(grp)
     res = {}
-    for lvl, m in (("keep", kp & win_ok), ("keep_v5", kp & win_ok & (A.keep_v5 == 1).to_numpy())):
+    for lvl, m in (("keep", kp & win_ok), ("keep_v5", kp & win_ok & (A.keep_v5 == 1).to_numpy()),
+                   *((lv, m & win_ok) for lv, m in lv_rong.items()),
+                   *((f"{lv}_tru_keep", m & win_ok & ~kp) for lv, m in lv_rong.items())):
         for name, getter in (("T1_v2", lambda f, c: FONT.get(c)), ("T2_v2", lambda f, c: PRO.get((f, c)))):
             o, g = offs(getter, m)
             res[f"{name}|{lvl}"] = PD.summarize(o, g, B=400, seed=0)
@@ -356,7 +375,7 @@ def st_export(work: Path, out: Path):
     (out / "DATASHEET.md").write_text(EX.datasheet(info), encoding="utf-8")
     EX.write_checksums(out)
     c = info["counts"]["cumulative"]["tong"]
-    log(f"export: {len(L)} dòng, keep_v5 {c['keep_v5']}, keep {c['keep']}, keep_high {c['keep_high']}, ảnh {c['with_image']}, "
+    log(f"export: {len(L)} dòng, keep_v5 {c['keep_v5']}, keep {c['keep']}, rong_995 {c['rong_995']}, rong_95 {c['rong_95']}, ảnh {c['with_image']}, "
         f"{info['size']['total_mb']} MB -> {out.relative_to(REPO) if out.is_relative_to(REPO) else out}")
 
 
@@ -367,6 +386,9 @@ def main(argv=None):
     ap.add_argument("--out", default=str(OUT))
     ap.add_argument("--workers", type=int, default=3)
     ap.add_argument("--device", default="auto", help="auto (mps nếu có) | cpu | mps")
+    ap.add_argument("--kim-beta", type=float, default=KIM["beta"], help="TN10: điểm mốc kim trong bước gióng (0 = tắt)")
+    ap.add_argument("--kim-src", default=KIM["src"], help="lt2 | lt1x2 | lt2+lt1x2")
+    ap.add_argument("--kim-pad", type=float, default=KIM["pad"])
     a = ap.parse_args(argv)
     stages = STAGES if a.stage == "all" else [s.strip() for s in a.stage.split(",") if s.strip()]
     bad = [s for s in stages if s not in STAGES]
@@ -390,7 +412,7 @@ def main(argv=None):
         elif s == "glyphs":
             st_glyphs(work, dev)
         elif s == "align":
-            st_align(work, a.workers)
+            st_align(work, a.workers, dict(beta=a.kim_beta, src=a.kim_src, pad=a.kim_pad))
         elif s == "keep":
             st_keep(work)
         elif s == "paddle":

@@ -31,10 +31,11 @@ import pandas as pd
 
 REPO = Path(__file__).resolve().parents[2]
 BOOKS = ("SachKinhThayCaBinh", "SachDungLyHoThan")
-LEVELS = ("keep_v5", "keep", "keep_high", "khong")
-IMG_LEVELS = ("keep_v5", "keep")          # == params.CROP_LEVELS
+LEVELS = ("keep_v5", "keep", "rong_995", "rong_95", "khong")   # TN10 30/09: + 2 mức mở rộng có ảnh
+IMG_LEVELS = ("keep_v5", "keep", "rong_995", "rong_95")          # == params.CROP_LEVELS
 THETA_KNOWN = (0.0094, 0.0169)       # r5 q06 'D|borg_keep|mid+delay' CI 95 % (θ = 1,32 %, n = 15.383)
-KEEP_RULE = dict(det_min=0.2, page_skip_max=0.1, post_v1=0.999, post_v2=0.999, post_v2_high=0.99)   # == params.KEEP (a12)
+KEEP_RULE = dict(det_min=0.2, page_skip_max=0.1, post_v1=0.999, post_v2=0.999, post_v2_high=0.99,
+                 rong_995=0.995, rong_95=0.95)   # == params.KEEP (a12 + TN10 mức mở rộng)
 MAX_BYTES = 1_000_000_000
 
 
@@ -135,24 +136,33 @@ def main(argv=None) -> int:
     KH = base & (f("post_v2") >= KEEP_RULE["post_v2_high"])
     lv = L.keep_level.to_numpy()
     in_keep = np.isin(lv, ["keep_v5", "keep"])
-    in_high = np.isin(lv, ["keep_v5", "keep", "keep_high"])
-    add("luat_keep_tinh_lai_trung", 0, dict(keep_lech=int((K != in_keep).sum()), keep_high_lech=int((KH != in_high).sum())),
-        bool((K == in_keep).all() and (KH == in_high).all()),
-        "real ∧ det≥0,2 ∧ trang bỏ chữ<10 % ∧ cùng hộp v1/v2 ∧ post_v1≥0,999 ∧ post_v2≥0,999 (keep_high: ≥0,99)")
+    base0 = (L.kind.to_numpy() == "real") & (f("det_score") >= KEEP_RULE["det_min"]) & (ps < KEEP_RULE["page_skip_max"]) & \
+        (f("agree_v2") == 1)
+    mnp = np.minimum(f("post_v1"), f("post_v2"))
+    R995 = K | (base0 & (mnp >= KEEP_RULE["rong_995"]))
+    R95 = R995 | KH | (base0 & (mnp >= KEEP_RULE["rong_95"]))
+    in_r995 = np.isin(lv, ["keep_v5", "keep", "rong_995"])
+    in_high = np.isin(lv, ["keep_v5", "keep", "rong_995", "rong_95"])          # = rong_95 (tên biến giữ cho các khối sau)
+    add("luat_keep_tinh_lai_trung", 0, dict(keep_lech=int((K != in_keep).sum()), rong_995_lech=int((R995 != in_r995).sum()),
+                                            rong_95_lech=int((R95 != in_high).sum())),
+        bool((K == in_keep).all() and (R995 == in_r995).all() and (R95 == in_high).all()),
+        "keep: real ∧ det≥0,2 ∧ trang bỏ chữ<10 % ∧ cùng hộp v1/v2 ∧ post_v1≥0,999 ∧ post_v2≥0,999; rong_995/rong_95: keep ∪ "
+        "(cùng điều kiện hộp ∧ min(post_v1, post_v2) ≥ 0,995 / ≥ 0,95; rong_95 ⊇ keep_high cũ)")
     lech = np.array([t.startswith("lech") for t in L.paddle_test])
     normp = np.array(["|paddle" in x for x in L.chuan_hoa_nguoi_phien])
     k5 = in_keep & ~lech & ~normp
     add("keep_v5_bang_keep_tru_paddle", 0, int((k5 != (lv == "keep_v5")).sum()), bool((k5 == (lv == "keep_v5")).all()),
-        "keep_v5 = keep − paddle_test lệch − chuẩn hoá '|paddle' (⇒ keep_v5 ⊆ keep ⊆ keep_high)")
+        "keep_v5 = keep − paddle_test lệch − chuẩn hoá '|paddle' (⇒ keep_v5 ⊆ keep ⊆ rong_995 ⊆ rong_95)")
     cnt = {x: int((lv == x).sum()) for x in LEVELS}
-    add("long_nhau_keep_v5_keep_keep_high", True, dict(keep_v5=cnt["keep_v5"], keep=int(in_keep.sum()), keep_high=int(in_high.sum())),
-        cnt["keep_v5"] <= in_keep.sum() <= in_high.sum() <= len(L), "")
+    add("long_nhau_keep_v5_keep_rong", True, dict(keep_v5=cnt["keep_v5"], keep=int(in_keep.sum()), rong_995=int(in_r995.sum()),
+                                                   rong_95=int(in_high.sum())),
+        cnt["keep_v5"] <= in_keep.sum() <= in_r995.sum() <= in_high.sum() <= len(L), "")
 
     # 4. ảnh
     has_img = L.image != ""
     need = np.isin(lv, IMG_LEVELS)
     add("anh_dung_muc", 0, dict(thieu_anh=int((need & ~has_img.to_numpy()).sum()), khong_ma_co_anh=int((~need & has_img.to_numpy()).sum())),
-        bool((need == has_img.to_numpy()).all()), "mọi ô keep trở lên có crop; ô keep_high/khong không có")
+        bool((need == has_img.to_numpy()).all()), "mọi ô rong_95 trở lên có crop; ô khong không có")
     todo = L[has_img | (L.crop_chuan != "")]
     if a.limit:
         todo = todo.head(a.limit)
@@ -215,7 +225,7 @@ def main(argv=None) -> int:
     by_book = {b: {x: int(((L.book == b) & (L.keep_level == x)).sum()) for x in LEVELS} for b in BOOKS}
     summ = dict(generated_at=time.strftime("%Y-%m-%dT%H:%M:%S"), dir=str(D.relative_to(REPO)) if D.is_relative_to(REPO) else str(D),
                 limit=a.limit or None, n_cells=len(L), level_exclusive=by_book, level_total=cnt,
-                cumulative=dict(keep_v5=cnt["keep_v5"], keep=int(in_keep.sum()), keep_high=int(in_high.sum())),
+                cumulative=dict(keep_v5=cnt["keep_v5"], keep=int(in_keep.sum()), rong_995=int(in_r995.sum()), rong_95=int(in_high.sum())),
                 with_image=int(has_img.sum()), one_char_ok=int((oc == "1").sum()),
                 theta_paddle_keep=dict(n=int(len(offs)), theta=round(float(th), 4), ci95=ci),
                 theta_encoder=info["theta"].get("encoder", {}), size_mb=round(size / 1e6, 1),
@@ -223,7 +233,8 @@ def main(argv=None) -> int:
                 runtime_s=round(time.time() - t0, 1), invariants=iv)
     (out / "summary.json").write_text(json.dumps(summ, ensure_ascii=False, indent=1, default=str), encoding="utf-8")
     n_fail = sum(1 for x in iv if x["pass"] is False and x["name"] != "tai_lap_r4_r5")
-    print(f"borg_human_eval: {len(L):,} ô · keep_v5 {cnt['keep_v5']:,} · keep {int(in_keep.sum()):,} · keep_high {int(in_high.sum()):,} · "
+    print(f"borg_human_eval: {len(L):,} ô · keep_v5 {cnt['keep_v5']:,} · keep {int(in_keep.sum()):,} · rong_995 {int(in_r995.sum()):,} · "
+          f"rong_95 {int(in_high.sum()):,} · "
           f"θ(keep) {100 * th:.2f} % [{100 * ci[0]:.2f}–{100 * ci[1]:.2f}] · {size / 1e6:.0f} MB · {summ['runtime_s']} s")
     for x in iv:
         print(f"  {'SKIP' if x['pass'] is None else ('PASS' if x['pass'] else 'FAIL')} {x['name']}"

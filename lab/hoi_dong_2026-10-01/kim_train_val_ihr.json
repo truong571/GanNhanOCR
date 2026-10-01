@@ -1,0 +1,48 @@
+{
+ "LucVanTien1916": {
+  "ghép_khớp_chữ": 1.0,
+  "lệch_cột": -1,
+  "train": {
+   "n_o": 10330,
+   "n_trang": 97,
+   "strict": 95.21,
+   "v1p": 95.48
+  },
+  "val": {
+   "n_o": 3099,
+   "n_trang": 94,
+   "strict": 95.93,
+   "v1p": 96.06
+  },
+  "train_tru_val_strict": {
+   "diem": -0.72,
+   "ci95": [
+    -2.94,
+    1.25
+   ]
+  }
+ },
+ "TruyenKieu1872": {
+  "ghép_khớp_chữ": 1.0,
+  "lệch_cột": -1,
+  "train": {
+   "n_o": 16445,
+   "n_trang": 153,
+   "strict": 97.32,
+   "v1p": 97.6
+  },
+  "val": {
+   "n_o": 4872,
+   "n_trang": 150,
+   "strict": 97.97,
+   "v1p": 98.13
+  },
+  "train_tru_val_strict": {
+   "diem": -0.65,
+   "ci95": [
+    -1.75,
+    0.2
+   ]
+  }
+ }
+}

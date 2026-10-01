@@ -199,3 +199,52 @@ FontDiffuser chỉ dùng **ảnh glyph sinh sẵn** (89.898 tệp); pipeline kh�
   minh giá trị của bộ dữ liệu.
 - Chưa có ablation riêng cho phần đóng góp của glyph FontDiffuser.
 - Chưa có cận thống kê cho độ đúng GOLD ở sách không có nhãn người (ví dụ prediction-powered inference).
+
+---
+
+## 5. Bộ nào có thể nằm trong dữ liệu huấn luyện của kim? Xếp mức độ khó
+
+### 5.1 Chồng lấn với dữ liệu huấn luyện của kim
+
+kim là hộp đen; công bố chỉ nói chung: khoảng 200.000 ảnh gán nhãn để huấn luyện OCR, đối tác **Nom Foundation**, Viện Trần Nhân
+Tông ([HCMUS, 19/07/2026](https://hcmus.edu.vn/ai-giai-ma-di-san-han-nom-mo-canh-cua-dua-kho-tri-thuc-nghin-nam-den-gan-cong-chung/)),
+thêm 5 TB dữ liệu thư viện Đại học Columbia năm 2025 ([Digitizing Vietnam](https://www.digitizingvietnam.com/vi/tools/digital-humanities-tools/kim-han-nom)).
+Không có danh sách sách. Bằng chứng tự đo (0 API, `lab/hoi_dong_2026-10-01/`):
+
+| Phép kiểm | LVT 1916 | Truyện Kiều 1872 | Ý nghĩa |
+|---|---|---|---|
+| kim trả **đúng mã PUA riêng của Nôm Foundation** ở ô nhãn người là PUA | 439/518 (84,7 %) | 1.104/1.155 (95,6 %) | Mã PUA do Nôm Foundation tự gán, OCR không thể tự đoán ra → kim chắc chắn học dữ liệu mã hoá theo Nôm Foundation (`kim_pua_signature.py`) |
+| Câu có trong NomNaOCR (bộ công khai, nguồn Nôm Foundation) | 99,5 % | 99,8 % | Cả hai cuốn nằm trong dữ liệu công khai thường dùng để huấn luyện (`data/<Bộ>/manifest.tsv`) |
+| kim đúng ở câu train − câu val của IHR-NomDB | −0,7 điểm [−2,9; +1,3] | −0,7 điểm [−1,8; +0,2] | Không có lợi thế ở phần train → không phải chỉ học phần train của IHR; không loại được việc học cả cuốn (`kim_train_val_ihr.py`) |
+| Chỗ nhãn NomNaOCR ≠ IHR: kim theo bên nào | 2/2 theo NomNaOCR | 6 theo IHR, 4 theo NomNaOCR | Quá ít mẫu (14 vị trí) để kết luận (`kim_nomnaocr_signature.py`) |
+
+**Chốt:**
+- **LVT 1916, Truyện Kiều 1872 (IHR-NomDB): nhiều khả năng nằm trong, hoặc trùng nguồn với, dữ liệu huấn luyện của kim**
+  (nguồn Nôm Foundation, đối tác dữ liệu của kim; dấu vết PUA; có trong NomNaOCR). Vì vậy độ đúng kim 95–97 % và GOLD
+  98–99 % trên hai bộ này là **lạc quan**, không dùng làm bằng chứng tổng quát hoá.
+- **Borg.tonch.18/34 (Vatican), Sách Thánh Truyện: không có dấu hiệu.** kim chỉ đúng 38–56 %, và kim không nằm trong nguồn
+  công bố của các bản này. Đây là thước đo thật cho sách ngoài miền dữ liệu của kim.
+- **LVT 1883, Kim Vân Kiều 1884, Chrestomathie (BnF Gallica): không xác định** được. Không có danh sách để đối chiếu, và các
+  bộ này không có nhãn người.
+- kim trả mã PUA ở mọi bộ (0,2–5,5 % số chữ đọc ra), nên bộ từ vựng của kim chắc chắn theo bảng mã Nôm Foundation.
+
+### 5.2 Xếp mức độ khó
+
+Thước đo chung cho cả 10 bộ là tỉ lệ ô mà chữ kim là một cách đọc của âm Quốc ngữ, theo từ điển (`do_kho_10_bo.py`). Kèm
+theo là độ đúng kim thật (bộ có nhãn người) và loại chữ.
+
+| Mức | Bộ | Loại chữ | kim khớp âm | kim đúng (nhãn người) | GOLD hiện tại | Dùng trong luận văn |
+|---|---|---|---:|---:|---:|---|
+| **Dễ** | Truyện Kiều 1872 | mộc bản | 98,7 % | 97,5 % | 97,6 % | trần trên; **không** dùng chứng minh tổng quát hoá (có thể kim đã học) |
+| **Dễ** | Lục Vân Tiên 1916 | mộc bản | 97,4 % | 95,2 % | 95,4 % | như trên |
+| **Trung bình** | Kim Vân Kiều 1884 | thạch bản | 92,3 % | — (dị bản 87 %) | 90,5 % | sách in ngoài IHR; độ đúng ước lượng |
+| **Trung bình** | Chrestomathie 1872 | thạch bản văn xuôi | 80,8 % | — | 74,2 % | văn xuôi: gióng khó hơn thơ |
+| **Trung bình** | Lục Vân Tiên 1883 | thạch bản | 79,6 % | — (dị bản 80 %) | 75,4 % | âm Quốc ngữ mượn ấn bản khác |
+| **Khó** | Sách Thánh Truyện Q2/Q4/Q11 | chép tay | 69,6–75,6 % | — | 59,9–66,3 % | bộ giao nộp chính; độ đúng suy đoán |
+| **Khó** | Borg.tonch.18 | chép tay Công giáo | 55,9 % | 50,5 % | 90,3 %* | thước đo THẬT cho chữ viết tay |
+| **Rất khó** | Borg.tonch.34 | chép tay Công giáo | 34,7 % | 38,0 % | 68,7 % | 24,6 % ô có âm giữ chỗ (không có chữ) |
+
+\* Nhờ bộ chọn chữ bằng ảnh học trên Borg.34 (học chéo sách), nên GOLD cao dù kim yếu.
+
+**Cách trình bày:** báo kết quả theo 3 mức. "Dễ" dùng để kiểm tính đúng của pipeline. "Trung bình" và "Khó" dùng để chứng minh
+pipeline hoạt động ngoài miền dữ liệu của kim. Chỉ số đo thật cho mức khó lấy từ Borg.

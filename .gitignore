@@ -126,3 +126,6 @@ measure_out/
 # Bản dựng CŨ do `./run_pipeline.sh --prune` chuyển vào (xoá hẳn bằng `--clean`);
 # mọi thứ trong đây dựng lại được, không commit.
 /archive/
+
+# Log chạy pipeline/đo (sinh lại mỗi lượt; không đưa vào git — 01/10/2026)
+logs/

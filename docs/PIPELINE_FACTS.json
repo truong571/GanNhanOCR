@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-10-01T11:04:45Z",
+ "generated_at": "2026-10-01T13:40:19Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "5fe6ae106c",
+ "git_head": "782d6dc621",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 61,
@@ -19,7 +19,7 @@
   "checkpoint_exists": 7,
   "git_dirty_pipeline_core": 0,
   "dataset_out_deleted": 0,
-  "invariants_pass": "18/18"
+  "invariants_pass": "17/18"
  },
  "invariants": [
   {
@@ -153,8 +153,8 @@
   {
    "name": "dataset_out_tracked_clean",
    "expected": true,
-   "observed": true,
-   "pass": true
+   "observed": false,
+   "pass": false
   }
  ],
  "sections": {
@@ -4838,7 +4838,7 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "5fe6ae106c",
+   "head": "782d6dc621",
    "branch": "main",
    "n_dirty_pipeline_core": 0,
    "dirty_pipeline_core": [],
@@ -4872,9 +4872,14 @@
     ],
     "deleted_files": [],
     "all_tracked_deleted": false,
-    "n_modified_in_worktree": 0,
-    "modified_files": [],
-    "tracked_clean": true,
+    "n_modified_in_worktree": 4,
+    "modified_files": [
+     "dataset_out/CHECKSUMS.txt",
+     "dataset_out/hai_luot_report.json",
+     "dataset_out/labels_final.csv",
+     "dataset_out/summary.json"
+    ],
+    "tracked_clean": false,
     "n_files_on_disk": 74010
    }
   }

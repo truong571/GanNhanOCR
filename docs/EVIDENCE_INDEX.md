@@ -1051,3 +1051,18 @@ sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
 | `Dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
 | `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
 | `config/pipeline.yaml` | `b9693e5b21f5d0a2a2df538fc1f6d3ff701a81f413c6e7985428e482949b6f61` |
+
+## Lần chạy 2026-10-01T12:28:25Z (100% Tự động - Tích hợp Self-Training)
+
+sách: STT2+STT4+STT11 | reseg=detector | config=config/pipeline.yaml
+
+| file | sha256 |
+|---|---|
+| `dataset_out/labels.csv` | `bc42d58a2078d232859cd5080aa4a45bf623127d2cc5e7aff116f88fa1c13e5e` |
+| `dataset_out/labels_remediated.csv` | `ee7b0417f08c42988d7c8e1eb40eeb9491bf12fa88523e1762ad9c1a74414aa7` |
+| `dataset_out/labels_final.csv` | `d5679755fcdc23e556ff007704ac72f58ac29ff30d944676dde1dbae590036d9` |
+| `dataset/SachThanhTruyen/labels.csv` | `2527c33364f5563a688b748b36ebe2116898d0d481b6de97116732eca55df41b` |
+| `Dict/QuocNgu_SinoNom.csv` | `e65b98748e13e41f66e1f5527e4b07e7f89ba24522090a4050decab95f1c87d8` |
+| `Dict/SinoNom_Similar.csv` | `2ac4cb6dea38e9a6fc544966051d06932c67d918d06c3a0b640ab4b70b9b01b3` |
+| `train_crop/detector_r34.best.pt` | `2c119689debfff01a81fee6bf198181c47fe8ab3ccb1eeaa6b576539dd344694` |
+| `config/pipeline.yaml` | `b9693e5b21f5d0a2a2df538fc1f6d3ff701a81f413c6e7985428e482949b6f61` |

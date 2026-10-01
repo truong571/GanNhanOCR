@@ -1,7 +1,7 @@
 # BẢNG SỐ LIỆU CHÍNH THỨC
 
 <!-- AUTO:HEADER:START -->
-**Bộ nhãn sinh ngày**: 2026-10-01 · **Commit chạm bộ nhãn gần nhất**: `4310a59c38` · **Bộ nhãn**: `dataset_out/labels_final.csv` (83.542 dòng)
+**Bộ nhãn sinh ngày**: 2026-10-01 · **Commit chạm bộ nhãn gần nhất**: `5fe6ae106c` · **Bộ nhãn**: `dataset_out/labels_final.csv` (83.542 dòng)
 <!-- AUTO:HEADER:END -->
 
 > **QUY TẮC BẤT DI BẤT DỊCH**: mọi con số trong luận văn (mọi chương, mọi bảng, mọi slide) **chỉ
@@ -40,8 +40,8 @@ labels.csv --[4 remediate]--> labels_remediated.csv --[5 confusion_fix]--> label
 |---|---|---|---|
 | `dataset_out/labels.csv` | 83.038 | `bc42d58a2078d232` | `python -m pipeline.align_engine.build_dataset --config config/pipeline.yaml --reseg detector  (S3 tắt từ 16/09)` |
 | `dataset_out/labels_remediated.csv` | 83.038 | `ee7b0417f08c4298` | `python -m pipeline.remediation --labels dataset_out/labels.csv --out dataset_out apply --tau 0.62` |
-| `dataset_out/labels_final.csv` | 83.542 | `d9309bc1b233daf4` | `python -m pipeline.remediation.confusion_fix … rồi python -m pipeline.remediation.s3_unwind … --apply` |
-| `dataset/SachThanhTruyen/labels.csv` (**bộ giao nộp**) | **62.130** | `717ed9ad3a0c0bf4` | `python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset/SachThanhTruyen` |
+| `dataset_out/labels_final.csv` | 83.542 | `d5679755fcdc23e5` | `python -m pipeline.remediation.confusion_fix … rồi python -m pipeline.remediation.s3_unwind … --apply` |
+| `dataset/SachThanhTruyen/labels.csv` (**bộ giao nộp**) | **62.108** | `2527c33364f5563a` | `python pipeline/export_final_dataset.py --labels dataset_out/labels_final.csv --src-root dataset_out --out dataset/SachThanhTruyen` |
 <!-- AUTO:NGUON_GOC:END -->
 
 **Đối chiếu**: `bash scripts/check_evidence.sh` → khớp 4 · lệch 0 · thiếu 0.
@@ -56,16 +56,16 @@ Vân tay từng bước: `dataset_out/CHECKSUMS.txt`.
 <!-- AUTO:PHAN_HANG:START -->
 | Tier | Số ô | % | Vào bộ giao nộp? | Nguồn kiểm định |
 |---|---|---|---|---|
-| **GOLD** | **51.907** | 62.1% | ✅ | ⚪ CHƯA ĐO |
+| **GOLD** | **51.891** | 62.1% | ✅ | ⚪ CHƯA ĐO |
 | SILVER_uncalibrated | 0 | 0.0% | ❌ ngoài `USABLE_TIERS` | ⚪ CHƯA ĐO (verdict **máy**, không dùng làm bằng chứng) |
-| SYLLABLE | 10.223 | 12.2% | ✅ (nhãn cấp **âm tiết**) | ⚪ CHƯA ĐO |
-| REVIEW | 21.388 | 25.6% | ❌ | — (không phải nhãn) |
+| SYLLABLE | 10.217 | 12.2% | ✅ (nhãn cấp **âm tiết**) | ⚪ CHƯA ĐO |
+| REVIEW | 21.410 | 25.6% | ❌ | — (không phải nhãn) |
 
-**Bộ giao nộp = 51.907 nhãn CẤP KÝ TỰ + 10.223 chú giải CẤP ÂM TIẾT** = 62.130 dòng · 62.130 ảnh đã copy, **0 thiếu**.
+**Bộ giao nộp = 51.891 nhãn CẤP KÝ TỰ + 10.217 chú giải CẤP ÂM TIẾT** = 62.108 dòng · 62.108 ảnh đã copy, **0 thiếu**.
 
 > Nguồn: `dataset/SachThanhTruyen/labels.csv` — **bộ CUỐI CÙNG (đã nạp phán quyết người)**.
 
-> ⚠️ **KHÔNG phát biểu là “62.130 nhãn”.** 10.223/10.223 dòng tầng SYLLABLE có cột `label` **rỗng** — chúng chỉ ghi ÂM Quốc ngữ, không gán chữ Nôm. Con số dùng khi so với các bộ dữ liệu Hán Nôm khác là **51.907**.
+> ⚠️ **KHÔNG phát biểu là “62.108 nhãn”.** 10.217/10.217 dòng tầng SYLLABLE có cột `label` **rỗng** — chúng chỉ ghi ÂM Quốc ngữ, không gán chữ Nôm. Con số dùng khi so với các bộ dữ liệu Hán Nôm khác là **51.891**.
 <!-- AUTO:PHAN_HANG:END -->
 
 Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('dataset_out/labels_final.csv')));print(len(r),collections.Counter(x['tier'] for x in r))"`
@@ -101,7 +101,7 @@ Tái sinh: `python -c "import csv,collections;r=list(csv.DictReader(open('datase
 | **Trang cho đủ 9 cột có nhãn** | **445/448** |
 | Lớp ký tự phân biệt (mọi tier có nhãn) | 1.608 |
 | **Lớp trong bộ giao nộp** | **1.384** |
-| **Selftest** | **1250 passed, 8 failed** |
+| **Selftest** | **1252 passed, 6 failed** |
 <!-- AUTO:PHAM_VI:END -->
 
 ### 2.4 Vá lỗi (bước 4–6)

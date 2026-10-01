@@ -42,6 +42,15 @@
   (ảnh chỉ ô ok). Bảng kết quả nghiên cứu → đã/không áp dụng: `docs/DIEU_HUONG_PIPELINE_2026-09-28.md`.
 - Dọn + dựng lại toàn bộ đúng thứ tự: `bash scripts/clean_rebuild_all.sh --yes --run` (giữ cache OCR/lt2, chặn API, đo, nghiệm thu, báo cáo).
 
+## Nâng GOLD theo TN8/TN9 (2026-10-01)
+- `pipeline/chon_chu/` (bước 4b, `config/chon_chu.yaml`): cổng crop_bad kiểm lại trên ảnh gốc; bộ chọn chữ bằng ảnh (Borg LOBO,
+  sách in chỉ xác nhận nhãn kim); `qn_geo` (ô lệch số chữ có tâm crop trong hộp chữ kim — KVK, Chr; TẮT L83), `np_geo` (KVK).
+- STT "bản chặt" (`pipeline/stt_hai_luot/`, config/pipeline.yaml): đọc lt1 ∪ l1skel_l2 (chữ Nôm lt2 gióng chuỗi vào khung lt1),
+  cổng strict R4, box_decoder visual_dp + cổng vdp. Mốc md5 STT đã đổi có chủ đích.
+- Số 01/10: GOLD L16 95,4 % · TK 97,6 % · Borg Kinh 90,3 % · KVK 90,5 % (đạt 90/90, KVK/Borg sát) · Borg DungLy 68,7 · Chr 74,2 ·
+  L83 75,4 · STT 59,9/60,3/66,3 (độ đúng ước 93–97,5 % [SĐ]). Nghiên cứu: lab/thu_nghiem_kim/TN7–TN10, measure_out/_tn8, _tn9, _tn10.
+- kim: máy chủ chỉ phản ứng `lang_type`; font_type/ocr_id bị bỏ qua, lang_type 0 bị từ chối.
+
 ## KHÔNG chia tập + web chỉ tầng nhãn (2026-09-30)
 - Quyết định A-10 (16/09): **không** cột/tập chia (`split`, `split_hint`, `lobo_group`, train/val/test, LOBO) ở bất kỳ đầu ra
   nào (`dataset/<Bộ>/`, `dataset/_ALL/`, `cong_bo/`, `_BORG_NHAN_NGUOI/`); bộ có nhãn người chỉ mang cờ `evaluation_only`.

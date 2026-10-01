@@ -1,8 +1,8 @@
 {
  "generated_by": "scripts/measure/code_facts.py",
- "generated_at": "2026-10-01T02:12:24Z",
+ "generated_at": "2026-10-01T11:04:45Z",
  "repo": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR",
- "git_head": "68518e9de1",
+ "git_head": "5fe6ae106c",
  "note": "Sinh tự động bằng grep/AST; không có LLM. Agent đọc tệp này thay vì đọc mã nguồn. Chạy lại: .venv/bin/python scripts/measure/code_facts.py",
  "counts": {
   "column_pins": 61,
@@ -17,9 +17,9 @@
   "pdf_readers": 2,
   "checkpoint_paths": 50,
   "checkpoint_exists": 7,
-  "git_dirty_pipeline_core": 12,
+  "git_dirty_pipeline_core": 0,
   "dataset_out_deleted": 0,
-  "invariants_pass": "17/18"
+  "invariants_pass": "18/18"
  },
  "invariants": [
   {
@@ -153,8 +153,8 @@
   {
    "name": "dataset_out_tracked_clean",
    "expected": true,
-   "observed": false,
-   "pass": false
+   "observed": true,
+   "pass": true
   }
  ],
  "sections": {
@@ -192,7 +192,7 @@
     "pipeline/tools/update_bang_so_lieu.py": 1
    },
    "discarded": {
-    "call_arg_no_column_context": 9,
+    "call_arg_no_column_context": 11,
     "call_kwarg_no_column_context": 5,
     "compare_no_column_context": 1,
     "other_no_column_context": 31,
@@ -209,6 +209,8 @@
     "pipeline/phase1_engine_selftest.py:565 range(… arg#0=9)",
     "pipeline/remediation/mechanism_gates_selftest.py:63 _row(… arg#0=9)",
     "pipeline/remediation/mechanism_gates_selftest.py:219 _row(… arg#0=9)",
+    "pipeline/stt_hai_luot/selftest.py:118 _row(… arg#0=9)",
+    "pipeline/stt_hai_luot/selftest.py:123 _row(… arg#0=9)",
     "pipeline/tools/ingest_borg_book.py:694 KimClient(budget=9)",
     "pipeline/tools/ingest_prose_selftest.py:43 ing.sino_number(… arg#0=9)",
     "pipeline/tools/merge_datasets.py:555 _bo_gia(… arg#2=9)",
@@ -4836,88 +4838,11 @@
   },
   "git": {
    "how": "git rev-parse HEAD; git status --porcelain -- pipeline core; git diff --numstat; git diff -- core/ocr/ocr_api.py (đếm dòng + chứa 'guest'); git ls-files/status -- dataset_out; kiểm thư mục.",
-   "head": "68518e9de1",
+   "head": "5fe6ae106c",
    "branch": "main",
-   "n_dirty_pipeline_core": 12,
-   "dirty_pipeline_core": [
-    {
-     "file": "pipeline/align_engine/align_production.py",
-     "status": "M",
-     "ins": 16,
-     "del": 4
-    },
-    {
-     "file": "pipeline/align_engine/book_layout.py",
-     "status": "M",
-     "ins": 22,
-     "del": 2
-    },
-    {
-     "file": "pipeline/align_engine/book_layout_selftest.py",
-     "status": "M",
-     "ins": 13,
-     "del": 6
-    },
-    {
-     "file": "pipeline/align_engine/build_dataset.py",
-     "status": "M",
-     "ins": 29,
-     "del": 1
-    },
-    {
-     "file": "pipeline/chon_chu/selftest.py",
-     "status": "M",
-     "ins": 4,
-     "del": 3
-    },
-    {
-     "file": "pipeline/chon_chu/stt.py",
-     "status": "M",
-     "ins": 3,
-     "del": 1
-    },
-    {
-     "file": "pipeline/export_final_dataset.py",
-     "status": "M",
-     "ins": 2,
-     "del": 0
-    },
-    {
-     "file": "pipeline/gold_exact/signals_geom.py",
-     "status": "M",
-     "ins": 13,
-     "del": 7
-    },
-    {
-     "file": "pipeline/gold_exact/signals_lt2.py",
-     "status": "M",
-     "ins": 8,
-     "del": 3
-    },
-    {
-     "file": "pipeline/tools/duong_chay.py",
-     "status": "M",
-     "ins": 37,
-     "del": 14
-    },
-    {
-     "file": "pipeline/tools/selftest.py",
-     "status": "M",
-     "ins": 13,
-     "del": 0
-    },
-    {
-     "file": "pipeline/stt_hai_luot/",
-     "status": "??"
-    }
-   ],
-   "untracked_pipeline_core": [
-    "pipeline/stt_hai_luot/__init__.py",
-    "pipeline/stt_hai_luot/__main__.py",
-    "pipeline/stt_hai_luot/doc.py",
-    "pipeline/stt_hai_luot/route.py",
-    "pipeline/stt_hai_luot/selftest.py"
-   ],
+   "n_dirty_pipeline_core": 0,
+   "dirty_pipeline_core": [],
+   "untracked_pipeline_core": [],
    "ocr_api_guest_mode": {
     "file": "core/ocr/ocr_api.py",
     "has_uncommitted_diff": false,
@@ -4929,12 +4854,14 @@
    },
    "dataset_out": {
     "dir_exists": true,
-    "n_tracked": 10,
+    "n_tracked": 12,
     "n_deleted_in_worktree": 0,
     "tracked_files": [
      "dataset_out/CHECKSUMS.txt",
+     "dataset_out/boxes_syl.csv",
      "dataset_out/confusion_fix_report.json",
      "dataset_out/decisions_report.json",
+     "dataset_out/hai_luot_report.json",
      "dataset_out/labels.csv",
      "dataset_out/labels_final.csv",
      "dataset_out/labels_remediated.csv",
@@ -4945,20 +4872,9 @@
     ],
     "deleted_files": [],
     "all_tracked_deleted": false,
-    "n_modified_in_worktree": 10,
-    "modified_files": [
-     "dataset_out/CHECKSUMS.txt",
-     "dataset_out/confusion_fix_report.json",
-     "dataset_out/decisions_report.json",
-     "dataset_out/labels.csv",
-     "dataset_out/labels_final.csv",
-     "dataset_out/labels_remediated.csv",
-     "dataset_out/pair_pages.json",
-     "dataset_out/remediation_report.json",
-     "dataset_out/self_training_rescue_report.json",
-     "dataset_out/summary.json"
-    ],
-    "tracked_clean": false,
+    "n_modified_in_worktree": 0,
+    "modified_files": [],
+    "tracked_clean": true,
     "n_files_on_disk": 74010
    }
   }

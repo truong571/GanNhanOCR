@@ -8,7 +8,9 @@ và cache lt2 của STT (pipeline.gold_exact.signals_lt2.activation — cùng h�
         [--publish on|off] [--merge on|off]
     .venv/bin/python -m pipeline.tools.duong_chay --selftest
 
-Cột: bộ · config · layout · box_decoder (hộp ảnh) · kim lang_type (1 = Hán, 2 = Nôm) · crop_source (ảnh crop của labels.csv) ·
+Cột: bộ · config · layout · box_decoder (hộp ảnh) · kim lang_type (1 = Hán, 2 = Nôm) · đọc kim (01/10, TN9: books[].kim_read +
+mục stt_hai_luot — STT: "lt1∪l1skel_l2 · cổng … · vdp …" = hai bản dựng hợp theo ô + cổng; sách khác: nguồn đọc) ·
+crop_source (ảnh crop của labels.csv) ·
 chon_chu (30/09, bước 4b chọn chữ bằng ảnh — config/chon_chu.yaml: BẬT họ/đòn bẩy/mô hình | TẮT) ·
 gold_exact profile (printed | handwriting) · second_read (lt2 STT: BẬT khi đủ cache, TẮT + lý do) · ảnh giao ô ok (crop chuẩn v2).
 """
@@ -28,6 +30,22 @@ STT = {"SachThanhTruyen2": "stt2", "SachThanhTruyen4": "stt4", "SachThanhTruyen1
 SET8 = {**STT, "Chrestomathie1872": "Chr", "LucVanTien1883": "L83", "KimVanKieu1884": "KVK", "LucVanTien1916": "L16",
         "TruyenKieu1872": "TK", "SachKinhThayCaBinh": "B18", "SachDungLyHoThan": "B34"}
 ALL10 = list(SET8)
+COL_DOC = 5          # chỉ số cột "đọc kim" trong hàng routes()
+
+
+def doc_route(book: str, L, cfg_path) -> str:
+    """Ô 'đọc kim': nguồn đọc của bản dựng (books[].kim_read) + đường hai lượt STT (mục stt_hai_luot của config)."""
+    read = getattr(L, "kim_read", "lt1")
+    if book not in STT:
+        return f"{L.kim_cache_dir}/ (lang_type {L.kim_lang_type})"
+    try:
+        from pipeline.stt_hai_luot.route import cfg_of
+        h = cfg_of(yaml.safe_load(Path(cfg_path).read_text(encoding="utf-8")) or {})
+    except Exception as e:  # noqa: BLE001
+        return f"{read} (LỖI stt_hai_luot: {e})"
+    if not h["enabled"]:
+        return f"{read} (một bản dựng)"
+    return f"{h['aux_read']}∪{read} · cổng {h['gate']} · vdp {'BẬT' if h['vdp_gate'] else 'TẮT'}"
 
 
 def book_cfg(book: str):
@@ -85,8 +103,9 @@ def routes(books, gold_exact=True):
             L = book_layout(bd)
             layout, dec, lang, src = L.layout, L.box_decoder, str(L.kim_lang_type), L.crop_source
             cfgs = str(p.relative_to(REPO))
+            doc = doc_route(b, L, p)
         except Exception as e:  # noqa: BLE001
-            layout = dec = lang = src = "?"; cfgs = f"LỖI: {e}"
+            layout = dec = lang = src = doc = "?"; cfgs = f"LỖI: {e}"
         pf = "handwriting" if s8 in hw else "printed"
         if not gold_exact:
             sr = "— (gold_exact off)"
@@ -96,13 +115,13 @@ def routes(books, gold_exact=True):
                   else f"TẮT ({r.get('pages_lt2')}/{r.get('pages_lt1')} trang lt2)")
         else:
             sr = "—"
-        rows.append((b, cfgs, layout, dec, lang, src, chon_chu_route(b, ccfg), pf if gold_exact else "— (off)", sr))
+        rows.append((b, cfgs, layout, dec, lang, doc, src, chon_chu_route(b, ccfg), pf if gold_exact else "— (off)", sr))
     return rows, gcfg, prof
 
 
 def render(rows, gcfg, prof, gold_exact=True, publish=False, merge=True) -> str:
-    hdr = ("bộ", "config", "layout", "box_decoder", "kim lang_type", "crop_source", "chon_chu (4b)", "gold_exact profile",
-           "second_read (lt2)")
+    hdr = ("bộ", "config", "layout", "box_decoder", "kim lang_type", "đọc kim (TN9)", "crop_source", "chon_chu (4b)",
+           "gold_exact profile", "second_read (lt2)")
     tb = [hdr] + [tuple(str(x) for x in r) for r in rows]
     w = [max(len(r[i]) for r in tb) for i in range(len(hdr))]
     out = ["ĐƯỜNG CHẠY (config hiện hành; đổi config = đổi đường):"]
@@ -111,7 +130,7 @@ def render(rows, gcfg, prof, gold_exact=True, publish=False, merge=True) -> str:
         if k == 0:
             out.append("  |" + "|".join("-" * (w[i] + 2) for i in range(len(hdr))) + "|")
     sr = ((gcfg.get("profiles") or {}).get("handwriting") or {}).get("second_read") or {}
-    chain = ["các bộ (… cổng -> chon_chu 4b -> export)"] + (["gộp dataset/_ALL"] if merge else [])
+    chain = ["các bộ (… cổng -> [STT: hợp hai lượt + cổng hai lượt] -> chon_chu 4b -> export)"] + (["gộp dataset/_ALL"] if merge else [])
     if merge and gold_exact:
         chain.append(f"gold_exact (policy {gcfg.get('version')}; ô ok -> crop chuẩn v2; lt2 {sr.get('mode', 'off') if isinstance(sr, dict) else sr})")
     if merge and gold_exact and publish:
@@ -138,16 +157,20 @@ def selftest() -> int:
     chk("du_10_bo_doc_duoc_config", all("LỖI" not in r[1] for r in rows) and len(rows) == 10)
     chk("stt_kim_lang_type_1", all(by[b][4] == "1" for b in STT))
     chk("sach_moi_kim_lang_type_2", all(by[b][4] == "2" for b in ALL10 if b not in STT))
-    chk("profile_handwriting_stt_borg", all(by[b][7] == ("handwriting" if SET8[b] in (prof or {}).get("sets", []) else "printed")
+    chk("profile_handwriting_stt_borg", all(by[b][8] == ("handwriting" if SET8[b] in (prof or {}).get("sets", []) else "printed")
                                             for b in ALL10))
-    chk("second_read_chi_stt", all((by[b][8] != "—") == (b in STT) for b in ALL10))
-    chk("chon_chu_stt_tat", all(by[b][6] == "TẮT" for b in STT))
-    chk("chon_chu_borg_viet_tay_lobo", by["SachKinhThayCaBinh"][6].startswith("BẬT hand") and "hand_B34" in by["SachKinhThayCaBinh"][6]
-        and "hand_B18" in by["SachDungLyHoThan"][6])
-    chk("chon_chu_sach_in_chi_L1", all(by[b][6].startswith("BẬT print: L1+confusion_fix")
+    chk("second_read_chi_stt", all((by[b][9] != "—") == (b in STT) for b in ALL10))
+    chk("chon_chu_stt_tat", all(by[b][7] == "TẮT" for b in STT))
+    chk("chon_chu_borg_viet_tay_lobo", by["SachKinhThayCaBinh"][7].startswith("BẬT hand") and "hand_B34" in by["SachKinhThayCaBinh"][7]
+        and "hand_B18" in by["SachDungLyHoThan"][7])
+    chk("chon_chu_sach_in_chi_L1", all(by[b][7].startswith("BẬT print: L1+confusion_fix")
                                         for b in ("Chrestomathie1872", "LucVanTien1883", "KimVanKieu1884", "LucVanTien1916", "TruyenKieu1872")))
-    chk("chon_chu_tn9_geo", "+qn_geo+np_geo" in by["KimVanKieu1884"][6] and "+qn_geo" in by["LucVanTien1883"][6]
-        and "np_geo" not in by["LucVanTien1883"][6] and "qn_geo" not in by["TruyenKieu1872"][6])
+    # 01/10: config/chon_chu.yaml TẮT qn_geo của L83 (dị bản 72,1 % < GOLD − 3 điểm) -> chỉ KVK mang qn_geo+np_geo
+    chk("chon_chu_tn9_geo", "+qn_geo+np_geo" in by["KimVanKieu1884"][7] and "qn_geo" not in by["LucVanTien1883"][7]
+        and "np_geo" not in by["LucVanTien1883"][7] and "qn_geo" not in by["TruyenKieu1872"][7])
+    chk("stt_hai_luot_doc_kim", all(by[b][COL_DOC].startswith("lt1∪l1skel_l2 · cổng strict · vdp BẬT") for b in STT)
+        and all(by[b][COL_DOC] == "detected/ (lang_type 2)" for b in ALL10 if b not in STT))
+    chk("stt_box_decoder_visual_dp", all(by[b][3] == "visual_dp" for b in STT))
     txt = render(rows, gcfg, prof, publish=True)
     chk("render_co_chuoi", "ĐƯỜNG CHẠY" in txt and "cong_bo" in txt and "gold_exact" in txt)
     print(f"RESULT: {ok} passed, {len(fail)} failed" + (f" {fail}" if fail else ""))

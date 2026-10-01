@@ -363,7 +363,10 @@ def _kim_page(args):
     if d is None:
         return None
     cols, qn_lines, iter_pairs, binary, ok = d
-    return {int(line_id): [(c.get("char") or c.get("text") or "", c.get("bbox")) for c in cols[ci]["chars"]]
+    # (2026-10-01, TN9) phần tử thứ 3 = chữ kim LƯỢT 1 (lt1) tại vị trí: cache kim_l1skel_l2 mang khoá `lt1`; cache lt1
+    # (detected/) không có khoá -> = chữ. signals_lt2 định vị trong dòng lt1 bằng chữ này.
+    return {int(line_id): [(c.get("char") or c.get("text") or "", c.get("bbox"),
+                            c.get("lt1") or c.get("char") or c.get("text") or "") for c in cols[ci]["chars"]]
             for ci, line_id in iter_pairs}
 
 
@@ -387,7 +390,8 @@ def kim_vs_box(G: pd.DataFrame, raw: pd.DataFrame, geo: pd.DataFrame, cfg_map: d
             psub = AUTO_PREP.get(b["name"], b["name"])      # Borg: prepared/_auto/<Sách> (27/09)
             for pg in need.get((bs, code), []):
                 dd = REPO / "prepared" / psub
-                sig = _stat_sig(sorted(p for sub in ("pages", "pages_denoised", "detected", "transcriptions", "labeled")
+                sig = _stat_sig(sorted(p for sub in ("pages", "pages_denoised", "detected", "kim_l1skel_l2",
+                                                     "transcriptions", "labeled")
                                        for p in (dd / sub).glob(f"{pg}*")))
                 key = hashlib.sha256(json.dumps([sig, b, cfgf, ksig], default=str).encode()).hexdigest()
                 pf = root / b["name"] / f"{pg}.pkl"
@@ -406,16 +410,17 @@ def kim_vs_box(G: pd.DataFrame, raw: pd.DataFrame, geo: pd.DataFrame, cfg_map: d
                     log(f"  _detect {k}/{len(jobs)}")
     rk = raw.set_index("key")
     pit = geo.pitch
-    dys, dxs, oks, kcs, kbs = [], [], [], [], []
+    dys, dxs, oks, kcs, kbs, k1s = [], [], [], [], [], []
     for u, bs, bk in zip(G.cell_uid, G.book_set, G.book):
-        dy = dx = np.nan; cok = np.nan; kch = ""; kbox = None
+        dy = dx = np.nan; cok = np.nan; kch = ""; kbox = None; k1 = ""
         if u in rk.index:
             r = rk.loc[u]
             cols = res.get((bs, code2.get((bs, bk)), r.page))
             chars = cols.get(int(r.column)) if cols else None
             b = _pb(r.bbox); ni = int(r.nom_idx)
             if chars and ni < len(chars) and b is not None and chars[ni][1]:
-                kc, kb = chars[ni]
+                kc, kb = chars[ni][0], chars[ni][1]
+                k1 = chars[ni][2] if len(chars[ni]) > 2 else kc
                 kb = [float(v) for v in kb[:4]]
                 p = pit.get(u, np.nan)
                 if not (p == p):
@@ -426,8 +431,9 @@ def kim_vs_box(G: pd.DataFrame, raw: pd.DataFrame, geo: pd.DataFrame, cfg_map: d
                 dy = round(dy, 3) if dy == dy else dy; dx = round(dx, 3)
                 cok = int(kc == r.ocr_char)
                 kch, kbox = kc, kb          # 28/09: hộp + chữ kim lt1 của ô (tín hiệu lt2_agree — signals_lt2)
-        dys.append(dy); dxs.append(dx); oks.append(cok); kcs.append(kch); kbs.append(kbox)
-    return pd.DataFrame(dict(cell_uid=G.cell_uid.values, dy_kim=dys, dx_kim=dxs, kim_char_ok=oks, kim_char=kcs, kim_box=kbs))
+        dys.append(dy); dxs.append(dx); oks.append(cok); kcs.append(kch); kbs.append(kbox); k1s.append(k1)
+    return pd.DataFrame(dict(cell_uid=G.cell_uid.values, dy_kim=dys, dx_kim=dxs, kim_char_ok=oks, kim_char=kcs, kim_box=kbs,
+                             kim_lt1=k1s))
 
 
 # ================================================================================================ ảnh của ô khác (rescue)

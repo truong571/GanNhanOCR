@@ -22,16 +22,44 @@
   #                                   #   và cổng qn_parse_ok (thạch bản: 10)
   #   qn_syllables_per_column: 14     # chỉ với lithograph; 0 = không kiểm
   # Sách mới dùng config RIÊNG (config/pipeline_LucVanTien1883.yaml, config/pipeline_KimVanKieu1884.yaml), không thêm vào books: ở đây.
+#
+  # 2026-10-01 (TN9, measure_out/_tn9/KET_QUA.md — "bản chặt"): ĐƯỜNG STT HAI LƯỢT. Mỗi sách:
+  #   kim_read: l1skel_l2   gióng trên cache kim_l1skel_l2/ = KHUNG lt1 (Hán, đủ số chữ) + chữ lt2 (Nôm, kim_raw_lt2/) gióng
+  #                         theo chuỗi từng dòng (pipeline/stt_hai_luot/doc.py; `python -m pipeline.stt_hai_luot cache`)
+  #   box_decoder: visual_dp hộp ảnh visual_dp (TN6) — trọng tài CNN sạch (Borg 99,3 %) nghiêng visual_dp ở 6–9 % ô lệch
+  # và mục `stt_hai_luot` (dưới books) = bản dựng PHỤ lt1 + hợp theo ô + cổng chặt R4 + cổng vdp lệch syl_index.
+  # Quay về đường cũ (một bản dựng lt1, hộp legacy, md5 59e436d7… của 3 trang): bỏ hai khoá này + `stt_hai_luot.enabled: false`.
 books:
   - name: SachThanhTruyen2
     pdf: data/SachThanhTruyen2/STT2.pdf
     reocr: true
+    kim_read: l1skel_l2
+    box_decoder: visual_dp
   - name: SachThanhTruyen4
     pdf: data/SachThanhTruyen4/STT4.pdf
     reocr: true
+    kim_read: l1skel_l2
+    box_decoder: visual_dp
   - name: SachThanhTruyen11
     pdf: data/SachThanhTruyen11/STT11.pdf
     reocr: true
+    kim_read: l1skel_l2
+    box_decoder: visual_dp
+
+# ĐƯỜNG STT HAI LƯỢT (TN9, 01/10) — pipeline/stt_hai_luot, run_pipeline.sh step_build/step_remediate/step_hai_luot.
+#   enabled   false = đường MỘT bản dựng theo books[] (không hợp, không cổng)
+#   aux_read  nguồn đọc của bản dựng PHỤ (lt1 = cache detected/); hợp theo ô với bản CHÍNH (books[].kim_read)
+#   aux_dir   dataset_out của bản dựng phụ (gitignore; crop của hàng lấy từ bản phụ chép sang dataset_out/<tầng>/hl_lt1__*)
+#   gate      strict = R4: ô GOLD chỉ giữ khi lt1≡lt2∈R(âm) | lt2∈R∌lt1 (nhãn lt2) | lt1∈R & không có lt2; còn lại
+#             (lt1∈R∌lt2, xung đột lt1/lt2 cùng ∈R, similar/rescue/khác trừ khi lt1≡lt2≡nhãn) -> REVIEW
+#             union = R2 (chỉ hợp, xung đột lấy nhãn bản chính) · off = chỉ hợp
+#   vdp_gate  ô GOLD có hộp vdp_low/vdp_virtual/vdp_fallback LỆCH hộp syl_index (= legacy, IoU < 0,5) -> REVIEW
+stt_hai_luot:
+  enabled: true
+  aux_read: lt1
+  aux_dir: prepared/_stt_hai_luot/doc_lt1
+  gate: strict
+  vdp_gate: true
 
 paths:
   data_dir: prepared

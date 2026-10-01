@@ -742,6 +742,18 @@ def test_doi_soat_the_he_v3() -> None:
         check("bảng kỳ vọng có dòng usable + B8 ghi đè", any("Ô dùng được" in l for l in bkv) and any("ghi đè bản in" in l for l in bkv))
 
 
+def test_stt_hai_luot() -> None:
+    """(01/10, TN9) đường STT hai lượt — chạy bộ kiểm của pipeline.stt_hai_luot (dữ liệu tổng hợp + từ điển thật)."""
+    print("\n[stt_hai_luot]")
+    from pipeline.stt_hai_luot import selftest as ST
+    ok, fail = ST.run()
+    check("stt_hai_luot: mọi phép kiểm qua", not fail and ok >= 30, f"{ok} ok, FAIL {fail}")
+    from pipeline.tools import duong_chay as DC
+    rows, gcfg, prof = DC.routes(list(DC.STT))
+    check("ĐƯỜNG CHẠY: STT hiện đường hai lượt", all("lt1∪l1skel_l2" in r[DC.COL_DOC] for r in rows),
+          str([r[DC.COL_DOC] for r in rows]))
+
+
 def main() -> int:
     print("=" * 64)
     print("TOOLS SELFTEST")
@@ -762,6 +774,7 @@ def main() -> int:
     test_xlsx_khong_bi_excel_an_kieu()
     test_batch_by_rule()
     test_doi_soat_the_he_v3()
+    test_stt_hai_luot()
     print("=" * 64)
     print(f"RESULT: {_passed} passed, {_failed} failed")
     print("=" * 64)

@@ -68,6 +68,12 @@ Khoá tuỳ chọn trong `books:` của config/pipeline.yaml (vắng = hành vi 
                                     # 5 Văn bia · 6 Kinh Phật. Đã đo: 5 (+epitaph) KÉM hơn -> giữ 1.
     kim_font_type: 1                # (2026-09-23, tuỳ chọn) `font_type`: 0 Tự động · 1 In (mặc định) ·
                                     # 2 Viết tay. Đã đo: 2 KÉM hơn trên sách in -> giữ 1.
+    kim_read: l1skel_l2             # (2026-10-01, TN9, tuỳ chọn) NGUỒN chữ kim cho gióng: "lt1" (mặc định = cache
+                                    # detected/<trang>_ocr_cache.json, hành vi cũ) | "l1skel_l2" = KHUNG lt1
+                                    # (hình học cột/hộp giữ nguyên từng điểm) + chữ lt2 (kim_raw_lt2/, Nôm) gióng
+                                    # theo CHUỖI từng dòng (pipeline/stt_hai_luot/doc.py, 0 API) đọc từ
+                                    # kim_l1skel_l2/<trang>_ocr_cache.json (dựng bằng
+                                    # `python -m pipeline.stt_hai_luot cache`). Chỉ STT có cache lt2.
     crop_source: original           # (2026-09-23, tuỳ chọn) NGUỒN ĐIỂM ẢNH của crop GIAO NỘP:
                                     # "processed" (MẶC ĐỊNH = hành vi cũ, STT không đổi byte) cắt từ
                                     # prepared/<Book>/pages/*.png — ảnh đã qua adapter (xám L +
@@ -138,6 +144,10 @@ DETECTOR_RESIZES = (DETECTOR_RESIZE_LINEAR, DETECTOR_RESIZE_AREA)
 CROP_SOURCE_PROCESSED = "processed"   # cắt từ prepared/<Book>/pages/*.png (hành vi cũ)
 CROP_SOURCE_ORIGINAL = "original"     # cắt từ ảnh quét gốc data/<Book>/… (giữ nền giấy)
 CROP_SOURCES = (CROP_SOURCE_PROCESSED, CROP_SOURCE_ORIGINAL)
+KIM_READ_LT1 = "lt1"                  # cache detected/ (kim lang_type 1 = Hán; hành vi cũ)
+KIM_READ_L1SKEL_L2 = "l1skel_l2"      # (TN9) khung lt1 + chữ lt2 gióng chuỗi — cache kim_l1skel_l2/
+KIM_READS = (KIM_READ_LT1, KIM_READ_L1SKEL_L2)
+KIM_READ_DIRS = {KIM_READ_LT1: "detected", KIM_READ_L1SKEL_L2: "kim_l1skel_l2"}
 
 
 @dataclass(frozen=True)
@@ -157,6 +167,12 @@ class BookLayout:
     kim_lang_type: int = KIM_LANG_TYPE_DEFAULT      # body lang_type của kênh kim (1 = Hán = bộ cũ)
     kim_ocr_id: int = KIM_OCR_ID_DEFAULT            # body ocr_id (1 = văn bản thông thường)
     kim_font_type: int = KIM_FONT_TYPE_DEFAULT      # body font_type (1 = in)
+    kim_read: str = KIM_READ_LT1                    # (TN9) "lt1" | "l1skel_l2" — thư mục cache kim mà _detect đọc
+
+    @property
+    def kim_cache_dir(self) -> str:
+        """Thư mục con của prepared/<Sách> chứa <trang>_ocr_cache.json mà _detect đọc (lt1 = detected/)."""
+        return KIM_READ_DIRS[self.kim_read]
 
     @property
     def kim_params(self) -> dict:
@@ -254,19 +270,23 @@ def book_layout(book_cfg: dict | None) -> BookLayout:
     kim_lang_type = _enum_key(book_cfg, name, "kim_lang_type", KIM_LANG_TYPE_DEFAULT, KIM_LANG_TYPES)
     kim_ocr_id = _enum_key(book_cfg, name, "kim_ocr_id", KIM_OCR_ID_DEFAULT, KIM_OCR_IDS)
     kim_font_type = _enum_key(book_cfg, name, "kim_font_type", KIM_FONT_TYPE_DEFAULT, KIM_FONT_TYPES)
+    kim_read = book_cfg.get("kim_read", KIM_READ_LT1)
+    if kim_read not in KIM_READS:
+        raise ValueError(f"books[{name}].kim_read = {kim_read!r}; chỉ nhận {KIM_READS}")
     if (layout == LAYOUT_STT and n_columns == DEFAULT_N_COLUMNS and qpc == 0
             and det_xmargin is None and det_thr is None and box_decoder == BOX_DECODER_LEGACY
             and detector_ckpt is None and detector_resize == DETECTOR_RESIZE_LINEAR
             and crop_source == CROP_SOURCE_PROCESSED
             and kim_lang_type == KIM_LANG_TYPE_DEFAULT and kim_ocr_id == KIM_OCR_ID_DEFAULT
-            and kim_font_type == KIM_FONT_TYPE_DEFAULT and not tier_dp and not qn_charfix):
+            and kim_font_type == KIM_FONT_TYPE_DEFAULT and not tier_dp and not qn_charfix
+            and kim_read == KIM_READ_LT1):
         return DEFAULT_LAYOUT
     return BookLayout(layout=layout, n_columns=n_columns, qn_per_column=qpc,
                       det_xmargin=det_xmargin, det_thr=det_thr, box_decoder=box_decoder,
                       detector_ckpt=detector_ckpt, detector_resize=detector_resize,
                       crop_source=crop_source, tier_dp=tier_dp, qn_charfix=qn_charfix,
                       kim_lang_type=kim_lang_type, kim_ocr_id=kim_ocr_id,
-                      kim_font_type=kim_font_type)
+                      kim_font_type=kim_font_type, kim_read=kim_read)
 
 
 def resolve_detector_ckpt(detector_ckpt: str | None, repo_root) -> str | None:

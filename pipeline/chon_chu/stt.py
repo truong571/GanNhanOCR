@@ -46,7 +46,9 @@ def lt2_reads(D, book: str, bdict: dict, log=print) -> np.ndarray:
             chars = cols.get(int(col))
             if not chars or ni < 0 or ni >= len(chars) or not chars[ni][1] or chars[ni][0] != oc:
                 continue
-            d = pp.by_line(chars[ni][0], [float(v) for v in chars[ni][1][:4]])
+            # (01/10, TN9) cache kim_l1skel_l2: định vị trong dòng lt1 bằng chữ LƯỢT 1 (phần tử thứ 3; cache lt1 = chữ)
+            k1 = chars[ni][2] if len(chars[ni]) > 2 and chars[ni][2] else chars[ni][0]
+            d = pp.by_line(k1, [float(v) for v in chars[ni][1][:4]])
             if d.get("st_line") == "ok":
                 out[i] = d.get("oth_line", "")
                 n_ok += 1

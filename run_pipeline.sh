@@ -310,9 +310,44 @@ step_extract() {
   done
 }
 
+# ---- ĐƯỜNG STT HAI LƯỢT (TN9, 01/10) -----------------------------------------
+# config `stt_hai_luot` (pipeline/stt_hai_luot): bản dựng CHÍNH theo books[] (kim_read l1skel_l2 + visual_dp) ở $DS_OUT;
+# bản dựng PHỤ (kim_read := aux_read = lt1) ở aux_dir, chạy SONG SONG với bản chính, cùng chuỗi build -> confusion_fix;
+# sau confusion: HỢP theo ô vào $LABELS_FINAL; sau rescue: CỔNG (strict R4 + vdp lệch syl_index). 0 API.
+HL_ENABLED=0; HL_AUX_DIR=""; HL_WORK=""; HL_GATE="off"; HL_VDP=0; HL_AUX_PID=""
+hai_luot_info() {
+  local _out
+  _out=$("$PY" -m pipeline.stt_hai_luot info --config "$CONFIG") || die "đọc mục stt_hai_luot của $CONFIG lỗi"
+  eval "$_out"
+}
+
+hai_luot_aux_chain() {   # bản dựng PHỤ: y hệt step_build + step_remediate của bản chính, chỉ khác config/out
+  local A="$HL_AUX_DIR" C="$HL_AUX_DIR/config.yaml"
+  X "$PY" -m pipeline.align_engine.build_dataset --config "$C" --reseg "$RESEG" --qd01-cells none --force --out "$A" &&
+  X "$PY" -m pipeline.tools.enrich_crop_quality --labels "$A/labels.csv" --src-root "$A" &&
+  X "$PY" -m pipeline.remediation --labels "$A/labels.csv" --out "$A" census &&
+  X "$PY" -m pipeline.remediation --labels "$A/labels.csv" --out "$A" apply --tau "$TAU_REMEDIATE" &&
+  X "$PY" -m pipeline.remediation.confusion_fix --in "$A/labels_remediated.csv" --out "$A/labels_final.csv" \
+      --fixes "$CONFUSION_FIXES" --measure
+}
+
 # ---- 3/6 build --------------------------------------------------------------
 step_build() {
   banner 3 build "align_engine.build_dataset: banded-DP align + consensus tier (100% tự động, --qd01-cells none)"
+  hai_luot_info
+  if (( HL_ENABLED )); then
+    info "ĐƯỜNG STT HAI LƯỢT (TN9): cache kim l1skel_l2 · bản dựng phụ $HL_AUX_DIR (song song) · hợp theo ô · cổng $HL_GATE · vdp $HL_VDP"
+    X "$PY" -m pipeline.stt_hai_luot cache --books $STT_BOOKS_ALL
+    X mkdir -p "$HL_AUX_DIR"
+    X "$PY" -m pipeline.stt_hai_luot aux-config --config "$CONFIG" --out "$HL_AUX_DIR/config.yaml"
+    if (( DRY_RUN )); then
+      hai_luot_aux_chain
+    else
+      ( hai_luot_aux_chain ) > "$HL_AUX_DIR/run.log" 2>&1 &
+      HL_AUX_PID=$!
+      info "bản dựng phụ chạy nền: pid $HL_AUX_PID · log $HL_AUX_DIR/run.log"
+    fi
+  fi
   X "$PY" -m pipeline.align_engine.build_dataset --config "$CONFIG" --reseg "$RESEG" \
       --qd01-cells none --force --out "$DS_OUT"
   [[ -f "$LABELS_RAW" ]] || die "bước build không sinh $LABELS_RAW"
@@ -362,6 +397,24 @@ step_remediate() {
   X "$PY" -m pipeline.remediation.confusion_fix \
       --in "$LABELS_REMED" --out "$LABELS_FINAL" --fixes "$CONFUSION_FIXES" --measure
   [[ -f "$LABELS_FINAL" ]] || die "bước confusion không sinh $LABELS_FINAL"
+  hai_luot_info
+  if (( HL_ENABLED )); then
+    if [[ -n "$HL_AUX_PID" ]]; then
+      info "chờ bản dựng phụ (pid $HL_AUX_PID) ..."
+      wait "$HL_AUX_PID" || die "bản dựng phụ lỗi — xem $HL_AUX_DIR/run.log"
+      HL_AUX_PID=""
+    fi
+    [[ -f "$HL_AUX_DIR/labels_final.csv" ]] || die "bản dựng phụ không sinh $HL_AUX_DIR/labels_final.csv"
+    X "$PY" -m pipeline.stt_hai_luot union --config "$CONFIG" --primary "$DS_OUT"
+  fi
+}
+
+# ---- 5a/6 cổng hai lượt (TN9) -------------------------------------------------
+step_hai_luot() {
+  hai_luot_info
+  (( HL_ENABLED )) || return 0
+  banner 5a hai_luot "cổng hai lượt TN9 (gate $HL_GATE, vdp $HL_VDP) -> $LABELS_FINAL"
+  X "$PY" -m pipeline.stt_hai_luot gate --config "$CONFIG" --primary "$DS_OUT" --labels "$LABELS_FINAL"
 }
 
 # ---- 5/6 rescue (Self-Training In-domain) ------------------------------------
@@ -928,12 +981,12 @@ stt_dry_run() {   # STT --dry-run: in đúng chuỗi 6 bước cũ; X/die/assert
   log ""
   log "${BLD}[DRY-RUN STT] sách: $BOOKS_LABEL · cache OCR: dùng cache cũ · DS_OUT=$DS_OUT · không chạy gì${RST}"
   (( RUN_ALL )) || print_route $STT_BOOKS_ALL
-  log "${BLD}Sẽ chạy 6 bước:${RST} setup -> extract($BOOKS_LABEL) -> build(100% tự động) -> remediate & confusion -> rescue (Self-Training) -> [chon_chu: TẮT theo config] -> export"
+  log "${BLD}Sẽ chạy 6 bước:${RST} setup -> extract($BOOKS_LABEL) -> build(100% tự động; + bản dựng phụ lt1 nếu stt_hai_luot) -> remediate & confusion (+ hợp theo ô) -> rescue (Self-Training) -> [cổng hai lượt] -> [chon_chu: TẮT theo config] -> export"
   (
     X() { printf '    %s$%s %s\n' "$CYA" "$RST" "$*"; }
     die() { printf '    %s(dry-run: sẽ dừng nếu thiếu)%s %s\n' "$YEL" "$RST" "$*"; }
     assert_qd01() { printf '    %s(dry-run)%s assert_qd01 %s (%s)\n' "$CYA" "$RST" "$1" "$2"; }
-    step_setup; step_extract; step_build; step_remediate; step_rescue; step_chon_chu; step_export
+    step_setup; step_extract; step_build; step_remediate; step_rescue; step_hai_luot; step_chon_chu; step_export
     log ""
     log "  (sau export: checkpoint/evidence sha256 -> $CHECKSUMS, $EVIDENCE)"
   )
@@ -1515,7 +1568,7 @@ stt_pipeline() {
   fi
 
   log ""
-  log "${BLD}Sẽ chạy 6 bước:${RST} setup -> extract($BOOKS_LABEL) -> build(100% tự động) -> remediate & confusion -> rescue (Self-Training) -> export"
+  log "${BLD}Sẽ chạy 6 bước:${RST} setup -> extract($BOOKS_LABEL) -> build(100% tự động; + bản dựng phụ lt1 nếu stt_hai_luot) -> remediate & confusion (+ hợp theo ô) -> rescue (Self-Training) -> [cổng hai lượt] -> export"
   log "  cache OCR : $([[ $FRESH_OCR == 1 ]] && echo 'XOÁ & OCR lại mới' || echo 'dùng cache cũ')"
   log "  ${YEL}export sẽ xuất bộ dữ liệu tự động hoàn toàn -> $FINAL_DIR/${RST}"
   if [[ "$NONINTERACTIVE" == "1" ]]; then
@@ -1535,6 +1588,9 @@ stt_pipeline() {
   step_rescue
   checkpoint rescue "$LABELS_FINAL"; tick rescue
   assert_qd01 "$LABELS_FINAL" rescue
+  step_hai_luot
+  checkpoint hai_luot "$LABELS_FINAL"; tick hai_luot
+  assert_qd01 "$LABELS_FINAL" hai_luot
   step_chon_chu
   step_export
   checkpoint export "${FINAL_OUT:-$FINAL_DIR}/labels.csv"; tick export

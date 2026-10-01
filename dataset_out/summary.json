@@ -1,55 +1,55 @@
 {
   "pages": 448,
-  "total_pairs": 83239,
+  "total_pairs": 83038,
   "tiers": {
-    "GOLD": 49946,
-    "REVIEW": 14368,
-    "SYLLABLE": 18925
+    "GOLD": 57386,
+    "REVIEW": 14286,
+    "SYLLABLE": 11366
   },
   "syllable_promoted": 0,
   "syllable_tu_silver": 0,
   "rules": {
-    "s1_inter_s2_direct": 46369,
-    "no_context": 12693,
-    "syl_ctx:tone": 224,
-    "corpus_reading:cr_7121_vồ": 73,
-    "syl_ctx:bigram": 10024,
-    "syl_ctx:corpus4": 8677,
-    "lop_nham:nguoi_2029A_vs_346B": 1471,
-    "s1_inter_s2_similar": 2967,
-    "s1_inter_s2_direct_am_sua_dau": 408,
-    "s1_inter_s2_direct_lowp": 52,
-    "not_plausible": 188,
-    "corpus_reading:cr_50e5_nhiều": 67,
-    "low_posterior": 16,
+    "s1_inter_s2_direct": 54869,
+    "no_context": 12167,
+    "syl_ctx:tone": 238,
+    "syl_ctx:bigram": 6215,
+    "corpus_reading:cr_7121_vồ": 104,
+    "syl_ctx:corpus4": 4913,
+    "lop_nham:nguoi_2029A_vs_346B": 1909,
+    "s1_inter_s2_direct_lowp": 170,
+    "s1_inter_s2_similar": 1761,
+    "s1_inter_s2_direct_am_sua_dau": 438,
+    "not_plausible": 183,
+    "corpus_reading:cr_50e5_nhiều": 34,
+    "low_posterior": 27,
     "corpus_reading:cr_4fc2_hế": 10
   },
   "luat_moi": {
-    "s1_inter_s2_direct_am_sua_dau": 408,
-    "  trong đó từ REVIEW": 40,
-    "  trong đó từ SILVER": 368,
+    "s1_inter_s2_direct_am_sua_dau": 438,
+    "  trong đó từ REVIEW": 52,
+    "  trong đó từ SILVER": 386,
     "s1_inter_s2_similar_cot_lech": 0,
     "s1_inter_s2_similar_nguoc": 0,
     "am_da_quyet": [
       "người"
     ]
   },
-  "char_classes": 1332,
+  "char_classes": 1519,
   "two_pass": true,
   "anchor_cap": 2.0,
-  "n_anchor_pairs": 24466,
+  "n_anchor_pairs": 14653,
   "visual_emission": {
     "enabled": false,
     "requested": false
   },
   "pass1b": {
     "n_cols": 4030,
-    "n_pair_keys": 14015,
-    "n_match_ops1": 83242,
-    "n_match_ops2": 83239,
-    "n_match_changed": 1721,
-    "n_band_touched": 3,
-    "n_p_register_ge_0.8": 82302
+    "n_pair_keys": 14113,
+    "n_match_ops1": 82976,
+    "n_match_ops2": 83038,
+    "n_match_changed": 2174,
+    "n_band_touched": 8,
+    "n_p_register_ge_0.8": 81751
   },
   "box_rule": "syl_index",
   "detector_thr": 0.2,
@@ -58,52 +58,91 @@
     "SachThanhTruyen2": {
       "det_thr": 0.2,
       "det_xmargin": 0.25,
-      "box_decoder": "legacy"
+      "box_decoder": "visual_dp",
+      "visual_dp": {
+        "pages": 160,
+        "items": 28849,
+        "kinds": {
+          "real": 28463,
+          "virtual": 4,
+          "merge": 2
+        },
+        "fallback": 380,
+        "low": 617,
+        "agree": 901,
+        "seconds": 54.1
+      }
     },
     "SachThanhTruyen4": {
       "det_thr": 0.2,
       "det_xmargin": 0.25,
-      "box_decoder": "legacy"
+      "box_decoder": "visual_dp",
+      "visual_dp": {
+        "pages": 145,
+        "items": 27791,
+        "kinds": {
+          "real": 26848,
+          "merge": 144,
+          "virtual": 114
+        },
+        "fallback": 685,
+        "low": 1202,
+        "agree": 960,
+        "seconds": 10.2
+      }
     },
     "SachThanhTruyen11": {
       "det_thr": 0.2,
       "det_xmargin": 0.25,
-      "box_decoder": "legacy"
+      "box_decoder": "visual_dp",
+      "visual_dp": {
+        "pages": 143,
+        "items": 27921,
+        "kinds": {
+          "real": 27276,
+          "virtual": 70,
+          "merge": 10
+        },
+        "fallback": 565,
+        "low": 799,
+        "agree": 804,
+        "seconds": 6.4
+      }
     }
   },
   "n_locked_cols_qd01": 0,
   "lock_scope": "col",
   "lock_shift": {},
   "count_source": {
-    "equal_qn": 63048,
-    "conflict": 6591,
-    "equal_ocr": 13600
+    "visual_dp": 83038
   },
   "box_source": {
-    "detector": 80438,
-    "midpoint": 2609,
-    "split": 192
+    "vdp_agree": 2585,
+    "vdp_det": 76678,
+    "vdp_low": 2527,
+    "vdp_fallback": 1072,
+    "vdp_virtual": 176
   },
-  "usable_char": 49946,
-  "usable_total": 68871,
+  "usable_char": 57386,
+  "usable_total": 68752,
   "pass1c": {
     "enabled": true,
     "tier_v3": {
-      "CHAR_A": 47549,
-      "REVIEW": 12937,
-      "SYL": 19443,
-      "CHAR_B": 3310
+      "CHAR_A": 56635,
+      "REVIEW": 12429,
+      "SYL": 11900,
+      "CHAR_B": 2074
     },
     "tier_v3_final": {
-      "CHAR_A": 47956,
-      "REVIEW": 12897,
-      "SYL": 19075,
-      "CHAR_B": 3311
+      "CHAR_A": 57072,
+      "REVIEW": 12377,
+      "SYL": 11514,
+      "CHAR_B": 2075
     },
     "l1": {
-      "doi": 408,
-      "giu_goc_thua": 110,
-      "hoa": 136
+      "doi": 438,
+      "giu_goc_thua": 275,
+      "hoa": 162
     },
     "qd01": {
       "n_cells_in_build": 0,
@@ -125,55 +164,81 @@
       "dat_locked_pending": true
     },
     "nguoi_ngoai_khoa": {
-      "n": 2295,
-      "lop_nham_review": 1471
+      "n": 2294,
+      "lop_nham_review": 1909
     },
     "flank_gold": {
-      "1": 40346,
-      "0": 17682,
-      "2": 25211
+      "1": 35891,
+      "0": 11303,
+      "2": 35844
     },
     "decisions": {
       "path": "/Users/truongmdn/TruongMDN/ThS/DoAn/GanNhanOCR/config/decisions.yaml",
       "corpus_readings_ap": {
-        "cr_7121_vồ": 73,
-        "cr_50e5_nhiều": 67,
+        "cr_7121_vồ": 104,
+        "cr_50e5_nhiều": 34,
         "cr_4fc2_hế": 10
       },
       "di_the_ap": {
-        "dt_5fb3_5fb7|stt2": 120,
-        "dt_4e9c_4e9e|stt2": 3,
-        "dt_5e84_5e92|stt2": 14,
-        "dt_57a9_580a|stt2": 13,
-        "dt_6c92_6ca1|stt2": 46,
-        "dt_6bce_6bcf|stt2": 8,
-        "dt_4e8a_4e8b|stt2": 24,
-        "dt_5b9e_5b9f|stt2": 1,
-        "dt_5225_522b|stt2": 3,
-        "dt_5fb3_5fb7|stt4": 185,
-        "dt_5ee9_5eea|stt4": 30,
-        "dt_5b90_5b9c|stt4": 13,
-        "dt_70ba_7232_stt4|stt4": 54,
-        "dt_6c92_6ca1|stt4": 88,
-        "dt_4e9c_4e9e|stt4": 8,
+        "dt_5fb3_5fb7|stt2": 19,
+        "dt_5e84_5e92|stt2": 61,
+        "dt_5225_522b|stt2": 6,
+        "dt_6c92_6ca1|stt2": 17,
+        "dt_57a9_580a|stt2": 8,
+        "dt_4e8a_4e8b|stt2": 18,
+        "dt_70dd_84b8|stt2": 1,
+        "dt_5ee9_5eea|stt4": 10,
+        "dt_6c92_6ca1|stt4": 127,
+        "dt_70ba_7232_stt4|stt4": 153,
         "dt_5225_522b|stt4": 38,
-        "dt_57a9_580a|stt4": 7,
-        "dt_5e84_5e92|stt4": 1,
-        "dt_4e8a_4e8b|stt4": 1,
+        "dt_5e84_5e92|stt4": 20,
+        "dt_5fb3_5fb7|stt4": 9,
+        "dt_5b90_5b9c|stt4": 8,
+        "dt_57a9_580a|stt4": 1,
         "dt_6c92_6ca1|stt11": 5,
-        "dt_5e84_5e92|stt11": 326,
-        "dt_4e9c_4e9e|stt11": 23,
-        "dt_70dd_84b8|stt11": 8,
-        "dt_5fb3_5fb7|stt11": 3,
-        "dt_5225_522b|stt11": 41,
-        "dt_5b90_5b9c|stt11": 3,
-        "dt_6bce_6bcf|stt11": 4,
-        "dt_4e8a_4e8b|stt11": 2,
-        "dt_5b9e_5b9f|stt11": 9,
-        "dt_57a9_580a|stt11": 1
+        "dt_5e84_5e92|stt11": 387,
+        "dt_70dd_84b8|stt11": 14,
+        "dt_5225_522b|stt11": 57,
+        "dt_57a9_580a|stt11": 20,
+        "dt_5b9e_5b9f|stt11": 10
       },
-      "lop_nham_review": 1471,
-      "n_label_canonical_ne_label": 1082
+      "lop_nham_review": 1909,
+      "n_label_canonical_ne_label": 989
+    }
+  },
+  "layout_gate": {
+    "SachThanhTruyen2": {
+      "layout": "stt",
+      "n_columns": 9,
+      "qn_syllables_per_column": 0,
+      "pages": 160,
+      "page_ok": 160,
+      "col_method": {
+        "?": 160
+      },
+      "pages_not_ok": []
+    },
+    "SachThanhTruyen4": {
+      "layout": "stt",
+      "n_columns": 9,
+      "qn_syllables_per_column": 0,
+      "pages": 145,
+      "page_ok": 145,
+      "col_method": {
+        "?": 145
+      },
+      "pages_not_ok": []
+    },
+    "SachThanhTruyen11": {
+      "layout": "stt",
+      "n_columns": 9,
+      "qn_syllables_per_column": 0,
+      "pages": 143,
+      "page_ok": 143,
+      "col_method": {
+        "?": 143
+      },
+      "pages_not_ok": []
     }
   }
 }

@@ -52,6 +52,8 @@ TRACE = ["image", "nom_idx", "syl_idx", "syllable_ocr", "syllable_raw", "qn_fix_
          # (c') 30/09: kiểm lại cờ crop trên ảnh gốc (mechanism_gates) + bước 4b chọn chữ bằng ảnh (pipeline.chon_chu):
          # chỉ có khi bước đó chạy cho sách — STT (tắt) không có cột nào mới
          "crop_recheck", "chon_chu", "chon_chu_p", "chon_chu_truoc",
+         # (01/10, TN9) đường STT hai lượt (pipeline.stt_hai_luot): nguồn bản dựng:lớp bằng chứng + tầng|nhãn trước cổng
+         "hai_luot", "hai_luot_truoc",
          # B-2 (--visual-emission): chỉ có khi build bật cờ; tắt cờ -> không ghi (không bịa cột)
          "p_visual_syl", "visual_fold", "visual_argmax", "visual_max_p"]
 # columns.csv: khoá (book,page,column) + các đại lượng cấp CỘT (giá trị đầu tiên gặp).

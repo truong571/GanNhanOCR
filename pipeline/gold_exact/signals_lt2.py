@@ -263,6 +263,10 @@ def signal(G: pd.DataFrame, KB: pd.DataFrame, cfg: dict | None, override: str | 
     kb = KB.set_index("cell_uid").reindex(G.cell_uid)
     kchar = kb["kim_char"].fillna("").values if "kim_char" in kb else np.array([""] * n, dtype=object)
     kbox = kb["kim_box"].values if "kim_box" in kb else np.array([None] * n, dtype=object)
+    # (2026-10-01, TN9) cache kim_l1skel_l2: chữ của ô có thể là chữ lt2 -> ĐỊNH VỊ trong dòng lt1 bằng chữ lt1 tại vị trí
+    # (kim_lt1; cache lt1 thì kim_lt1 == kim_char -> hành vi cũ không đổi)
+    k1 = kb["kim_lt1"].fillna("").values if "kim_lt1" in kb else kchar
+    k1 = np.where(k1 == "", kchar, k1)
     for s8, P in pages.items():
         idx = np.nonzero(S8 == s8)[0]
         by_page = pd.Series(idx).groupby(G.page.values[idx]).apply(list).to_dict()
@@ -277,11 +281,12 @@ def signal(G: pd.DataFrame, KB: pd.DataFrame, cfg: dict | None, override: str | 
                 b = kbox[i]
                 if not isinstance(b, (list, tuple)) or len(b) < 4:
                     st[i] = "no_lt1_box"; continue
-                if kchar[i] != G.ocr_char.values[i]:
+                if kchar[i] != G.ocr_char.values[i] and k1[i] != G.ocr_char.values[i]:
+                    # (01/10, TN9) hàng hợp từ bản dựng phụ lt1 mang chữ lt1 (== k1) dù cột kim là cache l1skel_l2
                     st[i] = "lt1_mismatch"; continue
-                d = pp.by_line(kchar[i], [float(v) for v in b[:4]])
+                d = pp.by_line(k1[i], [float(v) for v in b[:4]])
                 self_ctl[0] += 1
-                self_ctl[1] += int(me.by_line(kchar[i], [float(v) for v in b[:4]]).get("oth_line") == kchar[i])
+                self_ctl[1] += int(me.by_line(k1[i], [float(v) for v in b[:4]]).get("oth_line") == k1[i])
                 st[i] = d.get("st_line", "no_loc")
                 if st[i] == MATCH_OK:
                     ch[i] = d["oth_line"]

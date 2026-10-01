@@ -364,8 +364,9 @@ def test_signatures():
     check("_get_qn_lines n_columns mặc định 9",
           inspect.signature(_get_qn_lines).parameters["n_columns"].default == 9)
     src = (REPO / "pipeline" / "align_engine" / "build_dataset.py").read_text(encoding="utf-8")
-    check("build_dataset PASS 1: lay = book_layout(b) và align_page(..., layout=lay)",
-          "lay = book_layout(b)" in src and "layout=lay)" in src)
+    # 01/10 (TN9): align_page nhận thêm syl_ref (hộp tham chiếu syl_index cho cổng vdp) -> "layout=lay, syl_ref=…"
+    check("build_dataset PASS 1: lay = book_layout(b) và align_page(..., layout=lay, syl_ref=…)",
+          "lay = book_layout(b)" in src and "layout=lay, syl_ref=syl_ref_on)" in src)
     src0 = (REPO / "pipeline" / "step0_setup.py").read_text(encoding="utf-8")
     src1 = (REPO / "pipeline" / "step1_extract.py").read_text(encoding="utf-8")
     check("step0/step1: chỉ nhánh layout=lithograph|prose được vắng pdf",
@@ -373,8 +374,11 @@ def test_signatures():
           and 'book_cfg.get("layout") in ("lithograph", "prose") and "pdf" not in book_cfg' in src1)
     import yaml
     cfg = yaml.safe_load((REPO / "config" / "pipeline.yaml").read_text(encoding="utf-8"))
-    check("config/pipeline.yaml: 3 sách STT không khai layout/n_columns -> DEFAULT_LAYOUT",
-          all(BL.book_layout(b) is BL.DEFAULT_LAYOUT for b in cfg["books"]) and len(cfg["books"]) == 3)
+    # 01/10 (TN9): sách STT khai kim_read + box_decoder (đường hai lượt) nên KHÔNG còn là DEFAULT_LAYOUT; bố cục vẫn STT 9 cột
+    check("config/pipeline.yaml: 3 sách STT không khai layout/n_columns -> bố cục STT 9 cột, 1 tầng",
+          all(BL.book_layout(b).layout == BL.LAYOUT_STT and BL.book_layout(b).n_columns == 9
+              and BL.book_layout(b).qn_per_column == 0 and "layout" not in b and "n_columns" not in b
+              for b in cfg["books"]) and len(cfg["books"]) == 3)
 
 
 def test_prose():
@@ -665,8 +669,11 @@ def test_visual_dp():
     except ValueError:
         check("box_decoder sai -> ValueError", True)
     stt = yaml.safe_load((REPO / "config" / "pipeline.yaml").read_text(encoding="utf-8"))["books"]
-    check("config/pipeline.yaml (STT): KHÔNG sách nào khai box_decoder -> legacy (md5 STT giữ)",
-          all("box_decoder" not in x for x in stt) and all(BL.book_layout(x) is BL.DEFAULT_LAYOUT for x in stt))
+    # 01/10 (TN9, "bản chặt"): 3 sách STT chuyển visual_dp + kim_read l1skel_l2 (md5 3 trang 59e436d7… -> 91c6c10e… với
+    # lệnh hồi quy reseg mặc định; bỏ hai khoá = trở về 59e436d7… — đã kiểm 01/10)
+    check("config/pipeline.yaml (STT): 3 sách khai box_decoder visual_dp + kim_read l1skel_l2 (đường hai lượt TN9)",
+          all(x.get("box_decoder") == "visual_dp" and x.get("kim_read") == "l1skel_l2" for x in stt)
+          and all(BL.book_layout(x).box_decoder == "visual_dp" for x in stt))
     src = inspect.getsource(AP.align_page)
     check("align_page: visual_dp chạy PASS 1 như pitch + ghi rec['vdp_page']",
           'visual_dp_on = box_decoder in ("visual_dp", "visual_dp_hybrid")' in src and 'rec["vdp_page"] = vdp_page' in src)

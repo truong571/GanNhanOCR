@@ -858,6 +858,8 @@ def _record(book, page, page_png, idx, p, dec, s3, seg_backend) -> dict:
         # A-6 (N4d/N4e): số đếm cột (n_* và count_source sang columns.csv ở S9) + nguồn hộp
         "n_ocr": p.get("n_ocr", ""), "n_qn": p.get("n_qn", ""), "n_det": p.get("n_det", ""),
         "count_source": p.get("count_source", ""), "box_source": p.get("box_source", ""),
+        # (2026-10-01, TN9) hộp tham chiếu syl_index của ô (chỉ khi stt_hai_luot.vdp_gate) -> $out/boxes_syl.csv
+        **({"bbox_syl": p["bbox_syl"]} if "bbox_syl" in p else {}),
         # (2026-09-23) cờ cột "số đếm âm QN không sửa được" — CHỈ có khi sách là lithograph
         # (luật 6/8) hoặc prose (dp_ratio); STT không có khoá này -> labels.csv không có cột.
         **({COL_QN_UNFIXED: int(p[COL_QN_UNFIXED])} if COL_QN_UNFIXED in p else {}),
@@ -1202,6 +1204,12 @@ def main():
     nom_to_qn = build_nom_to_qn(qn_to_nom)
     similar = load_similarity_dict(str(REPO / paths["similar_dict"]))
     data_root = REPO / paths["data_dir"]
+    # (2026-10-01, TN9) đường STT hai lượt + cổng vdp: sách box_decoder visual_dp ghi thêm HỘP THAM CHIẾU syl_index
+    # (= bản dựng legacy) vào $out/boxes_syl.csv để cổng "vdp_low/virtual/fallback lệch legacy" so được. Chỉ bật khi
+    # config có stt_hai_luot.vdp_gate = true (config/pipeline.yaml); không đổi hộp/nhãn nào.
+    _hl = config.get("stt_hai_luot") or {}
+    syl_ref_on = bool(_hl.get("enabled", False) and _hl.get("vdp_gate", False))
+    syl_box_rows: list = []
 
     vs3 = None
     if args.use_s3:
@@ -1330,7 +1338,7 @@ def main():
                                                  else locked_cols.get((_book_code(book), page))),
                                  legacy_also_columns=(locked_cols.get((_book_code(book), page))
                                                       if args.lock_scope != "col" else None),
-                                 layout=lay)
+                                 layout=lay, syl_ref=syl_ref_on)
             except DetectorUnavailableError:
                 # KHÔNG nuốt: thiếu detector mà vẫn chạy tiếp = lặng lẽ tách chữ bằng
                 # trung điểm cho TOÀN BỘ corpus. Phải dừng hẳn.
@@ -1462,6 +1470,11 @@ def main():
                     if _rb is not None:
                         reseg_boxes, box_source, count_source = _rb, _bs, _cs
                 # PASS 1c (A-7) cần ops CUỐI + hộp cuối của cột (khe QĐ-01 không có record)
+                syl_boxes = None
+                if cs.get("G_syl") is not None:
+                    # (TN9) hộp tham chiếu syl_index (legacy) theo ops lượt 2 — y như PASS 1b của bản dựng legacy
+                    syl_boxes, _sbs, _scs = ap_mod.assign_boxes(cs["G_syl"], ops2, cs["n_ocr"], cs["n_qn"],
+                                                                cluster=cs["cluster"], cb=cs.get("cb_syl"))
                 cs["ops2"], cs["post"], cs["boxes2"] = ops2, post, reseg_boxes
                 cs["box_source2"], cs["count_source2"] = box_source, count_source
                 col_pairs = []
@@ -1479,6 +1492,8 @@ def main():
                         "n_ocr": cs.get("n_ocr", ""), "n_qn": cs.get("n_qn", ""),
                         "n_det": cs.get("n_det", ""), "count_source": count_source,
                         "box_source": box_source[i] if box_source else "",
+                        **({"bbox_syl": (syl_boxes[i] if syl_boxes and 0 <= i < len(syl_boxes) else None)}
+                           if syl_boxes is not None else {}),
                         **({COL_QN_UNFIXED: cs[COL_QN_UNFIXED]} if COL_QN_UNFIXED in cs else {}),
                         **({COL_QN_FIX_KIND: (cs["qn_fix_kind"][j]
                                               if j < len(cs["qn_fix_kind"]) else "")}
@@ -1826,6 +1841,11 @@ def main():
                     if q_cu:
                         r["_image_cu"] = f"{r['tier'].lower()}/{fn_cu}"
             r["_image"], r["_md5"] = img_rel or "", q["md5"] if q else ""
+            if "bbox_syl" in r:
+                syl_box_rows.append({"book": r["book"], "page": r["page"], "column": r["column"],
+                                     "nom_idx": r.get("nom_idx", ""), "syl_idx": r.get("syl_idx", ""),
+                                     "bbox": json.dumps(r.get("bbox")), "bbox_syl": json.dumps(r.get("bbox_syl")),
+                                     "box_source": r.get("box_source", "")})
             labels.append({
                 # khoá sắp xếp, KHÔNG ghi ra CSV (xem `fields`) — chỉ để T6.b
                 "_sort": (r["book"], r["page"], int(r["column"]), int(r["idx"])),
@@ -1980,6 +2000,14 @@ def main():
             r.pop("_sort", None)
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader(); w.writerows(labels)
+    if syl_box_rows:
+        # (2026-10-01, TN9) sidecar hộp tham chiếu syl_index (legacy) — khoá (book,page,column,nom_idx,syl_idx);
+        # pipeline.stt_hai_luot gate đọc để hạ ô vdp_low/virtual/fallback LỆCH legacy (IoU < 0,5). Không vào labels.csv.
+        syl_box_rows.sort(key=lambda r: (r["book"], r["page"], int(r["column"]), str(r["nom_idx"]), str(r["syl_idx"])))
+        with open(out / "boxes_syl.csv", "w", encoding="utf-8", newline="") as f:
+            w = csv.DictWriter(f, fieldnames=["book", "page", "column", "nom_idx", "syl_idx", "bbox", "bbox_syl", "box_source"])
+            w.writeheader(); w.writerows(syl_box_rows)
+        print(f"  [TN9] {out / 'boxes_syl.csv'}: {len(syl_box_rows):,} ô có hộp tham chiếu syl_index", flush=True)
     if vis_em is not None:
         # B-2: sidecar riêng cùng số dòng/thứ tự labels.csv (khoá image + book,page,column,nom_idx)
         _vf = ["image", "book", "page", "column", "nom_idx", "syl_idx", "syllable", "tier", "tier_v3", *FIELDS_B2]

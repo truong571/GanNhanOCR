@@ -393,8 +393,14 @@ def eval_stt(cov, kim: KimCols, all_dir: Path, primary: str, detect_check: int):
                 d["status"] = "no_lt1_box"; rows.append(d); continue
             kc, kb = chars[ni][0], [float(v) for v in chars[ni][1][:4]]
             d["lt1_box"] = json.dumps([int(v) for v in kb])
-            if kc != r.ocr_char:
+            # (01/10, TN9) cache kim_l1skel_l2: chữ của ô có thể là chữ lt2 (bản dựng chính) HOẶC chữ lt1 (hàng hợp từ bản dựng
+            # phụ lt1) -> khớp khi ocr_char == chữ cột (lượt chính) hoặc == phần tử thứ 3 (lượt 1); phép đo "lt1 vs lt2" dùng chữ
+            # LƯỢT 1 tại vị trí (cache lt1 thì == chữ) — định vị trong dòng lt1 + so với lt2 bằng chữ này.
+            k1 = chars[ni][2] if len(chars[ni]) > 2 and chars[ni][2] else kc
+            if kc != r.ocr_char and k1 != r.ocr_char:
                 d["status"] = "lt1_mismatch"; rows.append(d); continue
+            kc = k1
+            d["ocr_char_o"] = d["ocr_char"]; d["ocr_char"] = kc
             s_l, s_g = me.by_line(kc, kb), me.by_geom(kb)
             self_ctl[0] += 1
             self_ctl[1] += int(s_l.get("st_line") == "ok" and s_g["st_geom"] == "ok")

@@ -221,8 +221,9 @@ def test_geo(tmp: Path):
     chk("kim_geo: hai hộp cùng chứa tâm -> hộp có tâm gần nhất", g[4] == "丁", str(g[4]))
     cfg = _cfg()
     kvk = POL.book_cfg(cfg, "KimVanKieu1884"); l83 = POL.book_cfg(cfg, "LucVanTien1883")
-    chk("config: qn_geo L83/KVK/Chr, np_geo CHỈ KVK, IHR/Borg/STT tắt",
-        kvk["qn_geo"] and kvk["np_geo"] and l83["qn_geo"] and not l83["np_geo"] and POL.book_cfg(cfg, "Chrestomathie1872")["qn_geo"]
+    # 01/10: config/chon_chu.yaml TẮT qn_geo của L83 (dị bản 72,1 % < GOLD − 3 điểm, cổng TN9) -> chỉ KVK/Chr mang qn_geo
+    chk("config: qn_geo KVK/Chr (L83 TẮT 01/10), np_geo CHỈ KVK, IHR/Borg/STT tắt",
+        kvk["qn_geo"] and kvk["np_geo"] and not l83["qn_geo"] and not l83["np_geo"] and POL.book_cfg(cfg, "Chrestomathie1872")["qn_geo"]
         and not POL.book_cfg(cfg, "LucVanTien1916")["qn_geo"] and not POL.book_cfg(cfg, "SachKinhThayCaBinh")["qn_geo"])
     bad = json.loads(json.dumps(cfg)); bad["books"]["SachKinhThayCaBinh"]["qn_geo"] = True
     try:
@@ -248,7 +249,7 @@ def test_geo(tmp: Path):
     chk("P3: not_plausible có kim ∧ geo ≡ kim -> nâng (KVK); không kim -> không; no_context/GOLD không bao giờ",
         list(p3) == [False, False, False, False, True, False, False, False], str(list(p3)))
     q2, q3 = POL.decide_geo(tier, grp, kim, syl, geo, already, l83, lambda x: R.get(x, set()), veq)
-    chk("L83: P2 có, P3 TẮT", q2[0] and not q3.any())
+    chk("L83 (qn_geo TẮT 01/10): P2 TẮT, P3 TẮT", not q2.any() and not q3.any())
     # ghi vào bảng nhãn qua run() với process_book giả (không cần mô hình/ảnh)
     Lb = pd.DataFrame(dict(image=["gold/a.png", "", "gold/c.png"], book=["kvk"] * 3, page=["p1"] * 3, column=["1"] * 3,
                            ocr_char=["城", "城", "甲"], syllable=["thành", "khongdocx", "giáp"], label=["城", "", "甲"],

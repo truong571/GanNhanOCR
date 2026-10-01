@@ -67,7 +67,8 @@ def _detect(page_name: str, data_dir: Path, qn_dict_set: set,
     if color_img is None:
         return None
 
-    ocr_path = data_dir / "detected" / f"{page_name}_ocr_cache.json"
+    # (2026-10-01, TN9) books[].kim_read: "lt1" = detected/ (cũ, byte-identical); "l1skel_l2" = kim_l1skel_l2/
+    ocr_path = data_dir / lay.kim_cache_dir / f"{page_name}_ocr_cache.json"
     if not ocr_path.exists():
         return None
     ocr_data = json.load(open(ocr_path, encoding="utf-8"))
@@ -708,7 +709,7 @@ def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
                     encoder=None, page_bgr=None, det=None, page_boxes=None,
                     box_rule: str = "syl_index", legacy_page_boxes=None,
                     box_decoder: str = "legacy", page_boxes_low=None, tier_n=None,
-                    tier_dp: bool = False, tier_rule=None
+                    tier_dp: bool = False, tier_rule=None, syl_ref: bool = False
                     ) -> tuple[list[dict], int, list[dict], list | None, dict]:
     """Như `_pair_new` nhưng trả thêm (ops lượt 1, reseg_boxes, box_info) — trạng thái
     cột cho PASS 1b (flow N3g): build_dataset chạy DP lại với `cost_fn` neo ngữ liệu
@@ -734,6 +735,7 @@ def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
     use_det = (reseg_mode == "detector" and det is not None and page_boxes is not None
                and bool(cluster.get("x_range")))
     G = cb = None
+    G_syl = cb_syl = None       # (TN9) syl_ref: hộp thô + ép đếm của đường syl_index (legacy) cho cổng vdp
     n_det = ""
     count_source = ""
     box_source = None
@@ -742,6 +744,13 @@ def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
     elif use_det and box_rule == "syl_index":
         G = det.raw_column_boxes(page_boxes, cluster["x_range"], DETECTOR_XMARGIN)
         n_det = len(G)                            # số hộp thô ở det_thr — giữ nguyên nghĩa I5 cả khi pitch
+        if syl_ref and box_decoder == "pitch":
+            # (2026-10-01, TN9) giữ HỘP THAM CHIẾU của đường syl_index (= box_decoder legacy): cùng G ở det_thr,
+            # cùng ép đếm (enforce_count chỉ phụ thuộc hộp, n, ảnh xám trang) -> PASS 1b gán lại theo ops lượt 2
+            # bằng assign_boxes y như bản dựng legacy. Chỉ để CỔNG vdp lệch legacy (stt_hai_luot), không đổi hộp.
+            G_syl = [list(g) for g in G]
+            if n_qn > 0 and len(G) != n_qn and len(G) != n_ocr:
+                cb_syl = det.enforce_count(G, n_qn)
         G_src = None
         if box_decoder == "pitch" and page_boxes_low is not None and n_qn > 0:
             # (2026-09-22) giải mã theo bước cột: ứng viên ≥ 0,05 + ô ảo chiếu mực -> đúng N hộp
@@ -783,6 +792,7 @@ def _pair_new_state(cluster: dict, syllables: list[str], qn_to_nom, similar,
                 "count_source": count_source, "box_source": box_source,
                 "box_rule": box_rule if use_det else reseg_mode,
                 "G_src": (G_src if (use_det and box_rule == "pitch") else None),
+                **({"G_syl": G_syl, "cb_syl": cb_syl} if syl_ref else {}),
                 "col_tiers": col_tiers}     # (tier_dp) [(chữ, âm)] mỗi tầng; None = DP cả cột
     out = []
     for p in mp:
@@ -824,7 +834,8 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                qn_to_nom: dict, similar: dict, mode: str,
                reseg_mode: str = "midpoint", encoder=None,
                box_rule: str = "syl_index", locked_columns=None,
-               legacy_also_columns=None, layout: BookLayout | None = None) -> dict | None:
+               legacy_also_columns=None, layout: BookLayout | None = None,
+               syl_ref: bool = False) -> dict | None:
     """Align one page in the given mode. Returns per-page record with pairs.
 
     layout (pipeline.align_engine.book_layout.BookLayout, tuỳ chọn): số cột kỳ vọng
@@ -961,7 +972,8 @@ def align_page(page_name: str, data_dir: Path, qn_dict_set: set,
                 box_rule=col_rule, legacy_page_boxes=legacy_page_boxes,
                 box_decoder=box_decoder, page_boxes_low=page_boxes_low,
                 tier_n=tier_n_by_line.get(line_id),
-                tier_dp=tier_dp, tier_rule=tier_rule)
+                tier_dp=tier_dp, tier_rule=tier_rule,
+                syl_ref=bool(syl_ref and visual_dp_on))
             n_gap_total += n_gap
             # syllable_raw = âm SAU normalize_column (đầu vào DP); syllable_ocr = âm
             # VietOCR nguyên văn. Chỉ PHÁT THÊM vào pair, không đổi hành vi ghép.

@@ -1,41 +1,41 @@
 {
-  "n_rows": 83239,
+  "n_rows": 83038,
   "census": {
-    "dup_bbox_rows": 0,
-    "dup_bbox_groups": 0,
-    "cross_col_rows": 104,
-    "cross_col_groups": 52,
-    "union_rows": 107,
-    "union_groups": 53,
-    "conflicting_groups": 47,
-    "provably_wrong_rows": 48,
+    "dup_bbox_rows": 40,
+    "dup_bbox_groups": 20,
+    "cross_col_rows": 17,
+    "cross_col_groups": 6,
+    "union_rows": 68,
+    "union_groups": 50,
+    "conflicting_groups": 8,
+    "provably_wrong_rows": 16,
     "by_tier": {
-      "GOLD": 80,
-      "SYLLABLE": 27
+      "GOLD": 53,
+      "SYLLABLE": 15
     },
-    "md5_dup_rows": 3,
-    "md5_dup_groups": 1
+    "md5_dup_rows": 17,
+    "md5_dup_groups": 5
   },
-  "quarantined_rows": 101,
-  "quarantined_conflict": 95,
-  "quarantined_duplicate": 6,
-  "kept_representatives": 6,
+  "quarantined_rows": 26,
+  "quarantined_conflict": 24,
+  "quarantined_duplicate": 2,
+  "kept_representatives": 42,
   "demoted_similar_lowcos": 0,
   "split_reassigned_rows": 0,
   "md5_spanning_splits_original": 0,
   "md5_spanning_splits_residual": 0,
   "md5_spanning_splits_after": 0,
   "tier_before": {
-    "GOLD": 49946,
-    "SYLLABLE": 18925,
-    "REVIEW": 14368
+    "GOLD": 57386,
+    "REVIEW": 14286,
+    "SYLLABLE": 11366
   },
   "tier_after": {
-    "GOLD": 49867,
-    "SYLLABLE": 18903,
-    "REVIEW": 14368,
-    "QUARANTINE": 101
+    "GOLD": 57365,
+    "REVIEW": 14286,
+    "SYLLABLE": 11361,
+    "QUARANTINE": 26
   },
-  "usable_before": 68871,
-  "usable_after": 68770
+  "usable_before": 68752,
+  "usable_after": 68726
 }

@@ -176,7 +176,8 @@ def analyse_page(page_df: pd.DataFrame, sym_rows: list, R: dict, conf_hi=0.8, sh
         pit = pitch.get(r["column"]) or chh
         rec = dict(idx=idx, book=r["book_key"], page=r["page"], column=r["column"], tier=r["tier"], syl=syl, label=label, kim=kim, label_class=char_class(label),
                    x0=x0, y0=y0, x1=x1, y1=y1, pitch=pit, v="", v_class="", vconf=np.nan, ang=np.nan, dx=np.nan, dy=np.nan, dy_pitch=np.nan, vw=np.nan, vh=np.nan,
-                   harm=np.nan, status="no_vision", shift_dx=np.nan, shift_dy=np.nan, shift_conf=np.nan, v_in_R=False, _k=k)
+                   harm=np.nan, status="no_vision", shift_dx=np.nan, shift_dy=np.nan, shift_conf=np.nan, v_in_R=False,
+                   vx0=np.nan, vy0=np.nan, vx1=np.nan, vy1=np.nan, _k=k)
         j = int(assign[k])
         if j >= 0:
             s = syms[j]
@@ -185,7 +186,7 @@ def analyse_page(page_df: pd.DataFrame, sym_rows: list, R: dict, conf_hi=0.8, sh
             cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
             scx, scy = (sx0 + sx1) / 2, (sy0 + sy1) / 2
             rec.update(v=ch, v_class=char_class(ch), vconf=conf if conf is not None else np.nan, ang=ang, dx=(scx - cx) / cw, dy=(scy - cy) / chh, dy_pitch=(scy - cy) / pit,
-                       vw=(sx1 - sx0) / cw, vh=(sy1 - sy0) / chh, v_in_R=ch in R.get(syl, set()))
+                       vw=(sx1 - sx0) / cw, vh=(sy1 - sy0) / chh, v_in_R=ch in R.get(syl, set()), vx0=sx0, vy0=sy0, vx1=sx1, vy1=sy1)
             if not label:
                 rec["status"] = "syllable_seen"
             elif same_char(ch, label):
@@ -322,7 +323,7 @@ def run_cells(cid: str, books: list[str] | None, conf_hi=0.8, shift_min=0.5, out
     summ["theo_cuon_GOLD"] = per_book
     summ["loo_tong"] = dict(n=len(errs["zero"]), zero=_frac_le(errs["zero"]), const=_frac_le(errs["const"]), lin=_frac_le(errs["lin"]))
     cols = ["book", "page", "column", "tier", "syl", "label", "label_class", "kim", "x0", "y0", "x1", "y1", "pitch", "v", "v_class", "vconf", "ang", "dx", "dy", "dy_pitch", "harm",
-            "status", "v_in_R"]
+            "status", "v_in_R", "vx0", "vy0", "vx1", "vy1"]
     D[cols + ["shift_dx", "shift_dy"]].to_csv(out / "cells.csv.gz", index=False)
     dis = G[(G["status"] == "disagree") & G["hi"] & (G["label_class"] == "URO") & (G["v_class"] == "URO")]
     dis[cols].to_csv(out / "disagree_candidates.csv", index=False)

@@ -1,0 +1,41 @@
+{
+ "registered_at": "2026-10-04 23:45:35",
+ "ghi_chu": "Đăng ký TRƯỚC khi chạy bất kỳ số đo KẾT QUẢ nào của thí nghiệm crop. Đã làm: chỉ kiểm độ trung thực của bản sao đường cắt (2.400/2.400 crop dựng lại GIỐNG TỪNG ĐIỂM ẢNH crop giao nộp, 8 sách × 300 ô). Đã biết từ Vision (không dùng làm kết quả ở đây): 'hại hình học' theo sách và cơ chế (L16 hộp thấp; viết tay lệch tâm từng ô).",
+ "thiet_ke": {
+  "cat_crop": "sao đúng build_dataset.save_crop (cửa sổ bbox±pad → carve mực hàng xóm → tighten_box; điểm ảnh gốc nếu sách khai crop_source=original); chỉ thay tham số cửa sổ/bbox",
+  "diem": "bộ nhúng của pipeline: MultiEnc v1+v2 (norm=True cho crop, norm=False cho glyph phông NomNaTong); s(c)=e_crop·e_font(c); m_hom = s(nhãn) − max_{c∈R(âm)∖{nhãn}, glyph khác} s(c); top1 ⇔ m_hom > 0",
+  "nhan": "L16/TK: nhãn NGƯỜI IHR (gt) khi có; các sách khác: nhãn pipeline (E2 chỉ ô Vision khớp chữ nhãn)",
+  "thong_ke": "hiệu so cặp theo ô (biến thể − cơ sở); KTC95 % bootstrap THEO TRANG (5.000 lần, hạt giống 17); ô thiếu điểm ở cơ sở hoặc biến thể bị loại"
+ },
+ "E1_noi_cua_so_L16": {
+  "quan_the": "mọi ô GOLD của L16 có nhãn người (KHÔNG dùng Vision) — quần thể áp dụng thật",
+  "bien_the": [
+   "base: pad dọc 0,12 (hiện hành)",
+   "py20: pad dọc 0,20",
+   "py30: pad dọc 0,30",
+   "py45: pad dọc 0,45",
+   "adapt: nới pad dọc 0,06/bước tới tối đa 0,45 chừng nào mực còn chạm mép trên/dưới cửa sổ sau carve (≥3 điểm ảnh trong 2 hàng mép) — KHÔNG dùng Vision"
+  ],
+  "diem_cuoi_chinh": "Δ top1 (điểm %) của `adapt` so với base trên TOÀN BỘ ô GOLD L16 có nhãn người",
+  "ket_luan_cai_thien": "cận dưới KTC95 % của Δtop1(adapt) > 0 VÀ Δtop1(adapt) ≥ +0,3 điểm %; ngược lại ghi 'không cải thiện/không đủ lớn'",
+  "phu": "py20/py30/py45 (Holm trên 3 so sánh); Δ m_hom, Δ s_label; phân tầng 'bị cắt' (Vision agree & hại=1) / 'không bị cắt'; tỉ lệ ô có crop đổi",
+  "bao_ve_khong_hai": "trên ô KHÔNG bị cắt: cận dưới KTC95 % của Δtop1 ≥ −0,3 điểm %; vi phạm thì ghi rõ"
+ },
+ "E2_doi_tam_o_lech": {
+  "quan_the": "ô GOLD mà Vision khớp chữ nhãn và |dy| > 0,10 bước cột (lệch tâm), theo sách Chr, stt2, stt4, stt11 (nhãn = nhãn pipeline đã được Vision xác nhận)",
+  "bien_the": [
+   "base",
+   "rc_full: dời tâm hộp về tâm glyph Vision (giữ cỡ hộp)",
+   "rc_half: dời nửa đường",
+   "rc_rand: đối chứng — dời cùng độ lớn, hướng ngẫu nhiên (hạt giống cố định)",
+   "vis_union: ORACLE — cửa sổ ⊇ hộp glyph Vision (nở 4 %)",
+   "adapt: như E1"
+  ],
+  "diem_cuoi_chinh": "Δ top1 (điểm %) của rc_full TRỪ Δ top1 của rc_rand, gộp 4 sách, KTC95 % theo trang",
+  "ket_luan_cai_thien": "cận dưới KTC95 % của (Δtop1 rc_full − Δtop1 rc_rand) > 0 VÀ Δtop1(rc_full) ≥ +0,5 điểm %; ngược lại 'dời tâm không cải thiện'",
+  "phu": "vis_union, adapt, rc_half; Δ m_hom; riêng từng sách; nhóm 'bị cắt' (hại=1)",
+  "luu_y": "rc_*/vis_union dùng Vision nên chỉ là CẬN TRÊN (oracle) và không áp dụng được cho ô Vision không đọc; `adapt` mới là luật áp dụng được"
+ },
+ "kiem_soat_phu": "TK, KVK, L83: áp `adapt` cho mẫu ngẫu nhiên ≤ 3.000 ô GOLD/sách; bảo vệ: cận dưới KTC95 % của Δtop1 ≥ −0,3 điểm %",
+ "quy_tac_bao_cao": "báo cả kết quả âm; không đổi biến thể/ngưỡng sau khi xem kết quả; mọi lệch ghi vào prereg_crop_test_lech.json"
+}

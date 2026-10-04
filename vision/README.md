@@ -26,7 +26,8 @@ Khoá sách: `KVK L83 TK L16 Chr stt11 stt2 stt4 B34 B18`. Cấu hình chính (c
 | `vision_crosscheck.py` | đối chứng ký hiệu Vision ↔ ô/nhãn pipeline (khớp 1–1, dị thể, lớp mã, "hại hình học", bỏ-một-ô) → `ket_qua/<cfg>/` |
 | `vision_vs_human.py` | Vision so với nhãn NGƯỜI (IHR: L16, TK; Borg: B18, B34) |
 | `prereg_q1_eval.py` | chấm tiêu chí Q1 (chọn cấu hình ghép) của prereg |
-| `prereg/` | tiêu chí quyết định đăng ký TRƯỚC pilot (+ sha256) và ghi chú 2 lệch (D1, D2) |
+| `prereg/` | tiêu chí quyết định đăng ký TRƯỚC pilot (+ sha256) và ghi chú 2 lệch (D1, D2); `prereg_crop_test.json` cho thí nghiệm crop |
+| `crop_test/` | thí nghiệm crop bằng so ảnh (cục bộ, 0 yêu cầu): `run_crop_test.py` (nới cửa sổ L16, dời tâm ô lệch) · `analyze_crop_test.py` (bootstrap theo trang, đúng prereg) · `check_fidelity.py` (bản dựng lại crop khớp từng điểm ảnh với crop đã giao: 2.400/2.400) · `crop_lib.py` |
 | `ket_qua/` | đầu ra phân tích: `n2-grid-…/{summary.json, cells.csv.gz, disagree_candidates.csv, drift.csv, offsets.csv, column_model.csv}`, `vs_human_*.json`, `q1_stage1_*.json` |
 | `tai_lieu/VISION_DOI_CHUNG_2026-10-04.md` | báo cáo: điều đã đo, kết luận, giới hạn |
 | `tests/` | `test_vision_harvest.py` (27 phép) · `test_vision_crosscheck.py` (14 phép) — offline, không gọi mạng |
@@ -51,7 +52,8 @@ Khoá sách: `KVK L83 TK L16 Chr stt11 stt2 stt4 B34 B18`. Cấu hình chính (c
 - Vision đọc được 35 % ô GOLD toàn bộ (KVK 84 %, L83 81 %, Chr 75 %, TK 57 %, L16 44 %, stt11 33 %, stt2 20 %, B18 18 %, stt4 17 %, B34 12,5 %).
 - So nhãn người IHR (L16, TK): ô Vision xác nhận (conf ≥ 0,8) chính xác 99 % nhưng chỉ 5,1 % / 14,2 % số ô GOLD; **bất đồng Vision≠nhãn không giàu lỗi hơn nền** (Vision đúng 4/2.723 ô) ⇒ không giúp bắt kim sai hay kiểm lại nhãn; không đưa vào pipeline.
 - Crop: phần chữ nằm ngoài cửa sổ crop (bbox ± 0,12) ở ô Vision đọc được — STT 21–25 %, Chr 20 %, L16 20 %, B18 17 %, B34 15 %, KVK/L83/TK 0–2 %. Viết tay do lệch tâm từng ô (không phải lệch hằng theo cột); L16 do hộp quá thấp. Hiệu chỉnh theo cột không đạt tiêu chí.
-- Còn mở để nghiên cứu: kiểm độc lập (cosine crop↔glyph nhãn, `pipeline/tools/eval_crops_v2.py`) việc nới cửa sổ L16 / dời tâm ô lệch; chữ Latin Vision đọc ở lề (B18/B34, KVK) như nguồn chữ quốc ngữ thứ ba; so Vision với kim ở cấp trang/dòng.
+- Thí nghiệm crop bằng so ảnh (05/10; prereg `prereg/prereg_crop_test.json`; thước = crop giống glyph nhãn hơn mọi chữ đồng âm, "top1"): **nới cửa sổ L16 làm TỆ hơn** — top1 61,84 % → 58,2 / 53,7 / 48,9 % (pad 0,20 / 0,30 / 0,45), bản thích ứng 59,8 % (−2,08 pp [−2,43; −1,73]); tệ cả ở 601 ô Vision xác nhận bị cắt. **Dời tâm theo hộp Vision** chỉ lợi nhỏ: +1,17 pp [+0,31; +2,01] (dời nửa bước +2,20 pp) trên ô lệch tâm của Chr + 3 tập STT, hầu như chỉ ở ô bị cắt; ròng ≈ +1 % GOLD ở Chr, ≤ 0,1 % ở STT; chỉ áp dụng được cho ô Vision đọc ra. Chi tiết: `ket_qua/crop_test/BAO_CAO_CROP_TEST.md` (không commit vì `ket_qua/` bị bỏ qua; sinh lại bằng `crop_test/analyze_crop_test.py` từ các CSV cùng thư mục). Không đổi mã pipeline.
+- Còn mở để nghiên cứu: chữ Latin Vision đọc ở lề (B18/B34, KVK) như nguồn chữ quốc ngữ thứ ba; so Vision với kim ở cấp trang/dòng; (chưa thử) cửa sổ theo hộp Vision cho riêng L16.
 
 ## Việc nên làm / không nên
 

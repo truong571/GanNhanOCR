@@ -1,0 +1,102 @@
+{
+ "trang_thai": "THĂM DÒ (NGOÀI prereg_crop_test) — giả thuyết sinh ra SAU khi thấy kết quả E1/E2 (commit b298656af8) trên chính các ô này; KTC chỉ để mô tả, không phải kiểm định xác nhận",
+ "ghi_chu": "Đăng ký TRƯỚC khi chạy bất kỳ số đo KẾT QUẢ nào của X1 bản 2. Điểm cuối chính DUY NHẤT là D1; mọi số khác là mô tả, không hiệu chỉnh đa so sánh (báo cáo in > 60 KTC). Bộ mã chạy, mã phân tích, thư viện crop và bộ kiểm được băm cùng giao thức (ma_nguon_sha256).",
+ "lich_su_thiet_ke": {
+  "ban_1": "nháp: biến thể chính vw_c = cửa sổ hợp(cửa sổ chuẩn, V nở 4 %) với khoảng bảo vệ carve own_y = hợp(bbox, V). Chỉ chạy THỬ KHÓI 30 ô bị cắt + 30 ô còn lại (--limit 30) để kiểm mã chạy được. Lần thử khói có in top1 theo biến thể: vw_c thấp hơn nhiều so với base và vw. Số này ĐÃ ĐƯỢC THẤY trước khi thiết kế bản 2; nó phù hợp với cơ chế G1 bên dưới nhưng KHÔNG được dùng để chọn ngưỡng, quần thể hay biến thể.",
+  "phan_bien": "3 phản biện độc lập (workflow wf_e31a796b-341; 14 agent gồm bước xác minh bằng phản chứng, chỉ đọc mã/giao thức, test trên mảng tổng hợp): (G1, CONFIRMED) own_y = hợp(bbox, V) trên cửa sổ hẹp (V nở 4 %) làm dải xoá nét của carve_neighbor_ink chỉ còn 1–2 hàng; < 3 hàng thì _seam_boundary trả None ⇒ KHÔNG carve ở phía tràn ⇒ vw_c ≈ 'tắt carve', không phải 'carve khớp'; (D2) đối chứng đảo phía đạt theo cấu tạo; (D4) nb bị pha loãng khi cửa sổ nới và vw_own làm nb≈0 theo cấu tạo; ô 'bị cắt' định nghĩa theo diện tích hộp Vision chứ không theo mực; lề 4 % ≠ 12 % của pipeline (khung khác); nhiều bất biến vô hiệu; D1 +2,0 điểm không ràng buộc ở n≈601; phải băm cả mã chạy/phân tích; viết điểm trước khối bất biến.",
+  "ban_2": "chuyển biến thể CHÍNH sang vpipe: chạy NGUYÊN đường cắt của pipeline trên hộp hợp ô∪V ⇒ có dải xoá thật (≈ 0,12·cao), vùng bảo vệ khớp chữ, lề khớp base. Thêm đối chứng xáo (vpipe_shuf) và lật (vpipe_flip) trên đường pipeline, oracle vpipe_own, chẩn đoán TUYỆT ĐỐI (nbA, foA, er_own, cờ seam, khung giao nộp, foO trên điểm ảnh gốc), tầng mô tả của D1 (cov_base, hướng tràn, liều, |dy|…), bất biến mới (cửa sổ ⊇ V số nguyên, vòng mực quanh V, khớp kích thước trang với pages_denoised, tái lập E1 theo luật 'lệch giải thích được'). Quyết định chuyển sang vpipe dựa trên G1 (đọc mã) + test tổng hợp (vision/tests/test_explore_vwindow.py); các số thử khói KHÔNG được dùng để chọn ngưỡng, quần thể hay biến thể."
+ },
+ "boi_canh": {
+  "E1": "nới cửa sổ L16 (đồng loạt pad 0,20/0,30/0,45 và thích ứng) làm top1 GIẢM (61,84 % → 58,18/53,68/48,91 %; thích ứng 59,76 %), kể cả ở 601 ô mà hộp Vision vượt cửa sổ (agree & hại=1). Nguyên nhân CHƯA kiểm.",
+  "E2": "dời tâm hộp theo Vision lợi nhỏ (+1,17 điểm, nửa bước +2,20) và gần hết ở ô bị cắt.",
+  "carve": "carve_neighbor_ink(crop, gray_full, cửa sổ, own_y, prev_bbox, next_bbox) xoá mực phía trên/dưới theo đường seam ít mực nhất trong dải [max(tâm hộp prev, đỉnh cửa sổ), đỉnh own_y] và [đáy own_y, min(tâm hộp next+1, đáy cửa sổ)]; own_y là khoảng DỌC ĐƯỢC BẢO VỆ (không bao giờ xoá lấn vào). Seam chỉ chạy khi: oy1 > cy1 (phía trên) / oy2 < cy2 (phía dưới), ya < oy1 / yb > oy2, dải ≥ 3 hàng và rộng ≥ 2 (else bỏ qua phía đó). Pipeline truyền own_y = bbox của ô. Khi hộp quá thấp phần glyph tràn khỏi bbox nằm trong dải xoá và có thể bị seam cắt (test tổng hợp T6a)."
+ },
+ "gia_thuyet": {
+  "H_A_chinh": "với ô L16 mà Vision xác nhận chữ nhãn và hộp Vision tràn > 10 % ra ngoài cửa sổ chuẩn, chạy nguyên đường cắt của pipeline trên hộp hợp ô∪V (biến thể vpipe: pad 0,12, carve với own_y = hộp hợp, dải xoá thật) làm TĂNG top1 so với crop giao nộp",
+  "H_B_mo_ta": "(i) nới cửa sổ mà không có carve khớp làm tăng mực lạ tuyệt đối (foA/nbA) so với base; (ii) carve của crop giao nộp xoá mực của chính ô ở một phần ô bị cắt (er_own_base > 0); (iii) loại hoàn hảo mực hộp ký hiệu khác (vpipe_own) cho thêm lợi so với vpipe. CHỈ mô tả liên hệ, không có luật quyết định."
+ },
+ "quan_the": {
+  "nguon": "đúng bộ ô và thuộc tính Vision của E1: rct.load_eval_cells('L16') = ô GOLD L16 có nhãn người IHR (13.117), gắn status/harm/hộp Vision bằng analyse_page CHỈ trên các ô đó (ô khác của trang không tham gia ghép 1–1); nhãn chấm = nhãn người (gt)",
+  "bi_cat": "Vision khớp chữ nhãn (status=agree; so khớp NFKC nên gồm cả dạng tương thích) và harm=1 (phần hộp Vision nằm ngoài cửa sổ bbox±0,12 > 10 % diện tích hộp; ký hiệu nghiêng > 3° có harm=NaN nên không thuộc nhóm này). Kỳ vọng đúng 601 ô. QUẦN THỂ CHÍNH. 'Bị cắt' nghĩa là 'hộp Vision vượt cửa sổ', KHÔNG phải 'đã xác minh chữ bị cắt' — cov_base (mực thật) được báo ở D0.",
+  "con_lai": "Vision khớp còn lại (harm≠1 gồm cả harm=NaN; kỳ vọng 2.377 ô; tổng 2.978). Dùng cho D3. Chỉ chạy base, vw, vpipe.",
+  "bien_dang_ky": "ô bị cắt cần có crop base; so sánh luôn trên tập cặp đầy đủ của từng biến thể (ô thiếu điểm ở base hoặc biến thể bị loại, số ô loại được báo); crop None = thiếu."
+ },
+ "bien_the": {
+  "cat_crop": "dùng đúng đường cắt của pipeline (crop_lib.cut_window → carve → finish: tighten_box + điểm ảnh gốc nếu crop_source=original); mã cut_window2 chỉ thêm tham số own_y và tuỳ chọn xoá hộp ký hiệu khác, mặc định tái lập từng điểm ảnh. V = hộp glyph Vision của chính ô (hệ trang, kẹp trong trang); U = hộp hợp số nguyên của bbox ô và V.",
+  "base": "crop giao nộp (cửa sổ bbox±0,12; own_y = (bbox.y0, bbox.y1))",
+  "py20": "tham chiếu E1: pad dọc 0,20 (chẩn đoán cơ chế + bất biến tái lập)",
+  "adapt": "tham chiếu E1: luật nới thích ứng (chẩn đoán cơ chế + bất biến tái lập)",
+  "vw": "THAM CHIẾU (= vis_union của E2): cửa sổ = hợp(cửa sổ chuẩn, V nở 4 %); carve hiện hành (own_y = bbox). Lề phía tràn ≈ 1–3 px < lề 12 % của base.",
+  "vw_off": "THAM CHIẾU: như vw nhưng KHÔNG carve (tách tác dụng carve ở khung lề 4 %)",
+  "vpipe": "[CHÍNH] chạy nguyên đường cắt của pipeline trên U: cửa sổ U ± 0,12 cạnh (khung/lề khớp base), carve_neighbor_ink với own_y = (U.y0, U.y1) và prev/next bbox hiện hành (dải xoá thật ≈ 0,12·cao U), tighten_box. Tương đương crop_lib.make_crop(pg, U, prev, next) (bất biến điểm ảnh).",
+  "vpipe_flip": "ĐỐI CHỨNG vị trí: như vpipe nhưng V bị lật dọc qua tâm bbox ô (cùng kích thước/độ tràn, SAI phía; kẹp trang — nên khác ở ô sát biên trang; GIỐNG HỆT vpipe khi chỉ tràn ngang và V nằm trong bbox theo chiều dọc). Đạt theo cấu tạo ⇒ chỉ là kiểm 'sai phía tệ hơn đúng phía'.",
+  "vpipe_shuf": "ĐỐI CHỨNG thông tin: như vpipe nhưng V thay bằng hình học (độ lệch/kích thước so với bbox, chuẩn hoá theo bbox) của MỘT ô bị cắt khác cùng tam phân vị tổng độ tràn (xáo + hoán vị vòng quanh, hạt giống 17, không ô nào nhận lại hình học của chính nó) — giữ phân bố độ tràn, bỏ thông tin riêng từng ô.",
+  "vpipe_own": "ORACLE cô lập: như vpipe, thêm tô nền mực nằm trong hộp Vision của MỌI ký hiệu CJK/PUA khác trên trang, trừ vùng V ± 2 px (nb của biến thể này ≈ 0 theo cấu tạo, không diễn giải).",
+  "vbox": "ORACLE hình học, KHUNG KHÁC (lề 4 % thay 12 %): crop = V nở 4 %, KHÔNG carve, rồi tighten_box — không coi là cận trên."
+ },
+ "thuoc_do": {
+  "chinh": "như E1: s(c)=e_crop·e_font(c); m_hom = s(nhãn người) − max_{c∈R(âm)∖{nhãn}, glyph khác} s(c); top1 ⇔ m_hom > 0 (m_hom = 0 tính là 0); MultiEnc v1+v2 (norm=True crop, norm=False glyph phông). Hiệu so cặp theo ô trên tập cặp đầy đủ; KTC95 % bootstrap theo TRANG (5.000 lần, hạt giống 17; trung bình tỉ số tổng); 'lo > 0' là cận một phía 97,5 %.",
+  "dong_diem_cuoi_mo_ta": "Δs_label và Δm_hom (liên tục, nhạy hơn top1).",
+  "chan_doan": "trên crop đã carve/xoá, TRƯỚC tighten, mực = xám < 128 trên trang đã xử lý: cov = mực chính ô còn giữ / mực chính ô trên trang (mực trong V); fo, nb = tỉ lệ mực crop ngoài V (dung sai 2 px) / trong hộp ký hiệu CJK khác ngoài V (chia cho mực crop, mô tả); foA, nbA = cùng tử số chia cho mực chính ô (số tuyệt đối, dùng để so); er_own, er_out = phần mực trong/ngoài V mà carve đã xoá; seam_top/bot = seam có chạy; fh, fw, mm = khung giao nộp (sau tighten) và lề nhỏ nhất; foO = tỉ lệ điểm tối (Otsu theo cửa sổ, nên phụ thuộc kích thước cửa sổ) ngoài V ± 2 px trên crop điểm ảnh GỐC TRƯỚC tighten — mô tả, không phải thuộc tính của ảnh giao nộp; own_overlap = chồng lấn lớn nhất của hộp ký hiệu khác với V; ring = (mực trong V ± 3 px − mực trong V)/mực trong V."
+ },
+ "diem_cuoi_chinh": "D1: Δ top1 (điểm %) của vpipe so với crop giao nộp (base) trên ô 'bị cắt'",
+ "quy_tac_quyet_dinh": {
+  "D1": "ĐÁNG CHÚ Ý (vẫn chỉ là thăm dò) ⇔ cận dưới KTC95 % của Δtop1(vpipe) > 0. Ghi chú cỡ: ở n≈601 nửa rộng KTC95 % dự kiến ≈ 2,2–2,4 điểm (E1 py20 2,2; E2 vis_union quy về n=601: 2,4) nên chỉ phát hiện được hiệu ứng ≳ 2,3 điểm (≈ 14 ô ròng). Nếu cận trên < 0: ghi 'tệ hơn crop giao nộp'. Nếu cận dưới ≤ 0 ≤ cận trên: ghi 'KTC chứa 0'; thêm 'và loại trừ hiệu ứng ≥ +2 điểm' khi cận trên < +2,0, ngược lại 'null chưa đủ độ nhạy'. Quy ra ô và % ô GOLD L16 có nhãn người (mẫu số 13.117).",
+  "D0_mo_ta": "tiền đề: phân vị cov_base của ô bị cắt, tỉ lệ cov_base < 0,97 và ≤ 0,90, so với ô còn lại; carve xoá mực chính ô ở base bao nhiêu % ô; phân vị vòng mực quanh V (ring: V chặt vào mực hay còn mực lân cận) — MÔ TẢ, không phải bất biến chặn. Báo TRƯỚC mọi Δ.",
+  "D2_mo_ta": "đối chứng (tập cặp đầy đủ vpipe/flip/shuf): vpipe − vpipe_shuf và vpipe − vpipe_flip (riêng ô tràn dọc ≥ 10 %). Kỳ vọng dương theo cấu tạo; KHÔNG phải bằng chứng lợi so với crop giao nộp; chỉ D1 nói điều đó.",
+  "D3_mo_ta": "nếu áp vpipe cho mọi ô Vision khớp: Δtop1 trên ô còn lại (cận dưới ≥ −0,3 điểm là 'đạt' nhưng KHÔNG chứng minh vô hại; không đạt có thể chỉ do KTC rộng), tỉ lệ crop đổi, Δ riêng ô thật sự đổi, tách ký hiệu nghiêng (hại=NaN), ròng gộp bị cắt + còn lại (ô, % ô GOLD L16).",
+  "D4_mo_ta": "cơ chế (liên hệ): bảng cov/foA/nbA/er_own/cờ seam/khung theo biến thể với Δ so với base (KTC theo trang); vpipe_own − vpipe (cặp, KTC theo trang). Chỉ nói 'mực lạ tuyệt đối tăng/không tăng khi nới', không nói nguyên nhân.",
+  "tang_mo_ta": "Δtop1(vpipe) theo tầng, KHÔNG ngưỡng, n hiển thị: cov_base ≤ 0,90 / (0,90; 0,97) / ≥ 0,97; hướng tràn (dọc/ngang/cả hai/dọc < 10 % = đối chứng âm tự nhiên); |dy_pitch| < 0,5 vs ≥ 0,5; nhãn pipeline = nhãn người; crop vpipe ≠ base; chồng lấn hộp khác < 0,1; liều theo tam phân vị tràn dọc. Độ nhạy: KTC theo trang×cột, số cụm, cặp bất đồng b/c với kiểm dấu chính xác (mô tả).",
+  "so_sanh": "mọi ngưỡng so bằng giá trị KHÔNG làm tròn"
+ },
+ "bat_bien": [
+  "quần thể khớp E1: 601 ô bị cắt + 2.377 còn lại = 2.978",
+  "tìm thấy hộp ký hiệu Vision của chính ô bằng so khớp hộp (0 thất bại)",
+  "trang đã xử lý và pages_denoised cùng kích thước (hệ toạ độ Vision = hệ crop) ở mọi trang dùng",
+  "số ô GOLD L16 có nhãn người = 13.117 (mẫu số quy %)",
+  "giao thức đã đóng băng: băm JSON khớp .sha256 và băm 6 tệp mã nguồn khớp ma_nguon_sha256 (bộ phân tích tính lại; chặn diễn giải nếu lệch)",
+  "cửa sổ THẬT mà từng biến thể vw / vpipe / vbox dùng chứa V (số nguyên, kẹp biên trang) ở mọi ô",
+  "đường base tái lập crop_lib.make_crop từng điểm ảnh (mẫu ngẫu nhiên 150 ô) và vpipe == make_crop trên U (mẫu ngẫu nhiên ≤ 150 ô bị cắt), hạt giống 17",
+  "mực bị carve xoá ⇒ seam đã chạy (nhất quán cờ seam)",
+  "base/py20/adapt tái lập điểm E1: max|Δs| < 2e-3; mọi lệch top1 phải giải thích được bằng gần hoà (|m_E1| < 2·max|Δs|); mẫu NaN của t giống; không có lỗi đọc E1",
+  "mỗi biến thể có crop ở ≥ 99 % ô có đối thủ (base/vw/vpipe: mọi ô Vision khớp; còn lại: ô bị cắt)",
+  "nếu bất kỳ bất biến FAIL: báo cáo in số nhưng KHÔNG diễn giải D1–D4; xử lý rồi chạy lại, ghi lệch vào thamdo_X1_lech.json; không đổi D1"
+ ],
+ "thu_tuc": {
+  "diem_truoc_khoi_bat_bien": "bộ chạy ghi X1_L16_vwindow.csv.gz TRƯỚC khối bất biến E1; lỗi ở khối đó chỉ ghi vào X1_invariants.json",
+  "crop_none": "crop None = thiếu; tập cặp đầy đủ loại ô đó; báo số ô loại",
+  "hoa_m_hom": "m_hom = 0 ⇒ top1 = 0",
+  "mau_so_quy_phan_tram": "13.117 ô GOLD L16 có nhãn người (kể cả ô không có đối thủ)",
+  "ky_hieu_khac": "'ký hiệu khác' = ký hiệu CJK/PUA của Vision (cùng bộ lọc is_cjk với bước ghép) trừ ký hiệu của chính ô; dấu câu/chữ Latin KHÔNG tính",
+  "thu_khoi": "đã chạy thử khói bản 1 và bản 2 (30+30 ô) để kiểm mã. Bộ chạy in top1 theo biến thể cả ở chế độ --limit nên top1 thử khói bản 2 (n=30) cũng ĐÃ ĐƯỢC THẤY (vpipe thấp hơn base rất nhiều trên mẫu nhỏ đó); không diễn giải và không dùng để đổi biến thể/ngưỡng/quần thể. Ngoài top1 đã thấy: ring trung vị ≈ 0,15 trên 60 ô (nên ring được chuyển từ bất biến chặn sang mô tả D0) và các bất biến mã đều đạt.",
+  "dong_bang": "ma_nguon_sha256 (nằm trong JSON, băm từng tệp: run_explore_vwindow.py, analyze_explore_vwindow.py, test_explore_vwindow.py, crop_lib.py, analyze_crop_test.py, run_crop_test.py) + tệp .sha256 băm chính JSON; bộ phân tích tính lại cả hai khi chạy thật và coi lệch là bất biến chặn",
+  "kiem_dau": "kiểm dấu chính xác trên cặp bất đồng (b,c) chỉ MÔ TẢ, bỏ qua cụm trang nên có thể mạnh hơn KTC theo trang; in trong báo cáo, KHÔNG ghi vào JSON"
+ },
+ "tu_cam": [
+  "'đã xác nhận' / 'chứng minh'",
+  "'nguyên nhân của việc E1 giảm' (chỉ nói liên hệ)",
+  "'pipeline nên áp dụng' / 'nên đưa vào pipeline' (kết quả là thăm dò, dùng Vision, ô Vision đọc ra)",
+  "'an toàn khi áp cho mọi ô' (D3 đạt không phải vô hại)",
+  "khái quát sang sách khác hay ô Vision không đọc",
+  "'hộp Vision đúng' (chỉ nói crop theo hộp đó cho điểm tốt hơn/không)"
+ ],
+ "gioi_han": [
+  "vw*, vbox, vpipe*, vpipe_own dùng hộp Vision ⇒ chỉ áp dụng cho ô Vision đọc ra; ảnh giao cho ô 'ok' của GOLD chính xác đã là crop chuẩn v2 (gold_exact/crop_chuan.py), kết quả ở crop cũ (cột image của labels.csv) không chuyển sang v2 nếu chưa đo lại",
+  "ô chọn theo hộp Vision rồi dựng crop theo chính hộp đó: thước đo (độ giống glyph nhãn người) độc lập với Vision, nhưng quần thể giới hạn ở ô Vision khớp (dễ hơn trung bình)",
+  "bộ mã hoá đo được huấn luyện trên crop kiểu hiện hành nên hơi thiên về crop gốc",
+  "một sách (L16), n≈601, ≈ 100 trang ⇒ KTC rộng; không suy ra cho sách khác; null có thể là 'chưa đủ độ nhạy'",
+  "Vision ghép 1–1 trên các ô GOLD có nhãn người của trang (không phải mọi ô) ⇒ có thể ghép nhầm ký hiệu cùng chữ của ô láng giềng; tầng |dy_pitch| ≥ 0,5 báo riêng",
+  "V lấy từ pages_denoised, crop và chẩn đoán từ pages (cùng kích thước nhưng nét có thể dày hơn): chẩn đoán trên trang đã xử lý, foO trên điểm ảnh gốc",
+  "harm không đo cho ký hiệu nghiêng > 3°"
+ ],
+ "quy_tac_bao_cao": "báo cả kết quả âm; không đổi biến thể/ngưỡng/quần thể sau khi xem kết quả; mọi lệch ghi vào thamdo_X1_lech.json; kết quả là THĂM DÒ",
+ "ma_nguon_sha256": {
+  "vision/crop_test/run_explore_vwindow.py": "390e17b65cc49c37b826d07d468e14b7892ac0d771e5958610e910b2d4b8b34e",
+  "vision/crop_test/analyze_explore_vwindow.py": "fa085699b80669b6ea2d4db2a203cfd8630b97746285c074131afc111d764ffe",
+  "vision/tests/test_explore_vwindow.py": "a8a0855ba26c0934cb1e9ce59f3b6f0b2c6ab4c616354ee8c1694b20ba04aad9",
+  "vision/crop_test/crop_lib.py": "c24bd9b5a3890693bc5cfbfb1c643314822e819e12dec572ff1c9d07885fee47",
+  "vision/crop_test/analyze_crop_test.py": "8b6c724b908d565a72fd35c621ec22708065af3e44ee59dd92f218fdd3757222",
+  "vision/crop_test/run_crop_test.py": "cfcc4ac1f7f863ed9d344a806a6d1ad13abca47c595247b3b0db434a04fad063"
+ },
+ "registered_at": "2026-10-05 01:12:29"
+}

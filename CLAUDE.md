@@ -74,4 +74,4 @@
 - `vision/vision_harvest.py run` chỉ gọi PHẦN THIẾU; **không đổi** `--n/--layout/--hints/--cell-h/--cap-mp` (là cấu hình khác ⇒ gọi lại tất cả). Gọi mạng cần người dùng đồng ý; khoá dịch vụ nằm NGOÀI repo
   (`~/.config/gcloud/vision-ocr-*.json`) — không đọc/in nội dung, không đưa vào repo.
 - Kết luận đã chốt theo tiêu chí đăng ký trước (`vision/prereg/`): Vision **không** giúp bắt kim sai hay kiểm lại nhãn (Q2 trượt), **không** đưa vào pipeline; chỉ dùng làm thước đo crop
-  (phần chữ ngoài cửa sổ crop: viết tay 15–25 %, L16 20 %). Chi tiết: `vision/tai_lieu/VISION_DOI_CHUNG_2026-10-04.md`.
+  (phần chữ ngoài cửa sổ crop: viết tay 15–25 %; số L16 20 % KHÔNG đáng tin — hộp Vision L16 chồng lấn láng giềng, xem X1). Chi tiết: `vision/tai_lieu/VISION_DOI_CHUNG_2026-10-04.md`, `vision/tai_lieu/CROP_TEST_2026-10-05.md`.

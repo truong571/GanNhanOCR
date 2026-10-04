@@ -16,6 +16,7 @@ Dữ liệu: `vision/cache/` (không commit, **nhớ sao lưu**), phân tích: `
 - **Nhưng "hại hình học" (glyph Vision > 10 % ngoài cửa sổ crop bbox ± 0,12) là có thật**, trên ô Vision đọc được: **STT 21–25 %, Chr 20 %, L16 20 %, B18 17 %, B34 15 %; KVK 0 %, L83 0 %, TK 2 %**. Hai cơ chế khác nhau:
   chữ viết tay (STT/Chr/B34): do **lệch tâm theo từng ô** (|dy| ≤ 0,10 bước: hại 1–8 %; |dy| > 0,10 — 62–70 % số ô — hại 26–35 %), không phải lệch hằng theo cột nên không sửa bằng một phép dịch;
   L16: do **hộp quá thấp** (62 % ô có chiều cao glyph ≥ chiều cao hộp → hại 31 %; còn lại 2,5 %), tức cửa sổ cắt đầu/đuôi chữ.
+  **ĐÍNH CHÍNH 05/10 (X1c, `CROP_TEST_2026-10-05.md` §3–4): vế L16 chưa được chứng minh.** Hộp Vision của ô L16 'bị cắt' cao 1,36× hộp ô và chồng lấn ký hiệu láng giềng 36 % diện tích (trung vị) — 'hại hình học' ở L16 chỉ cho biết hộp Vision lấn ra ngoài cửa sổ, không cho biết crop giao nộp mất nét chữ; 20 % của L16 không dùng làm tỉ lệ crop hỏng.
 - Vision bao phủ (ô GOLD): KVK 84 %, L83 81 %, Chr 75 %, TK 57 %, L16 44 %, stt11 33 %, stt2 20 %, B18 18 %, stt4 17 %, B34 12,5 %; xác nhận conf ≥ 0,8: KVK 47 %, L83 41 %, TK 14 %, Chr 8 %, L16 5 %, B18 4 %, B34 3 %, STT 1–2 %.
 
 Quyết định đã đăng ký: **không** đưa Vision vào pipeline làm tín hiệu xác nhận/cứu nhãn, **không** áp hiệu chỉnh crop theo cột. Hai lệch so với prereg (D1, D2) ghi ở `prereg_vision_ghi_chu_lech.json`.

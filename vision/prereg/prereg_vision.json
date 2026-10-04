@@ -1,0 +1,27 @@
+{
+ "registered_at": "2026-10-04 22:53:48",
+ "ghi_chu": "Đăng ký TRƯỚC khi xem kết quả pilot Vision (pilot chưa chạy; ledger 5/950). Đã xem: 5 phản hồi cache cũ (10 trang, ghép 2, gợi ý zh-Hant+vi) và các số suy ra từ chúng — các ngưỡng dưới đây KHÔNG chỉnh trên dữ liệu đó và dữ liệu đó KHÔNG dùng để xác nhận. Mẫu 10 trang chỉ để chọn cấu hình; mọi kết luận cuối dùng trang giữ lại.",
+ "quy_tac_chung": {
+  "thong_ke": "KTC bootstrap theo CỘT/TRANG (đơn vị độc lập thật), DEFF ≈ 1,65; mỗi quyết định MỘT điểm cuối chính, Holm cho điểm cuối phụ",
+  "du_lieu_cam": "không dùng đầu ra Vision để sửa nhãn/ảnh ở các bộ evaluation_only (B18, B34, L16, TK) trong dataset; chỉ ghi sidecar ở measure_out/",
+  "bat_bien": "mọi phép so sánh giữa cấu hình dùng CÙNG tập ô GOLD của CÙNG trang; chữ so sau chuẩn hoá NFKC; dị thể (SinoNom_Similar) KHÔNG tính bất đồng; nhãn ngoài URO tách riêng"
+ },
+ "Q1_chon_cau_hinh_ghep (pilot giai đoạn 1: n=1 · n=4 không trần · n=4 trần 5 MP · n=3 trần 5 MP trên 10 trang cũ)": {
+  "diem_cuoi_chinh": "số ô GOLD mà Vision ghép 1–1 và khớp nhãn (agree) trên mọi ô GOLD của trang, so cặp theo trang với n=1",
+  "chon": "n lớn nhất sao cho (i) cận dưới KTC95 % (bootstrap theo trang) của hiệu so với n=1 ≥ −3 điểm phần trăm số ô GOLD; (ii) số ký hiệu mỗi trang ≥ 0,90 × n=1 trên ≥ 9/10 trang; (iii) 0 lỗi theo ảnh và frame == 'canvas' ở mọi nhóm",
+  "neu_khong_cau_hinh_nao_dat": "n=2 trần 5 MP (843 yêu cầu, vừa trần 950)",
+  "goi_y_ngon_ngu (giai đoạn 2)": "giữ zh-Hant; chỉ đổi sang không gợi ý nếu số ô agree tăng ≥ 1 điểm trên ≥ 7/10 trang; KHÔNG dùng đếm chữ Latin làm bằng chứng (87 %/83 % ký hiệu Latin ở B18/B34 nằm ngoài mọi ô)"
+ },
+ "Q2_Vision_lam_tin_hieu_xac_nhan_cho_kim": {
+  "pham_vi": "chỉ xét sách in (KVK, L83, TK, L16); thu hoạch L16 + TK trọn bộ (259 trang) làm giai đoạn đánh giá TRƯỚC khi chạy các sách còn lại",
+  "dieu_kien_dung": "trên trang giữ lại có nhãn người: độ chính xác của ô 'agree & conf ≥ 0,8' ≥ 98 % VÀ chiếm ≥ 20 % ô GOLD của sách; thêm vào pipeline (ưu tiên: tín hiệu cộng thêm cho GOLD) chỉ khi độ chính xác GOLD không giảm quá 0,5 điểm (cận dưới KTC) và số ô GOLD đúng không giảm",
+  "khong_lam": "không dùng bất đồng Vision≠nhãn để SỬA nhãn; 'cứu kim sai' chỉ được xét nếu trên nhãn người Vision đúng ≥ 50 % ô bất đồng URO không-dị-thể với n ≥ 97 ô (nửa-rộng ±10 điểm)"
+ },
+ "Q3_hieu_chinh_crop (ứng viên: mô hình co rút theo cột trên dy_pitch)": {
+  "chi_so_chinh_crop_lech": "tỉ lệ ô agree có hộp glyph Vision nằm ngoài cửa sổ crop (bbox ± 0,12) > 10 % (harm) — bbox là hộp detector/cửa sổ theo bước, không phải hộp chữ chặt",
+  "dieu_kien_ap_dung": "(a) bỏ-một-ô: |sai số dự đoán| ≤ 0,1 bước cột ở ≥ 80 % ô agree, gộp ≥ 30 cột trên trang GIỮ LẠI của cùng sách; (b) trên ô Vision KHÔNG đọc được: điểm cuối chính = pipeline/tools/eval_crops_v2.py (CNN OOF + McNemar theo cụm cột) không kém hơn, và cosine(crop, glyph nhãn) tăng (so cặp theo cột, p < 0,01); (c) tỉ lệ 'harm' giảm ≥ 30 % tương đối",
+  "chi_ap_khi_du_o_tren_cot": "≥ 4 ô agree phủ ≥ 50 % chiều dài cột; dời CẢ CỘT nhất quán và tính lại prev/next bbox (seam carving); không dời từng ô",
+  "dau_ra": "chỉ sidecar (measure_out/); không sửa labels.csv/crops; không đạt thì ghi KẾT QUẢ ÂM",
+  "tien_le": "crop v2 tái định tâm theo mực (F3g) từng làm CNN-OOF tụt 0,775 → 0,735: căn tâm ≠ tự cải thiện"
+ }
+}

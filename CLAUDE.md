@@ -67,3 +67,11 @@
 - Bộ crop NHÃN NGƯỜI (0 API, tách khỏi GOLD tự động): `dataset/_BORG_NHAN_NGUOI/` (`python -m pipeline.borg_human
   --stage all`; đo `scripts/measure/borg_human_eval.py`). Tài liệu: `docs/BORG_DANH_GIA_2026-09-27.md`,
   `docs/BORG_NHAN_NGUOI_2026-09-27.md`.
+
+## Google Vision OCR — thư mục `vision/` (2026-10-04)
+- Đã OCR **TOÀN BỘ 1.682 trang** của 10 sách (ghép 2 trang/ảnh, 845 yêu cầu; hạn mức 876/950 tháng 10/2026). **KHÔNG gọi lại Vision**: đọc cache `vision/cache/` qua `vision/vision_data.py`
+  (không gọi mạng); mã, kết quả, cách chạy bổ sung và cấu trúc ở `vision/README.md`.
+- `vision/vision_harvest.py run` chỉ gọi PHẦN THIẾU; **không đổi** `--n/--layout/--hints/--cell-h/--cap-mp` (là cấu hình khác ⇒ gọi lại tất cả). Gọi mạng cần người dùng đồng ý; khoá dịch vụ nằm NGOÀI repo
+  (`~/.config/gcloud/vision-ocr-*.json`) — không đọc/in nội dung, không đưa vào repo.
+- Kết luận đã chốt theo tiêu chí đăng ký trước (`vision/prereg/`): Vision **không** giúp bắt kim sai hay kiểm lại nhãn (Q2 trượt), **không** đưa vào pipeline; chỉ dùng làm thước đo crop
+  (phần chữ ngoài cửa sổ crop: viết tay 15–25 %, L16 20 %). Chi tiết: `vision/tai_lieu/VISION_DOI_CHUNG_2026-10-04.md`.

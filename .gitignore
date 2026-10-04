@@ -129,3 +129,18 @@ measure_out/
 
 # Log chạy pipeline/đo (sinh lại mỗi lượt; không đưa vào git — 01/10/2026)
 logs/
+
+# Khoá dịch vụ Google Cloud (Vision OCR) — TUYỆT ĐỐI không commit (remote origin là GitHub); nên để NGOÀI repo, vd ~/.config/gcloud/
+vision-ocr-*.json
+*service-account*.json
+*-sa-key*.json
+# Google Vision (thư mục vision/): dữ liệu nặng/phát sinh từ yêu cầu ĐÃ TRẢ HẠN MỨC — không commit (nhưng NHỚ sao lưu vision/cache); mã, tests, prereg, tài liệu thì commit được
+vision/cache/
+vision/ledger/
+vision/ket_qua/
+vision/nhat_ky/
+vision/phan_bien/
+vision/legacy/cache/
+vision/sao_luu/
+vision/legacy/run.lock.old
+vision/legacy/vision_cache_ledger_v1.json

@@ -1,0 +1,46 @@
+{
+ "ghi_chu_ngay": "2026-10-04 23:04:56",
+ "tham_chieu_prereg_sha256": "a5b5955f003c28f12e66bb3bdd5b02864b77e6f8e941e243c92bb6eae5361090",
+ "ket_qua_pilot_giai_doan_1 (10 trang, bootstrap theo trang)": "n=1: agree/GOLD 29,4 % · n=3 trần 5 MP 27,6 % (Δ −1,9 [−8,6; +5,2]) · n=4 không trần (≤10,5 MP) 31,9 % (Δ +2,4 [−3,9; +11,7]; (ii),(iii) đạt, (i) trượt do KTC rộng) · n=4 trần 5 MP 28,4 % (Δ −1,1 [−5,4; +3,5]). Mọi nhóm: frame canvas, 0 lỗi theo ảnh, Vision báo kích thước = ảnh gửi (kể cả 10,5 MP).",
+ "quyet_dinh_Q1": "theo prereg: không cấu hình n≥3 nào đạt (i) ⇒ dự phòng n=2",
+ "quyet_dinh_goi_y": "pilot giai đoạn 2: Δ +0,0 pp, 0/10 trang tăng ≥ 1 điểm ⇒ GIỮ zh-Hant (zh-Hant+vi, zh-Hant, không gợi ý khác nhau ≤ 0,1 điểm)",
+ "LECH_so_voi_prereg_D1": {
+  "prereg": "n=2 trần 5 MP",
+  "thuc_hien": "n=2 lưới (một hàng 2 trang), gợi ý zh-Hant, cao ô 80, trần 10,5 MP (= MP lớn nhất đã kiểm chứng trong pilot)",
+  "ly_do": "pilot cho thấy trần 5 MP làm GIẢM số ô agree (28,4 % so với 31,9 % không trần) và Vision không thu nhỏ ảnh tới 10,5 MP; ảnh n=2 lớn nhất ≈ 6,6 MP nên trần 10,5 MP không cắt nhóm nào (độ phân giải hiệu dụng = n=1). Trần 5 MP ban đầu là biện pháp phòng ngừa cho vùng CHƯA kiểm chứng; pilot đã kiểm chứng đến 10,5 MP.",
+  "anh_huong": "chỉ cấu hình thu hoạch (độ phân giải cao hơn một phần nhóm); không đổi tiêu chí Q2/Q3, không đổi điểm cuối, không dùng dữ liệu pilot để chỉnh ngưỡng nào khác"
+ },
+ "KET_QUA_Q2_giai_doan_danh_gia_L16_TK (n=2, 130 yêu cầu, 98+161 trang, nhãn người IHR)": {
+  "ngay": "2026-10-04 23:09:11",
+  "L16": "xác nhận (agree & conf≥0,8) 664 ô = 5,1 % GOLD, chính xác 99,2 % [Wilson 98,2; 99,7]; nhãn GOLD đúng 97,9 %",
+  "TK": "xác nhận 2.969 ô = 14,2 % GOLD, chính xác 99,0 % [98,6; 99,3]; nhãn GOLD đúng 98,6 %",
+  "ket_luan_Q2": "KHÔNG đạt: độ chính xác ≥ 98 % đạt nhưng phần GOLD được xác nhận (5,1 %, 14,2 %) < 20 % ⇒ KHÔNG đưa Vision vào pipeline làm tín hiệu xác nhận",
+  "cuu_kim_sai": "bất đồng URO không-dị-thể: L16 1.131 ô, Vision đúng 1, nhãn đúng 1.101; TK 1.592 ô, Vision đúng 3, nhãn đúng 1.567 ⇒ 'cứu' không có giá trị (ngưỡng ≥ 50 % không đạt)"
+ },
+ "LECH_so_voi_prereg_D2": {
+  "prereg_text": "chỉ khi đạt Q2 mới tiếp các sách còn lại (docs/VISION_DOI_CHUNG: mục 2.3)",
+  "thuc_hien": "vẫn thu hoạch các sách còn lại (KVK, L83, Chr, stt11, stt2, stt4, B34) ở n=2; B18 bỏ (529 trang, 265 yêu cầu) trừ khi người dùng yêu cầu",
+  "ly_do": "người dùng yêu cầu rõ lưu Vision cho mọi sách về đĩa; chi phí chỉ là hạn mức miễn phí; dữ liệu còn dùng cho Q3 (đo lệch/hại crop theo sách) không phụ thuộc Q2. Quyết định Q2 (không dùng làm tín hiệu xác nhận) KHÔNG đổi.",
+  "anh_huong": "chỉ phạm vi thu hoạch; không thay đổi tiêu chí hay kết luận Q2"
+ },
+ "KET_QUA_Q3_thu_hoach_9_sach (n=2, 578 yêu cầu, 1.151 trang, 160.581 ô)": {
+  "ngay": "2026-10-04 23:19:20",
+  "bo_mot_o_<=0,1_buoc (không dịch / hằng / tuyến tính co rút)": {
+   "KVK": "97/96/96 % (n=11.280)",
+   "L83": "95/93/92 % (5.465)",
+   "TK": "95/95/94 % (4.524)",
+   "L16": "67/63/63 % (1.541)",
+   "Chr": "36/43/45 % (2.264)",
+   "stt11": "30/38/42 % (1.289)",
+   "stt2": "31/37/39 % (962)",
+   "stt4": "28/37/39 % (762)",
+   "B34": "32/37/26 % (99)"
+  },
+  "ket_luan_Q3": "KHÔNG đạt (a) ≥ 80 % ở mọi sách có 'hại' (L16, Chr, STT, B34); sách in lành đạt chỉ vì 'không dịch' đã đạt ⇒ KHÔNG áp hiệu chỉnh crop theo cột; không cần chạy (b),(c)",
+  "hai_co_che_hai_hinh_hoc (ô agree, glyph Vision >10 % ngoài cửa sổ bbox±0,12)": {
+   "viet_tay_STT_Chr_B34": "hại 17–26 %; do LỆCH TÂM theo từng ô: ô có |dy|≤0,10 bước hại 1–8 %, |dy|>0,10 (62–70 % số ô) hại 26–35 %; vh/h trung vị 0,77–0,84 (bbox rộng hơn chữ)",
+   "L16": "hại 20 %; do HỘP QUÁ THẤP: 62 % ô có vh/h ≥ 1,0 → hại 31 %; vh/h < 1,0 → 2,5 % (cửa sổ cắt đầu/đuôi chữ)",
+   "KVK_L83_TK": "0–2 %"
+  }
+ }
+}
